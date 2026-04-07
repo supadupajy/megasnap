@@ -58,27 +58,30 @@ const Index = () => {
   // 초기 포스트 500개 생성 (전국 분포)
   const [posts, setPosts] = useState(() => generateRandomPosts(500));
 
-  // 지도가 움직일 때마다 현재 화면에 보이는 포스트 필터링
+  // 지도가 움직일 때마다 현재 화면에 보이는 포스트 필터링 (최대 20개로 제한)
   const visiblePosts = useMemo(() => {
     let filtered = posts;
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
-    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 50);
     
-    return filtered.filter(post => {
-      return (
-        post.lat <= mapBounds.ne.lat &&
-        post.lat >= mapBounds.sw.lat &&
-        post.lng <= mapBounds.ne.lng &&
-        post.lng >= mapBounds.sw.lng
-      );
-    });
+    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 20);
+    
+    return filtered
+      .filter(post => {
+        return (
+          post.lat <= mapBounds.ne.lat &&
+          post.lat >= mapBounds.sw.lat &&
+          post.lng <= mapBounds.ne.lng &&
+          post.lng >= mapBounds.sw.lng
+        );
+      })
+      .slice(0, 20); // 한 화면에 최대 20개만 표시
   }, [mapBounds, selectedCategory, posts]);
 
   // 지도를 움직일 때 포스트가 너무 적으면 자동으로 추가 생성
   useEffect(() => {
-    if (mapBounds && visiblePosts.length < 15 && !isRefreshing) {
+    if (mapBounds && visiblePosts.length < 10 && !isRefreshing) {
       const newPosts = generateRandomPosts(30, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
     }
