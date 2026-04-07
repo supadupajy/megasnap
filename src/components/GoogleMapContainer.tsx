@@ -2,45 +2,50 @@
 
 import React from 'react';
 import GoogleMapReact from 'google-map-react';
+import { cn } from '@/lib/utils';
 
 interface MapMarkerProps {
   lat: number;
   lng: number;
   image: string;
+  isViewed: boolean;
   onClick?: () => void;
 }
 
-const MapMarker = ({ image, onClick }: MapMarkerProps) => (
+const MapMarker = ({ image, isViewed, onClick }: MapMarkerProps) => (
   <div 
-    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-110 z-10"
+    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all hover:scale-110 z-10"
     onClick={(e) => {
       e.stopPropagation();
       onClick?.();
     }}
   >
-    <div className="w-14 h-14 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gray-200">
+    <div className={cn(
+      "w-14 h-14 rounded-2xl border-4 shadow-lg overflow-hidden bg-gray-200 transition-all duration-500",
+      isViewed ? "grayscale border-gray-300 opacity-70" : "grayscale-0 border-white opacity-100"
+    )}>
       <img src={image} alt="marker" className="w-full h-full object-cover" />
     </div>
-    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 shadow-sm" />
+    <div className={cn(
+      "absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 shadow-sm transition-colors duration-500",
+      isViewed ? "bg-gray-300" : "bg-white"
+    )} />
   </div>
 );
 
 interface GoogleMapContainerProps {
   posts: any[];
+  viewedPostIds: Set<number>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
 }
 
-const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapContainerProps) => {
+const GoogleMapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange }: GoogleMapContainerProps) => {
   const defaultProps = {
-    center: {
-      lat: 37.5665,
-      lng: 126.9780
-    },
+    center: { lat: 37.5665, lng: 126.9780 },
     zoom: 14
   };
 
-  // 지도를 더 밝고 깨끗하게 보이게 하는 스타일 (Silver Theme)
   const mapStyles = [
     { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
     { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
@@ -60,12 +65,7 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
   return (
     <div className="w-full h-full bg-gray-100">
       <GoogleMapReact
-        // TODO: 실제 서비스 시에는 아래에 발급받은 API 키를 입력해야 팝업이 사라집니다.
-        bootstrapURLKeys={{ 
-          key: "", // 여기에 "AIza..."로 시작하는 키를 입력하세요.
-          language: 'ko',
-          region: 'KR'
-        }}
+        bootstrapURLKeys={{ key: "", language: 'ko', region: 'KR' }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
         yesIWantToUseGoogleMapApiInternals
@@ -73,7 +73,7 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
         options={{
           disableDefaultUI: true,
           styles: mapStyles,
-          gestureHandling: 'greedy' // 모바일에서 두 손가락 대신 한 손가락으로 이동 가능하게 설정
+          gestureHandling: 'greedy'
         }}
       >
         {posts.map((post) => (
@@ -82,6 +82,7 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
             lat={post.lat}
             lng={post.lng}
             image={post.image}
+            isViewed={viewedPostIds.has(post.id)}
             onClick={() => onMarkerClick(post)}
           />
         ))}

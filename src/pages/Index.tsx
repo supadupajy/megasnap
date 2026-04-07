@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Navigation, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
@@ -14,10 +14,8 @@ import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 더 많은 게시물을 생성하고, 특정 지역에 밀집되도록 개선
 const generatePosts = (centerLat = 37.5665, centerLng = 126.9780) => {
   return Array.from({ length: 400 }).map((_, i) => {
-    // 70%는 현재 중심점(서울 등) 주변에 생성, 30%는 전국에 랜덤 생성
     const isLocal = Math.random() > 0.3;
     const lat = isLocal 
       ? centerLat + (Math.random() - 0.5) * 0.1 
@@ -47,23 +45,19 @@ const generatePosts = (centerLat = 37.5665, centerLng = 126.9780) => {
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
+  const [viewedPostIds, setViewedPostIds] = useState<Set<number>>(new Set());
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [posts, setPosts] = useState(() => generatePosts());
 
-  // 현재 지도 영역에 있는 게시물 필터링
   const visiblePosts = useMemo(() => {
     let filtered = posts;
-    
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
-
-    // 지도 영역 정보가 없으면 상위 30개만 미리 보여줌
     if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 30);
-
     return filtered.filter(post => {
       return (
         post.lat <= mapBounds.ne.lat &&
@@ -74,19 +68,22 @@ const Index = () => {
     });
   }, [mapBounds, selectedCategory, posts]);
 
-  const handleMapChange = useCallback(({ bounds, center }: any) => {
+  const handleMarkerClick = (post: any) => {
+    setSelectedPost(post);
+    setViewedPostIds(prev => new Set(prev).add(post.id));
+  };
+
+  const handleMapChange = useCallback(({ bounds }: any) => {
     setMapBounds(bounds);
   }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      // 현재 지도의 중심점을 기준으로 새로운 데이터 생성 (데이터 밀도 유지)
       const center = mapBounds ? {
         lat: (mapBounds.ne.lat + mapBounds.sw.lat) / 2,
         lng: (mapBounds.ne.lng + mapBounds.sw.lng) / 2
       } : undefined;
-      
       setPosts(generatePosts(center?.lat, center?.lng));
       setIsRefreshing(false);
       showSuccess('이 지역의 새로운 게시물을 불러왔습니다.');
@@ -96,11 +93,7 @@ const Index = () => {
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
-      
-      <CategoryFilter 
-        selectedId={selectedCategory} 
-        onSelect={setSelectedCategory} 
-      />
+      <CategoryFilter selectedId={selectedCategory} onSelect={setSelectedCategory} />
 
       <div className="absolute top-36 left-1/2 -translate-x-1/2 z-30">
         <button 
@@ -116,10 +109,10 @@ const Index = () => {
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
         <GoogleMapContainer 
           posts={visiblePosts} 
-          onMarkerClick={(post) => setSelectedPost(post)}
+          viewedPostIds={viewedPostIds}
+          onMarkerClick={handleMarkerClick}
           onMapChange={handleMapChange}
         />
-        
         <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
           <Navigation className="w-6 h-6 fill-current" />
         </button>
@@ -146,23 +139,16 @@ const Index = () => {
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
               {isRefreshing ? (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center py-20"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
                   <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
                   <p className="text-sm text-gray-400">장소를 찾는 중...</p>
                 </motion.div>
               ) : visiblePosts.length > 0 ? (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="divide-y divide-gray-50"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="divide-y divide-gray-50">
                   {visiblePosts.map(post => (
-                    <PostItem key={post.id} {...post} />
+                    <div key={post.id} onClick={() => setViewedPostIds(prev => new Set(prev).add(post.id))}>
+                      <PostItem {...post} />
+                    </div>
                   ))}
                 </motion.div>
               ) : (
@@ -177,16 +163,8 @@ const Index = () => {
       </motion.div>
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-
-      <PostDetail 
-        post={selectedPost} 
-        isOpen={!!selectedPost} 
-        onClose={() => setSelectedPost(null)} 
-      />
-      <WritePost 
-        isOpen={isWriteOpen} 
-        onClose={() => setIsWriteOpen(false)} 
-      />
+      <PostDetail post={selectedPost} isOpen={!!selectedPost} onClose={() => setSelectedPost(null)} />
+      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );
 };
