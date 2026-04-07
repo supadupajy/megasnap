@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Navigation, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
@@ -14,22 +14,35 @@ import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 대한민국 전역을 커버하도록 좌표 범위 확대 (위도 33~38, 경도 124~130)
-const generatePosts = () => Array.from({ length: 200 }).map((_, i) => ({
-  id: i + 1,
-  user: { 
-    name: `traveler_${i + 1}`, 
-    avatar: `https://i.pravatar.cc/150?u=${i + 100}` 
-  },
-  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #국내여행 #추천`,
-  location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][i % 8],
-  category: CATEGORIES[i % CATEGORIES.length],
-  lat: 33.0 + Math.random() * 5.5, // 대한민국 위도 범위
-  lng: 124.0 + Math.random() * 6.0, // 대한민국 경도 범위
-  likes: Math.floor(Math.random() * 1000),
-  image: `https://picsum.photos/seed/${i + 500}/800/800`,
-  isLiked: Math.random() > 0.5
-}));
+// 더 많은 게시물을 생성하고, 특정 지역에 밀집되도록 개선
+const generatePosts = (centerLat = 37.5665, centerLng = 126.9780) => {
+  return Array.from({ length: 400 }).map((_, i) => {
+    // 70%는 현재 중심점(서울 등) 주변에 생성, 30%는 전국에 랜덤 생성
+    const isLocal = Math.random() > 0.3;
+    const lat = isLocal 
+      ? centerLat + (Math.random() - 0.5) * 0.1 
+      : 33.0 + Math.random() * 5.5;
+    const lng = isLocal 
+      ? centerLng + (Math.random() - 0.5) * 0.15 
+      : 124.0 + Math.random() * 6.0;
+
+    return {
+      id: i + 1,
+      user: { 
+        name: `traveler_${i + 1}`, 
+        avatar: `https://i.pravatar.cc/150?u=${i + 100}` 
+      },
+      content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #국내여행 #추천`,
+      location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][i % 8],
+      category: CATEGORIES[i % CATEGORIES.length],
+      lat,
+      lng,
+      likes: Math.floor(Math.random() * 1000),
+      image: `https://picsum.photos/seed/${i + 500}/800/800`,
+      isLiked: Math.random() > 0.5
+    };
+  });
+};
 
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -38,8 +51,9 @@ const Index = () => {
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [posts, setPosts] = useState(generatePosts());
+  const [posts, setPosts] = useState(() => generatePosts());
 
+  // 현재 지도 영역에 있는 게시물 필터링
   const visiblePosts = useMemo(() => {
     let filtered = posts;
     
@@ -47,7 +61,8 @@ const Index = () => {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
 
-    if (!mapBounds) return filtered.slice(0, 20);
+    // 지도 영역 정보가 없으면 상위 30개만 미리 보여줌
+    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 30);
 
     return filtered.filter(post => {
       return (
@@ -59,17 +74,23 @@ const Index = () => {
     });
   }, [mapBounds, selectedCategory, posts]);
 
-  const handleMapChange = useCallback(({ bounds }: any) => {
+  const handleMapChange = useCallback(({ bounds, center }: any) => {
     setMapBounds(bounds);
   }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      setPosts(generatePosts());
+      // 현재 지도의 중심점을 기준으로 새로운 데이터 생성 (데이터 밀도 유지)
+      const center = mapBounds ? {
+        lat: (mapBounds.ne.lat + mapBounds.sw.lat) / 2,
+        lng: (mapBounds.ne.lng + mapBounds.sw.lng) / 2
+      } : undefined;
+      
+      setPosts(generatePosts(center?.lat, center?.lng));
       setIsRefreshing(false);
       showSuccess('이 지역의 새로운 게시물을 불러왔습니다.');
-    }, 800);
+    }, 600);
   };
 
   return (
