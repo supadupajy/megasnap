@@ -28,9 +28,10 @@ const MapMarker = ({ image, onClick }: MapMarkerProps) => (
 interface GoogleMapContainerProps {
   posts: any[];
   onMarkerClick: (post: any) => void;
+  onMapChange: (data: any) => void;
 }
 
-const GoogleMapContainer = ({ posts, onMarkerClick }: GoogleMapContainerProps) => {
+const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapContainerProps) => {
   const defaultProps = {
     center: {
       lat: 37.5665,
@@ -42,10 +43,11 @@ const GoogleMapContainer = ({ posts, onMarkerClick }: GoogleMapContainerProps) =
   return (
     <div className="w-full h-full bg-gray-100">
       <GoogleMapReact
-        bootstrapURLKeys={{ key: "" }} // API 키 없이도 기본 지도는 표시됩니다.
+        bootstrapURLKeys={{ key: "" }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
         yesIWantToUseGoogleMapApiInternals
+        onChange={onMapChange} // 지도 이동 시 범위 정보 전달
         options={{
           disableDefaultUI: true,
           styles: [

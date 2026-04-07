@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronUp } from 'lucide-react';
 import Header from '@/components/Header';
@@ -10,46 +10,48 @@ import GoogleMapContainer from '@/components/GoogleMapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 
+// 서울 주요 지역을 중심으로 30개의 랜덤 게시물 생성
+const MASTER_POSTS = Array.from({ length: 30 }).map((_, i) => ({
+  id: i + 1,
+  user: { 
+    name: `사용자${i + 1}`, 
+    avatar: `https://i.pravatar.cc/150?u=${i}` 
+  },
+  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #서울 #추천`,
+  location: ['강남역', '홍대입구', '이태원', '성수동', '여의도', '잠실', '북촌', '익선동'][i % 8],
+  lat: 37.5665 + (Math.random() - 0.5) * 0.15, // 서울 중심 기준 랜덤 분포
+  lng: 126.9780 + (Math.random() - 0.5) * 0.2,
+  likes: Math.floor(Math.random() * 1000),
+  image: `https://picsum.photos/seed/${i + 100}/800/800`,
+  isLiked: Math.random() > 0.5
+}));
+
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [mapBounds, setMapBounds] = useState<any>(null);
 
-  const mockPosts = [
-    {
-      id: 1,
-      user: { name: '지민', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-      content: '경복궁에서 한복 체험 🏯 너무 예뻐요! 날씨도 좋고 사진도 잘 나와서 기분이 너무 좋네요.',
-      location: '경복궁',
-      lat: 37.5796,
-      lng: 126.9770,
-      likes: 234,
-      image: 'https://images.unsplash.com/photo-1578469645742-46cae010e5d4?w=800',
-      isLiked: false
-    },
-    {
-      id: 2,
-      user: { name: '수현', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100' },
-      content: '남산타워에서 본 야경이 정말 최고였어요 ✨ 서울의 밤은 정말 아름답네요.',
-      location: '남산서울타워',
-      lat: 37.5512,
-      lng: 126.9882,
-      likes: 567,
-      image: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?w=800',
-      isLiked: true
-    },
-    {
-      id: 3,
-      user: { name: '민준', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-      content: '한강 공원에서 피크닉 즐기기 딱 좋은 날씨네요 🍕 치맥은 진리입니다!',
-      location: '반포한강공원',
-      lat: 37.5115,
-      lng: 126.9945,
-      likes: 128,
-      image: 'https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=800',
-      isLiked: false
-    }
-  ];
+  // 현재 지도 범위 내에 있는 게시물만 필터링
+  const visiblePosts = useMemo(() => {
+    if (!mapBounds) return MASTER_POSTS.slice(0, 20); // 초기 로딩 시 20개 노출
+
+    return MASTER_POSTS.filter(post => {
+      const { nw, se } = mapBounds;
+      // nw: north-west (top-left), se: south-east (bottom-right)
+      // google-map-react의 bounds 구조에 맞춰 체크
+      return (
+        post.lat <= mapBounds.ne.lat &&
+        post.lat >= mapBounds.sw.lat &&
+        post.lng <= mapBounds.ne.lng &&
+        post.lng >= mapBounds.sw.lng
+      );
+    });
+  }, [mapBounds]);
+
+  const handleMapChange = useCallback(({ bounds }: any) => {
+    setMapBounds(bounds);
+  }, []);
 
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
@@ -58,8 +60,9 @@ const Index = () => {
       {/* Map Area */}
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
         <GoogleMapContainer 
-          posts={mockPosts} 
+          posts={visiblePosts} 
           onMarkerClick={(post) => setSelectedPost(post)}
+          onMapChange={handleMapChange}
         />
       </main>
 
@@ -78,16 +81,23 @@ const Index = () => {
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
             <div className="flex items-center gap-1 text-gray-500">
               <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${isSheetOpen ? 'rotate-180' : ''}`} />
-              <span className="text-sm font-medium">주변 게시물</span>
+              <span className="text-sm font-medium">주변 게시물 ({visiblePosts.length})</span>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-40">
-            {mockPosts.map(post => (
-              <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
-                <PostItem {...post} />
+            {visiblePosts.length > 0 ? (
+              visiblePosts.map(post => (
+                <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
+                  <PostItem {...post} />
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <p>이 지역에는 게시물이 없어요.</p>
+                <p className="text-xs">지도를 다른 곳으로 이동해 보세요!</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </motion.div>
