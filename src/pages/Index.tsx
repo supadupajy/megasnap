@@ -7,43 +7,46 @@ import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import BottomNav from '@/components/BottomNav';
 import GoogleMapContainer from '@/components/GoogleMapContainer';
+import PostDetail from '@/components/PostDetail';
+import WritePost from '@/components/WritePost';
 
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<any | null>(null);
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 위경도 좌표를 포함한 목업 데이터
   const mockPosts = [
     {
       id: 1,
       user: { name: '지민', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-      content: '경복궁에서 한복 체험 🏯 너무 예뻐요!',
+      content: '경복궁에서 한복 체험 🏯 너무 예뻐요! 날씨도 좋고 사진도 잘 나와서 기분이 너무 좋네요. 다들 꼭 한번 와보세요!',
       location: '경복궁',
       lat: 37.5796,
       lng: 126.9770,
       likes: 234,
-      image: 'https://images.unsplash.com/photo-1578469645742-46cae010e5d4?w=400',
+      image: 'https://images.unsplash.com/photo-1578469645742-46cae010e5d4?w=800',
       isLiked: false
     },
     {
       id: 2,
       user: { name: '수현', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100' },
-      content: '남산타워에서 본 야경이 정말 최고였어요 ✨',
+      content: '남산타워에서 본 야경이 정말 최고였어요 ✨ 서울의 밤은 정말 아름답네요.',
       location: '남산서울타워',
       lat: 37.5512,
       lng: 126.9882,
       likes: 567,
-      image: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?w=400',
+      image: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?w=800',
       isLiked: true
     },
     {
       id: 3,
       user: { name: '민준', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
-      content: '한강 공원에서 피크닉 즐기기 딱 좋은 날씨네요 🍕',
+      content: '한강 공원에서 피크닉 즐기기 딱 좋은 날씨네요 🍕 치맥은 진리입니다!',
       location: '반포한강공원',
       lat: 37.5115,
       lng: 126.9945,
       likes: 128,
-      image: 'https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=400',
+      image: 'https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=800',
       isLiked: false
     }
   ];
@@ -54,7 +57,10 @@ const Index = () => {
 
       {/* Map Area */}
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
-        <GoogleMapContainer posts={mockPosts} />
+        <GoogleMapContainer 
+          posts={mockPosts} 
+          onMarkerClick={(post) => setSelectedPost(post)}
+        />
       </main>
 
       {/* Bottom Sheet */}
@@ -65,7 +71,6 @@ const Index = () => {
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pointer-events-auto flex flex-col">
-          {/* Handle */}
           <div 
             className="w-full py-4 flex flex-col items-center cursor-pointer"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
@@ -77,20 +82,28 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto px-4 pb-40">
             {mockPosts.map(post => (
-              <PostItem key={post.id} {...post} />
-            ))}
-            {/* Extra items for scrolling demo */}
-            {mockPosts.map(post => (
-              <PostItem key={`copy-${post.id}`} {...post} />
+              <div key={post.id} onClick={() => setSelectedPost(post)}>
+                <PostItem {...post} />
+              </div>
             ))}
           </div>
         </div>
       </motion.div>
 
-      <BottomNav />
+      <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+
+      {/* Modals/Drawers */}
+      <PostDetail 
+        post={selectedPost} 
+        isOpen={!!selectedPost} 
+        onClose={() => setSelectedPost(null)} 
+      />
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+      />
     </div>
   );
 };

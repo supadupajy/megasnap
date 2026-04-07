@@ -7,10 +7,17 @@ interface MapMarkerProps {
   lat: number;
   lng: number;
   image: string;
+  onClick?: () => void;
 }
 
-const MapMarker = ({ image }: MapMarkerProps) => (
-  <div className="relative transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-110 z-10">
+const MapMarker = ({ image, onClick }: MapMarkerProps) => (
+  <div 
+    className="relative transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-110 z-10"
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick?.();
+    }}
+  >
     <div className="w-14 h-14 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gray-200">
       <img src={image} alt="marker" className="w-full h-full object-cover" />
     </div>
@@ -20,9 +27,10 @@ const MapMarker = ({ image }: MapMarkerProps) => (
 
 interface GoogleMapContainerProps {
   posts: any[];
+  onMarkerClick: (post: any) => void;
 }
 
-const GoogleMapContainer = ({ posts }: GoogleMapContainerProps) => {
+const GoogleMapContainer = ({ posts, onMarkerClick }: GoogleMapContainerProps) => {
   const defaultProps = {
     center: {
       lat: 37.5665,
@@ -34,7 +42,7 @@ const GoogleMapContainer = ({ posts }: GoogleMapContainerProps) => {
   return (
     <div className="w-full h-full">
       <GoogleMapReact
-        bootstrapURLKeys={{ key: "" }} // 실제 서비스 시 API 키 입력 필요
+        bootstrapURLKeys={{ key: "" }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
         options={{
@@ -54,6 +62,7 @@ const GoogleMapContainer = ({ posts }: GoogleMapContainerProps) => {
             lat={post.lat}
             lng={post.lng}
             image={post.image}
+            onClick={() => onMarkerClick(post)}
           />
         ))}
       </GoogleMapReact>
