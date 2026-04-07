@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Navigation, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
@@ -14,29 +14,33 @@ import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-const generatePosts = (centerLat = 37.5665, centerLng = 126.9780) => {
-  return Array.from({ length: 400 }).map((_, i) => {
-    const isLocal = Math.random() > 0.3;
-    const lat = isLocal 
-      ? centerLat + (Math.random() - 0.5) * 0.1 
-      : 33.0 + Math.random() * 5.5;
-    const lng = isLocal 
-      ? centerLng + (Math.random() - 0.5) * 0.15 
-      : 124.0 + Math.random() * 6.0;
+// 전국 단위로 고르게 포스트를 생성하는 함수
+const generateRandomPosts = (count: number, bounds?: any) => {
+  return Array.from({ length: count }).map((_, i) => {
+    let lat, lng;
+    if (bounds && bounds.ne) {
+      // 현재 화면 범위 내에서 생성
+      lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
+      lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
+    } else {
+      // 기본값: 한국 전역 범위
+      lat = 33.0 + Math.random() * 5.5;
+      lng = 124.0 + Math.random() * 7.0;
+    }
 
     return {
-      id: i + 1,
+      id: Math.random(), // 고유 ID 생성
       user: { 
-        name: `traveler_${i + 1}`, 
-        avatar: `https://i.pravatar.cc/150?u=${i + 100}` 
+        name: `traveler_${Math.floor(Math.random() * 1000)}`, 
+        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
       },
-      content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #국내여행 #추천`,
-      location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][i % 8],
-      category: CATEGORIES[i % CATEGORIES.length],
+      content: `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
+      location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
+      category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
       lat,
       lng,
       likes: Math.floor(Math.random() * 1000),
-      image: `https://picsum.photos/seed/${i + 500}/800/800`,
+      image: `https://picsum.photos/seed/${Math.random()}/800/800`,
       isLiked: Math.random() > 0.5
     };
   });
@@ -50,14 +54,18 @@ const Index = () => {
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [posts, setPosts] = useState(() => generatePosts());
+  
+  // 초기 포스트 500개 생성 (전국 분포)
+  const [posts, setPosts] = useState(() => generateRandomPosts(500));
 
+  // 지도가 움직일 때마다 현재 화면에 보이는 포스트 필터링
   const visiblePosts = useMemo(() => {
     let filtered = posts;
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
-    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 30);
+    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 50);
+    
     return filtered.filter(post => {
       return (
         post.lat <= mapBounds.ne.lat &&
@@ -67,6 +75,14 @@ const Index = () => {
       );
     });
   }, [mapBounds, selectedCategory, posts]);
+
+  // 지도를 움직일 때 포스트가 너무 적으면 자동으로 추가 생성
+  useEffect(() => {
+    if (mapBounds && visiblePosts.length < 15 && !isRefreshing) {
+      const newPosts = generateRandomPosts(30, mapBounds);
+      setPosts(prev => [...prev, ...newPosts]);
+    }
+  }, [mapBounds, visiblePosts.length, isRefreshing]);
 
   const handleMarkerClick = (post: any) => {
     setSelectedPost(post);
@@ -80,13 +96,11 @@ const Index = () => {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      const center = mapBounds ? {
-        lat: (mapBounds.ne.lat + mapBounds.sw.lat) / 2,
-        lng: (mapBounds.ne.lng + mapBounds.sw.lng) / 2
-      } : undefined;
-      setPosts(generatePosts(center?.lat, center?.lng));
+      // 현재 화면 중심으로 대량의 포스트 추가 생성
+      const newPosts = generateRandomPosts(100, mapBounds);
+      setPosts(prev => [...prev, ...newPosts]);
       setIsRefreshing(false);
-      showSuccess('이 지역의 새로운 게시물을 불러왔습니다.');
+      showSuccess('주변의 새로운 게시물을 불러왔습니다.');
     }, 600);
   };
 
@@ -102,7 +116,7 @@ const Index = () => {
           className="flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? '검색 중...' : '이 지역 검색'}
+          {isRefreshing ? '검색 중...' : '이 지역 재검색'}
         </button>
       </div>
 
@@ -154,7 +168,7 @@ const Index = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <p className="font-medium">이 지역에는 게시물이 없어요.</p>
-                  <p className="text-xs mt-1">지도를 이동한 후 '이 지역 검색'을 눌러보세요!</p>
+                  <p className="text-xs mt-1">지도를 이동하면 새로운 장소가 나타납니다!</p>
                 </div>
               )}
             </AnimatePresence>
