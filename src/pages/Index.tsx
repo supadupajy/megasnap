@@ -9,27 +9,23 @@ import BottomNav from '@/components/BottomNav';
 import GoogleMapContainer from '@/components/GoogleMapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
-import CategoryFilter from '@/components/CategoryFilter';
 import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 전국 단위로 고르게 포스트를 생성하는 함수
 const generateRandomPosts = (count: number, bounds?: any) => {
   return Array.from({ length: count }).map((_, i) => {
     let lat, lng;
     if (bounds && bounds.ne) {
-      // 현재 화면 범위 내에서 생성
       lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
     } else {
-      // 기본값: 한국 전역 범위
       lat = 33.0 + Math.random() * 5.5;
       lng = 124.0 + Math.random() * 7.0;
     }
 
     return {
-      id: Math.random(), // 고유 ID 생성
+      id: Math.random(),
       user: { 
         name: `traveler_${Math.floor(Math.random() * 1000)}`, 
         avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
@@ -52,22 +48,14 @@ const Index = () => {
   const [viewedPostIds, setViewedPostIds] = useState<Set<number>>(new Set());
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // 초기 포스트 500개 생성 (전국 분포)
   const [posts, setPosts] = useState(() => generateRandomPosts(500));
 
-  // 지도가 움직일 때마다 현재 화면에 보이는 포스트 필터링 (최대 20개로 제한)
   const visiblePosts = useMemo(() => {
-    let filtered = posts;
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
-    }
+    if (!mapBounds || !mapBounds.ne) return posts.slice(0, 20);
     
-    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 20);
-    
-    return filtered
+    return posts
       .filter(post => {
         return (
           post.lat <= mapBounds.ne.lat &&
@@ -76,10 +64,9 @@ const Index = () => {
           post.lng >= mapBounds.sw.lng
         );
       })
-      .slice(0, 20); // 한 화면에 최대 20개만 표시
-  }, [mapBounds, selectedCategory, posts]);
+      .slice(0, 20);
+  }, [mapBounds, posts]);
 
-  // 지도를 움직일 때 포스트가 너무 적으면 자동으로 추가 생성
   useEffect(() => {
     if (mapBounds && visiblePosts.length < 10 && !isRefreshing) {
       const newPosts = generateRandomPosts(30, mapBounds);
@@ -99,7 +86,6 @@ const Index = () => {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      // 현재 화면 중심으로 대량의 포스트 추가 생성
       const newPosts = generateRandomPosts(100, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
       setIsRefreshing(false);
@@ -110,16 +96,16 @@ const Index = () => {
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
-      <CategoryFilter selectedId={selectedCategory} onSelect={setSelectedCategory} />
 
-      <div className="absolute top-36 left-1/2 -translate-x-1/2 z-30">
+      {/* Refresh Button - Moved to Top Right */}
+      <div className="absolute top-20 right-4 z-30">
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? '검색 중...' : '이 지역 재검색'}
+          {isRefreshing ? '검색 중...' : '재검색'}
         </button>
       </div>
 
