@@ -40,6 +40,23 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
     zoom: 14
   };
 
+  // 지도를 더 밝고 깨끗하게 보이게 하는 스타일 (Silver Theme)
+  const mapStyles = [
+    { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+    { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
+    { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+    { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+    { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+    { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+    { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
+    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+  ];
+
   return (
     <div className="w-full h-full bg-gray-100">
       <GoogleMapReact
@@ -47,16 +64,10 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
         yesIWantToUseGoogleMapApiInternals
-        onChange={onMapChange} // 지도 이동 시 범위 정보 전달
+        onChange={onMapChange}
         options={{
           disableDefaultUI: true,
-          styles: [
-            {
-              "featureType": "poi",
-              "elementType": "labels",
-              "stylers": [{ "visibility": "off" }]
-            }
-          ]
+          styles: mapStyles
         }}
       >
         {posts.map((post) => (

@@ -14,20 +14,20 @@ import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 초기 데이터셋 생성
-const generatePosts = () => Array.from({ length: 60 }).map((_, i) => ({
+// 대한민국 전역을 커버하도록 좌표 범위 확대 (위도 33~38, 경도 124~130)
+const generatePosts = () => Array.from({ length: 200 }).map((_, i) => ({
   id: i + 1,
   user: { 
     name: `traveler_${i + 1}`, 
     avatar: `https://i.pravatar.cc/150?u=${i + 100}` 
   },
-  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #서울 #추천`,
-  location: ['강남역', '홍대입구', '이태원', '성수동', '여의도', '잠실', '북촌', '익선동'][i % 8],
+  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #국내여행 #추천`,
+  location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][i % 8],
   category: CATEGORIES[i % CATEGORIES.length],
-  lat: 37.5665 + (Math.random() - 0.5) * 0.15,
-  lng: 126.9780 + (Math.random() - 0.5) * 0.2,
+  lat: 33.0 + Math.random() * 5.5, // 대한민국 위도 범위
+  lng: 124.0 + Math.random() * 6.0, // 대한민국 경도 범위
   likes: Math.floor(Math.random() * 1000),
-  image: `https://picsum.photos/seed/${i + 300}/800/800`,
+  image: `https://picsum.photos/seed/${i + 500}/800/800`,
   isLiked: Math.random() > 0.5
 }));
 
@@ -65,11 +65,10 @@ const Index = () => {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // 실제 API 호출을 시뮬레이션하기 위해 0.8초 뒤에 데이터 갱신
     setTimeout(() => {
-      setPosts(generatePosts()); // 새로운 랜덤 데이터 생성
+      setPosts(generatePosts());
       setIsRefreshing(false);
-      showSuccess('주변 게시물을 새로 불러왔습니다.');
+      showSuccess('이 지역의 새로운 게시물을 불러왔습니다.');
     }, 800);
   };
 
@@ -82,15 +81,14 @@ const Index = () => {
         onSelect={setSelectedCategory} 
       />
 
-      {/* Refresh Button - Top Center */}
       <div className="absolute top-36 left-1/2 -translate-x-1/2 z-30">
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-gray-50 active:scale-95 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? '불러오는 중...' : '이 지역 검색'}
+          {isRefreshing ? '검색 중...' : '이 지역 검색'}
         </button>
       </div>
 
@@ -101,13 +99,11 @@ const Index = () => {
           onMapChange={handleMapChange}
         />
         
-        {/* My Location Button */}
         <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
           <Navigation className="w-6 h-6 fill-current" />
         </button>
       </main>
 
-      {/* Bottom Sheet */}
       <motion.div 
         initial={{ y: "75%" }}
         animate={{ y: isSheetOpen ? "10%" : "75%" }}
@@ -136,7 +132,7 @@ const Index = () => {
                   className="flex flex-col items-center justify-center py-20"
                 >
                   <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
-                  <p className="text-sm text-gray-400">새로운 장소를 찾는 중...</p>
+                  <p className="text-sm text-gray-400">장소를 찾는 중...</p>
                 </motion.div>
               ) : visiblePosts.length > 0 ? (
                 <motion.div 
@@ -150,8 +146,8 @@ const Index = () => {
                 </motion.div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <p className="font-medium">해당 카테고리의 게시물이 없어요.</p>
-                  <p className="text-xs mt-1">다른 카테고리를 선택하거나 지도를 이동해보세요!</p>
+                  <p className="font-medium">이 지역에는 게시물이 없어요.</p>
+                  <p className="text-xs mt-1">지도를 이동한 후 '이 지역 검색'을 눌러보세요!</p>
                 </div>
               )}
             </AnimatePresence>
