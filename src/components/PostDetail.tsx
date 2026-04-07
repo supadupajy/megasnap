@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Heart, MessageCircle, Share2, MapPin, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-none rounded-[32px] bg-white shadow-2xl">
+      <DialogContent className="w-[92vw] sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[32px] bg-white shadow-2xl">
         <DialogHeader className="absolute top-4 right-4 z-10">
           <Button 
             variant="ghost" 
