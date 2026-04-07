@@ -2,26 +2,30 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, Navigation } from 'lucide-react';
 import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import BottomNav from '@/components/BottomNav';
 import GoogleMapContainer from '@/components/GoogleMapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
+import CategoryFilter from '@/components/CategoryFilter';
 
-const MASTER_POSTS = Array.from({ length: 30 }).map((_, i) => ({
+const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
+
+const MASTER_POSTS = Array.from({ length: 50 }).map((_, i) => ({
   id: i + 1,
   user: { 
     name: `traveler_${i + 1}`, 
     avatar: `https://i.pravatar.cc/150?u=${i}` 
   },
-  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. 날씨도 좋고 분위기도 최고였습니다. 다음에 또 오고 싶네요! #여행 #서울 #추천 #일상`,
+  content: `${i + 1}번째 장소에서의 멋진 추억! 여기 정말 추천해요. #여행 #서울 #추천`,
   location: ['강남역', '홍대입구', '이태원', '성수동', '여의도', '잠실', '북촌', '익선동'][i % 8],
+  category: CATEGORIES[i % CATEGORIES.length],
   lat: 37.5665 + (Math.random() - 0.5) * 0.15,
   lng: 126.9780 + (Math.random() - 0.5) * 0.2,
   likes: Math.floor(Math.random() * 1000),
-  image: `https://picsum.photos/seed/${i + 100}/800/800`,
+  image: `https://picsum.photos/seed/${i + 200}/800/800`,
   isLiked: Math.random() > 0.5
 }));
 
@@ -30,11 +34,18 @@ const Index = () => {
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const visiblePosts = useMemo(() => {
-    if (!mapBounds) return MASTER_POSTS.slice(0, 20);
+    let filtered = MASTER_POSTS;
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === selectedCategory);
+    }
 
-    return MASTER_POSTS.filter(post => {
+    if (!mapBounds) return filtered.slice(0, 20);
+
+    return filtered.filter(post => {
       return (
         post.lat <= mapBounds.ne.lat &&
         post.lat >= mapBounds.sw.lat &&
@@ -42,7 +53,7 @@ const Index = () => {
         post.lng >= mapBounds.sw.lng
       );
     });
-  }, [mapBounds]);
+  }, [mapBounds, selectedCategory]);
 
   const handleMapChange = useCallback(({ bounds }: any) => {
     setMapBounds(bounds);
@@ -51,6 +62,11 @@ const Index = () => {
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
+      
+      <CategoryFilter 
+        selectedId={selectedCategory} 
+        onSelect={setSelectedCategory} 
+      />
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
         <GoogleMapContainer 
@@ -58,9 +74,13 @@ const Index = () => {
           onMarkerClick={(post) => setSelectedPost(post)}
           onMapChange={handleMapChange}
         />
+        
+        {/* My Location Button */}
+        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
+          <Navigation className="w-6 h-6 fill-current" />
+        </button>
       </main>
 
-      {/* Bottom Sheet - Instagram Style Feed */}
       <motion.div 
         initial={{ y: "75%" }}
         animate={{ y: isSheetOpen ? "10%" : "75%" }}
@@ -88,8 +108,8 @@ const Index = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                <p className="font-medium">이 지역에는 게시물이 없어요.</p>
-                <p className="text-xs mt-1">지도를 다른 곳으로 이동해 보세요!</p>
+                <p className="font-medium">해당 카테고리의 게시물이 없어요.</p>
+                <p className="text-xs mt-1">다른 카테고리를 선택하거나 지도를 이동해보세요!</p>
               </div>
             )}
           </div>
