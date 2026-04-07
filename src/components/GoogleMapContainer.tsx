@@ -22,13 +22,15 @@ const MapMarker = ({ image, isViewed, onClick }: MapMarkerProps) => (
   >
     <div className={cn(
       "w-14 h-14 rounded-2xl border-4 shadow-lg overflow-hidden bg-gray-200 transition-all duration-500",
-      isViewed ? "grayscale border-gray-300 opacity-70" : "grayscale-0 border-white opacity-100"
+      isViewed 
+        ? "grayscale brightness-50 border-gray-500 opacity-80 scale-90" 
+        : "grayscale-0 brightness-100 border-white opacity-100 scale-100"
     )}>
       <img src={image} alt="marker" className="w-full h-full object-cover" />
     </div>
     <div className={cn(
       "absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 shadow-sm transition-colors duration-500",
-      isViewed ? "bg-gray-300" : "bg-white"
+      isViewed ? "bg-gray-500" : "bg-white"
     )} />
   </div>
 );
