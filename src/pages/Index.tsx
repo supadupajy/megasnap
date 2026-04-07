@@ -6,7 +6,7 @@ import { ChevronUp, Navigation, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import BottomNav from '@/components/BottomNav';
-import GoogleMapContainer from '@/components/GoogleMapContainer';
+import MapContainer from '@/components/MapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import { showSuccess } from '@/utils/toast';
@@ -20,8 +20,8 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
     } else {
-      lat = 33.0 + Math.random() * 5.5;
-      lng = 124.0 + Math.random() * 7.0;
+      lat = 37.5 + Math.random() * 0.1;
+      lng = 126.9 + Math.random() * 0.1;
     }
 
     return {
@@ -97,8 +97,8 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      {/* Refresh Button - Moved to Top Right */}
-      <div className="absolute top-20 right-4 z-30">
+      {/* Refresh Button */}
+      <div className="absolute top-20 right-4 z-[1000]">
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -110,13 +110,13 @@ const Index = () => {
       </div>
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
-        <GoogleMapContainer 
+        <MapContainer 
           posts={visiblePosts} 
           viewedPostIds={viewedPostIds}
           onMarkerClick={handleMarkerClick}
           onMapChange={handleMapChange}
         />
-        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
+        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-[1000] border border-gray-100">
           <Navigation className="w-6 h-6 fill-current" />
         </button>
       </main>
