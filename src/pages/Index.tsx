@@ -6,28 +6,7 @@ import { ChevronUp } from 'lucide-react';
 import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import BottomNav from '@/components/BottomNav';
-import NaverMapContainer from '@/components/NaverMapContainer';
-
-const Index = () => {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-
-  // 위경도 좌표를 포함한 목업 데이터
-  const mockPosts = [
-    {
-      id: 1,
-      user: { name: '지민', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-      content: '경복궁에서 한복 체험 🏯 너무 예뻐요!',
-      location: '경복궁',
-      lat: 37<dyad-write path="src/pages/Index.tsx" description="네이버 지도를 적용한 메인 페이지 업데이트">
-"use client";
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
-import Header from '@/components/Header';
-import PostItem from '@/components/PostItem';
-import BottomNav from '@/components/BottomNav';
-import NaverMapContainer from '@/components/NaverMapContainer';
+import GoogleMapContainer from '@/components/GoogleMapContainer';
 
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -75,7 +54,7 @@ const Index = () => {
 
       {/* Map Area */}
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
-        <NaverMapContainer posts={mockPosts} />
+        <GoogleMapContainer posts={mockPosts} />
       </main>
 
       {/* Bottom Sheet */}
