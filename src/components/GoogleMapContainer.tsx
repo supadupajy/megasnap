@@ -60,14 +60,20 @@ const GoogleMapContainer = ({ posts, onMarkerClick, onMapChange }: GoogleMapCont
   return (
     <div className="w-full h-full bg-gray-100">
       <GoogleMapReact
-        bootstrapURLKeys={{ key: "" }}
+        // TODO: 실제 서비스 시에는 아래에 발급받은 API 키를 입력해야 팝업이 사라집니다.
+        bootstrapURLKeys={{ 
+          key: "", // 여기에 "AIza..."로 시작하는 키를 입력하세요.
+          language: 'ko',
+          region: 'KR'
+        }}
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
         yesIWantToUseGoogleMapApiInternals
         onChange={onMapChange}
         options={{
           disableDefaultUI: true,
-          styles: mapStyles
+          styles: mapStyles,
+          gestureHandling: 'greedy' // 모바일에서 두 손가락 대신 한 손가락으로 이동 가능하게 설정
         }}
       >
         {posts.map((post) => (
