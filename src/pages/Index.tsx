@@ -19,7 +19,7 @@ const Index = () => {
     {
       id: 1,
       user: { name: '지민', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' },
-      content: '경복궁에서 한복 체험 🏯 너무 예뻐요! 날씨도 좋고 사진도 잘 나와서 기분이 너무 좋네요. 다들 꼭 한번 와보세요!',
+      content: '경복궁에서 한복 체험 🏯 너무 예뻐요! 날씨도 좋고 사진도 잘 나와서 기분이 너무 좋네요.',
       location: '경복궁',
       lat: 37.5796,
       lng: 126.9770,
@@ -84,7 +84,7 @@ const Index = () => {
 
           <div className="flex-1 overflow-y-auto px-4 pb-40">
             {mockPosts.map(post => (
-              <div key={post.id} onClick={() => setSelectedPost(post)}>
+              <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
                 <PostItem {...post} />
               </div>
             ))}

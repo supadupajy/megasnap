@@ -12,7 +12,7 @@ interface MapMarkerProps {
 
 const MapMarker = ({ image, onClick }: MapMarkerProps) => (
   <div 
-    className="relative transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-110 z-10"
+    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-110 z-10"
     onClick={(e) => {
       e.stopPropagation();
       onClick?.();
@@ -40,11 +40,12 @@ const GoogleMapContainer = ({ posts, onMarkerClick }: GoogleMapContainerProps) =
   };
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full bg-gray-100">
       <GoogleMapReact
-        bootstrapURLKeys={{ key: "" }}
+        bootstrapURLKeys={{ key: "" }} // API 키 없이도 기본 지도는 표시됩니다.
         defaultCenter={defaultProps.center}
         defaultZoom={defaultProps.zoom}
+        yesIWantToUseGoogleMapApiInternals
         options={{
           disableDefaultUI: true,
           styles: [
