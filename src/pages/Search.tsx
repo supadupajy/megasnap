@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search as SearchIcon, UserPlus, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
@@ -21,14 +22,21 @@ const MOCK_USERS = Array.from({ length: 50 }).map((_, i) => ({
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const navigate = useNavigate();
 
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return MOCK_USERS.slice(0, 10); // 검색어 없을 때 추천 사용자 10명 노출
+    
     return MOCK_USERS.filter(
       user => user.id.toLowerCase().includes(query) || user.nickname.toLowerCase().includes(query)
     ).slice(0, 15);
   }, [searchQuery]);
+
+  const handleUserClick = (userId: string) => {
+    // 실제로는 해당 유저의 데이터를 넘기겠지만, 여기서는 프로필 페이지로 이동
+    navigate(`/profile/${userId}`);
+  };
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -46,15 +54,17 @@ const Search = () => {
         </div>
 
         <div className="space-y-4">
-          {searchQuery.trim() === '' ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <SearchIcon className="w-12 h-12 mb-4 opacity-20" />
-              <p className="font-medium">새로운 친구를 찾아보세요</p>
-              <p className="text-xs mt-1">아이디나 닉네임을 입력해주세요</p>
-            </div>
-          ) : filteredUsers.length > 0 ? (
+          <p className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+            {searchQuery.trim() === '' ? '추천 사용자' : '검색 결과'}
+          </p>
+          
+          {filteredUsers.length > 0 ? (
             filteredUsers.map((user) => (
-              <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl transition-colors">
+              <div 
+                key={user.id} 
+                onClick={() => handleUserClick(user.id)}
+                className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl transition-colors cursor-pointer active:scale-[0.98]"
+              >
                 <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
                   <AvatarImage src={user.avatar} />
                   <AvatarFallback>{user.nickname[0]}</AvatarFallback>
@@ -71,6 +81,10 @@ const Search = () => {
                   variant={user.isFollowing ? "outline" : "default"}
                   size="sm"
                   className={user.isFollowing ? "rounded-xl h-8 px-3 border-gray-200" : "rounded-xl h-8 px-3 bg-green-500 hover:bg-green-600"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // 팔로우 로직
+                  }}
                 >
                   {user.isFollowing ? (
                     <Check className="w-4 h-4 text-gray-400" />
