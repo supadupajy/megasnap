@@ -177,14 +177,13 @@ const Index = () => {
       {/* UI 컨트롤 레이어 */}
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="relative w-full h-full">
-          {/* 장소 검색 버튼 (좌측) */}
+          {/* 장소 검색 버튼 (좌측 - 현재 위치 버튼과 통일) */}
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto absolute left-0 bottom-0 flex items-center gap-2 px-5 py-3 bg-white rounded-full shadow-xl border border-gray-100 text-gray-700 font-bold text-sm active:scale-95 transition-all"
+            className="pointer-events-auto absolute left-0 bottom-0 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-gray-700 active:scale-90 transition-transform border border-gray-100"
           >
-            <Search className="w-4 h-4 text-green-500" />
-            장소 검색
+            <Search className="w-5 h-5 text-green-500" />
           </motion.button>
 
           {/* 현재 위치 버튼 (우측 - 타임 슬라이더와 너비 맞춤) */}
