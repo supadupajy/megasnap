@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Navigation, RefreshCw } from 'lucide-react';
+import { ChevronUp, Navigation, RefreshCw, Search } from 'lucide-react';
 import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import BottomNav from '@/components/BottomNav';
@@ -96,15 +96,20 @@ const Index = () => {
     }, 600);
   };
 
+  const handleCurrentLocation = () => {
+    showSuccess('현재 위치로 이동합니다.');
+    // 실제 구현 시에는 지도의 center 값을 업데이트하는 로직이 들어갑니다.
+  };
+
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      {/* Top Controls Container - right-3로 조정하여 여백 축소 */}
+      {/* Top Controls Container */}
       <div className="absolute top-20 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className={cn(
           "pointer-events-auto transition-all duration-500 ease-in-out",
-          isTrendingExpanded ? "flex-1" : "w-[260px]" // 접혔을 때 너비를 220px에서 260px로 확장
+          isTrendingExpanded ? "flex-1" : "w-[260px]"
         )}>
           <TrendingPosts 
             isExpanded={isTrendingExpanded} 
@@ -141,10 +146,28 @@ const Index = () => {
           onMarkerClick={handlePostSelect}
           onMapChange={handleMapChange}
         />
-        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
-          <Navigation className="w-6 h-6 fill-current" />
-        </button>
       </main>
+
+      {/* Floating Buttons above the sheet */}
+      <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
+        <div className="w-full flex justify-between items-end">
+          <motion.button
+            animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
+            className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-white rounded-full shadow-xl border border-gray-100 text-gray-700 font-bold text-sm active:scale-95 transition-all"
+          >
+            <Search className="w-4 h-4 text-green-500" />
+            장소 검색
+          </motion.button>
+
+          <motion.button 
+            onClick={handleCurrentLocation}
+            animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
+            className="pointer-events-auto w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-green-500 active:scale-90 transition-transform border border-gray-100"
+          >
+            <Navigation className="w-6 h-6 fill-current" />
+          </motion.button>
+        </div>
+      </div>
 
       {/* Nearby Posts Sheet */}
       <motion.div 
