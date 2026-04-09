@@ -10,6 +10,7 @@ import MapContainer from '@/components/MapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TrendingPosts from '@/components/TrendingPosts';
+import PlaceSearch from '@/components/PlaceSearch';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
@@ -49,7 +50,9 @@ const Index = () => {
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
   const [viewedPostIds, setViewedPostIds] = useState<Set<any>>(new Set());
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isPlaceSearchOpen, setIsPlaceSearchOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   
@@ -97,8 +100,13 @@ const Index = () => {
   };
 
   const handleCurrentLocation = () => {
+    setMapCenter({ lat: 37.5665, lng: 126.9780 });
     showSuccess('현재 위치로 이동합니다.');
-    // 실제 구현 시에는 지도의 center 값을 업데이트하는 로직이 들어갑니다.
+  };
+
+  const handlePlaceSelect = (place: any) => {
+    setMapCenter({ lat: place.lat, lng: place.lng });
+    showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
   return (
@@ -145,6 +153,7 @@ const Index = () => {
           viewedPostIds={viewedPostIds}
           onMarkerClick={handlePostSelect}
           onMapChange={handleMapChange}
+          center={mapCenter}
         />
       </main>
 
@@ -152,6 +161,7 @@ const Index = () => {
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
         <div className="w-full flex justify-between items-end">
           <motion.button
+            onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
             className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-white rounded-full shadow-xl border border-gray-100 text-gray-700 font-bold text-sm active:scale-95 transition-all"
           >
@@ -219,6 +229,11 @@ const Index = () => {
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <PostDetail post={selectedPost} isOpen={!!selectedPost} onClose={() => setSelectedPost(null)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      <PlaceSearch 
+        isOpen={isPlaceSearchOpen} 
+        onClose={() => setIsPlaceSearchOpen(false)} 
+        onSelect={handlePlaceSelect} 
+      />
     </div>
   );
 };

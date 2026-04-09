@@ -1,89 +1,124 @@
 "use client";
 
-import React from 'react';
-import GoogleMapReact from 'google-map-react';
+import React, { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-
-interface MarkerProps {
-  lat: number;
-  lng: number;
-  image: string;
-  isViewed: boolean;
-  onClick: () => void;
-}
-
-const Marker = ({ image, isViewed, onClick }: MarkerProps) => (
-  <div 
-    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all hover:scale-110 z-10"
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-  >
-    <div className={cn(
-      "w-14 h-14 rounded-2xl border-4 shadow-lg overflow-hidden bg-gray-200 transition-all duration-500",
-      isViewed 
-        ? "grayscale brightness-50 border-gray-500 opacity-80 scale-90" 
-        : "grayscale-0 brightness-100 border-white opacity-100 scale-100"
-    )}>
-      <img src={image} alt="marker" className="w-full h-full object-cover" />
-    </div>
-    <div className={cn(
-      "absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 shadow-sm transition-colors duration-500",
-      isViewed ? "bg-gray-500" : "bg-white"
-    )} />
-  </div>
-);
 
 interface MapContainerProps {
   posts: any[];
-  viewedPostIds: Set<number>;
+  viewedPostIds: Set<any>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
+  center?: { lat: number; lng: number };
 }
 
-const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange }: MapContainerProps) => {
-  const defaultProps = {
-    center: { lat: 37.5665, lng: 126.9780 },
-    zoom: 14
-  };
+const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center }: MapContainerProps) => {
+  const mapElement = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+  const markersRef = useRef<Map<any, any>>(new Map());
 
-  const mapOptions = {
-    disableDefaultUI: true,
-    styles: [
-      { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-      { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-      { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-      { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-      { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-      { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
-    ],
-    gestureHandling: "greedy"
-  };
+  useEffect(() => {
+    if (!mapElement.current || !window.naver) return;
+
+    const initialCenter = center || { lat: 37.5665, lng: 126.9780 };
+    const mapOptions = {
+      center: new window.naver.maps.LatLng(initialCenter.lat, initialCenter.lng),
+      zoom: 14,
+      minZoom: 6,
+      maxZoom: 19,
+      logoControl: false,
+      mapDataControl: false,
+      scaleControl: false,
+      zoomControl: false,
+    };
+
+    const map = new window.naver.maps.Map(mapElement.current, mapOptions);
+    mapInstance.current = map;
+
+    const updateBounds = () => {
+      const bounds = map.getBounds();
+      const sw = bounds.getSW();
+      const ne = bounds.getNE();
+      onMapChange({
+        bounds: {
+          sw: { lat: sw.lat(), lng: sw.lng() },
+          ne: { lat: ne.lat(), lng: ne.lng() }
+        }
+      });
+    };
+
+    window.naver.maps.Event.addListener(map, 'idle', updateBounds);
+    updateBounds();
+
+    return () => {
+      window.naver.maps.Event.clearInstanceListeners(map);
+    };
+  }, []);
+
+  // Handle center prop changes to move the map
+  useEffect(() => {
+    if (mapInstance.current && center) {
+      const newCenter = new window.naver.maps.LatLng(center.lat, center.lng);
+      mapInstance.current.panTo(newCenter);
+    }
+  }, [center]);
+
+  useEffect(() => {
+    if (!mapInstance.current || !window.naver) return;
+
+    const map = mapInstance.current;
+    const currentPostIds = new Set(posts.map(p => p.id));
+
+    // Remove markers that are no longer in posts
+    markersRef.current.forEach((marker, id) => {
+      if (!currentPostIds.has(id)) {
+        marker.setMap(null);
+        markersRef.current.delete(id);
+      }
+    });
+
+    // Add or update markers
+    posts.forEach(post => {
+      const isViewed = viewedPostIds.has(post.id);
+      let marker = markersRef.current.get(post.id);
+
+      const content = `
+        <div class="marker-container" style="transform: translate(-50%, -50%); cursor: pointer;">
+          <div class="marker-image-wrapper ${isViewed ? 'viewed' : ''}" 
+               style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${isViewed ? '#6b7280' : '#ffffff'}; 
+                      overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+                      background: #e5e7eb; transition: all 0.3s; 
+                      filter: ${isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
+            <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+          <div style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); 
+                      width: 12px; height: 12px; background: ${isViewed ? '#6b7280' : '#ffffff'}; 
+                      box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+        </div>
+      `;
+
+      if (marker) {
+        marker.setContent(content);
+      } else {
+        marker = new window.naver.maps.Marker({
+          position: new window.naver.maps.LatLng(post.lat, post.lng),
+          map: map,
+          icon: {
+            content: content,
+            anchor: new window.naver.maps.Point(28, 28),
+          }
+        });
+
+        window.naver.maps.Event.addListener(marker, 'click', () => {
+          onMarkerClick(post);
+        });
+
+        markersRef.current.set(post.id, marker);
+      }
+    });
+  }, [posts, viewedPostIds, onMarkerClick]);
 
   return (
-    <div className="w-full h-full bg-gray-100">
-      <GoogleMapReact
-        bootstrapURLKeys={{ key: "" }} // API 키 없이 개발 모드로 작동
-        defaultCenter={defaultProps.center}
-        defaultZoom={defaultProps.zoom}
-        options={mapOptions}
-        onChange={onMapChange}
-        yesIWantToUseGoogleMapApiInternals
-      >
-        {posts.map((post) => (
-          <Marker
-            key={post.id}
-            lat={post.lat}
-            lng={post.lng}
-            image={post.image}
-            isViewed={viewedPostIds.has(post.id)}
-            onClick={() => onMarkerClick(post)}
-          />
-        ))}
-      </GoogleMapReact>
-    </div>
+    <div ref={mapElement} className="w-full h-full bg-gray-100" />
   );
 };
 
