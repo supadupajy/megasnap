@@ -48,57 +48,6 @@ const generateRandomPosts = (count: number, bounds?: any) => {
 };
 
 const Index = () => {
-  const [isSheetOpen, setIsSheetOpen]<dyad-write path="src/pages/Index.tsx" description="하단 시트의 드래그 및 클릭 애니메이션 로직 최적화">
-"use client";
-
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Navigation, RefreshCw, Search } from 'lucide-react';
-import Header from '@/components/Header';
-import PostItem from '@/components/PostItem';
-import BottomNav from '@/components/BottomNav';
-import MapContainer from '@/components/MapContainer';
-import PostDetail from '@/components/PostDetail';
-import WritePost from '@/components/WritePost';
-import TrendingPosts from '@/components/TrendingPosts';
-import PlaceSearch from '@/components/PlaceSearch';
-import TimeSlider from '@/components/TimeSlider';
-import { showSuccess } from '@/utils/toast';
-import { cn } from '@/lib/utils';
-
-const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
-
-const generateRandomPosts = (count: number, bounds?: any) => {
-  return Array.from({ length: count }).map((_, i) => {
-    let lat, lng;
-    if (bounds && bounds.ne) {
-      lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
-      lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
-    } else {
-      lat = 37.5665 + (Math.random() - 0.5) * 0.04;
-      lng = 126.9780 + (Math.random() - 0.5) * 0.04;
-    }
-
-    return {
-      id: Math.random(),
-      user: { 
-        name: `traveler_${Math.floor(Math.random() * 1000)}`, 
-        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
-      },
-      content: `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
-      location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
-      category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-      lat,
-      lng,
-      likes: Math.floor(Math.random() * 1000),
-      image: `https://picsum.photos/seed/${Math.random()}/800/800`,
-      isLiked: Math.random() > 0.5,
-      createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000
-    };
-  });
-};
-
-const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
   const [viewedPostIds, setViewedPostIds] = useState<Set<any>>(new Set());
@@ -165,7 +114,6 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
-  // 드래그 종료 시 상태 결정
   const onDragEnd = (event: any, info: any) => {
     const threshold = 100;
     const velocityThreshold = 500;
@@ -247,7 +195,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Nearby Posts Sheet with Drag Support */}
       <motion.div 
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
