@@ -1,10 +1,14 @@
+require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
 platform :ios, '13.0'
 use_frameworks!
 
-# Capacitor의 헬퍼 스크립트 로드
-require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
-
 target 'App' do
   capacitor_pods
-  # 추가적인 Pod이 필요할 경우 여기에 작성합니다.
+end
+
+begin
+  # 추가적인 커스텀 설정이 필요할 경우 여기에 작성합니다.
+rescue => e
+  puts "An error occurred: #{e.message}"
 end
