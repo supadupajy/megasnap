@@ -1,7 +1,39 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import GoogleMapReact from 'google-map-react';
 import { cn } from '@/lib/utils';
+
+interface MarkerProps {
+  lat: number;
+  lng: number;
+  image: string;
+  isViewed: boolean;
+  onClick: () => void;
+}
+
+const Marker = ({ image, isViewed, onClick }: MarkerProps) => (
+  <div 
+    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all hover:scale-110 z-10"
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+  >
+    <div className={cn(
+      "w-14 h-14 rounded-2xl border-4 shadow-lg overflow-hidden bg-gray-200 transition-all duration-500",
+      isViewed 
+        ? "grayscale brightness-50 border-gray-500 opacity-80 scale-90" 
+        : "grayscale-0 brightness-100 border-white opacity-100 scale-100"
+    )}>
+      <img src={image} alt="marker" className="w-full h-full object-cover" />
+    </div>
+    <div className={cn(
+      "absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 shadow-sm transition-colors duration-500",
+      isViewed ? "bg-gray-500" : "bg-white"
+    )} />
+  </div>
+);
 
 interface MapContainerProps {
   posts: any[];
@@ -10,98 +42,49 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
 }
 
-declare global {
-  interface Window {
-    naver: any;
-  }
-}
-
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange }: MapContainerProps) => {
-  const mapElement = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const defaultProps = {
+    center: { lat: 37.5665, lng: 126.9780 },
+    zoom: 14
+  };
 
-  useEffect(() => {
-    if (!mapElement.current || !window.naver) return;
+  const mapOptions = {
+    disableDefaultUI: true,
+    styles: [
+      { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+      { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+    ],
+    gestureHandling: "greedy"
+  };
 
-    const location = new window.naver.maps.LatLng(37.5665, 126.9780);
-    const mapOptions = {
-      center: location,
-      zoom: 14,
-      minZoom: 7,
-      maxZoom: 19,
-      logoControl: false,
-      mapDataControl: false,
-      scaleControl: true,
-      zoomControl: false,
-    };
-
-    const map = new window.naver.maps.Map(mapElement.current, mapOptions);
-    mapRef.current = map;
-
-    window.naver.maps.Event.addListener(map, 'idle', () => {
-      const bounds = map.getBounds();
-      onMapChange({
-        bounds: {
-          sw: { lat: bounds.getSW().lat(), lng: bounds.getSW().lng() },
-          ne: { lat: bounds.getNE().lat(), lng: bounds.getNE().lng() }
-        }
-      });
-    });
-
-    return () => {
-      if (mapRef.current) {
-        window.naver.maps.Event.clearInstanceListeners(mapRef.current);
-      }
-    };
-  }, []);
-
-  // 마커 업데이트 로직
-  useEffect(() => {
-    if (!mapRef.current || !window.naver) return;
-
-    // 기존 마커 제거
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    // 새 마커 생성
-    posts.forEach((post) => {
-      const isViewed = viewedPostIds.has(post.id);
-      
-      // 커스텀 마커 HTML
-      const content = `
-        <div class="marker-container" style="position: absolute; transform: translate(-50%, -50%); cursor: pointer;">
-          <div class="marker-image-wrapper ${isViewed ? 'viewed' : ''}" 
-               style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${isViewed ? '#6b7280' : 'white'}; 
-                      overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); 
-                      transition: all 0.5s; ${isViewed ? 'filter: grayscale(1) brightness(0.5); opacity: 0.8; transform: scale(0.9);' : ''}">
-            <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
-          </div>
-          <div class="marker-pin" 
-               style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); 
-                      width: 12px; height: 12px; background: ${isViewed ? '#6b7280' : 'white'}; 
-                      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: background 0.5s;"></div>
-        </div>
-      `;
-
-      const marker = new window.naver.maps.Marker({
-        position: new window.naver.maps.LatLng(post.lat, post.lng),
-        map: mapRef.current,
-        icon: {
-          content: content,
-          anchor: new window.naver.maps.Point(28, 28),
-        }
-      });
-
-      window.naver.maps.Event.addListener(marker, 'click', () => {
-        onMarkerClick(post);
-      });
-
-      markersRef.current.push(marker);
-    });
-  }, [posts, viewedPostIds]);
-
-  return <div ref={mapElement} className="w-full h-full" />;
+  return (
+    <div className="w-full h-full bg-gray-100">
+      <GoogleMapReact
+        bootstrapURLKeys={{ key: "" }} // API 키 없이 개발 모드로 작동
+        defaultCenter={defaultProps.center}
+        defaultZoom={defaultProps.zoom}
+        options={mapOptions}
+        onChange={onMapChange}
+        yesIWantToUseGoogleMapApiInternals
+      >
+        {posts.map((post) => (
+          <Marker
+            key={post.id}
+            lat={post.lat}
+            lng={post.lng}
+            image={post.image}
+            isViewed={viewedPostIds.has(post.id)}
+            onClick={() => onMarkerClick(post)}
+          />
+        ))}
+      </GoogleMapReact>
+    </div>
+  );
 };
 
 export default MapContainer;

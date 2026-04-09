@@ -82,8 +82,8 @@ const Index = () => {
     setViewedPostIds(prev => new Set(prev).add(post.id));
   };
 
-  const handleMapChange = useCallback((data: any) => {
-    setMapBounds(data.bounds);
+  const handleMapChange = useCallback(({ bounds }: any) => {
+    setMapBounds(bounds);
   }, []);
 
   const handleRefresh = () => {
