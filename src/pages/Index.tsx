@@ -28,14 +28,17 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       lng = 126.9780 + (Math.random() - 0.5) * 0.04;
     }
 
+    const isAd = Math.random() < 0.1; // 약 10% 확률로 광고 생성
+
     return {
       id: Math.random(),
+      isAd,
       user: { 
-        name: `traveler_${Math.floor(Math.random() * 1000)}`, 
-        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
+        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
+        avatar: isAd ? "https://cdn-icons-png.flaticon.com/512/5455/5455873.png" : `https://i.pravatar.cc/150?u=${Math.random()}` 
       },
-      content: `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
-      location: ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
+      content: isAd ? "지금 바로 확인해보세요! 특별한 혜택이 기다리고 있습니다." : `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
+      location: isAd ? "광고" : ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
       category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
       lat,
       lng,

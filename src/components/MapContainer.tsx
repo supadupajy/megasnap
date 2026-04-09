@@ -95,16 +95,21 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
         div.style.width = '56px';
         div.style.height = '56px';
         
+        const borderColor = this.post.isAd ? '#3b82f6' : (this.isViewed ? '#6b7280' : '#ffffff');
+        const content = this.post.isAd 
+          ? `<div style="width: 100%; height: 100%; display: flex; items-center; justify-content: center; background: #3b82f6; color: white; font-weight: 900; font-size: 14px; letter-spacing: -0.5px;">Ad</div>`
+          : `<img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />`;
+
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${this.isViewed ? '#6b7280' : '#ffffff'}; 
+            <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${borderColor}; 
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
                         background: #e5e7eb; transition: all 0.3s; 
-                        filter: ${this.isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
-              <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+                        filter: ${!this.post.isAd && this.isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
+              ${content}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
-                        width: 12px; height: 12px; background: ${this.isViewed ? '#6b7280' : '#ffffff'}; 
+                        width: 12px; height: 12px; background: ${borderColor}; 
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;
@@ -152,7 +157,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        // If viewed status changed, we need to recreate to update styles
         if (overlay.isViewed !== isViewed) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
