@@ -174,28 +174,30 @@ const Index = () => {
         />
       </main>
 
-      <div className="fixed bottom-[220px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
-        <div className="w-full flex justify-between items-end">
+      {/* UI 컨트롤 레이어 */}
+      <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
+        <div className="relative w-full h-full">
+          {/* 장소 검색 버튼 (좌측) */}
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto flex items-center gap-2 px-5 py-3 bg-white rounded-full shadow-xl border border-gray-100 text-gray-700 font-bold text-sm active:scale-95 transition-all"
+            className="pointer-events-auto absolute left-0 bottom-0 flex items-center gap-2 px-5 py-3 bg-white rounded-full shadow-xl border border-gray-100 text-gray-700 font-bold text-sm active:scale-95 transition-all"
           >
             <Search className="w-4 h-4 text-green-500" />
             장소 검색
           </motion.button>
 
+          {/* 현재 위치 버튼 (우측 - 타임 슬라이더와 너비 맞춤) */}
           <motion.button 
             onClick={handleCurrentLocation}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-green-500 active:scale-90 transition-transform border border-gray-100"
+            className="pointer-events-auto absolute right-[-4px] bottom-0 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-green-500 active:scale-90 transition-transform border border-gray-100"
           >
-            <Navigation className="w-6 h-6 fill-current" />
+            <Navigation className="w-5 h-5 fill-current" />
           </motion.button>
         </div>
       </div>
 
-      {/* 주변 게시물 시트: 드래그 제거, 헤더 클릭으로만 동작 */}
       <motion.div 
         initial={false}
         animate={{ 
@@ -205,7 +207,6 @@ const Index = () => {
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
-          {/* 고정 헤더 영역 */}
           <div 
             className="w-full pt-4 pb-6 flex flex-col items-center cursor-pointer sticky top-0 bg-white z-10 rounded-t-[32px] border-b border-gray-50"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
@@ -217,7 +218,6 @@ const Index = () => {
             </div>
           </div>
 
-          {/* 스크롤 가능한 컨텐츠 영역 */}
           <div className="flex-1 overflow-y-auto pb-40">
             <AnimatePresence mode="wait">
               {isRefreshing ? (
