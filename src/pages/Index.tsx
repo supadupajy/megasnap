@@ -100,11 +100,11 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      {/* Top Controls Container */}
-      <div className="absolute top-20 left-4 right-4 z-30 flex items-start gap-2 pointer-events-none">
+      {/* Top Controls Container - right-3로 조정하여 여백 축소 */}
+      <div className="absolute top-20 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className={cn(
           "pointer-events-auto transition-all duration-500 ease-in-out",
-          isTrendingExpanded ? "flex-1" : "w-[220px]"
+          isTrendingExpanded ? "flex-1" : "w-[260px]" // 접혔을 때 너비를 220px에서 260px로 확장
         )}>
           <TrendingPosts 
             isExpanded={isTrendingExpanded} 
