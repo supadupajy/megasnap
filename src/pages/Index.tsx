@@ -17,11 +17,9 @@ const generateRandomPosts = (count: number, bounds?: any) => {
   return Array.from({ length: count }).map((_, i) => {
     let lat, lng;
     if (bounds && bounds.ne) {
-      // 현재 지도 영역 내에서 랜덤 좌표 생성
       lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
     } else {
-      // 초기값: 서울 시청 중심 근처 (0.02도 이내)
       lat = 37.5665 + (Math.random() - 0.5) * 0.04;
       lng = 126.9780 + (Math.random() - 0.5) * 0.04;
     }
@@ -69,7 +67,6 @@ const Index = () => {
       .slice(0, 20);
   }, [mapBounds, posts]);
 
-  // 지도가 움직일 때마다 데이터가 부족하면 추가 생성
   useEffect(() => {
     if (mapBounds && visiblePosts.length < 5 && !isRefreshing) {
       const newPosts = generateRandomPosts(20, mapBounds);
@@ -124,9 +121,13 @@ const Index = () => {
         </button>
       </main>
 
+      {/* Nearby Posts Sheet */}
       <motion.div 
-        initial={{ y: "75%" }}
-        animate={{ y: isSheetOpen ? "10%" : "75%" }}
+        initial={{ y: "100%" }}
+        animate={{ 
+          // 닫혔을 때: 하단 메뉴바(80px) + 핸들 영역(약 60px)만큼만 보이도록 설정
+          y: isSheetOpen ? "10%" : "calc(100% - 140px)" 
+        }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="fixed inset-0 z-40 pointer-events-none"
       >
@@ -142,7 +143,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-32">
             <AnimatePresence mode="wait">
               {isRefreshing ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
