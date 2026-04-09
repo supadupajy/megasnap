@@ -72,7 +72,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
 
     const map = mapInstance.current;
     
-    // Define Custom Overlay Class
     class HTMLMarker extends google.maps.OverlayView {
       latlng: google.maps.LatLng;
       div: HTMLDivElement | null = null;
@@ -95,18 +94,21 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
         div.style.width = '56px';
         div.style.height = '56px';
         
-        const borderColor = this.post.isAd ? '#3b82f6' : (this.isViewed ? '#6b7280' : '#ffffff');
-        const content = this.post.isAd 
-          ? `<div style="width: 100%; height: 100%; display: flex; items-center; justify-content: center; background: #3b82f6; color: white; font-weight: 900; font-size: 14px; letter-spacing: -0.5px;">Ad</div>`
-          : `<img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />`;
-
+        const borderColor = this.post.isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
             <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${borderColor}; 
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
                         background: #e5e7eb; transition: all 0.3s; 
-                        filter: ${!this.post.isAd && this.isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
-              ${content}
+                        filter: ${!this.post.isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+              <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+              ${this.post.isAd ? `
+                <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white; 
+                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
+                  AD
+                </div>
+              ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
                         width: 12px; height: 12px; background: ${borderColor}; 
@@ -143,7 +145,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // Remove old overlays
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -151,7 +152,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
       }
     });
 
-    // Add or update overlays
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       let overlay = overlaysRef.current.get(post.id);

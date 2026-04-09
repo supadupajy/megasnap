@@ -17,37 +17,47 @@ import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
+// 게시물이 뭉치지 않고 고루 퍼지도록 그리드 기반 생성 로직으로 변경
 const generateRandomPosts = (count: number, bounds?: any) => {
-  return Array.from({ length: count }).map((_, i) => {
-    let lat, lng;
-    if (bounds && bounds.ne) {
-      lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
-      lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
-    } else {
-      lat = 37.5665 + (Math.random() - 0.5) * 0.04;
-      lng = 126.9780 + (Math.random() - 0.5) * 0.04;
+  const posts = [];
+  const rows = Math.ceil(Math.sqrt(count));
+  const cols = rows;
+
+  const baseLat = bounds?.sw?.lat || 37.5465;
+  const baseLng = bounds?.sw?.lng || 126.9580;
+  const latStep = (bounds?.ne?.lat - bounds?.sw?.lat) / rows || 0.01;
+  const lngStep = (bounds?.ne?.lng - bounds?.sw?.lng) / cols || 0.01;
+
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (posts.length >= count) break;
+
+      // 그리드 내에서 약간의 랜덤 오프셋(Jitter) 추가
+      const lat = baseLat + (i * latStep) + (Math.random() * latStep);
+      const lng = baseLng + (j * lngStep) + (Math.random() * lngStep);
+
+      const isAd = Math.random() < 0.15; // 약 15% 확률로 광고
+
+      posts.push({
+        id: Math.random(),
+        isAd,
+        user: { 
+          name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
+          avatar: isAd ? "https://cdn-icons-png.flaticon.com/512/5455/5455873.png" : `https://i.pravatar.cc/150?u=${Math.random()}` 
+        },
+        content: isAd ? "지금 바로 확인해보세요! 특별한 혜택이 기다리고 있습니다." : `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
+        location: isAd ? "광고" : ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
+        category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
+        lat,
+        lng,
+        likes: Math.floor(Math.random() * 1000),
+        image: `https://picsum.photos/seed/${Math.random()}/800/800`,
+        isLiked: Math.random() > 0.5,
+        createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000
+      });
     }
-
-    const isAd = Math.random() < 0.1; // 약 10% 확률로 광고 생성
-
-    return {
-      id: Math.random(),
-      isAd,
-      user: { 
-        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
-        avatar: isAd ? "https://cdn-icons-png.flaticon.com/512/5455/5455873.png" : `https://i.pravatar.cc/150?u=${Math.random()}` 
-      },
-      content: isAd ? "지금 바로 확인해보세요! 특별한 혜택이 기다리고 있습니다." : `이곳에서의 멋진 추억! 정말 추천하는 장소입니다. #여행 #탐험 #추천`,
-      location: isAd ? "광고" : ['서울', '부산', '제주', '강릉', '경주', '전주', '인천', '대구'][Math.floor(Math.random() * 8)],
-      category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-      lat,
-      lng,
-      likes: Math.floor(Math.random() * 1000),
-      image: `https://picsum.photos/seed/${Math.random()}/800/800`,
-      isLiked: Math.random() > 0.5,
-      createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000
-    };
-  });
+  }
+  return posts;
 };
 
 const Index = () => {
@@ -62,13 +72,13 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [timeRange, setTimeRange] = useState(12);
   
-  const [posts, setPosts] = useState(() => generateRandomPosts(100));
+  const [posts, setPosts] = useState(() => generateRandomPosts(60));
 
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
     let filtered = posts.filter(post => post.createdAt >= timeThreshold);
-    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 20);
+    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 30);
     return filtered
       .filter(post => {
         return (
@@ -78,11 +88,11 @@ const Index = () => {
           post.lng >= mapBounds.sw.lng
         );
       })
-      .slice(0, 20);
+      .slice(0, 30);
   }, [mapBounds, posts, timeRange]);
 
   useEffect(() => {
-    if (mapBounds && visiblePosts.length < 5 && !isRefreshing) {
+    if (mapBounds && visiblePosts.length < 10 && !isRefreshing) {
       const newPosts = generateRandomPosts(20, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
     }
@@ -100,7 +110,7 @@ const Index = () => {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      const newPosts = generateRandomPosts(50, mapBounds);
+      const newPosts = generateRandomPosts(40, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
       setIsRefreshing(false);
       showSuccess('주변의 새로운 게시물을 불러왔습니다.');
