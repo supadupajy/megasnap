@@ -17,11 +17,13 @@ const generateRandomPosts = (count: number, bounds?: any) => {
   return Array.from({ length: count }).map((_, i) => {
     let lat, lng;
     if (bounds && bounds.ne) {
+      // 현재 지도 영역 내에서 랜덤 좌표 생성
       lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
     } else {
-      lat = 37.5 + Math.random() * 0.1;
-      lng = 126.9 + Math.random() * 0.1;
+      // 초기값: 서울 시청 중심 근처 (0.02도 이내)
+      lat = 37.5665 + (Math.random() - 0.5) * 0.04;
+      lng = 126.9780 + (Math.random() - 0.5) * 0.04;
     }
 
     return {
@@ -50,7 +52,7 @@ const Index = () => {
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const [posts, setPosts] = useState(() => generateRandomPosts(500));
+  const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
   const visiblePosts = useMemo(() => {
     if (!mapBounds || !mapBounds.ne) return posts.slice(0, 20);
@@ -67,9 +69,10 @@ const Index = () => {
       .slice(0, 20);
   }, [mapBounds, posts]);
 
+  // 지도가 움직일 때마다 데이터가 부족하면 추가 생성
   useEffect(() => {
-    if (mapBounds && visiblePosts.length < 10 && !isRefreshing) {
-      const newPosts = generateRandomPosts(30, mapBounds);
+    if (mapBounds && visiblePosts.length < 5 && !isRefreshing) {
+      const newPosts = generateRandomPosts(20, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
     }
   }, [mapBounds, visiblePosts.length, isRefreshing]);
@@ -86,7 +89,7 @@ const Index = () => {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      const newPosts = generateRandomPosts(100, mapBounds);
+      const newPosts = generateRandomPosts(50, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
       setIsRefreshing(false);
       showSuccess('주변의 새로운 게시물을 불러왔습니다.');
@@ -98,7 +101,7 @@ const Index = () => {
       <Header />
 
       {/* Refresh Button */}
-      <div className="absolute top-20 right-4 z-[1000]">
+      <div className="absolute top-20 right-4 z-30">
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -116,7 +119,7 @@ const Index = () => {
           onMarkerClick={handleMarkerClick}
           onMapChange={handleMapChange}
         />
-        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-[1000] border border-gray-100">
+        <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
           <Navigation className="w-6 h-6 fill-current" />
         </button>
       </main>
