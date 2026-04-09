@@ -125,6 +125,9 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
+  // 팝업창이 하나라도 열려있는지 확인
+  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost;
+
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
@@ -162,7 +165,18 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      <TimeSlider value={timeRange} onChange={setTimeRange} />
+      {/* 팝업이 열려있지 않을 때만 시간 슬라이더 표시 */}
+      <AnimatePresence>
+        {!isAnyPopupOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+          >
+            <TimeSlider value={timeRange} onChange={setTimeRange} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
         <MapContainer 
@@ -177,7 +191,7 @@ const Index = () => {
       {/* UI 컨트롤 레이어 */}
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="relative w-full h-full">
-          {/* 장소 검색 버튼 (좌측 - 현재 위치 버튼과 통일) */}
+          {/* 장소 검색 버튼 */}
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
@@ -186,7 +200,7 @@ const Index = () => {
             <Search className="w-5 h-5 text-green-500" />
           </motion.button>
 
-          {/* 현재 위치 버튼 (우측 - 타임 슬라이더와 너비 맞춤) */}
+          {/* 현재 위치 버튼 */}
           <motion.button 
             onClick={handleCurrentLocation}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
