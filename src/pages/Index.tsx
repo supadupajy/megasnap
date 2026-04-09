@@ -9,6 +9,7 @@ import BottomNav from '@/components/BottomNav';
 import MapContainer from '@/components/MapContainer';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
+import TrendingPosts from '@/components/TrendingPosts';
 import { showSuccess } from '@/utils/toast';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
@@ -97,16 +98,22 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      {/* Refresh Button */}
-      <div className="absolute top-20 right-4 z-30">
-        <button 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? '검색 중...' : '재검색'}
-        </button>
+      {/* Top Controls Container */}
+      <div className="absolute top-20 left-4 right-4 z-30 flex items-start justify-between pointer-events-none">
+        <div className="pointer-events-auto">
+          <TrendingPosts />
+        </div>
+        
+        <div className="pointer-events-auto">
+          <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? '검색 중...' : '재검색'}
+          </button>
+        </div>
       </div>
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
@@ -125,7 +132,6 @@ const Index = () => {
       <motion.div 
         initial={{ y: "100%" }}
         animate={{ 
-          // 닫혔을 때 높이를 180px로 상향하여 글쓰기 버튼 위로 텍스트가 올라오게 조정
           y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
