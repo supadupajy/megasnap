@@ -23,8 +23,12 @@ const MOCK_TRENDING = Array.from({ length: 10 }).map((_, i) => ({
   image: `https://picsum.photos/seed/trend${i + 1}/100/100`
 }));
 
-const TrendingPosts = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+interface TrendingPostsProps {
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+const TrendingPosts = ({ isExpanded, onToggle }: TrendingPostsProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // 5초마다 순환하는 타이머
@@ -41,17 +45,17 @@ const TrendingPosts = () => {
   const currentPost = MOCK_TRENDING[currentIndex];
 
   return (
-    <div className="relative">
+    <div className="w-full">
       <motion.div
         animate={{ 
           height: isExpanded ? 'auto' : '44px',
-          width: isExpanded ? '280px' : '220px'
         }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={cn(
-          "bg-white/90 backdrop-blur-md rounded-[22px] shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all",
+          "bg-white/90 backdrop-blur-md rounded-[22px] shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all w-full",
           isExpanded ? "p-2" : "px-3"
         )}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
       >
         {/* 닫혔을 때: 순환하는 한 줄 화면 */}
         {!isExpanded && (

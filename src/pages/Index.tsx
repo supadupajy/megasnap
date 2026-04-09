@@ -11,6 +11,7 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TrendingPosts from '@/components/TrendingPosts';
 import { showSuccess } from '@/utils/toast';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
@@ -50,6 +51,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   
   const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
@@ -99,21 +101,36 @@ const Index = () => {
       <Header />
 
       {/* Top Controls Container */}
-      <div className="absolute top-20 left-4 right-4 z-30 flex items-start justify-between pointer-events-none">
-        <div className="pointer-events-auto">
-          <TrendingPosts />
+      <div className="absolute top-20 left-4 right-4 z-30 flex items-start gap-2 pointer-events-none">
+        <div className={cn(
+          "pointer-events-auto transition-all duration-500 ease-in-out",
+          isTrendingExpanded ? "flex-1" : "w-[220px]"
+        )}>
+          <TrendingPosts 
+            isExpanded={isTrendingExpanded} 
+            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
+          />
         </div>
         
-        <div className="pointer-events-auto">
-          <button 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? '검색 중...' : '재검색'}
-          </button>
-        </div>
+        <AnimatePresence>
+          {!isTrendingExpanded && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 20, scale: 0.8 }}
+              className="pointer-events-auto"
+            >
+              <button 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? '검색 중...' : '재검색'}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
