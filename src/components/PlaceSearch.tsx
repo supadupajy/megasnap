@@ -45,27 +45,32 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[96vh]">
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
-        <div className="px-6 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6">
+      <DrawerContent className="h-[96vh] flex flex-col outline-none">
+        {/* Handle Bar */}
+        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        
+        <div className="px-6 flex flex-col flex-1 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 shrink-0">
             <h2 className="text-xl font-bold text-gray-900">장소 검색</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-gray-100">
               <X className="w-5 h-5 text-gray-400" />
             </Button>
           </div>
 
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          {/* Search Input */}
+          <div className="relative mb-6 shrink-0">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
               placeholder="장소, 주소 검색" 
-              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-green-500 text-base"
+              className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-green-500 text-base shadow-sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
             />
           </div>
 
+          {/* Results List */}
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-2 pb-10">
               {filteredPlaces.length > 0 ? (
@@ -76,14 +81,14 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                       onSelect(place);
                       onClose();
                     }}
-                    className="w-full flex items-start gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-colors text-left group"
+                    className="w-full flex items-start gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-all text-left group active:scale-[0.98]"
                   >
-                    <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
-                      <MapPin className="w-5 h-5 text-green-500" />
+                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
+                      <MapPin className="w-6 h-6 text-green-500" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 truncate">{place.name}</p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{place.address}</p>
+                    <div className="flex-1 min-w-0 py-0.5">
+                      <p className="font-bold text-gray-900 truncate text-base">{place.name}</p>
+                      <p className="text-sm text-gray-500 truncate mt-1">{place.address}</p>
                     </div>
                   </button>
                 ))
