@@ -14,7 +14,7 @@ interface MapContainerProps {
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<any, google.maps.Marker>>(new Map());
+  const overlaysRef = useRef<Map<any, any>>(new Map());
 
   useEffect(() => {
     if (!mapElement.current || !window.google) return;
@@ -61,7 +61,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
     };
   }, []);
 
-  // Handle center prop changes to move the map
   useEffect(() => {
     if (mapInstance.current && center) {
       mapInstance.current.panTo(center);
@@ -72,59 +71,98 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
     if (!mapInstance.current || !window.google) return;
 
     const map = mapInstance.current;
+    
+    // Define Custom Overlay Class
+    class HTMLMarker extends google.maps.OverlayView {
+      latlng: google.maps.LatLng;
+      div: HTMLDivElement | null = null;
+      post: any;
+      isViewed: boolean;
+      onClick: () => void;
+
+      constructor(post: any, isViewed: boolean, onClick: () => void) {
+        super();
+        this.latlng = new google.maps.LatLng(post.lat, post.lng);
+        this.post = post;
+        this.isViewed = isViewed;
+        this.onClick = onClick;
+      }
+
+      onAdd() {
+        const div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.cursor = 'pointer';
+        div.style.width = '56px';
+        div.style.height = '56px';
+        
+        div.innerHTML = `
+          <div style="position: relative; transform: translate(-50%, -100%);">
+            <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${this.isViewed ? '#6b7280' : '#ffffff'}; 
+                        overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+                        background: #e5e7eb; transition: all 0.3s; 
+                        filter: ${this.isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
+              <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>
+            <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
+                        width: 12px; height: 12px; background: ${this.isViewed ? '#6b7280' : '#ffffff'}; 
+                        box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+          </div>
+        `;
+
+        div.onclick = (e) => {
+          e.stopPropagation();
+          this.onClick();
+        };
+
+        this.div = div;
+        const panes = this.getPanes();
+        panes?.overlayMouseTarget.appendChild(div);
+      }
+
+      draw() {
+        const overlayProjection = this.getProjection();
+        const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
+        if (this.div && point) {
+          this.div.style.left = point.x + 'px';
+          this.div.style.top = point.y + 'px';
+        }
+      }
+
+      onRemove() {
+        if (this.div) {
+          this.div.parentNode?.removeChild(this.div);
+          this.div = null;
+        }
+      }
+    }
+
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // Remove markers that are no longer in posts
-    markersRef.current.forEach((marker, id) => {
+    // Remove old overlays
+    overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
-        marker.setMap(null);
-        markersRef.current.delete(id);
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
       }
     });
 
-    // Add or update markers
+    // Add or update overlays
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
-      let marker = markersRef.current.get(post.id);
+      let overlay = overlaysRef.current.get(post.id);
 
-      if (marker) {
-        // Update existing marker if needed (e.g., color change)
-        // For simplicity, we'll recreate the icon if viewed status changed
+      if (overlay) {
+        // If viewed status changed, we need to recreate to update styles
+        if (overlay.isViewed !== isViewed) {
+          overlay.setMap(null);
+          overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+          overlay.setMap(map);
+          overlaysRef.current.set(post.id, overlay);
+        }
       } else {
-        // Create custom marker element
-        const markerDiv = document.createElement('div');
-        markerDiv.className = 'custom-marker';
-        markerDiv.style.position = 'relative';
-        markerDiv.style.cursor = 'pointer';
-        markerDiv.innerHTML = `
-          <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${isViewed ? '#6b7280' : '#ffffff'}; 
-                      overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
-                      background: #e5e7eb; transition: all 0.3s; 
-                      filter: ${isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
-            <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
-          </div>
-          <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
-                      width: 12px; height: 12px; background: ${isViewed ? '#6b7280' : '#ffffff'}; 
-                      box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
-        `;
-
-        // Using OverlayView for custom HTML markers in Google Maps is complex, 
-        // so we'll use a standard marker with a data URI or simple styling for now.
-        // For a truly custom look, we'd use an AdvancedMarkerElement (v3.53+)
-        
-        marker = new google.maps.Marker({
-          position: { lat: post.lat, lng: post.lng },
-          map: map,
-          // Standard markers don't support arbitrary HTML easily without libraries,
-          // so we'll use a simple colored pin for this implementation.
-          title: post.location
-        });
-
-        marker.addListener('click', () => {
-          onMarkerClick(post);
-        });
-
-        markersRef.current.set(post.id, marker);
+        overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+        overlay.setMap(map);
+        overlaysRef.current.set(post.id, overlay);
       }
     });
   }, [posts, viewedPostIds, onMarkerClick]);
