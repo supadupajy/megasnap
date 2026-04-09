@@ -174,7 +174,7 @@ const Index = () => {
         />
       </main>
 
-      <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
+      <div className="fixed bottom-[220px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
         <div className="w-full flex justify-between items-end">
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
@@ -202,14 +202,14 @@ const Index = () => {
         onDragEnd={onDragEnd}
         initial={false}
         animate={{ 
-          y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
+          y: isSheetOpen ? "10%" : "calc(100% - 200px)" 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
           <div 
-            className="w-full pt-4 pb-8 flex flex-col items-center cursor-grab active:cursor-grabbing sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
+            className="w-full pt-4 pb-8 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
           >
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
