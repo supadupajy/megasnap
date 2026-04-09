@@ -125,17 +125,6 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
-  const onDragEnd = (event: any, info: any) => {
-    const threshold = 100;
-    const velocityThreshold = 500;
-
-    if (info.offset.y > threshold || info.velocity.y > velocityThreshold) {
-      setIsSheetOpen(false);
-    } else if (info.offset.y < -threshold || info.velocity.y < -velocityThreshold) {
-      setIsSheetOpen(true);
-    }
-  };
-
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
@@ -206,11 +195,8 @@ const Index = () => {
         </div>
       </div>
 
+      {/* 주변 게시물 시트: 드래그 제거, 헤더 클릭으로만 동작 */}
       <motion.div 
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.05}
-        onDragEnd={onDragEnd}
         initial={false}
         animate={{ 
           y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
@@ -219,8 +205,9 @@ const Index = () => {
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
+          {/* 고정 헤더 영역 */}
           <div 
-            className="w-full pt-4 pb-6 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
+            className="w-full pt-4 pb-6 flex flex-col items-center cursor-pointer sticky top-0 bg-white z-10 rounded-t-[32px] border-b border-gray-50"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
           >
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
@@ -230,6 +217,7 @@ const Index = () => {
             </div>
           </div>
 
+          {/* 스크롤 가능한 컨텐츠 영역 */}
           <div className="flex-1 overflow-y-auto pb-40">
             <AnimatePresence mode="wait">
               {isRefreshing ? (
