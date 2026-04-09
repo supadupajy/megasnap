@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ChevronUp, Navigation, RefreshCw, Search } from 'lucide-react';
 import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
@@ -42,7 +42,7 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       likes: Math.floor(Math.random() * 1000),
       image: `https://picsum.photos/seed/${Math.random()}/800/800`,
       isLiked: Math.random() > 0.5,
-      createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000 // 최근 12시간 이내 랜덤 시간
+      createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000
     };
   });
 };
@@ -57,18 +57,15 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
-  const [timeRange, setTimeRange] = useState(12); // 기본 12시간
+  const [timeRange, setTimeRange] = useState(12);
   
   const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-
     let filtered = posts.filter(post => post.createdAt >= timeThreshold);
-
     if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 20);
-    
     return filtered
       .filter(post => {
         return (
@@ -117,11 +114,22 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
+  // 드래그 종료 시 상태 결정
+  const onDragEnd = (event: any, info: any) => {
+    const shouldClose = info.offset.y > 100 || info.velocity.y > 500;
+    const shouldOpen = info.offset.y < -100 || info.velocity.y < -500;
+
+    if (isSheetOpen && shouldClose) {
+      setIsSheetOpen(false);
+    } else if (!isSheetOpen && shouldOpen) {
+      setIsSheetOpen(true);
+    }
+  };
+
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      {/* Top Controls Container */}
       <div className="absolute top-20 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className={cn(
           "pointer-events-auto transition-all duration-500 ease-in-out",
@@ -155,7 +163,6 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      {/* Time Slider */}
       <TimeSlider value={timeRange} onChange={setTimeRange} />
 
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
@@ -168,7 +175,6 @@ const Index = () => {
         />
       </main>
 
-      {/* Floating Buttons above the sheet */}
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none flex flex-col items-center gap-3">
         <div className="w-full flex justify-between items-end">
           <motion.button
@@ -190,18 +196,22 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Nearby Posts Sheet */}
+      {/* Nearby Posts Sheet with Drag Support */}
       <motion.div 
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.1}
+        onDragEnd={onDragEnd}
         initial={{ y: "100%" }}
         animate={{ 
           y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
         }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
           <div 
-            className="w-full pt-4 pb-8 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
+            className="w-full pt-4 pb-8 flex flex-col items-center cursor-grab active:cursor-grabbing sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
           >
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
