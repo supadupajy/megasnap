@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Map, LayoutGrid, Plus, Search, User } from 'lucide-react';
+import { Map, Trophy, Plus, Search, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -24,9 +24,12 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         <Map className="w-6 h-6" />
         <span className="text-[10px] font-bold">지도</span>
       </button>
-      <button className="flex flex-col items-center gap-1 text-gray-400">
-        <LayoutGrid className="w-6 h-6" />
-        <span className="text-[10px]">피드</span>
+      <button 
+        onClick={() => navigate('/popular')}
+        className={cn("flex flex-col items-center gap-1", isActive('/popular') ? "text-green-500" : "text-gray-400")}
+      >
+        <Trophy className="w-6 h-6" />
+        <span className="text-[10px] font-bold">인기</span>
       </button>
       
       <div className="relative -top-6">
