@@ -1,4 +1,3 @@
-w-10)">
 "use client";
 
 import React from 'react';
