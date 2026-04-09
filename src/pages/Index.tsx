@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 게시물이 뭉치지 않고 고루 퍼지도록 그리드 기반 생성 로직으로 변경
 const generateRandomPosts = (count: number, bounds?: any) => {
   const posts = [];
   const rows = Math.ceil(Math.sqrt(count));
@@ -32,11 +31,10 @@ const generateRandomPosts = (count: number, bounds?: any) => {
     for (let j = 0; j < cols; j++) {
       if (posts.length >= count) break;
 
-      // 그리드 내에서 약간의 랜덤 오프셋(Jitter) 추가
       const lat = baseLat + (i * latStep) + (Math.random() * latStep);
       const lng = baseLng + (j * lngStep) + (Math.random() * lngStep);
 
-      const isAd = Math.random() < 0.15; // 약 15% 확률로 광고
+      const isAd = Math.random() < 0.15;
 
       posts.push({
         id: Math.random(),
@@ -215,14 +213,14 @@ const Index = () => {
         onDragEnd={onDragEnd}
         initial={false}
         animate={{ 
-          y: isSheetOpen ? "10%" : "calc(100% - 200px)" 
+          y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="fixed inset-0 z-40 pointer-events-none"
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
           <div 
-            className="w-full pt-4 pb-8 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
+            className="w-full pt-4 pb-6 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
           >
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
@@ -232,7 +230,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto pb-32">
+          <div className="flex-1 overflow-y-auto pb-40">
             <AnimatePresence mode="wait">
               {isRefreshing ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">

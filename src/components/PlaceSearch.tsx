@@ -45,7 +45,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[85vh]">
+      <DrawerContent className="h-[96vh]">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
         <div className="px-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
