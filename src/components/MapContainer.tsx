@@ -101,7 +101,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
       `;
 
       if (marker) {
-        marker.setContent(content);
+        // setContent 대신 setIcon을 사용하여 HTML 콘텐츠를 업데이트합니다.
+        marker.setIcon({
+          content: content,
+          anchor: new window.naver.maps.Point(28, 28),
+        });
       } else {
         marker = new window.naver.maps.Marker({
           position: new window.naver.maps.LatLng(post.lat, post.lng),
