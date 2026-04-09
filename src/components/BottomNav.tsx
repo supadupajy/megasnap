@@ -42,7 +42,10 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 whitespace-nowrap">글쓰기</span>
       </div>
 
-      <button className="flex flex-col items-center gap-1 text-gray-400">
+      <button 
+        onClick={() => navigate('/search')}
+        className={cn("flex flex-col items-center gap-1", isActive('/search') ? "text-green-500" : "text-gray-400")}
+      >
         <Search className="w-6 h-6" />
         <span className="text-[10px]">검색</span>
       </button>
