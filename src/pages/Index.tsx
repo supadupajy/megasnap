@@ -125,7 +125,6 @@ const Index = () => {
       <motion.div 
         initial={{ y: "100%" }}
         animate={{ 
-          // 닫혔을 때: 하단 메뉴바(80px) + 핸들 영역(약 60px)만큼만 보이도록 설정
           y: isSheetOpen ? "10%" : "calc(100% - 140px)" 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
@@ -133,10 +132,10 @@ const Index = () => {
       >
         <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
           <div 
-            className="w-full py-4 flex flex-col items-center cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
+            className="w-full py-4 flex flex-col items-start px-6 cursor-pointer sticky top-0 bg-white/80 backdrop-blur-md z-10 rounded-t-[32px]"
             onClick={() => setIsSheetOpen(!isSheetOpen)}
           >
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4 self-center" />
             <div className="flex items-center gap-1 text-gray-500">
               <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${isSheetOpen ? 'rotate-180' : ''}`} />
               <span className="text-sm font-bold">주변 게시물 ({visiblePosts.length})</span>
