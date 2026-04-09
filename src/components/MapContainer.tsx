@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
 
 interface MapContainerProps {
   posts: any[];
@@ -17,7 +16,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
   const markersRef = useRef<Map<any, any>>(new Map());
 
   useEffect(() => {
-    if (!mapElement.current || !window.naver) return;
+    // 네이버 지도 API가 로드되었는지 확인
+    if (!mapElement.current || typeof window === 'undefined' || !window.naver) {
+      console.warn("Naver Maps API not loaded yet.");
+      return;
+    }
 
     const initialCenter = center || { lat: 37.5665, lng: 126.9780 };
     const mapOptions = {
@@ -50,13 +53,15 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
     updateBounds();
 
     return () => {
-      window.naver.maps.Event.clearInstanceListeners(map);
+      if (window.naver && map) {
+        window.naver.maps.Event.clearInstanceListeners(map);
+      }
     };
   }, []);
 
   // Handle center prop changes to move the map
   useEffect(() => {
-    if (mapInstance.current && center) {
+    if (mapInstance.current && center && window.naver) {
       const newCenter = new window.naver.maps.LatLng(center.lat, center.lng);
       mapInstance.current.panTo(newCenter);
     }
@@ -82,17 +87,16 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
       let marker = markersRef.current.get(post.id);
 
       const content = `
-        <div class="marker-container" style="transform: translate(-50%, -50%); cursor: pointer;">
-          <div class="marker-image-wrapper ${isViewed ? 'viewed' : ''}" 
-               style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${isViewed ? '#6b7280' : '#ffffff'}; 
+        <div style="transform: translate(-50%, -50%); cursor: pointer; position: relative;">
+          <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${isViewed ? '#6b7280' : '#ffffff'}; 
                       overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
                       background: #e5e7eb; transition: all 0.3s; 
                       filter: ${isViewed ? 'grayscale(1) brightness(0.5)' : 'none'};">
-            <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
           </div>
-          <div style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); 
+          <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
                       width: 12px; height: 12px; background: ${isViewed ? '#6b7280' : '#ffffff'}; 
-                      box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+                      box-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: -1;"></div>
         </div>
       `;
 
@@ -118,7 +122,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
   }, [posts, viewedPostIds, onMarkerClick]);
 
   return (
-    <div ref={mapElement} className="w-full h-full bg-gray-100" />
+    <div ref={mapElement} style={{ width: '100%', height: '100%' }} className="bg-gray-100" />
   );
 };
 
