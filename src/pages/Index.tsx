@@ -11,6 +11,7 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TrendingPosts from '@/components/TrendingPosts';
 import PlaceSearch from '@/components/PlaceSearch';
+import TimeSlider from '@/components/TimeSlider';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +41,8 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       lng,
       likes: Math.floor(Math.random() * 1000),
       image: `https://picsum.photos/seed/${Math.random()}/800/800`,
-      isLiked: Math.random() > 0.5
+      isLiked: Math.random() > 0.5,
+      createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000 // 최근 12시간 이내 랜덤 시간
     };
   });
 };
@@ -55,13 +57,19 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
+  const [timeRange, setTimeRange] = useState(12); // 기본 12시간
   
   const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
   const visiblePosts = useMemo(() => {
-    if (!mapBounds || !mapBounds.ne) return posts.slice(0, 20);
+    const now = Date.now();
+    const timeThreshold = now - (timeRange * 60 * 60 * 1000);
+
+    let filtered = posts.filter(post => post.createdAt >= timeThreshold);
+
+    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 20);
     
-    return posts
+    return filtered
       .filter(post => {
         return (
           post.lat <= mapBounds.ne.lat &&
@@ -71,7 +79,7 @@ const Index = () => {
         );
       })
       .slice(0, 20);
-  }, [mapBounds, posts]);
+  }, [mapBounds, posts, timeRange]);
 
   useEffect(() => {
     if (mapBounds && visiblePosts.length < 5 && !isRefreshing) {
@@ -147,6 +155,9 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
+      {/* Time Slider */}
+      <TimeSlider value={timeRange} onChange={setTimeRange} />
+
       <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
         <MapContainer 
           posts={visiblePosts} 
@@ -218,7 +229,7 @@ const Index = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <p className="font-medium">이 지역에는 게시물이 없어요.</p>
-                  <p className="text-xs mt-1">지도를 이동하면 새로운 장소가 나타납니다!</p>
+                  <p className="text-xs mt-1">지도를 이동하거나 시간 범위를 늘려보세요!</p>
                 </div>
               )}
             </AnimatePresence>
