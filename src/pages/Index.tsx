@@ -47,7 +47,7 @@ const generateRandomPosts = (count: number, bounds?: any) => {
 const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
-  const [viewedPostIds, setViewedPostIds] = useState<Set<number>>(new Set());
+  const [viewedPostIds, setViewedPostIds] = useState<Set<any>>(new Set());
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [mapBounds, setMapBounds] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -77,7 +77,7 @@ const Index = () => {
     }
   }, [mapBounds, visiblePosts.length, isRefreshing]);
 
-  const handleMarkerClick = (post: any) => {
+  const handlePostSelect = (post: any) => {
     setSelectedPost(post);
     setViewedPostIds(prev => new Set(prev).add(post.id));
   };
@@ -109,6 +109,7 @@ const Index = () => {
           <TrendingPosts 
             isExpanded={isTrendingExpanded} 
             onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
+            onPostClick={handlePostSelect}
           />
         </div>
         
@@ -137,7 +138,7 @@ const Index = () => {
         <MapContainer 
           posts={visiblePosts} 
           viewedPostIds={viewedPostIds}
-          onMarkerClick={handleMarkerClick}
+          onMarkerClick={handlePostSelect}
           onMapChange={handleMapChange}
         />
         <button className="absolute bottom-24 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-green-500 active:scale-90 transition-transform z-20 border border-gray-100">
@@ -176,7 +177,7 @@ const Index = () => {
               ) : visiblePosts.length > 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="divide-y divide-gray-50">
                   {visiblePosts.map(post => (
-                    <div key={post.id} onClick={() => setViewedPostIds(prev => new Set(prev).add(post.id))}>
+                    <div key={post.id} onClick={() => handlePostSelect(post)}>
                       <PostItem {...post} />
                     </div>
                   ))}
