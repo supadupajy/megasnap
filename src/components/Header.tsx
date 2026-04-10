@@ -5,7 +5,9 @@ import { Bell, MessageSquare } from 'lucide-react';
 
 const Header = () => {
   return (
-    <header className="fixed top-4 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4 pb-2 border-b border-gray-100">
+    // top-6 로 약간 더 내려서 모바일에서도 잘 보이게 함
+    // bg-white/80 + backdrop-blur 로 하단 네비와 시각적 통일성 확보
+    <header className="fixed top-6 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4 pb-2 border-b border-gray-100">
       <h1 className="text-xl font-bold text-green-500 tracking-tight">MegaSnap</h1>
       <div className="flex items-center gap-4">
         <div className="relative">
