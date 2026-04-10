@@ -31,10 +31,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 데이터가 없을 경우를 대비한 방어 코드
-  const displayPosts = posts.length > 0 ? posts.slice(0, 40) : [];
+  // 1위부터 20위까지만 표시하도록 제한
+  const displayPosts = posts.length > 0 ? posts.slice(0, 20) : [];
 
-  // Auto-rotate when collapsed
+  // 접혀있을 때 자동 롤링
   useEffect(() => {
     if (isExpanded || displayPosts.length === 0) return;
     const timer = setInterval(
@@ -69,7 +69,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         )}
         onClick={onToggle}
       >
-        {/* Collapsed view */}
+        {/* 접혔을 때 뷰 */}
         {!isExpanded && currentPost && (
           <div className="h-full flex items-center gap-2">
             <span className="text-green-600 font-black text-sm w-4 italic">
@@ -100,20 +100,20 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </div>
         )}
 
-        {/* Expanded view */}
+        {/* 펼쳐졌을 때 뷰 */}
         {isExpanded && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
-              <div className="flex items-center gap-1.5">
-                <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
-                  Real-time Popular (Top 40)
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                <Trophy className="w-3 h-3 text-yellow-500 shrink-0" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
+                  Real-time Popular (Top 20)
                 </span>
               </div>
-              <ChevronDown className="w-4 h-4 text-gray-400 rotate-180" />
+              <ChevronDown className="w-4 h-4 text-gray-400 rotate-180 shrink-0" />
             </div>
 
-            <div className="max-h-[400px] overflow-y-auto no-scrollbar">
+            <div className="max-h-[320px] overflow-y-auto no-scrollbar">
               {displayPosts.map((post) => (
                 <motion.div
                   key={post.id}
@@ -124,7 +124,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 >
                   <span
                     className={cn(
-                      "text-sm font-black italic w-4",
+                      "text-sm font-black italic w-4 shrink-0",
                       post.rank <= 3 ? "text-green-500" : "text-gray-300",
                     )}
                   >
