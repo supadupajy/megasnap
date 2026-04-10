@@ -1,20 +1,26 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useRef, useState } from 'react';
+import { MapPin, Plus } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
   viewedPostIds: Set<any>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
+  onMapWriteClick: () => void;
   center?: { lat: number; lng: number };
 }
 
-const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center }: MapContainerProps) => {
+const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const overlaysRef = useRef<Map<any, any>>(new Map());
+  const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
+  const actionOverlayRef = useRef<any>(null);
+
+  // Long press logic
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!mapElement.current || !window.google) return;
@@ -25,6 +31,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
       zoom: 14,
       disableDefaultUI: true,
       clickableIcons: false,
+      gestureHandling: 'greedy',
       styles: [
         { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
         { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -38,6 +45,30 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
 
     const map = new google.maps.Map(mapElement.current, mapOptions);
     mapInstance.current = map;
+
+    // Event Listeners for Long Press
+    map.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+      pressTimer.current = setTimeout(() => {
+        if (e.latLng) {
+          setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          // Haptic feedback if available
+          if (window.navigator.vibrate) window.navigator.vibrate(50);
+        }
+      }, 2000); // 2 seconds
+    });
+
+    map.addListener('mouseup', () => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+    });
+
+    map.addListener('dragstart', () => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+    });
+
+    map.addListener('click', () => {
+      setActionPin(null);
+    });
 
     const updateBounds = () => {
       const bounds = map.getBounds();
@@ -67,6 +98,84 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, center
     }
   }, [center]);
 
+  // Action Pin Overlay
+  useEffect(() => {
+    if (!mapInstance.current || !window.google) return;
+
+    if (actionOverlayRef.current) {
+      actionOverlayRef.current.setMap(null);
+      actionOverlayRef.current = null;
+    }
+
+    if (actionPin) {
+      class ActionMarker extends google.maps.OverlayView {
+        latlng: google.maps.LatLng;
+        div: HTMLDivElement | null = null;
+
+        constructor(lat: number, lng: number) {
+          super();
+          this.latlng = new google.maps.LatLng(lat, lng);
+        }
+
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.cursor = 'pointer';
+          div.style.zIndex = '1000';
+          
+          div.innerHTML = `
+            <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-col; items-center; gap: 8px;">
+              <div id="map-write-btn" style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; items-center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                글쓰기
+              </div>
+              <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; items-center; justify-center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e; margin: 0 auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+            </div>
+            <style>
+              @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+              }
+            </style>
+          `;
+
+          div.onclick = (e) => {
+            e.stopPropagation();
+            onMapWriteClick();
+            setActionPin(null);
+          };
+
+          this.div = div;
+          const panes = this.getPanes();
+          panes?.overlayMouseTarget.appendChild(div);
+        }
+
+        draw() {
+          const overlayProjection = this.getProjection();
+          const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
+          if (this.div && point) {
+            this.div.style.left = point.x + 'px';
+            this.div.style.top = point.y + 'px';
+          }
+        }
+
+        onRemove() {
+          if (this.div) {
+            this.div.parentNode?.removeChild(this.div);
+            this.div = null;
+          }
+        }
+      }
+
+      const overlay = new ActionMarker(actionPin.lat, actionPin.lng);
+      overlay.setMap(mapInstance.current);
+      actionOverlayRef.current = overlay;
+    }
+  }, [actionPin]);
+
+  // Post Markers
   useEffect(() => {
     if (!mapInstance.current || !window.google) return;
 

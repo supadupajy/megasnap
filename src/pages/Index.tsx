@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 게시물 생성 시 시간을 0~12시간 전으로 골고루 분산시킴
 const generateRandomPosts = (count: number, bounds?: any) => {
   const posts = [];
   const rows = Math.ceil(Math.sqrt(count));
@@ -38,8 +37,6 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       const lng = baseLng + (j * lngStep) + (Math.random() * lngStep);
 
       const isAd = Math.random() < 0.15;
-      
-      // 0시간 전부터 12시간 전까지 랜덤하게 시간 할당
       const hoursAgo = Math.random() * 12;
       const createdAt = now - (hoursAgo * 60 * 60 * 1000);
 
@@ -79,7 +76,6 @@ const Index = () => {
   
   const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
-  // 1. 현재 지도 영역에 있는 모든 게시물 (시간 필터링 전)
   const postsInBounds = useMemo(() => {
     if (!mapBounds || !mapBounds.ne) return posts.slice(0, 50);
     return posts.filter(post => {
@@ -92,14 +88,12 @@ const Index = () => {
     });
   }, [mapBounds, posts]);
 
-  // 2. 시간 슬라이더에 의해 필터링된 실제 보여질 게시물
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
     return postsInBounds.filter(post => post.createdAt >= timeThreshold);
   }, [postsInBounds, timeRange]);
 
-  // 지도 이동 시 게시물이 너무 적으면 추가 생성 (시간 필터링 전 기준)
   useEffect(() => {
     if (mapBounds && postsInBounds.length < 15 && !isRefreshing) {
       const newPosts = generateRandomPosts(30, mapBounds);
@@ -193,6 +187,7 @@ const Index = () => {
           viewedPostIds={viewedPostIds}
           onMarkerClick={handlePostSelect}
           onMapChange={handleMapChange}
+          onMapWriteClick={() => setIsWriteOpen(true)}
           center={mapCenter}
         />
       </main>
