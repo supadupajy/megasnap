@@ -125,8 +125,8 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
-  // 팝업창이 하나라도 열려있는지 확인
-  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost;
+  // 팝업창이나 바텀 시트가 열려있는지 확인 (isSheetOpen 추가)
+  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost || isSheetOpen;
 
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
@@ -165,7 +165,7 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      {/* 팝업이 열려있지 않을 때만 시간 슬라이더 표시 */}
+      {/* 팝업이나 시트가 열려있지 않을 때만 시간 슬라이더 표시 */}
       <AnimatePresence>
         {!isAnyPopupOpen && (
           <motion.div
@@ -191,13 +191,14 @@ const Index = () => {
       {/* UI 컨트롤 레이어 */}
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="relative w-full h-full">
-          {/* 장소 검색 버튼 */}
+          {/* 장소 검색 버튼 (텍스트 추가) */}
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto absolute left-0 bottom-0 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-gray-700 active:scale-90 transition-transform border border-gray-100"
+            className="pointer-events-auto absolute left-0 bottom-0 h-10 px-3 bg-white rounded-xl shadow-xl flex items-center gap-2 text-gray-700 active:scale-90 transition-transform border border-gray-100"
           >
-            <Search className="w-5 h-5 text-green-500" />
+            <Search className="w-4 h-4 text-green-500" />
+            <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">장소 검색</span>
           </motion.button>
 
           {/* 현재 위치 버튼 */}
