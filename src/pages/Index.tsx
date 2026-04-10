@@ -43,7 +43,7 @@ const generateRandomPosts = (count: number, bounds: any) => {
 
     posts.push({
       id: Math.random().toString(36).substr(2, 9),
-      rank: 0, // 나중에 정렬 후 부여
+      rank: 0,
       isAd,
       user: { 
         name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
@@ -89,8 +89,8 @@ const Index = () => {
         post.lng <= mapBounds.ne.lng
       );
 
-      // 2. 부족한 개수 계산 (최대 40개)
-      const neededCount = Math.max(0, 40 - visibleExistingPosts.length);
+      // 2. 부족한 개수 계산 (최대 35개로 조정)
+      const neededCount = Math.max(0, 35 - visibleExistingPosts.length);
 
       if (neededCount > 0) {
         // 3. 부족한 만큼만 새로운 게시물 생성
@@ -98,13 +98,13 @@ const Index = () => {
         
         // 4. 기존 유지 게시물 + 새 게시물 합치기 및 랭킹 재부여
         const combinedPosts = [...visibleExistingPosts, ...newPosts]
-          .sort((a, b) => b.likes - a.likes) // 좋아요 순 정렬
+          .sort((a, b) => b.likes - a.likes)
           .map((post, index) => ({ ...post, rank: index + 1 }));
 
         setPosts(combinedPosts);
-      } else if (visibleExistingPosts.length > 40) {
-        // 혹시 40개가 넘으면 상위 40개만 유지
-        setPosts(visibleExistingPosts.slice(0, 40));
+      } else if (visibleExistingPosts.length > 35) {
+        // 35개가 넘으면 상위 35개만 유지
+        setPosts(visibleExistingPosts.slice(0, 35));
       } else {
         setPosts(visibleExistingPosts);
       }
@@ -117,7 +117,8 @@ const Index = () => {
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-    return posts.filter(post => post.createdAt >= timeThreshold);
+    // 광고(isAd) 게시물은 시간 필터링에서 제외하여 항상 표시
+    return posts.filter(post => post.isAd || post.createdAt >= timeThreshold);
   }, [posts, timeRange]);
 
   const handlePostSelect = (post: any) => {
@@ -133,7 +134,7 @@ const Index = () => {
     if (!mapBounds) return;
     setIsRefreshing(true);
     setTimeout(() => {
-      const newPosts = generateRandomPosts(40, mapBounds)
+      const newPosts = generateRandomPosts(35, mapBounds)
         .sort((a, b) => b.likes - a.likes)
         .map((p, i) => ({ ...p, rank: i + 1 }));
       setPosts(newPosts);
