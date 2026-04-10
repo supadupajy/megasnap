@@ -1,109 +1,299 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import { cn } from '@/lib/utils';
-
-// Custom Marker Icon using DivIcon to match previous design
-const createCustomIcon = (image: string, isViewed: boolean) => {
-  return L.divIcon({
-    className: 'custom-div-icon',
-    html: `
-      <div class="relative transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-110">
-        <div class="w-14 h-14 rounded-2xl border-4 shadow-lg overflow-hidden bg-gray-200 transition-all duration-500 ${
-          isViewed 
-            ? "grayscale brightness-50 border-gray-500 opacity-80 scale-90" 
-            : "grayscale-0 brightness-100 border-white opacity-100 scale-100"
-        }">
-          <img src="${image}" alt="marker" class="w-full h-full object-cover" />
-        </div>
-        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 shadow-sm transition-colors duration-500 ${
-          isViewed ? "bg-gray-500" : "bg-white"
-        }"></div>
-      </div>
-    `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
-  });
-};
-
-interface MapEventsProps {
-  onMapChange: (data: any) => void;
-}
-
-const MapEvents = ({ onMapChange }: MapEventsProps) => {
-  const map = useMapEvents({
-    moveend: () => {
-      const bounds = map.getBounds();
-      onMapChange({
-        bounds: {
-          ne: { lat: bounds.getNorthEast().lat, lng: bounds.getNorthEast().lng },
-          sw: { lat: bounds.getSouthWest().lat, lng: bounds.getSouthWest().lng }
-        }
-      });
-    },
-    zoomend: () => {
-      const bounds = map.getBounds();
-      onMapChange({
-        bounds: {
-          ne: { lat: bounds.getNorthEast().lat, lng: bounds.getNorthEast().lng },
-          sw: { lat: bounds.getSouthWest().lat, lng: bounds.getSouthWest().lng }
-        }
-      });
-    }
-  });
-
-  // Initial bounds report
-  useEffect(() => {
-    const bounds = map.getBounds();
-    onMapChange({
-      bounds: {
-        ne: { lat: bounds.getNorthEast().lat, lng: bounds.getNorthEast().lng },
-        sw: { lat: bounds.getSouthWest().lat, lng: bounds.getSouthWest().lng }
-      }
-    });
-  }, []);
-
-  return null;
-};
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MapContainerProps {
   posts: any[];
-  viewedPostIds: Set<number>;
+  viewedPostIds: Set<any>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
+  onMapWriteClick: () => void;
+  center?: { lat: number; lng: number };
 }
 
-const LeafletMapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange }: MapContainerProps) => {
-  const center: [number, number] = [37.5665, 126.9780];
+const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
+  const mapElement = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const overlaysRef = useRef<Map<any, any>>(new Map());
+  const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
+  const actionOverlayRef = useRef<any>(null);
+
+  // Long press logic
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastLongPressTime = useRef(0);
+
+  useEffect(() => {
+    if (!mapElement.current || !window.google) return;
+
+    const initialCenter = center || { lat: 37.5665, lng: 126.9780 };
+    const mapOptions: google.maps.MapOptions = {
+      center: initialCenter,
+      zoom: 14,
+      disableDefaultUI: true,
+      clickableIcons: false,
+      gestureHandling: 'greedy',
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+        { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+      ],
+    };
+
+    const map = new google.maps.Map(mapElement.current, mapOptions);
+    mapInstance.current = map;
+
+    // Event Listeners for Long Press
+    map.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+      
+      pressTimer.current = setTimeout(() => {
+        if (e.latLng) {
+          lastLongPressTime.current = Date.now();
+          setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          if (window.navigator.vibrate) window.navigator.vibrate(50);
+        }
+      }, 2000); // 2 seconds
+    });
+
+    map.addListener('mouseup', () => {
+      if (pressTimer.current) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    });
+
+    map.addListener('dragstart', () => {
+      if (pressTimer.current) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    });
+
+    map.addListener('click', () => {
+      // 롱프레스 직후 손을 뗄 때 발생하는 클릭 이벤트는 무시 (500ms 여유)
+      const now = Date.now();
+      if (now - lastLongPressTime.current < 500) return;
+      
+      setActionPin(null);
+    });
+
+    const updateBounds = () => {
+      const bounds = map.getBounds();
+      if (bounds) {
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        onMapChange({
+          bounds: {
+            sw: { lat: sw.lat(), lng: sw.lng() },
+            ne: { lat: ne.lat(), lng: ne.lng() }
+          }
+        });
+      }
+    };
+
+    map.addListener('idle', updateBounds);
+    updateBounds();
+
+    return () => {
+      google.maps.event.clearInstanceListeners(map);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mapInstance.current && center) {
+      mapInstance.current.panTo(center);
+    }
+  }, [center]);
+
+  // Action Pin Overlay
+  useEffect(() => {
+    if (!mapInstance.current || !window.google) return;
+
+    if (actionOverlayRef.current) {
+      actionOverlayRef.current.setMap(null);
+      actionOverlayRef.current = null;
+    }
+
+    if (actionPin) {
+      class ActionMarker extends google.maps.OverlayView {
+        latlng: google.maps.LatLng;
+        div: HTMLDivElement | null = null;
+
+        constructor(lat: number, lng: number) {
+          super();
+          this.latlng = new google.maps.LatLng(lat, lng);
+        }
+
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.cursor = 'pointer';
+          div.style.zIndex = '1000';
+          
+          div.innerHTML = `
+            <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <div id="map-write-btn" style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                글쓰기
+              </div>
+              <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e; margin: 0 auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+            </div>
+            <style>
+              @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+              }
+            </style>
+          `;
+
+          div.onclick = (e) => {
+            e.stopPropagation();
+            onMapWriteClick();
+            setActionPin(null);
+          };
+
+          this.div = div;
+          const panes = this.getPanes();
+          panes?.overlayMouseTarget.appendChild(div);
+        }
+
+        draw() {
+          const overlayProjection = this.getProjection();
+          const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
+          if (this.div && point) {
+            this.div.style.left = point.x + 'px';
+            this.div.style.top = point.y + 'px';
+          }
+        }
+
+        onRemove() {
+          if (this.div) {
+            this.div.parentNode?.removeChild(this.div);
+            this.div = null;
+          }
+        }
+      }
+
+      const overlay = new ActionMarker(actionPin.lat, actionPin.lng);
+      overlay.setMap(mapInstance.current);
+      actionOverlayRef.current = overlay;
+    }
+  }, [actionPin]);
+
+  // Post Markers
+  useEffect(() => {
+    if (!mapInstance.current || !window.google) return;
+
+    const map = mapInstance.current;
+    
+    class HTMLMarker extends google.maps.OverlayView {
+      latlng: google.maps.LatLng;
+      div: HTMLDivElement | null = null;
+      post: any;
+      isViewed: boolean;
+      onClick: () => void;
+
+      constructor(post: any, isViewed: boolean, onClick: () => void) {
+        super();
+        this.latlng = new google.maps.LatLng(post.lat, post.lng);
+        this.post = post;
+        this.isViewed = isViewed;
+        this.onClick = onClick;
+      }
+
+      onAdd() {
+        const div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.cursor = 'pointer';
+        div.style.width = '56px';
+        div.style.height = '56px';
+        
+        const borderColor = this.post.isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        
+        div.innerHTML = `
+          <div style="position: relative; transform: translate(-50%, -100%);">
+            <div style="width: 56px; height: 56px; border-radius: 16px; border: 4px solid ${borderColor}; 
+                        overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+                        background: #e5e7eb; transition: all 0.3s; 
+                        filter: ${!this.post.isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+              <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+              ${this.post.isAd ? `
+                <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white; 
+                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
+                  AD
+                </div>
+              ` : ''}
+            </div>
+            <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); 
+                        width: 12px; height: 12px; background: ${borderColor}; 
+                        box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+          </div>
+        `;
+
+        div.onclick = (e) => {
+          e.stopPropagation();
+          this.onClick();
+        };
+
+        this.div = div;
+        const panes = this.getPanes();
+        panes?.overlayMouseTarget.appendChild(div);
+      }
+
+      draw() {
+        const overlayProjection = this.getProjection();
+        const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
+        if (this.div && point) {
+          this.div.style.left = point.x + 'px';
+          this.div.style.top = point.y + 'px';
+        }
+      }
+
+      onRemove() {
+        if (this.div) {
+          this.div.parentNode?.removeChild(this.div);
+          this.div = null;
+        }
+      }
+    }
+
+    const currentPostIds = new Set(posts.map(p => p.id));
+
+    overlaysRef.current.forEach((overlay, id) => {
+      if (!currentPostIds.has(id)) {
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
+      }
+    });
+
+    posts.forEach(post => {
+      const isViewed = viewedPostIds.has(post.id);
+      let overlay = overlaysRef.current.get(post.id);
+
+      if (overlay) {
+        if (overlay.isViewed !== isViewed) {
+          overlay.setMap(null);
+          overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+          overlay.setMap(map);
+          overlaysRef.current.set(post.id, overlay);
+        }
+      } else {
+        overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+        overlay.setMap(map);
+        overlaysRef.current.set(post.id, overlay);
+      }
+    });
+  }, [posts, viewedPostIds, onMarkerClick]);
 
   return (
-    <div className="w-full h-full bg-gray-100">
-      <MapContainer
-        center={center}
-        zoom={14}
-        zoomControl={false}
-        className="w-full h-full"
-      >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        />
-        <MapEvents onMapChange={onMapChange} />
-        {posts.map((post) => (
-          <Marker
-            key={post.id}
-            position={[post.lat, post.lng]}
-            icon={createCustomIcon(post.image, viewedPostIds.has(post.id))}
-            eventHandlers={{
-              click: () => onMarkerClick(post),
-            }}
-          />
-        ))}
-      </MapContainer>
-    </div>
+    <div ref={mapElement} className="w-full h-full bg-gray-100" />
   );
 };
 
-export default LeafletMapContainer;
+export default MapContainer;

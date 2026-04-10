@@ -5,7 +5,7 @@ import { Bell, MessageSquare } from 'lucide-react';
 
 const Header = () => {
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
       <h1 className="text-xl font-bold text-green-500 tracking-tight">MegaSnap</h1>
       <div className="flex items-center gap-4">
         <div className="relative">
