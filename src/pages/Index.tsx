@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
+// 게시물 생성 시 시간을 0~12시간 전으로 골고루 분산시킴
 const generateRandomPosts = (count: number, bounds?: any) => {
   const posts = [];
   const rows = Math.ceil(Math.sqrt(count));
@@ -27,6 +28,8 @@ const generateRandomPosts = (count: number, bounds?: any) => {
   const latStep = (bounds?.ne?.lat - bounds?.sw?.lat) / rows || 0.01;
   const lngStep = (bounds?.ne?.lng - bounds?.sw?.lng) / cols || 0.01;
 
+  const now = Date.now();
+
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       if (posts.length >= count) break;
@@ -35,6 +38,10 @@ const generateRandomPosts = (count: number, bounds?: any) => {
       const lng = baseLng + (j * lngStep) + (Math.random() * lngStep);
 
       const isAd = Math.random() < 0.15;
+      
+      // 0시간 전부터 12시간 전까지 랜덤하게 시간 할당
+      const hoursAgo = Math.random() * 12;
+      const createdAt = now - (hoursAgo * 60 * 60 * 1000);
 
       posts.push({
         id: Math.random(),
@@ -51,7 +58,7 @@ const generateRandomPosts = (count: number, bounds?: any) => {
         likes: Math.floor(Math.random() * 1000),
         image: `https://picsum.photos/seed/${Math.random()}/800/800`,
         isLiked: Math.random() > 0.5,
-        createdAt: Date.now() - Math.random() * 12 * 60 * 60 * 1000
+        createdAt
       });
     }
   }
@@ -70,31 +77,35 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [timeRange, setTimeRange] = useState(12);
   
-  const [posts, setPosts] = useState(() => generateRandomPosts(60));
+  const [posts, setPosts] = useState(() => generateRandomPosts(100));
 
+  // 1. 현재 지도 영역에 있는 모든 게시물 (시간 필터링 전)
+  const postsInBounds = useMemo(() => {
+    if (!mapBounds || !mapBounds.ne) return posts.slice(0, 50);
+    return posts.filter(post => {
+      return (
+        post.lat <= mapBounds.ne.lat &&
+        post.lat >= mapBounds.sw.lat &&
+        post.lng <= mapBounds.ne.lng &&
+        post.lng >= mapBounds.sw.lng
+      );
+    });
+  }, [mapBounds, posts]);
+
+  // 2. 시간 슬라이더에 의해 필터링된 실제 보여질 게시물
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-    let filtered = posts.filter(post => post.createdAt >= timeThreshold);
-    if (!mapBounds || !mapBounds.ne) return filtered.slice(0, 30);
-    return filtered
-      .filter(post => {
-        return (
-          post.lat <= mapBounds.ne.lat &&
-          post.lat >= mapBounds.sw.lat &&
-          post.lng <= mapBounds.ne.lng &&
-          post.lng >= mapBounds.sw.lng
-        );
-      })
-      .slice(0, 30);
-  }, [mapBounds, posts, timeRange]);
+    return postsInBounds.filter(post => post.createdAt >= timeThreshold);
+  }, [postsInBounds, timeRange]);
 
+  // 지도 이동 시 게시물이 너무 적으면 추가 생성 (시간 필터링 전 기준)
   useEffect(() => {
-    if (mapBounds && visiblePosts.length < 10 && !isRefreshing) {
-      const newPosts = generateRandomPosts(20, mapBounds);
+    if (mapBounds && postsInBounds.length < 15 && !isRefreshing) {
+      const newPosts = generateRandomPosts(30, mapBounds);
       setPosts(prev => [...prev, ...newPosts]);
     }
-  }, [mapBounds, visiblePosts.length, isRefreshing]);
+  }, [mapBounds, postsInBounds.length, isRefreshing]);
 
   const handlePostSelect = (post: any) => {
     setSelectedPost(post);
@@ -125,7 +136,6 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
-  // 팝업창이나 바텀 시트가 열려있는지 확인 (isSheetOpen 추가)
   const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost || isSheetOpen;
 
   return (
@@ -165,7 +175,6 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      {/* 팝업이나 시트가 열려있지 않을 때만 시간 슬라이더 표시 */}
       <AnimatePresence>
         {!isAnyPopupOpen && (
           <motion.div
@@ -188,10 +197,8 @@ const Index = () => {
         />
       </main>
 
-      {/* UI 컨트롤 레이어 */}
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="relative w-full h-full">
-          {/* 장소 검색 버튼 (텍스트 추가) */}
           <motion.button
             onClick={() => setIsPlaceSearchOpen(true)}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
@@ -201,7 +208,6 @@ const Index = () => {
             <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">장소 검색</span>
           </motion.button>
 
-          {/* 현재 위치 버튼 */}
           <motion.button 
             onClick={handleCurrentLocation}
             animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
@@ -249,8 +255,8 @@ const Index = () => {
                 </motion.div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <p className="font-medium">이 지역에는 게시물이 없어요.</p>
-                  <p className="text-xs mt-1">지도를 이동하거나 시간 범위를 늘려보세요!</p>
+                  <p className="font-medium">이 시간대에는 게시물이 없어요.</p>
+                  <p className="text-xs mt-1">슬라이더를 조절해 더 넓은 시간 범위를 확인해보세요!</p>
                 </div>
               )}
             </AnimatePresence>
