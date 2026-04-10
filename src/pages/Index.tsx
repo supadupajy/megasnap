@@ -122,9 +122,9 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      <div className="absolute top-28 left-4 right-4 z-30 flex items-start gap-2 pointer-events-none">
-        {/* 너비를 260px로 고정하여 확장 시에도 재검색 버튼을 밀어내지 않음 */}
-        <div className="pointer-events-auto w-[260px] shrink-0">
+      <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
+        {/* 너비를 240px로 조정하여 재검색 버튼이 화면 밖으로 나가지 않게 함 */}
+        <div className="pointer-events-auto w-[240px] shrink-0">
           <TrendingPosts 
             posts={visiblePosts} 
             isExpanded={isTrendingExpanded} 
@@ -137,7 +137,7 @@ const Index = () => {
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? '교체 중...' : '재검색'}
