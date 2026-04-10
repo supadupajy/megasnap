@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
 
-// 게시물 생성 함수 (rank 추가)
 const generateRandomPosts = (count: number, bounds?: any) => {
   const posts = [];
   const contentPool = [
@@ -40,7 +39,6 @@ const generateRandomPosts = (count: number, bounds?: any) => {
     const hoursAgo = Math.random() * 12;
     const createdAt = now - (hoursAgo * 60 * 60 * 1000);
 
-    // 좌표 랜덤 생성 (경계값이 있으면 그 안에서, 없으면 서울 근처)
     const lat = bounds?.sw?.lat 
       ? bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat)
       : 37.5465 + (Math.random() - 0.5) * 0.05;
@@ -81,10 +79,8 @@ const Index = () => {
   const [timeRange, setTimeRange] = useState(12);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
-  // 초기 게시물 40개 설정
   const [posts, setPosts] = useState(() => generateRandomPosts(40));
 
-  // 시간 필터링만 적용 (지도 범위 필터링은 MapContainer에서 처리하거나 여기서 posts 자체를 교체하므로 단순화)
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
@@ -100,12 +96,11 @@ const Index = () => {
     setMapBounds(bounds);
   }, []);
 
-  // 재검색 버튼 클릭 시: 기존 게시물을 버리고 새로운 40개로 교체
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
       const newPosts = generateRandomPosts(40, mapBounds);
-      setPosts(newPosts); // 완전히 교체 (Replace, not Append)
+      setPosts(newPosts);
       setIsRefreshing(false);
       showSuccess('주변의 새로운 게시물 40개를 불러왔습니다.');
     }, 600);
@@ -127,20 +122,18 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
-        <div className={cn(
-          "pointer-events-auto transition-all duration-500 ease-in-out",
-          isTrendingExpanded ? "flex-1" : "w-[260px]"
-        )}>
+      <div className="absolute top-28 left-4 right-4 z-30 flex items-start gap-2 pointer-events-none">
+        {/* 너비를 260px로 고정하여 확장 시에도 재검색 버튼을 밀어내지 않음 */}
+        <div className="pointer-events-auto w-[260px] shrink-0">
           <TrendingPosts 
-            posts={visiblePosts} // 현재 필터링된 40개 데이터를 전달
+            posts={visiblePosts} 
             isExpanded={isTrendingExpanded} 
             onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
             onPostClick={handlePostSelect}
           />
         </div>
         
-        <motion.div className="pointer-events-auto">
+        <div className="pointer-events-auto">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -149,7 +142,7 @@ const Index = () => {
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? '교체 중...' : '재검색'}
           </button>
-        </motion.div>
+        </div>
       </div>
 
       <AnimatePresence>
