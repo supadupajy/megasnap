@@ -42,7 +42,7 @@ const Messages = () => {
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
-          <h1 className="font-bold text-lg text-gray-900">Dyad_Explorer</h1>
+          <h1 className="font-bold text-lg text-gray-900">Direct Message</h1>
         </div>
         <button className="p-1 hover:bg-gray-50 rounded-full transition-colors">
           <Edit className="w-6 h-6 text-gray-800" />
