@@ -15,8 +15,6 @@ import TimeSlider from '@/components/TimeSlider';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
-const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
-
 const generateRandomPosts = (count: number, bounds?: any) => {
   const posts = [];
   const contentPool = [
@@ -81,6 +79,20 @@ const Index = () => {
   
   const [posts, setPosts] = useState(() => generateRandomPosts(40));
 
+  // 지도가 이동되어 bounds가 변경될 때마다 자동으로 게시물 갱신
+  useEffect(() => {
+    if (!mapBounds) return;
+
+    // 너무 잦은 갱신을 방지하기 위해 약간의 딜레이를 줄 수 있지만, 
+    // 즉각적인 반응을 위해 바로 실행하되 로딩 상태만 관리합니다.
+    const timer = setTimeout(() => {
+      const newPosts = generateRandomPosts(40, mapBounds);
+      setPosts(newPosts);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [mapBounds]);
+
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
@@ -123,7 +135,6 @@ const Index = () => {
       <Header />
 
       <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
-        {/* 너비를 240px로 조정하여 재검색 버튼이 화면 밖으로 나가지 않게 함 */}
         <div className="pointer-events-auto w-[240px] shrink-0">
           <TrendingPosts 
             posts={visiblePosts} 
