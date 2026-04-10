@@ -31,10 +31,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 데이터가 없을 경우를 대비한 방어 코드
   const displayPosts = posts.length > 0 ? posts.slice(0, 40) : [];
 
-  // Auto-rotate when collapsed
   useEffect(() => {
     if (isExpanded || displayPosts.length === 0) return;
     const timer = setInterval(
@@ -44,7 +42,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     return () => clearInterval(timer);
   }, [isExpanded, displayPosts]);
 
-  // 데이터가 바뀔 때 인덱스 초기화
   useEffect(() => {
     setCurrentIndex(0);
   }, [posts]);
@@ -59,7 +56,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   if (displayPosts.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto transition-all duration-500 ease-in-out">
+    <div className="w-full pointer-events-auto">
       <motion.div
         animate={{ height: isExpanded ? "auto" : "44px" }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
@@ -69,7 +66,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         )}
         onClick={onToggle}
       >
-        {/* Collapsed view */}
         {!isExpanded && currentPost && (
           <div className="h-full flex items-center gap-2">
             <span className="text-green-600 font-black text-sm w-4 italic">
@@ -100,7 +96,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </div>
         )}
 
-        {/* Expanded view */}
         {isExpanded && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
@@ -117,8 +112,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               {displayPosts.map((post) => (
                 <motion.div
                   key={post.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
                   onClick={(e) => handleItemClick(e, post)}
                 >

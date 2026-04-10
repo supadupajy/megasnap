@@ -1,155 +1,21 @@
-"use client";
-
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Navigation, RefreshCw, Search } from 'lucide-react';
-import Header from '@/components/Header';
-import PostItem from '@/components/PostItem';
-import BottomNav from '@/components/BottomNav';
-import MapContainer from '@/components/MapContainer';
-import PostDetail from '@/components/PostDetail';
-import WritePost from '@/components/WritePost';
-import TrendingPosts from '@/components/TrendingPosts';
-import PlaceSearch from '@/components/PlaceSearch';
-import TimeSlider from '@/components/TimeSlider';
-import { showSuccess } from '@/utils/toast';
-import { cn } from '@/lib/utils';
-
-const CATEGORIES = ['cafe', 'food', 'park', 'photo'];
-
-// 게시물 생성 함수 (rank 추가)
-const generateRandomPosts = (count: number, bounds?: any) => {
-  const posts = [];
-  const contentPool = [
-    "성수동 힙한 카페 발견! 분위기 너무 좋아요.",
-    "제주도 숨은 명소 공유합니다. 꼭 가보세요!",
-    "여기 진짜 인생 맛집이에요.. 웨이팅 필수!",
-    "강릉 바다 보러 왔어요 🌊 힐링 그 자체",
-    "서울 야경 명소 추천! 데이트 코스로 딱입니다.",
-    "부산 광안리 드론쇼 직관 후기입니다.",
-    "경주 황리단길 산책하기 좋은 날씨네요.",
-    "전주 한옥마을 먹거리 투어 다녀왔어요.",
-    "인천 송도 센트럴파크 피크닉 추천합니다.",
-    "대구 수성못 야경이 정말 예쁘네요.",
-  ];
-
-  const now = Date.now();
-
-  for (let i = 0; i < count; i++) {
-    const isAd = Math.random() < 0.1;
-    const hoursAgo = Math.random() * 12;
-    const createdAt = now - (hoursAgo * 60 * 60 * 1000);
-
-    // 좌표 랜덤 생성 (경계값이 있으면 그 안에서, 없으면 서울 근처)
-    const lat = bounds?.sw?.lat 
-      ? bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat)
-      : 37.5465 + (Math.random() - 0.5) * 0.05;
-    const lng = bounds?.sw?.lng 
-      ? bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng)
-      : 126.9580 + (Math.random() - 0.5) * 0.05;
-
-    posts.push({
-      id: Math.random().toString(36).substr(2, 9),
-      rank: i + 1,
-      isAd,
-      user: { 
-        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
-        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
-      },
-      content: contentPool[Math.floor(Math.random() * contentPool.length)],
-      location: ['서울', '부산', '제주', '강릉', '경주'][Math.floor(Math.random() * 5)],
-      lat,
-      lng,
-      likes: Math.floor(Math.random() * 1000),
-      image: `https://picsum.photos/seed/${Math.random()}/800/800`,
-      isLiked: Math.random() > 0.5,
-      createdAt
-    });
-  }
-  return posts;
-};
-
-const Index = () => {
-  const [selectedPost, setSelectedPost] = useState<any | null>(null);
-  const [viewedPostIds, setViewedPostIds] = useState<Set<any>>(new Set());
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [isPlaceSearchOpen, setIsPlaceSearchOpen] = useState(false);
-  const [mapBounds, setMapBounds] = useState<any>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
-  const [timeRange, setTimeRange] = useState(12);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  
-  // 초기 게시물 40개 설정
-  const [posts, setPosts] = useState(() => generateRandomPosts(40));
-
-  // 시간 필터링만 적용 (지도 범위 필터링은 MapContainer에서 처리하거나 여기서 posts 자체를 교체하므로 단순화)
-  const visiblePosts = useMemo(() => {
-    const now = Date.now();
-    const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-    return posts.filter(post => post.createdAt >= timeThreshold);
-  }, [posts, timeRange]);
-
-  const handlePostSelect = (post: any) => {
-    setSelectedPost(post);
-    setViewedPostIds(prev => new Set(prev).add(post.id));
-  };
-
-  const handleMapChange = useCallback(({ bounds }: any) => {
-    setMapBounds(bounds);
-  }, []);
-
-  // 재검색 버튼 클릭 시: 기존 게시물을 버리고 새로운 40개로 교체
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      const newPosts = generateRandomPosts(40, mapBounds);
-      setPosts(newPosts); // 완전히 교체 (Replace, not Append)
-      setIsRefreshing(false);
-      showSuccess('주변의 새로운 게시물 40개를 불러왔습니다.');
-    }, 600);
-  };
-
-  const handleCurrentLocation = () => {
-    setMapCenter({ lat: 37.5665, lng: 126.9780 });
-    showSuccess('현재 위치로 이동합니다.');
-  };
-
-  const handlePlaceSelect = (place: any) => {
-    setMapCenter({ lat: place.lat, lng: place.lng });
-    showSuccess(`${place.name}(으)로 이동합니다.`);
-  };
-
-  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost || isSheetOpen;
-
-  return (
-    <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
-      <Header />
-
-      <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
-        <div className={cn(
-          "pointer-events-auto transition-all duration-500 ease-in-out",
-          isTrendingExpanded ? "flex-1" : "w-[260px]"
-        )}>
-          <TrendingPosts 
-            posts={visiblePosts} // 현재 필터링된 40개 데이터를 전달
-            isExpanded={isTrendingExpanded} 
-            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
-            onPostClick={handlePostSelect}
-          />
-        </div>
-        
-        <motion.div className="pointer-events-auto">
+...
+        {/* 재검색 버튼이 항상 보이도록 유지 */}
+        <div className="pointer-events-auto">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text_
+```
+
+I will continue.
+
+```tsx
+-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? '교체 중...' : '재검색'}
           </button>
-        </motion.div>
+        </div>
       </div>
 
       <AnimatePresence>
