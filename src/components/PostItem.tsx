@@ -13,9 +13,11 @@ interface PostItemProps {
   likes: number;
   image: string;
   isLiked?: boolean;
+  isPopular?: boolean; // For popular posts with moving red gradient border
+  isInfluencer?: boolean; // For influencer posts with silver/gold border
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked }: PostItemProps) => {
+const PostItem = ({ user, content, location, likes, image, isLiked, isPopular, isInfluencer }: PostItemProps) => {
   return (
     <div className="bg-white mb-8 last:mb-20">
       {/* User Header */}
@@ -41,13 +43,36 @@ const PostItem = ({ user, content, location, likes, image, isLiked }: PostItemPr
         </button>
       </div>
 
-      {/* Main Image */}
-      <div className="aspect-square w-full bg-gray-100 overflow-hidden">
+      {/* Main Image with special border effects */}
+      <div className="relative aspect-square w-full bg-gray-100 overflow-hidden">
         <img 
           src={image} 
           alt="post" 
           className="w-full h-full object-cover" 
         />
+        
+        {/* Popular post border effect - moving red gradient */}
+        {isPopular && (
+          <div className="absolute inset-0 rounded-lg pointer-events-none">
+            <div className="absolute inset-0 rounded-lg bg-[length:200%_200%] bg-[radial-gradient(at_top_left,_red_0%,_transparent_50%)] 
+                      animate-[border_move_10s_linear_infinite] border-4 -translate-[2px] 
+                      bg-[radial-gradient(at_top_left,_red_0%,_transparent_50%)] 
+                      bg-[size:200%_200%] 
+                      bg-[position:0_0] 
+                      bg-[repeat:no-repeat]">
+            </div>
+          </div>
+        )}
+        
+        {/* Influencer post border effect - silver and gold gradient */}
+        {isInfluencer && (
+          <div className="absolute inset-0 rounded-lg pointer-events-none">
+            <div className="absolute inset-0 rounded-lg bg-[length:200%_200%] 
+                      bg-[conic-gradient(from_0deg,_silver_0%,_gold_25%,_silver_50%,_gold_75%,_silver_100%)] 
+                      animate-[border_move_15s_linear_infinite] border-4 -translate-[2px]">
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Interaction Bar */}
