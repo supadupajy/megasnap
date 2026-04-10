@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Trophy } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
+import StoryBar from '@/components/StoryBar';
 
 const MOCK_POPULAR = Array.from({ length: 20 }).map((_, i) => ({
   id: `pop-${i}`,
@@ -30,18 +30,8 @@ const Popular = () => {
       <Header />
       
       <div className="pt-[88px]">
-        {/* Title Section */}
-        <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-yellow-100 rounded-2xl flex items-center justify-center shadow-sm">
-              <Trophy className="w-7 h-7 text-yellow-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-gray-900">실시간 인기 피드</h2>
-              <p className="text-xs text-gray-400 font-medium">지금 가장 많은 사랑을 받는 장소들</p>
-            </div>
-          </div>
-        </div>
+        {/* 상단 프로필 스토리 바 */}
+        <StoryBar />
 
         {/* Instagram Style Feed */}
         <div className="flex flex-col">
