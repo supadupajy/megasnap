@@ -1,7 +1,5 @@
 "use client";
 
-import"use client";
-
 import React from 'react';
 import { Bell, MessageSquare } from 'lucide-react';
 
