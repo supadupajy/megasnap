@@ -37,7 +37,6 @@ const generateRandomPosts = (count: number, bounds: any) => {
     const hoursAgo = Math.random() * 12;
     const createdAt = now - (hoursAgo * 60 * 60 * 1000);
 
-    // 현재 바운즈 내에서 랜덤 좌표 생성
     const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
     const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
 
@@ -76,12 +75,10 @@ const Index = () => {
   
   const [posts, setPosts] = useState<any[]>([]);
 
-  // 지도가 이동되어 bounds가 변경될 때마다 게시물 업데이트
   useEffect(() => {
     if (!mapBounds) return;
 
     const updatePosts = () => {
-      // 1. 현재 화면(bounds) 안에 있는 기존 게시물 필터링
       const visibleExistingPosts = posts.filter(post => 
         post.lat >= mapBounds.sw.lat && 
         post.lat <= mapBounds.ne.lat && 
@@ -89,22 +86,19 @@ const Index = () => {
         post.lng <= mapBounds.ne.lng
       );
 
-      // 2. 부족한 개수 계산 (최대 35개로 조정)
-      const neededCount = Math.max(0, 35 - visibleExistingPosts.length);
+      // 30~35개 사이의 랜덤한 목표 개수 설정
+      const targetCount = Math.floor(Math.random() * 6) + 30;
+      const neededCount = Math.max(0, targetCount - visibleExistingPosts.length);
 
       if (neededCount > 0) {
-        // 3. 부족한 만큼만 새로운 게시물 생성
         const newPosts = generateRandomPosts(neededCount, mapBounds);
-        
-        // 4. 기존 유지 게시물 + 새 게시물 합치기 및 랭킹 재부여
         const combinedPosts = [...visibleExistingPosts, ...newPosts]
           .sort((a, b) => b.likes - a.likes)
           .map((post, index) => ({ ...post, rank: index + 1 }));
 
         setPosts(combinedPosts);
-      } else if (visibleExistingPosts.length > 35) {
-        // 35개가 넘으면 상위 35개만 유지
-        setPosts(visibleExistingPosts.slice(0, 35));
+      } else if (visibleExistingPosts.length > targetCount) {
+        setPosts(visibleExistingPosts.slice(0, targetCount));
       } else {
         setPosts(visibleExistingPosts);
       }
@@ -117,7 +111,6 @@ const Index = () => {
   const visiblePosts = useMemo(() => {
     const now = Date.now();
     const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-    // 광고(isAd) 게시물은 시간 필터링에서 제외하여 항상 표시
     return posts.filter(post => post.isAd || post.createdAt >= timeThreshold);
   }, [posts, timeRange]);
 
@@ -134,12 +127,13 @@ const Index = () => {
     if (!mapBounds) return;
     setIsRefreshing(true);
     setTimeout(() => {
-      const newPosts = generateRandomPosts(35, mapBounds)
+      const targetCount = Math.floor(Math.random() * 6) + 30;
+      const newPosts = generateRandomPosts(targetCount, mapBounds)
         .sort((a, b) => b.likes - a.likes)
         .map((p, i) => ({ ...p, rank: i + 1 }));
       setPosts(newPosts);
       setIsRefreshing(false);
-      showSuccess('주변 게시물을 완전히 새로고침했습니다.');
+      showSuccess('주변 게시물을 새로고침했습니다.');
     }, 600);
   };
 
@@ -153,7 +147,7 @@ const Index = () => {
     showSuccess(`${place.name}(으)로 이동합니다.`);
   };
 
-  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost || isSheetOpen;
+  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost;
 
   return (
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
@@ -182,7 +176,7 @@ const Index = () => {
       </div>
 
       <AnimatePresence>
-        {!isAnyPopupOpen && (
+        {!isAnyPopupOpen && !isSheetOpen && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -228,7 +222,7 @@ const Index = () => {
       <motion.div 
         initial={false}
         animate={{ 
-          y: isSheetOpen ? "10%" : "calc(100% - 180px)" 
+          y: isSheetOpen ? "110px" : "calc(100% - 180px)" 
         }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className="fixed inset-0 z-40 pointer-events-none"
