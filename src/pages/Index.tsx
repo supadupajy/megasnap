@@ -15,7 +15,7 @@ import TimeSlider from '@/components/TimeSlider';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
-const generateRandomPosts = (count: number, bounds?: any) => {
+const generateRandomPosts = (count: number, bounds: any) => {
   const posts = [];
   const contentPool = [
     "성수동 힙한 카페 발견! 분위기 너무 좋아요.",
@@ -37,16 +37,13 @@ const generateRandomPosts = (count: number, bounds?: any) => {
     const hoursAgo = Math.random() * 12;
     const createdAt = now - (hoursAgo * 60 * 60 * 1000);
 
-    const lat = bounds?.sw?.lat 
-      ? bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat)
-      : 37.5465 + (Math.random() - 0.5) * 0.05;
-    const lng = bounds?.sw?.lng 
-      ? bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng)
-      : 126.9580 + (Math.random() - 0.5) * 0.05;
+    // 현재 바운즈 내에서 랜덤 좌표 생성
+    const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
+    const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
 
     posts.push({
       id: Math.random().toString(36).substr(2, 9),
-      rank: i + 1,
+      rank: 0, // 나중에 정렬 후 부여
       isAd,
       user: { 
         name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
@@ -77,19 +74,43 @@ const Index = () => {
   const [timeRange, setTimeRange] = useState(12);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
-  const [posts, setPosts] = useState(() => generateRandomPosts(40));
+  const [posts, setPosts] = useState<any[]>([]);
 
-  // 지도가 이동되어 bounds가 변경될 때마다 자동으로 게시물 갱신
+  // 지도가 이동되어 bounds가 변경될 때마다 게시물 업데이트
   useEffect(() => {
     if (!mapBounds) return;
 
-    // 너무 잦은 갱신을 방지하기 위해 약간의 딜레이를 줄 수 있지만, 
-    // 즉각적인 반응을 위해 바로 실행하되 로딩 상태만 관리합니다.
-    const timer = setTimeout(() => {
-      const newPosts = generateRandomPosts(40, mapBounds);
-      setPosts(newPosts);
-    }, 300);
+    const updatePosts = () => {
+      // 1. 현재 화면(bounds) 안에 있는 기존 게시물 필터링
+      const visibleExistingPosts = posts.filter(post => 
+        post.lat >= mapBounds.sw.lat && 
+        post.lat <= mapBounds.ne.lat && 
+        post.lng >= mapBounds.sw.lng && 
+        post.lng <= mapBounds.ne.lng
+      );
 
+      // 2. 부족한 개수 계산 (최대 40개)
+      const neededCount = Math.max(0, 40 - visibleExistingPosts.length);
+
+      if (neededCount > 0) {
+        // 3. 부족한 만큼만 새로운 게시물 생성
+        const newPosts = generateRandomPosts(neededCount, mapBounds);
+        
+        // 4. 기존 유지 게시물 + 새 게시물 합치기 및 랭킹 재부여
+        const combinedPosts = [...visibleExistingPosts, ...newPosts]
+          .sort((a, b) => b.likes - a.likes) // 좋아요 순 정렬
+          .map((post, index) => ({ ...post, rank: index + 1 }));
+
+        setPosts(combinedPosts);
+      } else if (visibleExistingPosts.length > 40) {
+        // 혹시 40개가 넘으면 상위 40개만 유지
+        setPosts(visibleExistingPosts.slice(0, 40));
+      } else {
+        setPosts(visibleExistingPosts);
+      }
+    };
+
+    const timer = setTimeout(updatePosts, 300);
     return () => clearTimeout(timer);
   }, [mapBounds]);
 
@@ -109,12 +130,15 @@ const Index = () => {
   }, []);
 
   const handleRefresh = () => {
+    if (!mapBounds) return;
     setIsRefreshing(true);
     setTimeout(() => {
-      const newPosts = generateRandomPosts(40, mapBounds);
+      const newPosts = generateRandomPosts(40, mapBounds)
+        .sort((a, b) => b.likes - a.likes)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
       setPosts(newPosts);
       setIsRefreshing(false);
-      showSuccess('주변의 새로운 게시물 40개를 불러왔습니다.');
+      showSuccess('주변 게시물을 완전히 새로고침했습니다.');
     }, 600);
   };
 
