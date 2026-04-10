@@ -5,7 +5,6 @@ import { Grid, Bookmark, Map as MapIcon, ChevronLeft, UserPlus, MessageCircle } 
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
-import Header from '@/components/Header';
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -13,15 +12,15 @@ const UserProfile = () => {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-gray-50 sticky top-0 bg-white z-10">
-        <button onClick={() => navigate(-1)}>
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
+        <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <h1 className="font-bold text-gray-900">@{userId || 'traveler'}</h1>
-        <div className="w-6" /> {/* 여백용 */}
+        <div className="w-6" />
       </header>
 
-      <div className="p-6">
+      <div className="pt-[88px] p-6">
         {/* Profile Info */}
         <div className="flex items-center gap-6 mb-8">
           <div className="relative">

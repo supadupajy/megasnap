@@ -37,19 +37,19 @@ const Messages = () => {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-gray-50 sticky top-0 bg-white z-10">
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)}>
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <h1 className="font-bold text-lg text-gray-900">Dyad_Explorer</h1>
         </div>
-        <button className="p-1">
+        <button className="p-1 hover:bg-gray-50 rounded-full transition-colors">
           <Edit className="w-6 h-6 text-gray-800" />
         </button>
       </header>
 
-      <div className="px-4 py-4">
+      <div className="pt-[88px] px-4 py-4">
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChevronLeft, UserPlus } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -47,14 +47,14 @@ const Notifications = () => {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <header className="h-14 flex items-center px-4 border-b border-gray-50 sticky top-0 bg-white z-10">
-        <button onClick={() => navigate(-1)} className="mr-4">
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
+        <button onClick={() => navigate(-1)} className="mr-4 p-1 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <h1 className="font-bold text-lg text-gray-900">알림</h1>
       </header>
 
-      <div className="flex flex-col">
+      <div className="pt-[88px] flex flex-col">
         <div className="px-4 py-4">
           <h2 className="text-sm font-bold text-gray-900 mb-4">이번 주</h2>
           <div className="space-y-6">
