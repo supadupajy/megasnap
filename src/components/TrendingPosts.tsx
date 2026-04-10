@@ -62,7 +62,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         }}
         transition={{ 
           type: "spring", 
-          damping: 30, 
+          damping: 28, 
           stiffness: 400,
           mass: 0.8
         }}
@@ -72,14 +72,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         )}
         onClick={onToggle}
       >
-        <AnimatePresence mode="wait" initial={false}>
+        {/* AnimatePresence의 mode를 제거하여 펼칠 때 지연 없이 즉각적으로 애니메이션이 시작되도록 함 */}
+        <AnimatePresence initial={false}>
           {!isExpanded ? (
             <motion.div
               key="collapsed"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.2 }}
               className="h-full flex items-center gap-2"
             >
               <span className="text-green-600 font-black text-sm w-4 italic">
@@ -111,10 +112,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ) : (
             <motion.div 
               key="expanded"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
               className="flex flex-col gap-1"
             >
               <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
@@ -131,9 +132,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 {displayPosts.map((post, idx) => (
                   <motion.div
                     key={post.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.01, duration: 0.2 }}
+                    transition={{ delay: idx * 0.01, duration: 0.15 }}
                     className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
                     onClick={(e) => handleItemClick(e, post)}
                   >
