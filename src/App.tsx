@@ -10,6 +10,8 @@ import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Popular from "./pages/Popular";
 import Search from "./pages/Search";
+import Notifications from "./pages/Notifications";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 
@@ -21,7 +23,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500); // 2.5초 후 스플래시 종료
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -40,6 +42,8 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/popular" element={<Popular />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/messages" element={<Messages />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="*" element={<NotFound />} />

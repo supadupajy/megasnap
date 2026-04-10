@@ -75,7 +75,6 @@ const Index = () => {
   
   const [posts, setPosts] = useState<any[]>([]);
   
-  // 화면과 관계없이 유지될 전역 인기 포스팅 (20개)
   const globalPopularPosts = useMemo(() => {
     const dummyBounds = { sw: { lat: 33, lng: 124 }, ne: { lat: 38, lng: 130 } };
     return generateRandomPosts(20, dummyBounds)
@@ -160,6 +159,19 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
+      {/* Map Container - Full Screen */}
+      <main className="absolute inset-0 z-0">
+        <MapContainer 
+          posts={visiblePosts} 
+          viewedPostIds={viewedPostIds}
+          onMarkerClick={handlePostSelect}
+          onMapChange={handleMapChange}
+          onMapWriteClick={() => setIsWriteOpen(true)}
+          center={mapCenter}
+        />
+      </main>
+
+      {/* UI Overlays */}
       <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className="pointer-events-auto w-[240px] shrink-0">
           <TrendingPosts 
@@ -188,22 +200,12 @@ const Index = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
+            className="z-30"
           >
             <TimeSlider value={timeRange} onChange={setTimeRange} />
           </motion.div>
         )}
       </AnimatePresence>
-
-      <main className="relative w-full h-full pt-14 pb-20 overflow-hidden">
-        <MapContainer 
-          posts={visiblePosts} 
-          viewedPostIds={viewedPostIds}
-          onMarkerClick={handlePostSelect}
-          onMapChange={handleMapChange}
-          onMapWriteClick={() => setIsWriteOpen(true)}
-          center={mapCenter}
-        />
-      </main>
 
       <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
         <div className="relative w-full h-full">
