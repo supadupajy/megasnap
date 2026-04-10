@@ -136,7 +136,8 @@ const Index = () => {
     <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
       <Header />
 
-      <div className="absolute top-20 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
+      {/* ↓↓↓  여기서 top‑20 → top‑28 로 조정했습니다 ↓↓↓ */}
+      <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className={cn(
           "pointer-events-auto transition-all duration-500 ease-in-out",
           isTrendingExpanded ? "flex-1" : "w-[260px]"
