@@ -86,8 +86,8 @@ const Index = () => {
         post.lng <= mapBounds.ne.lng
       );
 
-      // 30~35개 사이의 랜덤한 목표 개수 설정
-      const targetCount = Math.floor(Math.random() * 6) + 30;
+      // 15~25개 사이의 랜덤한 목표 개수 설정
+      const targetCount = Math.floor(Math.random() * 11) + 15;
       const neededCount = Math.max(0, targetCount - visibleExistingPosts.length);
 
       if (neededCount > 0) {
@@ -127,7 +127,8 @@ const Index = () => {
     if (!mapBounds) return;
     setIsRefreshing(true);
     setTimeout(() => {
-      const targetCount = Math.floor(Math.random() * 6) + 30;
+      // 15~25개 사이의 랜덤한 목표 개수 설정
+      const targetCount = Math.floor(Math.random() * 11) + 15;
       const newPosts = generateRandomPosts(targetCount, mapBounds)
         .sort((a, b) => b.likes - a.likes)
         .map((p, i) => ({ ...p, rank: i + 1 }));
