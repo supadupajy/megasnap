@@ -17,7 +17,7 @@ type Post = {
 };
 
 interface TrendingPostsProps {
-  posts: Post[];                     // <-- dynamic posts passed from Index
+  posts: Post[];
   isExpanded: boolean;
   onToggle: () => void;
   onPostClick: (post: Post) => void;
@@ -31,9 +31,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Limit to at most 40 items for display  const displayPosts = posts.slice(0, 40);
+  // Define displayPosts as a subset of the posts prop (max 40 items)
+  const displayPosts = posts.slice(0, 40);
 
-  // Auto‑rotate when collapsed
+  // Auto-rotate when collapsed
   useEffect(() => {
     if (isExpanded) return;
     const timer = setInterval(
