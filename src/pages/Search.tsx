@@ -42,15 +42,17 @@ const Search = () => {
     <div className="min-h-screen bg-white pb-24">
       <Header />
       
-      <div className="pt-20 px-4">
-        <div className="relative mb-6">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input 
-            placeholder="아이디 또는 닉네임 검색" 
-            className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-green-500 text-base"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="pt-[88px] px-4">
+        <div className="relative py-6">
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input 
+              placeholder="아이디 또는 닉네임 검색" 
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-green-500 text-base"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="space-y-4">

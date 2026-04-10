@@ -29,7 +29,7 @@ const Popular = () => {
     <div className="min-h-screen bg-white pb-24">
       <Header />
       
-      <div className="pt-14">
+      <div className="pt-[88px]">
         {/* Title Section */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center gap-3">
