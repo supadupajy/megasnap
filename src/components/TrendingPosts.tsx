@@ -31,10 +31,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 1위부터 20위까지만 표시하도록 제한
-  const displayPosts = posts.length > 0 ? posts.slice(0, 20) : [];
+  // 항상 20개를 유지하도록 보장
+  const displayPosts = posts.slice(0, 20);
 
-  // 접혀있을 때 자동 롤링
   useEffect(() => {
     if (isExpanded || displayPosts.length === 0) return;
     const timer = setInterval(
@@ -42,12 +41,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       5000,
     );
     return () => clearInterval(timer);
-  }, [isExpanded, displayPosts]);
-
-  // 데이터가 바뀔 때 인덱스 초기화
-  useEffect(() => {
-    setCurrentIndex(0);
-  }, [posts]);
+  }, [isExpanded, displayPosts.length]);
 
   const currentPost = displayPosts[currentIndex];
 
@@ -59,12 +53,22 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   if (displayPosts.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto transition-all duration-500 ease-in-out">
+    <div className="pointer-events-auto">
       <motion.div
-        animate={{ height: isExpanded ? "auto" : "44px" }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        layout
+        initial={false}
+        animate={{ 
+          height: isExpanded ? "auto" : "44px",
+          borderRadius: isExpanded ? "24px" : "22px"
+        }}
+        transition={{ 
+          type: "spring", 
+          damping: 30, 
+          stiffness: 400, // 더 신속한 반응을 위해 강성 증가
+          mass: 0.8
+        }}
         className={cn(
-          "bg-white/90 backdrop-blur-md rounded-[22px] shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all w-full",
+          "bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer w-full",
           isExpanded ? "p-2" : "px-3",
         )}
         onClick={onToggle}
@@ -86,10 +90,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               <AnimatePresence mode="wait">
                 <motion.p
                   key={`${currentPost.id}-${currentIndex}`}
-                  initial={{ y: 20, opacity: 0 }}
+                  initial={{ y: 15, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  exit={{ y: -15, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
                   className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                 >
                   {currentPost.content}
@@ -102,7 +106,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
         {/* 펼쳐졌을 때 뷰 */}
         {isExpanded && (
-          <div className="flex flex-col gap-1">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col gap-1"
+          >
             <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
               <div className="flex items-center gap-1.5 overflow-hidden">
                 <Trophy className="w-3 h-3 text-yellow-500 shrink-0" />
@@ -113,12 +122,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               <ChevronDown className="w-4 h-4 text-gray-400 rotate-180 shrink-0" />
             </div>
 
-            <div className="max-h-[320px] overflow-y-auto no-scrollbar">
-              {displayPosts.map((post) => (
+            <div className="max-h-[320px] overflow-y-auto no-scrollbar overscroll-contain">
+              {displayPosts.map((post, idx) => (
                 <motion.div
                   key={post.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.02, duration: 0.2 }}
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
                   onClick={(e) => handleItemClick(e, post)}
                 >
@@ -143,7 +153,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
       </motion.div>
     </div>

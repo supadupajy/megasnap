@@ -74,6 +74,14 @@ const Index = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const [posts, setPosts] = useState<any[]>([]);
+  
+  // 화면과 관계없이 유지될 전역 인기 포스팅 (20개)
+  const globalPopularPosts = useMemo(() => {
+    const dummyBounds = { sw: { lat: 33, lng: 124 }, ne: { lat: 38, lng: 130 } };
+    return generateRandomPosts(20, dummyBounds)
+      .sort((a, b) => b.likes - a.likes)
+      .map((p, i) => ({ ...p, rank: i + 1 }));
+  }, []);
 
   useEffect(() => {
     if (!mapBounds) return;
@@ -86,7 +94,6 @@ const Index = () => {
         post.lng <= mapBounds.ne.lng
       );
 
-      // 15~25개 사이의 랜덤한 목표 개수 설정
       const targetCount = Math.floor(Math.random() * 11) + 15;
       const neededCount = Math.max(0, targetCount - visibleExistingPosts.length);
 
@@ -127,7 +134,6 @@ const Index = () => {
     if (!mapBounds) return;
     setIsRefreshing(true);
     setTimeout(() => {
-      // 15~25개 사이의 랜덤한 목표 개수 설정
       const targetCount = Math.floor(Math.random() * 11) + 15;
       const newPosts = generateRandomPosts(targetCount, mapBounds)
         .sort((a, b) => b.likes - a.likes)
@@ -157,7 +163,7 @@ const Index = () => {
       <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
         <div className="pointer-events-auto w-[240px] shrink-0">
           <TrendingPosts 
-            posts={visiblePosts} 
+            posts={globalPopularPosts} 
             isExpanded={isTrendingExpanded} 
             onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
             onPostClick={handlePostSelect}
