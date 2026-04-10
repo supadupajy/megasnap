@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Plus } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
@@ -21,7 +20,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
 
   // Long press logic
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLongPressing = useRef(false);
   const lastLongPressTime = useRef(0);
 
   useEffect(() => {
@@ -51,14 +49,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     // Event Listeners for Long Press
     map.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
       if (pressTimer.current) clearTimeout(pressTimer.current);
-      isLongPressing.current = false;
       
       pressTimer.current = setTimeout(() => {
         if (e.latLng) {
-          isLongPressing.current = true;
           lastLongPressTime.current = Date.now();
           setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-          // Haptic feedback if available
           if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
       }, 2000); // 2 seconds
@@ -79,9 +74,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     });
 
     map.addListener('click', () => {
-      // 롱프레스 직후의 클릭 이벤트(손을 뗄 때 발생하는 이벤트)는 무시
+      // 롱프레스 직후 손을 뗄 때 발생하는 클릭 이벤트는 무시 (500ms 여유)
       const now = Date.now();
-      if (now - lastLongPressTime.current < 300) return;
+      if (now - lastLongPressTime.current < 500) return;
       
       setActionPin(null);
     });
@@ -145,7 +140,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 글쓰기
               </div>
-              <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e; margin: 0 auto;">
+              <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e; margin: 0 auto;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
               </div>
             </div>
