@@ -61,8 +61,8 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
           </div>
           
           {isPopular && (
-            <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg">
-              <Sparkles className="w-3 h-3 fill-white" />
+            <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+              <Sparkles className="w-3 h-3 fill-black" />
               POPULAR
             </div>
           )}

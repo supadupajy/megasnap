@@ -6,9 +6,10 @@ import {
   DialogContent,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface PostDetailProps {
   post: any | null;
@@ -19,9 +20,14 @@ interface PostDetailProps {
 const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
   if (!post) return null;
 
+  const isPopular = post.borderType === 'popular';
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[92vw] sm:max-w-[400px] p-0 overflow-hidden border-none rounded-[32px] bg-white shadow-2xl">
+      <DialogContent className={cn(
+        "w-[92vw] sm:max-w-[400px] p-0 overflow-hidden rounded-[32px] bg-white shadow-2xl transition-all duration-300",
+        isPopular ? "border-[4px] border-[#ccff00]" : "border-none"
+      )}>
         <DialogHeader className="absolute top-4 right-4 z-10">
           <Button 
             variant="ghost" 
@@ -36,12 +42,18 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
         <ScrollArea className="max-h-[85vh]">
           <div className="flex flex-col">
             {/* Image Section */}
-            <div className="aspect-square w-full bg-gray-100">
+            <div className="aspect-square w-full bg-gray-100 relative">
               <img 
                 src={post.image} 
                 alt="" 
                 className="w-full h-full object-cover"
               />
+              {isPopular && (
+                <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                  <Sparkles className="w-3 h-3 fill-black" />
+                  POPULAR
+                </div>
+              )}
             </div>
 
             {/* Content Section */}
