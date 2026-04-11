@@ -50,29 +50,25 @@
   display: none !important;
 }
 
-.custom-div-icon {
-  background: none;
-  border: none;
-}
-
-/* Special Border Animations */
-@keyframes gradient-move {
+/* Moving Gradient Border Animation */
+@keyframes border-rotate {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-.animate-gradient-border {
-  background-size: 200% 200%;
-  animation: gradient-move 1.5s linear infinite;
+.animate-popular-border {
+  background: linear-gradient(90deg, #ff0000, #ff4d4d, #ff0000, #ff4d4d);
+  background-size: 300% 300%;
+  animation: border-rotate 2s linear infinite;
 }
 
 /* Popular Red Glow Animation */
 @keyframes popular-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.6)); }
+  50% { filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.9)); }
 }
 
 .animate-popular-glow {
-  animation: popular-glow 2s ease-in-out infinite;
+  animation: popular-glow 1.5s ease-in-out infinite;
 }

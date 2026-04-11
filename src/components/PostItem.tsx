@@ -18,6 +18,8 @@ interface PostItemProps {
 }
 
 const PostItem = ({ user, content, location, likes, image, isLiked, borderType = 'none' }: PostItemProps) => {
+  const isPopular = borderType === 'popular';
+
   return (
     <div className="bg-white mb-8 last:mb-20">
       {/* User Header */}
@@ -46,12 +48,12 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
       {/* Main Image with Special Border */}
       <div className="px-4">
         <div className={cn(
-          "relative aspect-square w-full overflow-hidden rounded-2xl transition-all duration-500",
-          borderType === 'popular' && "p-[4px] bg-gradient-to-r from-red-600 via-red-400 to-red-600 animate-gradient-border animate-popular-glow",
+          "relative aspect-square w-full rounded-2xl transition-all duration-500",
+          isPopular && "p-[5px] animate-popular-border animate-popular-glow",
           borderType === 'silver' && "p-[3px] bg-gradient-to-br from-gray-300 via-white to-gray-400",
           borderType === 'gold' && "p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700"
         )}>
-          <div className="w-full h-full rounded-[12px] overflow-hidden bg-white">
+          <div className="w-full h-full rounded-[12px] overflow-hidden bg-white relative z-10">
             <img 
               src={image} 
               alt="post" 
@@ -59,8 +61,8 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
             />
           </div>
           
-          {borderType === 'popular' && (
-            <div className="absolute top-3 left-3 bg-red-600 text-white px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg">
+          {isPopular && (
+            <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg">
               <Sparkles className="w-3 h-3 fill-white" />
               POPULAR
             </div>
