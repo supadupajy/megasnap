@@ -74,10 +74,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     });
 
     map.addListener('click', () => {
-      // 롱프레스 직후 손을 뗄 때 발생하는 클릭 이벤트는 무시 (500ms 여유)
       const now = Date.now();
       if (now - lastLongPressTime.current < 500) return;
-      
       setActionPin(null);
     });
 
@@ -226,7 +224,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background: ${isPopular ? 'transparent' : '#e5e7eb'}; transition: all 0.3s;
                         filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; ${isPopular ? 'border: 2px solid #ccff00;' : ''}">
+              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
               </div>
               ${isAd ? `
