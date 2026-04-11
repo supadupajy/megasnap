@@ -67,7 +67,7 @@
   position: relative;
   padding: 4px;
   border-radius: 1.25rem; /* 20px */
-  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
+  background-image: conic-gradient(from var(--angle), #ccff00, #ffff00, #ccff00, #ffff00, #ccff00);
   animation: rotate-border 2s linear infinite;
 }
 
@@ -79,15 +79,15 @@
 }
 
 .popular-border-fallback {
-  background: linear-gradient(90deg, #ff0000, #ff4d4d, #ff0000, #ff4d4d);
+  background: linear-gradient(90deg, #ccff00, #ffff00, #ccff00, #ffff00);
   background-size: 300% 300%;
   animation: border-rotate-fallback 2s linear infinite;
 }
 
-/* Popular Red Glow Animation */
+/* Popular Fluorescent Glow Animation */
 @keyframes popular-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
-  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(204, 255, 0, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(204, 255, 0, 1)); }
 }
 
 .animate-popular-glow {

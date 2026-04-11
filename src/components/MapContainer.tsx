@@ -236,8 +236,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${isPopular ? '#ff0000' : borderColor};
+                        width: 12px; height: 12px; background: ${isPopular ? '#ccff00' : borderColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+
           </div>
         `;
 
