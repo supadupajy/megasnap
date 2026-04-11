@@ -25,7 +25,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
       {/* User Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-purple-600">
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
             <img 
               src={user.avatar} 
               alt={user.name} 
