@@ -71,12 +71,17 @@
   animation: rotate-border 2s linear infinite;
 }
 
-.ad-border-container {
-  position: relative;
-  padding: 4px;
-  border-radius: 1.25rem;
-  background-color: #3b82f6;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+/* Fallback for browsers that don't support @property */
+@keyframes border-rotate-fallback {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.popular-border-fallback {
+  background: linear-gradient(90deg, #ccff00, #ffff00, #ccff00, #ffff00);
+  background-size: 300% 300%;
+  animation: border-rotate-fallback 2s linear infinite;
 }
 
 /* Popular Fluorescent Glow Animation */
@@ -85,15 +90,6 @@
   50% { filter: drop-shadow(0 0 20px rgba(204, 255, 0, 1)); }
 }
 
-@keyframes ad-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5)); }
-  50% { filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8)); }
-}
-
 .animate-popular-glow {
   animation: popular-glow 1.5s ease-in-out infinite;
-}
-
-.animate-ad-glow {
-  animation: ad-glow 1.5s ease-in-out infinite;
 }
