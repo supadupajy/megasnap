@@ -53,12 +53,25 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
                   className="w-10 h-10 rounded-full object-cover border-2 border-green-50" 
                 />
                 <div>
-                  <p className="font-bold text-gray-900 leading-none mb-1">{post.user.name}</p>
-                  <div className="flex items-center text-green-500 gap-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-900 leading-none">{post.user.name}</p>
+                    {post.isAd && (
+                      <a
+                        href="https://s.baemin.com/t3000fBqlbHGL"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold hover:bg-blue-600 transition-colors"
+                      >
+                        앱에서 보기
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center text-green-500 gap-1 mt-1">
                     <MapPin className="w-3 h-3" />
                     <span className="text-[11px] font-bold">{post.location}</span>
                   </div>
                 </div>
+
               </div>
 
               <p className="text-gray-700 text-sm leading-relaxed mb-6">

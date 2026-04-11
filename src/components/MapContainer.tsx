@@ -214,21 +214,22 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         div.style.width = '56px';
         div.style.height = '56px';
         
-        const isPopular = this.post.borderType === 'popular';
-        const borderColor = this.post.isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        const isAd = this.post.isAd;
+        const isPopular = !isAd && this.post.borderType === 'popular';
+        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
             <div class="${isPopular ? 'popular-border-container animate-popular-glow' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px;
-                        ${!isPopular ? `border: 4px solid ${borderColor};` : 'padding: 4px;'}
+                        ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background: ${isPopular ? 'transparent' : '#e5e7eb'}; transition: all 0.3s;
-                        filter: ${!this.post.isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
+                        filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; ${isPopular ? 'border: 2px solid #ccff00;' : ''}">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
               </div>
-              ${this.post.isAd ? `
+              ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
                             font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
                   AD
@@ -238,7 +239,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
                         width: 12px; height: 12px; background: ${isPopular ? '#ccff00' : borderColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
-
           </div>
         `;
 
