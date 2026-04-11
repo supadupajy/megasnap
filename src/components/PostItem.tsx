@@ -49,15 +49,14 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isPopular && "p-[5px] animate-popular-border animate-popular-glow",
-          borderType === 'silver' && "p-[3px] bg-gradient-to-br from-gray-300 via-white to-gray-400",
-          borderType === 'gold' && "p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700"
+          borderType === 'silver' && "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg",
+          borderType === 'gold' && "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg"
         )}>
-          <div className="w-full h-full rounded-[12px] overflow-hidden bg-white relative z-10">
-            <img 
-              src={image} 
-              alt="post" 
-              className="w-full h-full object-cover" 
+          <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
+            <img
+              src={image}
+              alt="post"
+              className="w-full h-full object-cover"
             />
           </div>
           

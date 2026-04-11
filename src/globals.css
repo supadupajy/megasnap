@@ -50,23 +50,44 @@
   display: none !important;
 }
 
-/* Moving Gradient Border Animation */
-@keyframes border-rotate {
+/* Moving Gradient Border Animation using Conic Gradient */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.popular-border-container {
+  position: relative;
+  padding: 4px;
+  border-radius: 1.25rem; /* 20px */
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
+  animation: rotate-border 2s linear infinite;
+}
+
+/* Fallback for browsers that don't support @property */
+@keyframes border-rotate-fallback {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-.animate-popular-border {
+.popular-border-fallback {
   background: linear-gradient(90deg, #ff0000, #ff4d4d, #ff0000, #ff4d4d);
   background-size: 300% 300%;
-  animation: border-rotate 2s linear infinite;
+  animation: border-rotate-fallback 2s linear infinite;
 }
 
 /* Popular Red Glow Animation */
 @keyframes popular-glow {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.6)); }
-  50% { filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.9)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
 }
 
 .animate-popular-glow {

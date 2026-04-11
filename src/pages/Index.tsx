@@ -44,9 +44,9 @@ const generateRandomPosts = (count: number, bounds: any) => {
       id: Math.random().toString(36).substr(2, 9),
       rank: 0,
       isAd,
-      user: { 
-        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
-        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
+      user: {
+        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`,
+        avatar: `https://i.pravatar.cc/150?u=${Math.random()}`
       },
       content: contentPool[Math.floor(Math.random() * contentPool.length)],
       location: ['서울', '부산', '제주', '강릉', '경주'][Math.floor(Math.random() * 5)],
@@ -55,9 +55,22 @@ const generateRandomPosts = (count: number, bounds: any) => {
       likes: Math.floor(Math.random() * 1000),
       image: `https://picsum.photos/seed/${Math.random()}/800/800`,
       isLiked: Math.random() > 0.5,
-      createdAt
+      createdAt,
+      borderType: 'none'
     });
   }
+
+  // Randomly assign 'popular' border to 1-2 posts
+  const specialCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
+  const shuffled = [...posts].sort(() => 0.5 - Math.random());
+  const selectedIds = new Set(shuffled.slice(0, specialCount).map(p => p.id));
+  
+  posts.forEach(p => {
+    if (selectedIds.has(p.id)) {
+      p.borderType = 'popular';
+    }
+  });
+
   return posts;
 };
 
@@ -189,7 +202,7 @@ const Index = () => {
             className="flex items-center gap-2 px-3 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? '교체 중...' : '재검색'}
+            재검색
           </button>
         </div>
       </div>

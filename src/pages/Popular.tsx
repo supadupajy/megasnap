@@ -8,19 +8,17 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
 
-// Generate mock posts with guaranteed popular posts every 2 items
+// Generate mock posts with popular posts for the badge (but no animated border in PostItem)
 const generateMockPosts = () => {
   return Array.from({ length: 30 }).map((_, i) => {
-    // Every 2nd post is 'popular' to ensure at least one is visible on screen at all times
-    const isPopular = i % 2 === 0;
-    
+    const isPopular = i % 3 === 0;
     return {
       id: `pop-${i}`,
       user: {
         name: `star_traveler_${i}`,
         avatar: `https://i.pravatar.cc/150?u=pop${i}`,
       },
-      content: isPopular 
+      content: isPopular
         ? "🔥 지금 가장 핫한 장소! 실시간 인기 포스팅입니다. #인기 #핫플 #추천"
         : "오늘의 추천 장소입니다. 분위기가 정말 좋네요. #일상 #여행 #소통",
       location: ["서울 성수동", "제주 애월", "부산 해운대", "강릉 안목해변"][i % 4],
