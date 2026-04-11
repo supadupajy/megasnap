@@ -222,7 +222,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                  style="width: 56px; height: 56px; border-radius: 16px;
                         ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background: ${isPopular ? 'transparent' : '#e5e7eb'}; transition: all 0.3s;
+                        background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;
                         filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
