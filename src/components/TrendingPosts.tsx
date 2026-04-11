@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Trophy } from "lucide-react";
+import { ChevronDown, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Post = {
@@ -72,7 +72,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         )}
         onClick={onToggle}
       >
-        {/* AnimatePresence의 mode를 제거하여 펼칠 때 지연 없이 즉각적으로 애니메이션이 시작되도록 함 */}
         <AnimatePresence initial={false}>
           {!isExpanded ? (
             <motion.div
@@ -120,9 +119,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             >
               <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
                 <div className="flex items-center gap-1.5 overflow-hidden">
-                  <Trophy className="w-3 h-3 text-yellow-500 shrink-0" />
+                  <Flame className="w-3 h-3 text-orange-500 shrink-0 fill-orange-500" />
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
-                    Real-time Popular (Top 20)
+                    Real-time HOT (Top 20)
                   </span>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-400 rotate-180 shrink-0" />

@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -50,8 +50,8 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
               />
               {isPopular && (
                 <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-                  <Sparkles className="w-3 h-3 fill-black" />
-                  POPULAR
+                  <Flame className="w-3 h-3 fill-black" />
+                  HOT
                 </div>
               )}
             </div>

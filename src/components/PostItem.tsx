@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PostItemProps {
@@ -63,8 +63,8 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
           
           {isPopular && (
             <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-              <Sparkles className="w-3 h-3 fill-black" />
-              POPULAR
+              <Flame className="w-3 h-3 fill-black" />
+              HOT
             </div>
           )}
         </div>
