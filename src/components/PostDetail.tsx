@@ -21,12 +21,13 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
   if (!post) return null;
 
   const isPopular = post.borderType === 'popular';
+  const isAd = post.isAd;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={cn(
         "w-[92vw] sm:max-w-[400px] p-0 overflow-hidden rounded-[32px] bg-white shadow-2xl transition-all duration-300",
-        isPopular ? "border-[4px] border-[#ccff00]" : "border-none"
+        isPopular ? "border-[4px] border-[#ccff00]" : (isAd ? "border-[4px] border-blue-500" : "border-none")
       )}>
         <DialogHeader className="absolute top-4 right-4 z-10">
           <Button 
@@ -52,6 +53,11 @@ const PostDetail = ({ post, isOpen, onClose }: PostDetailProps) => {
                 <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
                   <Flame className="w-3 h-3 fill-black" />
                   HOT
+                </div>
+              )}
+              {isAd && (
+                <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                  AD
                 </div>
               )}
             </div>

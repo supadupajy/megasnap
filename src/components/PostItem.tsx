@@ -14,10 +14,11 @@ interface PostItemProps {
   likes: number;
   image: string;
   isLiked?: boolean;
+  isAd?: boolean;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked, borderType = 'none' }: PostItemProps) => {
+const PostItem = ({ user, content, location, likes, image, isLiked, isAd, borderType = 'none' }: PostItemProps) => {
   const isPopular = borderType === 'popular';
 
   return (
@@ -50,6 +51,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
           isPopular && "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20",
+          isAd && "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20",
           borderType === 'silver' && "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg",
           borderType === 'gold' && "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg"
         )}>
@@ -65,6 +67,12 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
             <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
               <Flame className="w-3 h-3 fill-black" />
               HOT
+            </div>
+          )}
+
+          {isAd && (
+            <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+              AD
             </div>
           )}
         </div>
