@@ -216,20 +216,24 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isPopular = !isAd && this.post.borderType === 'popular';
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
+        const containerClass = isPopular 
+          ? 'popular-border-container animate-popular-glow' 
+          : (isAd ? 'ad-border-container animate-ad-glow' : '');
+
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            <div class="${isPopular ? 'popular-border-container animate-popular-glow' : ''}"
+            <div class="${containerClass}"
                  style="width: 56px; height: 56px; border-radius: 16px;
-                        ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
+                        ${(isPopular || isAd) ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;
+                        background-color: ${(isPopular || isAd) ? 'transparent' : '#e5e7eb'}; transition: all 0.3s;
                         filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
-                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
+                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 20;">
                   AD
                 </div>
               ` : ''}
