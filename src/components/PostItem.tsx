@@ -19,7 +19,7 @@ interface PostItemProps {
 }
 
 const PostItem = ({ user, content, location, likes, image, isLiked, isAd, borderType = 'none' }: PostItemProps) => {
-  const isPopular = borderType === 'popular';
+  const isPopular = !isAd && borderType === 'popular';
 
   return (
     <div className="bg-white mb-8 last:mb-20">
@@ -50,10 +50,13 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, border
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isPopular && "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20",
-          isAd && "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20",
-          borderType === 'silver' && "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg",
-          borderType === 'gold' && "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg"
+          isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
+            isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
+              borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
+                borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
+              )
+            )
+          )
         )}>
           <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
             <img
@@ -63,16 +66,14 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, border
             />
           </div>
           
-          {isPopular && (
+          {isAd ? (
+            <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+              AD
+            </div>
+          ) : isPopular && (
             <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
               <Flame className="w-3 h-3 fill-black" />
               HOT
-            </div>
-          )}
-
-          {isAd && (
-            <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-              AD
             </div>
           )}
         </div>
