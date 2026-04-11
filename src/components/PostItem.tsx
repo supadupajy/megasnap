@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PostItemProps {
   user: {
@@ -13,9 +14,10 @@ interface PostItemProps {
   likes: number;
   image: string;
   isLiked?: boolean;
+  borderType?: 'popular' | 'silver' | 'gold' | 'none';
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked }: PostItemProps) => {
+const PostItem = ({ user, content, location, likes, image, isLiked, borderType = 'none' }: PostItemProps) => {
   return (
     <div className="bg-white mb-8 last:mb-20">
       {/* User Header */}
@@ -41,13 +43,33 @@ const PostItem = ({ user, content, location, likes, image, isLiked }: PostItemPr
         </button>
       </div>
 
-      {/* Main Image */}
-      <div className="aspect-square w-full bg-gray-100 overflow-hidden">
-        <img 
-          src={image} 
-          alt="post" 
-          className="w-full h-full object-cover" 
-        />
+      {/* Main Image with Special Border */}
+      <div className="px-4">
+        <div className={cn(
+          "relative aspect-square w-full overflow-hidden rounded-2xl",
+          borderType === 'popular' && "p-[3px] bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-gradient-border",
+          borderType === 'silver' && "p-[3px] bg-gradient-to-br from-gray-300 via-white to-gray-400",
+          borderType === 'gold' && "p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700"
+        )}>
+          <div className="w-full h-full rounded-[13px] overflow-hidden bg-white">
+            <img 
+              src={image} 
+              alt="post" 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+          
+          {borderType !== 'none' && (
+            <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md p-1.5 rounded-full border border-white/30">
+              <Sparkles className={cn(
+                "w-4 h-4",
+                borderType === 'popular' && "text-red-500",
+                borderType === 'silver' && "text-gray-100",
+                borderType === 'gold' && "text-yellow-300"
+              )} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Interaction Bar */}
