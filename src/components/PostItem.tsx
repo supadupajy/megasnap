@@ -46,12 +46,12 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
       {/* Main Image with Special Border */}
       <div className="px-4">
         <div className={cn(
-          "relative aspect-square w-full overflow-hidden rounded-2xl",
-          borderType === 'popular' && "p-[3px] bg-gradient-to-r from-red-500 via-orange-500 to-red-500 animate-gradient-border",
+          "relative aspect-square w-full overflow-hidden rounded-2xl transition-all duration-500",
+          borderType === 'popular' && "p-[4px] bg-gradient-to-r from-red-600 via-red-400 to-red-600 animate-gradient-border animate-popular-glow",
           borderType === 'silver' && "p-[3px] bg-gradient-to-br from-gray-300 via-white to-gray-400",
           borderType === 'gold' && "p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700"
         )}>
-          <div className="w-full h-full rounded-[13px] overflow-hidden bg-white">
+          <div className="w-full h-full rounded-[12px] overflow-hidden bg-white">
             <img 
               src={image} 
               alt="post" 
@@ -59,14 +59,10 @@ const PostItem = ({ user, content, location, likes, image, isLiked, borderType =
             />
           </div>
           
-          {borderType !== 'none' && (
-            <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md p-1.5 rounded-full border border-white/30">
-              <Sparkles className={cn(
-                "w-4 h-4",
-                borderType === 'popular' && "text-red-500",
-                borderType === 'silver' && "text-gray-100",
-                borderType === 'gold' && "text-yellow-300"
-              )} />
+          {borderType === 'popular' && (
+            <div className="absolute top-3 left-3 bg-red-600 text-white px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg">
+              <Sparkles className="w-3 h-3 fill-white" />
+              POPULAR
             </div>
           )}
         </div>

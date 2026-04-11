@@ -64,5 +64,15 @@
 
 .animate-gradient-border {
   background-size: 200% 200%;
-  animation: gradient-move 3s ease infinite;
+  animation: gradient-move 1.5s linear infinite;
+}
+
+/* Popular Red Glow Animation */
+@keyframes popular-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+}
+
+.animate-popular-glow {
+  animation: popular-glow 2s ease-in-out infinite;
 }
