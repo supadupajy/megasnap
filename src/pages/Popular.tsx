@@ -8,7 +8,7 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
 
-// Generate mock posts with 1~3 random special borders
+// Generate mock posts with guaranteed 1 popular + 0~2 random special borders
 const generateMockPosts = () => {
   // Create 20 posts with default borderType = 'none'
   const posts = Array.from({ length: 20 }).map((_, i) => ({
@@ -23,28 +23,30 @@ const generateMockPosts = () => {
     likes: 2500 - i * 50,
     image: `https://picsum.photos/seed/pop${i}/800/800`,
     isLiked: true,
-    // Default borderType is 'none'
     borderType: 'none' as 'popular' | 'silver' | 'gold' | 'none',
   }));
 
-  // Determine how many special borders (1~3)
-  const specialCount = Math.min(3, posts.length); // Ensure we don't exceed post count
-  const indices = Array.from({ length: posts.length }, (_, i) => i); // Create [0,1,2,...]
-  
-  // Shuffle indices
+  // Create shuffled indices
+  const indices = Array.from({ length: posts.length }, (_, i) => i);
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
+
+  // GUARANTEE: First post always gets 'popular' (red animated border)
+  const popularIndex = indices[0];
+  posts[popularIndex].borderType = 'popular';
+
+  // Additional 0~2 random special borders (silver or gold)
+  const extraCount = Math.floor(Math.random() * 3); // 0, 1, or 2
+  const borderTypes: Array<'silver' | 'gold'> = ['silver', 'gold'];
   
-  // Assign random border types to 1~3 posts
-  const borderTypes: Array<'popular' | 'silver' | 'gold'> = ['popular', 'silver', 'gold'];
-  indices.slice(0, specialCount).forEach((idx, i) => {
-    // Safely assign borderType only if post exists
-    if (posts[idx]) {
+  for (let i = 1; i <= extraCount; i++) {
+    const idx = indices[i];
+    if (idx && posts[idx]) {
       posts[idx].borderType = borderTypes[i % borderTypes.length];
     }
-  });
+  }
 
   return posts;
 };
