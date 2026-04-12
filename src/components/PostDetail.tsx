@@ -19,10 +19,11 @@ interface PostDetailProps {
 }
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
-  // initialIndex가 -1일 수 있으므로, 유효한 인덱스를 찾을 때까지 기다리거나 기본값 설정
+  // currentIndex를 initialIndex로 초기화하되, -1인 경우 0으로 설정
   const [currentIndex, setCurrentIndex] = useState(initialIndex === -1 ? 0 : initialIndex);
   const [direction, setDirection] = useState(0);
 
+  // 팝업이 열릴 때마다 currentIndex를 initialIndex와 동기화
   useEffect(() => {
     if (isOpen && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -30,11 +31,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     }
   }, [isOpen, initialIndex]);
 
-  // posts가 없거나 currentIndex가 범위를 벗어나면 렌더링하지 않음
   if (!isOpen || !posts || posts.length === 0) return null;
   
-  const safeIndex = currentIndex >= 0 && currentIndex < posts.length ? currentIndex : (initialIndex !== -1 ? initialIndex : 0);
-  const post = posts[safeIndex];
+  // currentIndex가 유효한 범위 내에 있는지 확인
+  const activeIndex = currentIndex >= 0 && currentIndex < posts.length ? currentIndex : 0;
+  const post = posts[activeIndex];
   
   if (!post) return null;
 
@@ -105,7 +106,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               key={idx}
               className={cn(
                 "w-1.5 rounded-full transition-all duration-300",
-                idx === currentIndex ? "h-8 bg-[#ccff00]" : "h-1.5 bg-white/30"
+                idx === activeIndex ? "h-8 bg-[#ccff00]" : "h-1.5 bg-white/30"
               )}
             />
           ))}
@@ -153,12 +154,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                   <div className="p-8">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
-                        <img 
-                          src={post.user.avatar} 
-                          alt="" 
-                          className="w-full h-full rounded-full object-cover border-2 border-white" 
+                        <img
+                          src={post.user.avatar}
+                          alt=""
+                          className="w-full h-full rounded-full object-cover border-2 border-white"
                         />
                       </div>
+
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-900 text-base leading-none">{post.user.name}</p>

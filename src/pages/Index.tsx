@@ -19,7 +19,6 @@ const generateMockPosts = () => {
     "야경이 정말 아름다운 곳이에요 🌙"
   ];
 
-  // 마커 개수를 20개로 조정 (사용자 요청: 15~20개)
   for (let i = 0; i < 20; i++) {
     const isAd = Math.random() > 0.9;
     const lat = 37.5665 + (Math.random() - 0.5) * 0.05;
@@ -128,28 +127,31 @@ const Index = () => {
         />
       </main>
 
-      {/* Refresh Button - Text color set to green-600 */}
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10">
-        <button 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          재검색
-        </button>
-      </div>
+      {/* UI Overlays Container */}
+      <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+        {/* Trending Posts - Left Side */}
+        <div className="w-64 pointer-events-auto">
+          <TrendingPosts 
+            posts={trendingPosts}
+            isExpanded={isTrendingExpanded}
+            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+            onPostClick={(post) => {
+              setSelectedPostId(post.id);
+            }}
+          />
+        </div>
 
-      {/* Trending Posts Overlay - Moved back to left-4 */}
-      <div className="absolute top-24 left-4 z-10 w-64">
-        <TrendingPosts 
-          posts={trendingPosts}
-          isExpanded={isTrendingExpanded}
-          onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-          onPostClick={(post) => {
-            setSelectedPostId(post.id);
-          }}
-        />
+        {/* Refresh Button - Right Side, Aligned with TrendingPosts height */}
+        <div className="pointer-events-auto">
+          <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="bg-white/90 backdrop-blur-md h-[44px] px-5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            재검색
+          </button>
+        </div>
       </div>
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
