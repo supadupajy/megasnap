@@ -56,7 +56,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
           if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
-      }, 2000); // 2 seconds
+      }, 2000);
     });
 
     map.addListener('mouseup', () => {
@@ -93,7 +93,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       }
     };
 
-    // 'idle' 대신 'bounds_changed'를 사용하여 이동 중에도 실시간으로 좌표 업데이트
     map.addListener('bounds_changed', updateBounds);
     updateBounds();
 
@@ -102,9 +101,36 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     };
   }, []);
 
+  // Smooth Pan Animation for long distances
   useEffect(() => {
     if (mapInstance.current && center) {
-      mapInstance.current.panTo(center);
+      const map = mapInstance.current;
+      const start = map.getCenter();
+      if (!start) return;
+
+      const startTime = performance.now();
+      const duration = 1000; // 1 second animation
+
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease-in-out cubic function
+        const ease = progress < 0.5 
+          ? 4 * progress * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        const lat = start.lat() + (center.lat - start.lat()) * ease;
+        const lng = start.lng() + (center.lng - start.lng()) * ease;
+        
+        map.setCenter({ lat, lng });
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
     }
   }, [center]);
 
