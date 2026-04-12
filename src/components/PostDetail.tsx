@@ -9,7 +9,7 @@ import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls, useAnimation } from 'framer-motion';
 
 interface PostDetailProps {
   posts: any[];
@@ -22,9 +22,9 @@ interface PostDetailProps {
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [isClosingLeft, setIsClosingLeft] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+  const controls = useAnimation();
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -37,9 +37,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen) {
       setCurrentIndex(0);
       setDirection(0);
-      setIsClosingLeft(false);
+      controls.set({ x: 0, opacity: 1, y: 0 });
     }
-  }, [isOpen]);
+  }, [isOpen, controls]);
+
+  // 포스트가 바뀔 때마다 애니메이션 상태 초기화
+  useEffect(() => {
+    if (isOpen) {
+      controls.set({ x: 0, opacity: 1 });
+    }
+  }, [currentIndex, isOpen, controls]);
 
   useEffect(() => {
     if (isOpen && displayPosts[currentIndex] && onViewPost) {
@@ -66,12 +73,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
+  const handleDragEnd = async (event: any, info: PanInfo) => {
     const screenWidth = window.innerWidth;
     const swipeThreshold = 50;
     const velocityThreshold = 200;
 
-    // 수직 스와이프 감지 (포스팅 탐색)
+    // 1. 수직 스와이프 감지 (포스팅 탐색)
     if (Math.abs(info.offset.y) > Math.abs(info.offset.x) + 20) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         if (currentIndex < displayPosts.length - 1) {
@@ -84,16 +91,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           setCurrentIndex(currentIndex - 1);
         }
       }
+      // 수직 스와이프 후 위치 복구
+      controls.start({ y: 0, transition: { type: "spring", damping: 25, stiffness: 200 } });
       return;
     }
 
-    // 수평 스와이프 감지 (왼쪽으로 닫기)
+    // 2. 수평 스와이프 감지 (왼쪽으로 닫기)
     // 화면 절반 이상 드래그했거나 왼쪽으로 빠른 속도로 스와이프했을 때
     if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
-      setIsClosingLeft(true);
+      // 닫기 애니메이션 실행 (Fade out + Slide Left)
+      await controls.start({ 
+        x: -screenWidth, 
+        opacity: 0, 
+        transition: { duration: 0.3, ease: "easeOut" } 
+      });
       onClose();
+    } else {
+      // 원래 위치로 부드럽게 복귀
+      controls.start({ 
+        x: 0, 
+        opacity: 1,
+        transition: { type: "spring", damping: 25, stiffness: 250 } 
+      });
     }
-    // 그 외의 경우는 dragConstraints={{left:0, right:0}}에 의해 자동으로 0으로 복귀함
   };
 
   const variants = {
@@ -108,31 +128,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       x: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.3 },
-        x: { type: "spring", damping: 25, stiffness: 200 } // 복귀 시 부드러운 스프링 효과
+        opacity: { duration: 0.3 }
       }
     },
-    exit: (direction: number) => {
-      if (isClosingLeft) {
-        return {
-          x: "-100%",
-          opacity: 0,
-          transition: { 
-            x: { duration: 0.4, ease: "easeOut" },
-            opacity: { duration: 0.3 }
-          }
-        };
+    exit: (direction: number) => ({
+      y: direction > 0 ? "-100%" : "100%",
+      opacity: 0,
+      transition: {
+        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
-      return {
-        y: direction > 0 ? "-100%" : "100%",
-        opacity: 0,
-        x: 0,
-        transition: {
-          y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-          opacity: { duration: 0.2 }
-        }
-      };
-    }
+    })
   };
 
   return (
@@ -180,13 +186,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               custom={direction}
               variants={variants}
               initial="enter"
-              animate="center"
+              animate={controls} // useAnimation 컨트롤러 연결
               exit="exit"
               drag="x"
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: 0, right: 0 }} // 0으로 복귀하도록 강제
-              dragElastic={{ left: 1, right: 0 }} // 왼쪽으로는 자유롭게 드래그 가능
+              dragConstraints={{ left: -window.innerWidth, right: 0 }}
+              dragElastic={{ left: 1, right: 0 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
