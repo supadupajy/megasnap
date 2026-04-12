@@ -7,6 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
+import TimeSlider from '@/components/TimeSlider';
 import { RefreshCw } from 'lucide-react';
 
 // 포스팅 생성 함수를 컴포넌트 외부로 분리하여 일관성 유지
@@ -59,6 +60,7 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeValue, setTimeValue] = useState(6); // 기본값 6시간
 
   // 초기 데이터 생성
   useEffect(() => {
@@ -174,6 +176,9 @@ const Index = () => {
           </button>
         </div>
       </div>
+
+      {/* Time Slider */}
+      <TimeSlider value={timeValue} onChange={setTimeValue} />
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
 
