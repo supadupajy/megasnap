@@ -69,8 +69,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = (event: any, info: PanInfo) => {
     const swipeThreshold = 50;
     const velocityThreshold = 200;
+    const screenWidth = window.innerWidth;
 
-    // 수직 스와이프 (포스팅 탐색)
+    // 수직 스와이프 (포스팅 탐색) - 드래그 방향이 수직일 때만 작동
     if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         if (currentIndex < displayPosts.length - 1) {
@@ -85,9 +86,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     } 
     // 수평 스와이프 (왼쪽으로 스와이프하여 닫기)
-    else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
-      setIsClosingLeft(true);
-      onClose();
+    else {
+      // 화면 너비의 절반 이상 드래그했거나, 왼쪽으로 빠른 속도로 스와이프했을 때
+      if (info.offset.x < -screenWidth / 2 || info.velocity.x < -velocityThreshold) {
+        setIsClosingLeft(true);
+        onClose();
+      }
+      // 그 외의 경우(절반 미만 드래그)는 framer-motion의 dragConstraints에 의해 자동으로 원위치로 복귀함
     }
   };
 
@@ -103,7 +108,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       x: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.2 }
+        opacity: { duration: 0.2 },
+        x: { type: "spring", damping: 25, stiffness: 200 } // 복귀 시 부드러운 애니메이션
       }
     },
     exit: (direction: number) => {
@@ -174,8 +180,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               drag
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0, right: 0 }}
-              dragElastic={{ top: 0.02, bottom: 0.02, left: 0.5, right: 0 }}
+              dragConstraints={{ top: 0, bottom: 0, right: 0, left: -window.innerWidth }} // 왼쪽으로만 드래그 가능하도록 제한
+              dragElastic={{ top: 0.02, bottom: 0.02, left: 0.1, right: 0 }} // 드래그 시 탄성 조절
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
@@ -191,8 +197,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
-                    // 스크롤 영역에서도 왼쪽 스와이프 감지를 위해 드래그 시작
-                    // 단, 수직 스크롤과 겹치지 않도록 framer-motion이 처리함
                     dragControls.start(e);
                   }}
                 >
