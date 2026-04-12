@@ -71,8 +71,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const swipeThreshold = 50;
-    const velocityThreshold = 200;
+    const swipeThreshold = 40; // Reduced threshold for faster response
+    const velocityThreshold = 150; // Reduced threshold for faster response
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
       if (currentIndex < displayPosts.length - 1) {
@@ -91,25 +91,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
     }),
     center: {
       y: 0,
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.3 }
+        y: { type: "spring", damping: 25, stiffness: 400, mass: 0.6 }, // Faster spring
+        opacity: { duration: 0.15 },
+        scale: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 }
+        y: { type: "spring", damping: 25, stiffness: 400, mass: 0.6 }, // Faster spring
+        opacity: { duration: 0.15 }
       }
     })
   };
@@ -163,7 +163,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
+              dragElastic={0.15} // Less elastic for tighter feel
               onDragEnd={handleDragEnd}
               className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center will-change-transform"
               style={{

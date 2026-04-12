@@ -71,10 +71,10 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Viewed state for popular border */
+/* Viewed state for popular border - Enhanced contrast for gray gradient */
 .popular-border-container.viewed {
-  background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8);
-  animation: rotate-border 4s linear infinite; /* Slower rotation for viewed state */
+  background-image: conic-gradient(from var(--angle), #64748b, #e2e8f0, #64748b, #e2e8f0, #64748b);
+  animation: rotate-border 2.5s linear infinite; /* Slightly faster than before for better visibility */
 }
 
 /* Popular Fluorescent Glow Animation */
