@@ -161,11 +161,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragElastic={0.05}
               onDragEnd={handleDragEnd}
               className={cn(
-                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform",
-                isInfluencer ? "influencer-border-container animate-influencer-glow" : "bg-white"
+                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform bg-white",
+                isInfluencer && "animate-influencer-glow"
               )}
               style={{
-                border: isAd ? "4px solid #3b82f6" : (isPopular && !isInfluencer ? "4px solid #ccff00" : "none"),
+                border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
               }}
