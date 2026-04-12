@@ -93,7 +93,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       }
     };
 
-    map.addListener('idle', updateBounds);
+    // 'idle' 대신 'bounds_changed'를 사용하여 이동 중에도 실시간으로 좌표 업데이트
+    map.addListener('bounds_changed', updateBounds);
     updateBounds();
 
     return () => {
