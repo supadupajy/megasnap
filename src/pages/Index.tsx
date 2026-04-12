@@ -45,13 +45,11 @@ const generateMockPosts = () => {
     });
   }
 
-  const specialCount = Math.floor(Math.random() * 2) + 1;
-  const shuffled = [...posts].sort(() => 0.5 - Math.random());
-  const selectedIds = new Set(shuffled.slice(0, specialCount).map(p => p.id));
-  
-  posts.forEach(p => {
-    if (selectedIds.has(p.id)) {
+  // 인기 포스팅을 리스트 전체에 골고루 분포 (약 5개마다 하나씩)
+  posts.forEach((p, i) => {
+    if (i % 5 === 0) {
       p.borderType = 'popular';
+      p.likes += 1000;
     }
   });
 
@@ -127,9 +125,7 @@ const Index = () => {
         />
       </main>
 
-      {/* UI Overlays Container */}
       <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
-        {/* Trending Posts - Left Side */}
         <div className="w-64 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
@@ -141,12 +137,11 @@ const Index = () => {
           />
         </div>
 
-        {/* Refresh Button - Right Side, Aligned with TrendingPosts height */}
         <div className="pointer-events-auto">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="bg-white/90 backdrop-blur-md h-[44px] px-5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
+            className="bg-white/90 backdrop-blur-md h-[44px] px-6 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             재검색
