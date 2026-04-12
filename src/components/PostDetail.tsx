@@ -85,26 +85,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
-      scale: 0.95,
+      x: 0,
     }),
     center: {
       y: 0,
       opacity: 1,
-      scale: 1,
+      x: 0,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.2 }
+        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
-      scale: 0.95,
+      x: 0,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.2 }
+        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -158,10 +156,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.05}
+              dragElastic={0.02}
               onDragEnd={handleDragEnd}
               className={cn(
-                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform bg-white"
+                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
               )}
               style={{
                 border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
