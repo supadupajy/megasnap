@@ -112,8 +112,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Navigation Indicators */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4 px-1">
+        {/* Navigation Indicators - Moved to far left (left-2) to avoid overlap */}
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4 px-1">
           {posts.map((p, idx) => (
             <div 
               key={p.id}
