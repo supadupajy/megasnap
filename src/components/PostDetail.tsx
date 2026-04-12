@@ -71,7 +71,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const velocityThreshold = 200;
     const screenWidth = window.innerWidth;
 
-    // 수직 스와이프 (포스팅 탐색) - 드래그 방향이 수직일 때만 작동
+    // 수직 스와이프 (포스팅 탐색)
     if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         if (currentIndex < displayPosts.length - 1) {
@@ -92,7 +92,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         setIsClosingLeft(true);
         onClose();
       }
-      // 그 외의 경우(절반 미만 드래그)는 framer-motion의 dragConstraints에 의해 자동으로 원위치로 복귀함
+      // 절반 미만 드래그 시에는 framer-motion이 dragConstraints에 의해 자동으로 0으로 복귀함
     }
   };
 
@@ -108,8 +108,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       x: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.2 },
-        x: { type: "spring", damping: 25, stiffness: 200 } // 복귀 시 부드러운 애니메이션
+        opacity: { duration: 0.3 },
+        x: { type: "spring", damping: 25, stiffness: 200 }
       }
     },
     exit: (direction: number) => {
@@ -117,7 +117,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         return {
           x: "-100%",
           opacity: 0,
-          transition: { duration: 0.3, ease: "easeOut" }
+          transition: { 
+            x: { duration: 0.4, ease: "easeOut" },
+            opacity: { duration: 0.3 }
+          }
         };
       }
       return {
@@ -177,11 +180,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate="center"
               exit="exit"
-              drag
+              drag="x" // 수평 드래그만 명시적으로 허용 (수직은 onDragEnd에서 처리)
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0, right: 0, left: -window.innerWidth }} // 왼쪽으로만 드래그 가능하도록 제한
-              dragElastic={{ top: 0.02, bottom: 0.02, left: 0.1, right: 0 }} // 드래그 시 탄성 조절
+              dragConstraints={{ left: -window.innerWidth, right: 0 }}
+              dragElastic={{ left: 0.1, right: 0 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
