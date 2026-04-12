@@ -39,7 +39,7 @@ const Search = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen bg-white pb-28">
       <Header />
       
       <div className="pt-[88px] px-4">

@@ -11,7 +11,7 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="min-h-screen bg-white pb-28">
       <Header />
 
       <div className="pt-[88px]">

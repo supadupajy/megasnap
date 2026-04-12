@@ -16,7 +16,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[90px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 px-8 flex items-center justify-between z-50 pb-4">
+    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 px-8 flex items-center justify-between z-50 pb-8">
       <button 
         onClick={() => navigate('/')}
         className={cn(
@@ -39,7 +39,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         <span className="text-[10px] font-bold tracking-tight">My</span>
       </button>
       
-      <div className="relative -top-6">
+      <div className="relative -top-8">
         <button 
           onClick={onWriteClick}
           className="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-[0_10px_20px_rgba(34,197,94,0.25)] active:scale-90 active:rotate-90 transition-all duration-300"
