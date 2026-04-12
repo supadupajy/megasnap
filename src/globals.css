@@ -71,7 +71,7 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Viewed state for popular border - Solid gray look with subtle rotation */
+/* Viewed state for popular border - Matches regular viewed marker gray (#94a3b8) */
 .popular-border-container.viewed {
   background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8) !important;
   animation: rotate-border 3s linear infinite;
@@ -83,10 +83,10 @@
   50% { filter: drop-shadow(0 0 20px rgba(204, 255, 0, 1)); }
 }
 
-/* Gray Glow Animation for Viewed Popular Posts */
+/* Brighter White Glow Animation for Viewed Popular Posts */
 @keyframes popular-glow-viewed {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(148, 163, 184, 0.4)); }
-  50% { filter: drop-shadow(0 0 12px rgba(148, 163, 184, 0.7)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)); }
+  50% { filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)); }
 }
 
 .animate-popular-glow {
