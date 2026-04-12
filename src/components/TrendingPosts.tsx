@@ -53,12 +53,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   return (
     <div className="pointer-events-auto w-full">
       <div 
-        className={cn(
-          "bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300",
-          isExpanded ? "rounded-[24px]" : "rounded-full"
-        )}
+        className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer rounded-[22px]"
       >
-        {/* Header: Always visible, acts as the trigger */}
+        {/* Header: Always visible */}
         <div 
           className="h-[44px] px-3 flex items-center gap-2"
           onClick={onToggle}
@@ -119,7 +116,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               className="overflow-hidden border-t border-gray-50"
             >
               <div className="max-h-[320px] overflow-y-auto no-scrollbar overscroll-contain p-2">
-                {displayPosts.map((post, idx) => (
+                {displayPosts.map((post) => (
                   <div
                     key={post.id}
                     className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"

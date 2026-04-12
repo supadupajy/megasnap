@@ -10,7 +10,6 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import { RefreshCw } from 'lucide-react';
 
-// 포스팅 생성 함수: 생성 시간을 현재로부터 최대 12시간 전까지 랜덤하게 설정
 const createMockPosts = (centerLat: number, centerLng: number, count: number = 15) => {
   const contentPool = [
     "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
@@ -26,8 +25,6 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
     const isAd = Math.random() > 0.92;
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
-    
-    // 현재로부터 0~12시간 사이의 랜덤한 과거 시간 생성
     const randomHoursAgo = Math.random() * 12;
     const createdAt = new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000);
 
@@ -63,20 +60,17 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(12); // 기본값 12시간으로 변경
+  const [timeValue, setTimeValue] = useState(12);
 
-  // 초기 데이터 생성
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 30));
   }, []);
 
-  // 지도가 이동할 때 데이터 보충
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       const centerLat = (ne.lat + sw.lat) / 2;
       const centerLng = (ne.lng + sw.lng) / 2;
-
       const visibleCount = allPosts.filter(post => 
         post.lat >= sw.lat && post.lat <= ne.lat &&
         post.lng >= sw.lng && post.lng <= ne.lng
@@ -89,7 +83,6 @@ const Index = () => {
     }
   }, [mapData, allPosts.length]);
 
-  // 현재 지도 영역 + 선택된 시간 내의 포스팅 필터링
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
@@ -157,7 +150,9 @@ const Index = () => {
         />
       </main>
 
+      {/* Top Controls Container */}
       <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+        {/* Left: Trending Posts */}
         <div className="w-64 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
@@ -169,7 +164,8 @@ const Index = () => {
           />
         </div>
 
-        <div className="pointer-events-auto">
+        {/* Right: Refresh Button (Fixed Position) */}
+        <div className="pointer-events-auto shrink-0">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
