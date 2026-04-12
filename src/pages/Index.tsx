@@ -138,9 +138,15 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: any) => {
+    // 1. 먼저 지도를 해당 위치로 이동
     setMapCenter({ lat: post.lat, lng: post.lng });
-    setSelectedPostId(post.id);
+    // 2. 리스트 닫기
     setIsTrendingExpanded(false);
+    
+    // 3. 지도가 이동하는 모습을 보여주기 위해 약간의 지연 후 상세 팝업 열기
+    setTimeout(() => {
+      setSelectedPostId(post.id);
+    }, 800); // 0.8초 지연
   }, []);
 
   return (
