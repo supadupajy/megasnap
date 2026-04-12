@@ -152,8 +152,8 @@ const Index = () => {
 
       {/* Top Controls Container */}
       <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
-        {/* Left: Trending Posts */}
-        <div className="w-64 pointer-events-auto">
+        {/* Left: Trending Posts (Fixed Width) */}
+        <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
             isExpanded={isTrendingExpanded}
