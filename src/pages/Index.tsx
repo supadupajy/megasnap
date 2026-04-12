@@ -208,15 +208,15 @@ const Index = () => {
       </div>
 
       {/* View All Button */}
-      <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-1">
+      <div className="absolute bottom-32 right-4 z-20">
         <button 
           onClick={handleViewAll}
           disabled={filteredPosts.length === 0}
-          className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-[0_10px_20px_rgba(59,130,246,0.25)] active:scale-90 transition-all disabled:opacity-50 disabled:grayscale"
+          className="w-14 h-14 bg-blue-500 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_10px_20px_rgba(59,130,246,0.25)] active:scale-90 transition-all disabled:opacity-50 disabled:grayscale"
         >
-          <LayoutGrid className="w-7 h-7 stroke-[2.5px]" />
+          <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
+          <span className="text-[9px] font-black leading-none mt-1">모두 보기</span>
         </button>
-        <span className="text-[10px] text-blue-600 font-black whitespace-nowrap tracking-tighter">모두 보기</span>
       </div>
 
       <TimeSlider value={timeValue} onChange={setTimeValue} />
