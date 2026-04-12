@@ -68,31 +68,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const swipeThreshold = 50;
     const velocityThreshold = 200;
 
-    // Horizontal swipe detection for closing (Left swipe)
-    if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
-      onClose();
-      return;
-    }
-
-    // Vertical swipe detection for navigation
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
-      if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-        if (currentIndex < displayPosts.length - 1) {
-          setDirection(1);
-          setCurrentIndex(currentIndex + 1);
-        }
-      } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-        if (currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(currentIndex - 1);
-        }
+    if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+      if (currentIndex < displayPosts.length - 1) {
+        setDirection(1);
+        setCurrentIndex(currentIndex + 1);
+      }
+    } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
+      if (currentIndex > 0) {
+        setDirection(-1);
+        setCurrentIndex(currentIndex - 1);
       }
     }
   };
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : (direction < 0 ? "-100%" : 0),
+      y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
       x: 0,
     }),
@@ -106,12 +97,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : (direction < 0 ? "100%" : 0),
+      y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
-      x: direction === 0 ? "-50%" : 0, // direction이 0이면 닫히는 중(왼쪽 스와이프)으로 간주
+      x: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        x: { duration: 0.3, ease: "easeOut" },
         opacity: { duration: 0.2 }
       }
     })
@@ -162,11 +152,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate="center"
               exit="exit"
-              drag // Allow both x and y dragging
+              drag="y"
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0, right: 0 }} // Restrict right drag to emphasize left-to-close
-              dragElastic={{ top: 0.02, bottom: 0.02, left: 0.5, right: 0.02 }}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.02}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
