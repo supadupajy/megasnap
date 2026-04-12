@@ -16,45 +16,59 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-lg border-t border-gray-100 px-6 flex items-center justify-between z-50 pb-10">
+    <nav className="fixed bottom-0 left-0 right-0 h-[100px] bg-white/95 backdrop-blur-xl rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.06)] border-t border-white/20 px-8 flex items-center justify-between z-50 pb-6">
       <button 
         onClick={() => navigate('/')}
-        className={cn("flex flex-col items-center gap-1 transition-colors", isActive('/') ? "text-green-500" : "text-gray-400")}
+        className={cn(
+          "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
+          isActive('/') ? "text-green-500" : "text-gray-400"
+        )}
       >
-        <Map className="w-6 h-6" strokeWidth={2} />
-        <span className="text-[10px] font-medium">지도</span>
+        <Map className={cn("w-6 h-6", isActive('/') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">지도</span>
       </button>
+
       <button 
         onClick={() => navigate('/popular')}
-        className={cn("flex flex-col items-center gap-1 transition-colors", isActive('/popular') ? "text-green-500" : "text-gray-400")}
+        className={cn(
+          "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
+          isActive('/popular') ? "text-green-500" : "text-gray-400"
+        )}
       >
-        <LayoutGrid className="w-6 h-6" strokeWidth={2} />
-        <span className="text-[10px] font-medium">My</span>
+        <LayoutGrid className={cn("w-6 h-6", isActive('/popular') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">My</span>
       </button>
       
-      <div className="relative -top-6">
+      <div className="relative -top-8">
         <button 
           onClick={onWriteClick}
-          className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-200 active:scale-95 transition-transform"
+          className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-[0_12px_24px_rgba(34,197,94,0.3)] active:scale-90 active:rotate-90 transition-all duration-300"
         >
-          <Plus className="w-8 h-8" strokeWidth={2.5} />
+          <Plus className="w-9 h-9 stroke-[3px]" />
         </button>
-        <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 font-medium whitespace-nowrap">글쓰기</span>
+        <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-green-600 font-black whitespace-nowrap uppercase tracking-tighter">Write</span>
       </div>
 
       <button 
         onClick={() => navigate('/search')}
-        className={cn("flex flex-col items-center gap-1 transition-colors", isActive('/search') ? "text-green-500" : "text-gray-400")}
+        className={cn(
+          "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
+          isActive('/search') ? "text-green-500" : "text-gray-400"
+        )}
       >
-        <Search className="w-6 h-6" strokeWidth={2} />
-        <span className="text-[10px] font-medium">검색</span>
+        <Search className={cn("w-6 h-6", isActive('/search') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">검색</span>
       </button>
+
       <button 
         onClick={() => navigate('/profile')}
-        className={cn("flex flex-col items-center gap-1 transition-colors", isActive('/profile') ? "text-green-500" : "text-gray-400")}
+        className={cn(
+          "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
+          isActive('/profile') ? "text-green-500" : "text-gray-400"
+        )}
       >
-        <User className="w-6 h-6" strokeWidth={2} />
-        <span className="text-[10px] font-medium">내정보</span>
+        <User className={cn("w-6 h-6", isActive('/profile') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">내정보</span>
       </button>
     </nav>
   );
