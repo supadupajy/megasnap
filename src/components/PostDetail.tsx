@@ -9,7 +9,7 @@ import { Heart, MessageCircle, Share2, MapPin, X, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 
 interface PostDetailProps {
   posts: any[];
@@ -22,6 +22,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
 
   // 선택된 포스트가 항상 맨 처음에 오도록 리스트 재정렬
   const displayPosts = useMemo(() => {
@@ -80,23 +81,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? 600 : -600,
+      y: direction > 0 ? 800 : -800,
       opacity: 0,
+      scale: 0.9,
     }),
     center: {
       y: 0,
       opacity: 1,
+      scale: 1,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 200 },
-        opacity: { duration: 0.2 }
+        y: { type: "spring", damping: 30, stiffness: 300 },
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.4 }
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? -600 : 600,
+      y: direction > 0 ? -800 : 800,
       opacity: 0,
+      scale: 0.9,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 200 },
-        opacity: { duration: 0.2 }
+        y: { type: "spring", damping: 30, stiffness: 300 },
+        opacity: { duration: 0.3 }
       }
     })
   };
@@ -116,23 +121,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Vertical Scroll Indicator - Always starts from top */}
-        <div className="absolute left-4 top-32 bottom-32 w-1 z-50 flex flex-col items-center">
-          <div className="w-[2px] h-full bg-white/20 rounded-full relative overflow-hidden">
+        {/* Vertical Scroll Indicator - Attached to the far left */}
+        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
+          <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
-              className="absolute w-full bg-[#ccff00] rounded-full shadow-[0_0_15px_rgba(204,255,0,1)]"
+              className="absolute w-full bg-[#ccff00] rounded-full shadow-[0_0_20px_rgba(204,255,0,1)]"
               initial={false}
               animate={{ 
-                height: `${Math.max(10, 100 / displayPosts.length)}%`,
+                height: `${Math.max(15, 100 / displayPosts.length)}%`,
                 top: `${(currentIndex / displayPosts.length) * 100}%`
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
           </div>
           <div className="mt-4 flex flex-col items-center gap-1">
-            <span className="text-[10px] font-black text-[#ccff00]">{currentIndex + 1}</span>
-            <div className="w-1 h-[1px] bg-white/40" />
-            <span className="text-[10px] font-bold text-white/40">{displayPosts.length}</span>
+            <span className="text-[10px] font-black text-[#ccff00] drop-shadow-md">{currentIndex + 1}</span>
+            <div className="w-2 h-[1px] bg-white/20" />
+            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
           </div>
         </div>
 
@@ -147,22 +152,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               animate="center"
               exit="exit"
               drag="y"
+              dragControls={dragControls}
+              dragListener={false} // Only drag via handle
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.4}
+              dragElastic={0.5}
               onDragEnd={handleDragEnd}
-              className="pointer-events-auto w-[88vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] flex flex-col h-[85vh] relative origin-center"
+              className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center"
               style={{
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
               }}
             >
+              {/* Content Area - Fully Scrollable */}
               <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
-                <div className="flex flex-col min-h-full">
+                <div className="flex flex-col">
                   {/* Image Section */}
                   <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                     <img 
                       src={post.image} 
                       alt="" 
-                      className="w-full h-full object-cover pointer-events-none"
+                      className="w-full h-full object-cover"
                     />
                     {isAd ? (
                       <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
@@ -177,7 +185,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                   </div>
 
                   {/* Content Section */}
-                  <div className="p-6 sm:p-8 flex-1">
+                  <div className="p-6 sm:p-8">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
                         <img 
@@ -195,7 +203,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
-                              onClick={(e) => e.stopPropagation()}
                             >
                               앱에서 보기
                             </a>
@@ -226,30 +233,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                       </button>
                     </div>
 
-                    {/* Comments Section */}
-                    <div className="space-y-4 pb-10">
+                    {/* Comments Section - Now visible via scroll */}
+                    <div className="space-y-6 pb-10">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
-                      <div className="flex gap-3 items-start">
-                        <span className="font-bold text-sm text-gray-900 whitespace-nowrap">여행가_A</span>
-                        <span className="text-sm text-gray-500 leading-snug">와 여기 진짜 가보고 싶었는데! 정보 감사합니다.</span>
-                      </div>
-                      <div className="flex gap-3 items-start">
-                        <span className="font-bold text-sm text-gray-900 whitespace-nowrap">SeoulLife</span>
-                        <span className="text-sm text-gray-500 leading-snug">날씨 좋을 때 가면 최고죠 ㅎㅎ</span>
-                      </div>
-                      <div className="flex gap-3 items-start">
-                        <span className="font-bold text-sm text-gray-900 whitespace-nowrap">Explorer</span>
-                        <span className="text-sm text-gray-500 leading-snug">주차 공간은 넉넉한가요?</span>
-                      </div>
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex gap-3 items-start">
+                          <span className="font-bold text-sm text-gray-900 whitespace-nowrap">User_{i + 1}</span>
+                          <span className="text-sm text-gray-500 leading-snug">
+                            {["와 여기 진짜 가보고 싶었는데! 정보 감사합니다.", "날씨 좋을 때 가면 최고죠 ㅎㅎ", "주차 공간은 넉넉한가요?", "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!"][i % 4]}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </ScrollArea>
               
-              {/* Bottom Indicator */}
-              <div className="h-14 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md border-t border-gray-100 shrink-0">
-                <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-1.5" />
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Swipe to explore</p>
+              {/* Bottom Drag Handle - Swipe to explore */}
+              <div 
+                onPointerDown={(e) => dragControls.start(e)}
+                className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
+              >
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-2" />
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Swipe to explore</p>
               </div>
             </motion.div>
           </AnimatePresence>
