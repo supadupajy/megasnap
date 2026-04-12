@@ -71,8 +71,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const swipeThreshold = 30; // Further reduced for instant feel
-    const velocityThreshold = 100; // Further reduced for instant feel
+    const swipeThreshold = 30; // 임계값 낮춤
+    const velocityThreshold = 100; // 속도 임계값 낮춤
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
       if (currentIndex < displayPosts.length - 1) {
@@ -96,16 +96,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       y: 0,
       opacity: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 500, mass: 0.5 }, // Very fast spring
-        opacity: { duration: 0.1 }
+        y: { type: "spring", damping: 35, stiffness: 400, mass: 0.8 }, // 더 빠르고 묵직한 느낌
+        opacity: { duration: 0.15 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 500, mass: 0.5 }, // Very fast spring
-        opacity: { duration: 0.1 }
+        y: { type: "spring", damping: 35, stiffness: 400, mass: 0.8 },
+        opacity: { duration: 0.15 }
       }
     })
   };
@@ -147,7 +147,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
         {/* Post Card Container */}
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none overflow-hidden">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
+          <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={post.id}
               custom={direction}
@@ -159,7 +159,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.1} // Very tight feel
+              dragElastic={0.1}
               onDragEnd={handleDragEnd}
               className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center will-change-transform"
               style={{
