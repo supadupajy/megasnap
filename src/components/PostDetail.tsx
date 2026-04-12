@@ -100,16 +100,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Navigation Indicators */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2.5 max-h-[60vh] overflow-hidden py-4">
+        {/* Navigation Indicators - Always on the far left */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4 px-1">
           {posts.map((p, idx) => (
             <div 
               key={p.id}
               className={cn(
-                "w-1.5 rounded-full transition-all duration-300",
+                "w-1 rounded-full transition-all duration-300 shadow-sm",
                 idx === activeIndex 
-                  ? "h-8 bg-[#ccff00] shadow-[0_0_12px_rgba(204,255,0,0.9)]" 
-                  : "h-1.5 bg-white/30"
+                  ? "h-10 bg-[#ccff00] shadow-[0_0_15px_rgba(204,255,0,1)]" 
+                  : "h-1.5 bg-white/40"
               )}
             />
           ))}
@@ -129,7 +129,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.4}
               onDragEnd={handleDragEnd}
-              className="pointer-events-auto w-[90vw] sm:max-w-[400px] bg-white rounded-[40px] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] flex flex-col max-h-[82vh] relative origin-center"
+              className="pointer-events-auto w-[82vw] sm:max-w-[400px] bg-white rounded-[40px] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] flex flex-col max-h-[82vh] relative origin-center"
               style={{
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
               }}
