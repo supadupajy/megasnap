@@ -1,52 +1,37 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Navigation, RefreshCw, Search } from 'lucide-react';
-import Header from '@/components/Header';
-import PostItem from '@/components/PostItem';
-import BottomNav from '@/components/BottomNav';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
+import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
-import TrendingPosts from '@/components/TrendingPosts';
-import PlaceSearch from '@/components/PlaceSearch';
-import TimeSlider from '@/components/TimeSlider';
-import { showSuccess } from '@/utils/toast';
-import { cn } from '@/lib/utils';
+import { RefreshCw } from 'lucide-react';
 
-const generateRandomPosts = (count: number, bounds: any) => {
+const generateMockPosts = () => {
   const posts = [];
   const contentPool = [
-    "성수동 힙한 카페 발견! 분위기 너무 좋아요.",
-    "제주도 숨은 명소 공유합니다. 꼭 가보세요!",
-    "여기 진짜 인생 맛집이에요.. 웨이팅 필수!",
-    "강릉 바다 보러 왔어요 🌊 힐링 그 자체",
-    "서울 야경 명소 추천! 데이트 코스로 딱입니다.",
-    "부산 광안리 드론쇼 직관 후기입니다.",
-    "경주 황리단길 산책하기 좋은 날씨네요.",
-    "전주 한옥마을 먹거리 투어 다녀왔어요.",
-    "인천 송도 센트럴파크 피크닉 추천합니다.",
-    "대구 수성못 야경이 정말 예쁘네요.",
+    "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
+    "여기 분위기 진짜 대박... 꼭 와보세요! ✨",
+    "맛있는 점심 먹고 힐링 중입니다 🍱",
+    "주말 여행지로 강력 추천합니다! 🚗",
+    "야경이 정말 아름다운 곳이에요 🌙"
   ];
 
-  const now = Date.now();
-
-  for (let i = 0; i < count; i++) {
-    const isAd = Math.random() < 0.1;
-    const hoursAgo = Math.random() * 12;
-    const createdAt = now - (hoursAgo * 60 * 60 * 1000);
-
-    const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
-    const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
-
+  for (let i = 0; i < 50; i++) {
+    const isAd = Math.random() > 0.9;
+    const lat = 37.5665 + (Math.random() - 0.5) * 0.05;
+    const lng = 126.9780 + (Math.random() - 0.5) * 0.05;
+    const createdAt = new Date(Date.now() - Math.random() * 10000000000);
+    
     posts.push({
       id: Math.random().toString(36).substr(2, 9),
       rank: 0,
       isAd,
-      user: {
-        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`,
-        avatar: `https://i.pravatar.cc/150?u=${Math.random()}`
+      user: { 
+        name: isAd ? "Sponsored" : `traveler_${Math.floor(Math.random() * 1000)}`, 
+        avatar: `https://i.pravatar.cc/150?u=${Math.random()}` 
       },
       content: contentPool[Math.floor(Math.random() * contentPool.length)],
       location: ['서울', '부산', '제주', '강릉', '경주'][Math.floor(Math.random() * 5)],
@@ -60,8 +45,7 @@ const generateRandomPosts = (count: number, bounds: any) => {
     });
   }
 
-  // Randomly assign 'popular' border to 1-2 posts
-  const specialCount = Math.floor(Math.random() * 2) + 1; // 1 or 2
+  const specialCount = Math.floor(Math.random() * 2) + 1;
   const shuffled = [...posts].sort(() => 0.5 - Math.random());
   const selectedIds = new Set(shuffled.slice(0, specialCount).map(p => p.id));
   
@@ -75,225 +59,110 @@ const generateRandomPosts = (count: number, bounds: any) => {
 };
 
 const Index = () => {
-  const [selectedPost, setSelectedPost] = useState<any | null>(null);
-  const [viewedPostIds, setViewedPostIds] = useState<Set<any>>(new Set());
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [isPlaceSearchOpen, setIsPlaceSearchOpen] = useState(false);
-  const [mapBounds, setMapBounds] = useState<any>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [mapData, setMapData] = useState<any>(null);
+  const [viewedPostIds, setViewedPostIds] = useState<Set<string>>(new Set());
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
-  const [timeRange, setTimeRange] = useState(12);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  
-  const [posts, setPosts] = useState<any[]>([]);
-  
-  const globalPopularPosts = useMemo(() => {
-    const dummyBounds = { sw: { lat: 33, lng: 124 }, ne: { lat: 38, lng: 130 } };
-    return generateRandomPosts(20, dummyBounds)
-      .sort((a, b) => b.likes - a.likes)
-      .map((p, i) => ({ ...p, rank: i + 1 }));
-  }, []);
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (!mapBounds) return;
-
-    const updatePosts = () => {
-      const visibleExistingPosts = posts.filter(post => 
-        post.lat >= mapBounds.sw.lat && 
-        post.lat <= mapBounds.ne.lat && 
-        post.lng >= mapBounds.sw.lng && 
-        post.lng <= mapBounds.ne.lng
-      );
-
-      const targetCount = Math.floor(Math.random() * 11) + 15;
-      const neededCount = Math.max(0, targetCount - visibleExistingPosts.length);
-
-      if (neededCount > 0) {
-        const newPosts = generateRandomPosts(neededCount, mapBounds);
-        const combinedPosts = [...visibleExistingPosts, ...newPosts]
-          .sort((a, b) => b.likes - a.likes)
-          .map((post, index) => ({ ...post, rank: index + 1 }));
-
-        setPosts(combinedPosts);
-      } else if (visibleExistingPosts.length > targetCount) {
-        setPosts(visibleExistingPosts.slice(0, targetCount));
-      } else {
-        setPosts(visibleExistingPosts);
-      }
-    };
-
-    const timer = setTimeout(updatePosts, 300);
-    return () => clearTimeout(timer);
-  }, [mapBounds]);
-
-  const visiblePosts = useMemo(() => {
-    const now = Date.now();
-    const timeThreshold = now - (timeRange * 60 * 60 * 1000);
-    return posts.filter(post => post.isAd || post.createdAt >= timeThreshold);
-  }, [posts, timeRange]);
-
-  const handlePostSelect = (post: any) => {
-    setSelectedPost(post);
-    setViewedPostIds(prev => new Set(prev).add(post.id));
-  };
-
-  const handleMapChange = useCallback(({ bounds }: any) => {
-    setMapBounds(bounds);
+    setAllPosts(generateMockPosts());
   }, []);
 
-  const handleRefresh = () => {
-    if (!mapBounds) return;
+  const filteredPosts = useMemo(() => {
+    if (!mapData?.bounds) return [];
+    const { sw, ne } = mapData.bounds;
+    return allPosts.filter(post => 
+      post.lat >= sw.lat && post.lat <= ne.lat &&
+      post.lng >= sw.lng && post.lng <= ne.lng
+    );
+  }, [allPosts, mapData]);
+
+  const trendingPosts = useMemo(() => {
+    return [...allPosts]
+      .sort((a, b) => b.likes - a.likes)
+      .map((post, index) => ({ ...post, rank: index + 1 }));
+  }, [allPosts]);
+
+  const selectedIndex = useMemo(() => {
+    if (!selectedPostId) return -1;
+    return filteredPosts.findIndex(p => p.id === selectedPostId);
+  }, [selectedPostId, filteredPosts]);
+
+  // useCallback을 사용하여 마커 클릭 핸들러가 매번 생성되지 않도록 함
+  // 이를 통해 MapContainer에서 마커가 불필요하게 다시 그려지는 것을 방지
+  const handleMarkerClick = useCallback((post: any) => {
+    setSelectedPostId(post.id);
+    setViewedPostIds(prev => {
+      if (prev.has(post.id)) return prev;
+      const next = new Set(prev);
+      next.add(post.id);
+      return next;
+    });
+  }, []);
+
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
-      const targetCount = Math.floor(Math.random() * 11) + 15;
-      const newPosts = generateRandomPosts(targetCount, mapBounds)
-        .sort((a, b) => b.likes - a.likes)
-        .map((p, i) => ({ ...p, rank: i + 1 }));
-      setPosts(newPosts);
+      setAllPosts(generateMockPosts());
       setIsRefreshing(false);
-      showSuccess('주변 게시물을 새로고침했습니다.');
-    }, 600);
-  };
+    }, 800);
+  }, []);
 
-  const handleCurrentLocation = () => {
-    setMapCenter({ lat: 37.5665, lng: 126.9780 });
-    showSuccess('현재 위치로 이동합니다.');
-  };
-
-  const handlePlaceSelect = (place: any) => {
-    setMapCenter({ lat: place.lat, lng: place.lng });
-    showSuccess(`${place.name}(으)로 이동합니다.`);
-  };
-
-  const isAnyPopupOpen = isPlaceSearchOpen || isWriteOpen || !!selectedPost;
+  const handleCloseDetail = useCallback(() => {
+    setSelectedPostId(null);
+  }, []);
 
   return (
-    <div className="relative h-screen w-full bg-gray-50 overflow-hidden font-sans">
+    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
-
-      {/* Map Container - Full Screen */}
+      
       <main className="absolute inset-0 z-0">
         <MapContainer 
-          posts={visiblePosts} 
+          posts={filteredPosts}
           viewedPostIds={viewedPostIds}
-          onMarkerClick={handlePostSelect}
-          onMapChange={handleMapChange}
+          onMarkerClick={handleMarkerClick}
+          onMapChange={setMapData}
           onMapWriteClick={() => setIsWriteOpen(true)}
-          center={mapCenter}
         />
       </main>
 
-      {/* UI Overlays */}
-      <div className="absolute top-28 left-4 right-3 z-30 flex items-start gap-2 pointer-events-none">
-        <div className="pointer-events-auto w-[240px] shrink-0">
-          <TrendingPosts 
-            posts={globalPopularPosts} 
-            isExpanded={isTrendingExpanded} 
-            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
-            onPostClick={handlePostSelect}
-          />
-        </div>
-        
-        <div className="pointer-events-auto">
-          <button 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-green-600 font-bold text-sm hover:bg-white active:scale-95 transition-all whitespace-nowrap"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            재검색
-          </button>
-        </div>
+      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10">
+        <button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-gray-700 active:scale-95 transition-all"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          재검색
+        </button>
       </div>
 
-      <AnimatePresence>
-        {!isAnyPopupOpen && !isSheetOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="z-30"
-          >
-            <TimeSlider value={timeRange} onChange={setTimeRange} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="fixed bottom-[200px] left-0 right-0 z-40 px-4 pointer-events-none">
-        <div className="relative w-full h-full">
-          <motion.button
-            onClick={() => setIsPlaceSearchOpen(true)}
-            animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto absolute left-0 bottom-0 h-10 px-3 bg-white rounded-xl shadow-xl flex items-center gap-2 text-gray-700 active:scale-90 transition-transform border border-gray-100"
-          >
-            <Search className="w-4 h-4 text-green-500" />
-            <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">장소 검색</span>
-          </motion.button>
-
-          <motion.button 
-            onClick={handleCurrentLocation}
-            animate={{ opacity: isSheetOpen ? 0 : 1, y: isSheetOpen ? 20 : 0 }}
-            className="pointer-events-auto absolute right-[-4px] bottom-0 w-10 h-10 bg-white rounded-xl shadow-xl flex items-center justify-center text-green-500 active:scale-90 transition-transform border border-gray-100"
-          >
-            <Navigation className="w-5 h-5 fill-current" />
-          </motion.button>
-        </div>
+      <div className="absolute top-24 right-4 z-10 w-64">
+        <TrendingPosts 
+          posts={trendingPosts}
+          isExpanded={isTrendingExpanded}
+          onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+          onPostClick={(post) => {
+            setSelectedPostId(post.id);
+          }}
+        />
       </div>
-
-      <motion.div 
-        initial={false}
-        animate={{ 
-          y: isSheetOpen ? "110px" : "calc(100% - 180px)" 
-        }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed inset-0 z-40 pointer-events-none"
-      >
-        <div className="absolute inset-x-0 bottom-0 h-full bg-white rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)] pointer-events-auto flex flex-col">
-          <div 
-            className="w-full pt-4 pb-6 flex flex-col items-center cursor-pointer sticky top-0 bg-white z-10 rounded-t-[32px] border-b border-gray-50"
-            onClick={() => setIsSheetOpen(!isSheetOpen)}
-          >
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-4" />
-            <div className="flex items-center gap-1 text-gray-500">
-              <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${isSheetOpen ? 'rotate-180' : ''}`} />
-              <span className="text-sm font-bold">주변 게시물 ({visiblePosts.length})</span>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto pb-40">
-            <AnimatePresence mode="wait">
-              {isRefreshing ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
-                  <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
-                  <p className="text-sm text-gray-400">새로운 장소를 찾는 중...</p>
-                </motion.div>
-              ) : visiblePosts.length > 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="divide-y divide-gray-50">
-                  {visiblePosts.map(post => (
-                    <div key={post.id} onClick={() => handlePostSelect(post)}>
-                      <PostItem {...post} />
-                    </div>
-                  ))}
-                </motion.div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <p className="font-medium">게시물이 없습니다.</p>
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </motion.div>
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <PostDetail post={selectedPost} isOpen={!!selectedPost} onClose={() => setSelectedPost(null)} />
+
+      {selectedPostId && (
+        <PostDetail 
+          posts={filteredPosts}
+          initialIndex={selectedIndex}
+          isOpen={true} 
+          onClose={handleCloseDetail} 
+        />
+      )}
+
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-      <PlaceSearch 
-        isOpen={isPlaceSearchOpen} 
-        onClose={() => setIsPlaceSearchOpen(false)} 
-        onSelect={handlePlaceSelect} 
-      />
     </div>
   );
 };

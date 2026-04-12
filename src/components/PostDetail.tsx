@@ -19,27 +19,31 @@ interface PostDetailProps {
 }
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  // initialIndex가 -1일 수 있으므로, 유효한 인덱스를 찾을 때까지 기다리거나 기본값 설정
+  const [currentIndex, setCurrentIndex] = useState(initialIndex === -1 ? 0 : initialIndex);
   const [direction, setDirection] = useState(0);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setDirection(0);
     }
   }, [isOpen, initialIndex]);
 
-  if (!posts || posts.length === 0 || currentIndex === -1) return null;
-
-  const post = posts[currentIndex];
+  // posts가 없거나 currentIndex가 범위를 벗어나면 렌더링하지 않음
+  if (!isOpen || !posts || posts.length === 0) return null;
+  
+  const safeIndex = currentIndex >= 0 && currentIndex < posts.length ? currentIndex : (initialIndex !== -1 ? initialIndex : 0);
+  const post = posts[safeIndex];
+  
   if (!post) return null;
 
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const swipeThreshold = 100;
-    const velocityThreshold = 500;
+    const swipeThreshold = 80;
+    const velocityThreshold = 300;
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
       if (currentIndex < posts.length - 1) {
@@ -56,9 +60,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? 1000 : -1000,
+      y: direction > 0 ? 500 : -500,
       opacity: 0,
-      scale: 0.9
+      scale: 0.95
     }),
     center: {
       y: 0,
@@ -66,16 +70,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
       scale: 1,
       transition: {
         type: "spring",
-        damping: 25,
+        damping: 30,
         stiffness: 300
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? -1000 : 1000,
+      y: direction > 0 ? -500 : 500,
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
       transition: {
-        duration: 0.3
+        duration: 0.2
       }
     })
   };
@@ -83,7 +87,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
-        {/* Close Button */}
         <div className="absolute top-6 right-6 z-50">
           <Button 
             variant="ghost" 
@@ -96,8 +99,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
         </div>
 
         {/* Navigation Indicators */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2">
-          {posts.map((_, idx) => (
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[60vh] overflow-hidden">
+          {posts.slice(0, 15).map((_, idx) => (
             <div 
               key={idx}
               className={cn(
@@ -106,6 +109,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               )}
             />
           ))}
+          {posts.length > 15 && <div className="w-1.5 h-1.5 bg-white/10 rounded-full self-center" />}
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
@@ -119,7 +123,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               exit="exit"
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.7}
+              dragElastic={0.5}
               onDragEnd={handleDragEnd}
               className="pointer-events-auto w-[92vw] sm:max-w-[400px] bg-white rounded-[40px] overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] flex flex-col max-h-[85vh] relative"
               style={{
@@ -128,7 +132,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
             >
               <ScrollArea className="flex-1">
                 <div className="flex flex-col">
-                  {/* Image Section - Primary Drag Area */}
                   <div className="aspect-square w-full bg-gray-100 relative overflow-hidden">
                     <img 
                       src={post.image} 
@@ -145,12 +148,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                         HOT
                       </div>
                     )}
-                    
-                    {/* Swipe Hint Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  {/* Content Section */}
                   <div className="p-8">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
@@ -200,7 +199,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                       </button>
                     </div>
 
-                    {/* Comments Preview */}
                     <div className="space-y-4">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
                       <div className="flex gap-3 items-start">
@@ -216,7 +214,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                 </div>
               </ScrollArea>
               
-              {/* Bottom Swipe Handle */}
               <div className="h-10 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm border-t border-gray-100 shrink-0">
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-1" />
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Swipe to explore</p>
