@@ -218,11 +218,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            <div class="${isPopular ? 'popular-border-container animate-popular-glow' : ''}"
+            <div class="${isPopular ? 'popular-border-container animate-popular-glow' : ''} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px;
                         ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;
+                        background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
                         filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
@@ -235,7 +235,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${isPopular ? '#ccff00' : borderColor};
+                        width: 12px; height: 12px; background: ${isPopular ? (this.isViewed ? '#94a3b8' : '#ccff00') : borderColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;
