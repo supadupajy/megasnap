@@ -69,7 +69,7 @@ const SplashScreen = () => {
         <motion.div 
           initial={{ x: "-100%" }}
           animate={{ x: "0%" }}
-          transition={{ duration: 2.5, ease: "linear" }}
+          transition={{ duration: 1.5, ease: "linear" }}
           className="w-full h-full bg-green-500"
         />
       </div>
