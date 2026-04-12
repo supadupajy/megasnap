@@ -43,7 +43,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   useEffect(() => {
     if (isOpen) {
-      controls.set({ x: 0, opacity: 1, y: 0 });
+      controls.set({ x: 0, opacity: 1 });
     }
   }, [currentIndex, isOpen, controls]);
 
@@ -52,6 +52,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       onViewPost(displayPosts[currentIndex].id);
     }
   }, [currentIndex, isOpen, displayPosts, onViewPost]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) viewport.scrollTop = 0;
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, isOpen]);
 
   if (!isOpen || displayPosts.length === 0) return null;
   
@@ -67,8 +77,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const swipeThreshold = 50;
     const velocityThreshold = 200;
 
-    // 수직 스와이프가 더 강할 때 (포스팅 탐색)
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
+    // 1. 수직 스와이프 감지 (포스팅 탐색)
+    if (Math.abs(info.offset.y) > Math.abs(info.offset.x) + 20) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
@@ -80,13 +90,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           setCurrentIndex(currentIndex - 1);
         }
       }
-      // 위치 복구
+      // 수직 스와이프 후 위치 복구 (더 빠르게)
       controls.start({ y: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
       return;
     }
 
-    // 수평 스와이프가 더 강할 때 (닫기)
-    if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+    // 2. 수평 스와이프 감지 (왼쪽으로 닫기)
+    if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
+      // 닫기 애니메이션 (더 빠르게: 0.3s -> 0.2s)
       await controls.start({ 
         x: -screenWidth, 
         opacity: 0, 
@@ -94,6 +105,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       });
       onClose();
     } else {
+      // 원래 위치로 복귀 (더 탄성있고 빠르게)
       controls.start({ 
         x: 0, 
         opacity: 1,
@@ -172,9 +184,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate={controls}
               exit="exit"
-              drag
+              drag="x"
               dragControls={dragControls}
               dragListener={false}
+              dragConstraints={{ left: -window.innerWidth, right: 0 }}
+              dragElastic={{ left: 1, right: 0 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
@@ -190,7 +204,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
-                    // 스크롤 영역에서도 드래그가 시작될 수 있도록 설정
                     dragControls.start(e);
                   }}
                 >
@@ -230,6 +243,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-gray-900 text-base leading-none truncate">{post.user.name}</p>
+                            {isAd && (
+                              <a
+                                href="https://s.baemin.com/t3000fBqlbHGL"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
+                              >
+                                앱에서 보기
+                              </a>
+                            )}
                           </div>
                           <div className="flex items-center text-green-500 gap-1 mt-1.5">
                             <MapPin className="w-3.5 h-3.5" />
