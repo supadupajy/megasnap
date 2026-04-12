@@ -71,8 +71,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const swipeThreshold = 40; // Reduced threshold for faster response
-    const velocityThreshold = 150; // Reduced threshold for faster response
+    const swipeThreshold = 30; // Further reduced for instant feel
+    const velocityThreshold = 100; // Further reduced for instant feel
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
       if (currentIndex < displayPosts.length - 1) {
@@ -91,25 +91,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
-      scale: 0.98,
     }),
     center: {
       y: 0,
       opacity: 1,
-      scale: 1,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 400, mass: 0.6 }, // Faster spring
-        opacity: { duration: 0.15 },
-        scale: { duration: 0.2 }
+        y: { type: "spring", damping: 30, stiffness: 500, mass: 0.5 }, // Very fast spring
+        opacity: { duration: 0.1 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
-      scale: 0.98,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 400, mass: 0.6 }, // Faster spring
-        opacity: { duration: 0.15 }
+        y: { type: "spring", damping: 30, stiffness: 500, mass: 0.5 }, // Very fast spring
+        opacity: { duration: 0.1 }
       }
     })
   };
@@ -163,7 +159,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.15} // Less elastic for tighter feel
+              dragElastic={0.1} // Very tight feel
               onDragEnd={handleDragEnd}
               className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center will-change-transform"
               style={{

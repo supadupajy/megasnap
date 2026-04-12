@@ -223,9 +223,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
-                        filter: ${!isAd && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+                        filter: ${!isAd && !isPopular && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
-                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover;" />
+                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${isPopular && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
@@ -235,7 +235,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${isPopular ? (this.isViewed ? '#94a3b8' : '#ccff00') : borderColor};
+                        width: 12px; height: 12px; background: ${isPopular ? (this.isViewed ? '#475569' : '#ccff00') : borderColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;

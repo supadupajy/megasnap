@@ -71,10 +71,10 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Viewed state for popular border - Enhanced contrast for gray gradient */
+/* Viewed state for popular border - High contrast gray gradient */
 .popular-border-container.viewed {
-  background-image: conic-gradient(from var(--angle), #64748b, #e2e8f0, #64748b, #e2e8f0, #64748b);
-  animation: rotate-border 2.5s linear infinite; /* Slightly faster than before for better visibility */
+  background-image: conic-gradient(from var(--angle), #334155, #f8fafc, #334155, #f8fafc, #334155) !important;
+  animation: rotate-border 2s linear infinite;
 }
 
 /* Popular Fluorescent Glow Animation */
@@ -89,5 +89,5 @@
 
 .animate-popular-glow.viewed {
   animation: none;
-  filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
+  filter: drop-shadow(0 0 6px rgba(51, 65, 85, 0.3));
 }
