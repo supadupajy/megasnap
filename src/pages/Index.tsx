@@ -25,6 +25,7 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
     const isAd = Math.random() > 0.92;
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
+    // 0~12시간 전 사이의 랜덤한 시간 생성
     const randomHoursAgo = Math.random() * 12;
     const createdAt = new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000);
 
@@ -94,7 +95,9 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return isWithinBounds || post.id === selectedPostId; // 선택된 포스트는 항상 포함
+      
+      // 지도 범위 내에 있고 시간 조건도 만족하거나, 현재 선택된 포스트인 경우 노출
+      return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
@@ -138,15 +141,12 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: any) => {
-    // 1. 먼저 지도를 해당 위치로 이동
     setMapCenter({ lat: post.lat, lng: post.lng });
-    // 2. 리스트 닫기
     setIsTrendingExpanded(false);
     
-    // 3. 지도가 이동하는 모습을 보여주기 위해 약간의 지연 후 상세 팝업 열기
     setTimeout(() => {
       setSelectedPostId(post.id);
-    }, 800); // 0.8초 지연
+    }, 800);
   }, []);
 
   return (
@@ -164,9 +164,7 @@ const Index = () => {
         />
       </main>
 
-      {/* Top Controls Container */}
       <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
-        {/* Left: Trending Posts (Fixed Width) */}
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
@@ -176,7 +174,6 @@ const Index = () => {
           />
         </div>
 
-        {/* Right: Refresh Button & Count Display */}
         <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
           <button 
             onClick={handleRefresh}
