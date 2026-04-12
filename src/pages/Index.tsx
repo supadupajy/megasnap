@@ -55,6 +55,7 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
 const Index = () => {
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [mapData, setMapData] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [viewedPostIds, setViewedPostIds] = useState<Set<string>>(new Set());
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -93,9 +94,9 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return isWithinBounds && isWithinTime;
+      return isWithinBounds || post.id === selectedPostId; // 선택된 포스트는 항상 포함
     });
-  }, [allPosts, mapData, timeValue]);
+  }, [allPosts, mapData, timeValue, selectedPostId]);
 
   const trendingPosts = useMemo(() => {
     return [...allPosts]
@@ -136,6 +137,12 @@ const Index = () => {
     }
   }, [mapData]);
 
+  const handleTrendingPostClick = useCallback((post: any) => {
+    setMapCenter({ lat: post.lat, lng: post.lng });
+    setSelectedPostId(post.id);
+    setIsTrendingExpanded(false);
+  }, []);
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
@@ -147,6 +154,7 @@ const Index = () => {
           onMarkerClick={handleMarkerClick}
           onMapChange={setMapData}
           onMapWriteClick={() => setIsWriteOpen(true)}
+          center={mapCenter}
         />
       </main>
 
@@ -158,9 +166,7 @@ const Index = () => {
             posts={trendingPosts}
             isExpanded={isTrendingExpanded}
             onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-            onPostClick={(post) => {
-              setSelectedPostId(post.id);
-            }}
+            onPostClick={handleTrendingPostClick}
           />
         </div>
 

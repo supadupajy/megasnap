@@ -14,6 +14,8 @@ type Post = {
   likes: number;
   image: string;
   isLiked: boolean;
+  lat: number;
+  lng: number;
 };
 
 interface TrendingPostsProps {
@@ -44,21 +46,28 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const currentPost = displayPosts[currentIndex];
 
   const handleItemClick = (e: React.MouseEvent, post: Post) => {
+    e.preventDefault();
     e.stopPropagation();
     onPostClick(post);
+  };
+
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggle();
   };
 
   if (displayPosts.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto w-full">
+    <div className="pointer-events-auto w-full" onClick={(e) => e.stopPropagation()}>
       <div 
-        className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer rounded-[22px]"
+        className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden rounded-[22px]"
       >
         {/* Header: Always visible */}
         <div 
-          className="h-[44px] px-3 flex items-center gap-2"
-          onClick={onToggle}
+          className="h-[44px] px-3 flex items-center gap-2 cursor-pointer"
+          onClick={handleHeaderClick}
         >
           <span className="text-green-600 font-black text-sm w-4 italic shrink-0">
             {isExpanded ? "HOT" : currentPost?.rank}
@@ -119,7 +128,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 {displayPosts.map((post) => (
                   <div
                     key={post.id}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
+                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
                     onClick={(e) => handleItemClick(e, post)}
                   >
                     <span
