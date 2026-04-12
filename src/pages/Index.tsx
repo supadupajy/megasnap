@@ -9,7 +9,7 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import { RefreshCw } from 'lucide-react';
 
-const generateMockPosts = () => {
+const generateMockPosts = (centerLat = 37.5665, centerLng = 126.9780) => {
   const posts = [];
   const contentPool = [
     "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
@@ -21,8 +21,9 @@ const generateMockPosts = () => {
 
   for (let i = 0; i < 20; i++) {
     const isAd = Math.random() > 0.9;
-    const lat = 37.5665 + (Math.random() - 0.5) * 0.05;
-    const lng = 126.9780 + (Math.random() - 0.5) * 0.05;
+    // 중심 좌표 기준으로 랜덤하게 생성
+    const lat = centerLat + (Math.random() - 0.5) * 0.03;
+    const lng = centerLng + (Math.random() - 0.5) * 0.03;
     const createdAt = new Date(Date.now() - Math.random() * 10000000000);
     
     posts.push({
@@ -72,6 +73,8 @@ const Index = () => {
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
+    
+    // 현재 지도 영역에 있는 포스팅만 필터링
     return allPosts.filter(post => 
       post.lat >= sw.lat && post.lat <= ne.lat &&
       post.lng >= sw.lng && post.lng <= ne.lng
@@ -101,11 +104,22 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    
+    // 현재 지도의 중심 좌표를 가져옴
+    let centerLat = 37.5665;
+    let centerLng = 126.9780;
+    
+    if (mapData?.bounds) {
+      centerLat = (mapData.bounds.ne.lat + mapData.bounds.sw.lat) / 2;
+      centerLng = (mapData.bounds.ne.lng + mapData.bounds.sw.lng) / 2;
+    }
+
     setTimeout(() => {
-      setAllPosts(generateMockPosts());
+      // 현재 중심 좌표 기준으로 새로운 포스팅 생성
+      setAllPosts(generateMockPosts(centerLat, centerLng));
       setIsRefreshing(false);
     }, 800);
-  }, []);
+  }, [mapData]);
 
   const handleCloseDetail = useCallback(() => {
     setSelectedPostId(null);
@@ -125,7 +139,9 @@ const Index = () => {
         />
       </main>
 
+      {/* UI Overlays Container */}
       <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+        {/* Trending Posts - Left Side */}
         <div className="w-64 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
@@ -137,6 +153,7 @@ const Index = () => {
           />
         </div>
 
+        {/* Refresh Button - Right Side */}
         <div className="pointer-events-auto">
           <button 
             onClick={handleRefresh}

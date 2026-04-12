@@ -19,11 +19,9 @@ interface PostDetailProps {
 }
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
-  // currentIndex를 initialIndex로 초기화하되, -1인 경우 0으로 설정
-  const [currentIndex, setCurrentIndex] = useState(initialIndex === -1 ? 0 : initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
 
-  // 팝업이 열릴 때마다 currentIndex를 initialIndex와 동기화
   useEffect(() => {
     if (isOpen && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -33,8 +31,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
 
   if (!isOpen || !posts || posts.length === 0) return null;
   
-  // currentIndex가 유효한 범위 내에 있는지 확인
-  const activeIndex = currentIndex >= 0 && currentIndex < posts.length ? currentIndex : 0;
+  const activeIndex = (currentIndex >= 0 && currentIndex < posts.length) 
+    ? currentIndex 
+    : (initialIndex >= 0 ? initialIndex : 0);
+    
   const post = posts[activeIndex];
   
   if (!post) return null;
@@ -47,14 +47,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     const velocityThreshold = 300;
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-      if (currentIndex < posts.length - 1) {
+      if (activeIndex < posts.length - 1) {
         setDirection(1);
-        setCurrentIndex(prev => prev + 1);
+        setCurrentIndex(activeIndex + 1);
       }
     } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-      if (currentIndex > 0) {
+      if (activeIndex > 0) {
         setDirection(-1);
-        setCurrentIndex(prev => prev - 1);
+        setCurrentIndex(activeIndex - 1);
       }
     }
   };
@@ -99,18 +99,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Navigation Indicators */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[60vh] overflow-hidden">
-          {posts.slice(0, 15).map((_, idx) => (
+        {/* Navigation Indicators - Moved further left and fixed visibility */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4">
+          {posts.map((p, idx) => (
             <div 
-              key={idx}
+              key={p.id}
               className={cn(
                 "w-1.5 rounded-full transition-all duration-300",
-                idx === activeIndex ? "h-8 bg-[#ccff00]" : "h-1.5 bg-white/30"
+                idx === activeIndex 
+                  ? "h-8 bg-[#ccff00] shadow-[0_0_8px_rgba(204,255,0,0.8)]" 
+                  : "h-1.5 bg-white/40"
               )}
             />
           ))}
-          {posts.length > 15 && <div className="w-1.5 h-1.5 bg-white/10 rounded-full self-center" />}
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
@@ -154,13 +155,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                   <div className="p-8">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
-                        <img
-                          src={post.user.avatar}
-                          alt=""
-                          className="w-full h-full rounded-full object-cover border-2 border-white"
+                        <img 
+                          src={post.user.avatar} 
+                          alt="" 
+                          className="w-full h-full rounded-full object-cover border-2 border-white" 
                         />
                       </div>
-
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-900 text-base leading-none">{post.user.name}</p>
