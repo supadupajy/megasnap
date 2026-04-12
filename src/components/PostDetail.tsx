@@ -146,8 +146,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
               }}
             >
-              <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
-                <div className="flex flex-col min-h-full">
+              {/* dir="rtl"을 사용하여 스크롤바를 왼쪽으로 이동 */}
+              <ScrollArea ref={scrollAreaRef} className="flex-1 h-full" dir="rtl">
+                {/* 내부 콘텐츠는 다시 dir="ltr"로 설정하여 텍스트 방향 유지 */}
+                <div className="flex flex-col min-h-full text-left" dir="ltr">
                   {/* Image Section */}
                   <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                     <img 
