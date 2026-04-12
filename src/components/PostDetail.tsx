@@ -122,6 +122,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
+        {/* Vertical Scroll Indicator with Counter */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -133,6 +134,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
+          </div>
+          {/* Post Counter Text */}
+          <div className="mt-4 flex flex-col items-center gap-1">
+            <span className="text-[10px] font-black text-[#ccff00] drop-shadow-md">{currentIndex + 1}</span>
+            <div className="w-2 h-[1px] bg-white/20" />
+            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
           </div>
         </div>
 
