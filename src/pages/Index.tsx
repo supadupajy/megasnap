@@ -176,8 +176,8 @@ const Index = () => {
           />
         </div>
 
-        {/* Right: Refresh Button (Fixed Position) */}
-        <div className="pointer-events-auto shrink-0">
+        {/* Right: Refresh Button & Count Display */}
+        <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -186,6 +186,12 @@ const Index = () => {
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="whitespace-nowrap">재검색</span>
           </button>
+          
+          <div className="bg-white/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-100/50 shadow-sm">
+            <p className="text-[10px] font-bold text-gray-500 whitespace-nowrap">
+              현재 화면 <span className="text-green-600 ml-0.5">{filteredPosts.length}</span>
+            </p>
+          </div>
         </div>
       </div>
 
