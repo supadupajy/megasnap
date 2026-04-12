@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 
@@ -170,7 +170,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               }}
             >
               <div className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col">
-                <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 h-full no-scrollbar">
                   <div className="flex flex-col">
                     <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                       <img 
@@ -256,6 +256,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                       </div>
                     </div>
                   </div>
+                  <ScrollBar className="hidden" />
                 </ScrollArea>
                 
                 <div 
