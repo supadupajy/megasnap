@@ -71,17 +71,13 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Influencer Stripe Border */
+/* Influencer Red Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
-  background: repeating-conic-gradient(
-    from var(--angle),
-    #ff0000 0deg 15deg,
-    #ffffff 15deg 30deg
-  );
-  animation: rotate-border 3s linear infinite;
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
+  animation: rotate-border 2s linear infinite;
 }
 
 /* Viewed state for popular border */
