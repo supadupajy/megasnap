@@ -30,7 +30,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   onPostClick,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-
   const displayPosts = posts.slice(0, 20);
 
   useEffect(() => {
@@ -52,39 +51,24 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   if (displayPosts.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto">
-      <motion.div
-        layout
-        initial={false}
-        animate={{ 
-          height: isExpanded ? "auto" : "44px",
-          borderRadius: isExpanded ? "24px" : "22px"
-        }}
-        transition={{ 
-          type: "spring", 
-          damping: 28, 
-          stiffness: 400,
-          mass: 0.8
-        }}
+    <div className="pointer-events-auto w-full">
+      <div 
         className={cn(
-          "bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer w-full",
-          isExpanded ? "p-2" : "px-3",
+          "bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300",
+          isExpanded ? "rounded-[24px]" : "rounded-full"
         )}
-        onClick={onToggle}
       >
-        <AnimatePresence initial={false}>
+        {/* Header: Always visible, acts as the trigger */}
+        <div 
+          className="h-[44px] px-3 flex items-center gap-2"
+          onClick={onToggle}
+        >
+          <span className="text-green-600 font-black text-sm w-4 italic shrink-0">
+            {isExpanded ? "HOT" : currentPost?.rank}
+          </span>
+          
           {!isExpanded ? (
-            <motion.div
-              key="collapsed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="h-full flex items-center gap-2"
-            >
-              <span className="text-green-600 font-black text-sm w-4 italic">
-                {currentPost?.rank}
-              </span>
+            <div className="flex flex-1 items-center gap-2 overflow-hidden">
               <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                 <img
                   src={currentPost?.image}
@@ -106,34 +90,38 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   </motion.p>
                 </AnimatePresence>
               </div>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </motion.div>
+            </div>
           ) : (
-            <motion.div 
-              key="expanded"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-1"
-            >
-              <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                  <Flame className="w-3 h-3 text-orange-500 shrink-0 fill-orange-500" />
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
-                    Real-time HOT (Top 20)
-                  </span>
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-400 rotate-180 shrink-0" />
-              </div>
+            <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
+              <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0 fill-orange-500" />
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
+                Real-time HOT (Top 20)
+              </span>
+            </div>
+          )}
+          
+          <ChevronDown 
+            className={cn(
+              "w-4 h-4 text-gray-400 transition-transform duration-300",
+              isExpanded && "rotate-180"
+            )} 
+          />
+        </div>
 
-              <div className="max-h-[320px] overflow-y-auto no-scrollbar overscroll-contain">
+        {/* Dropdown Content */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden border-t border-gray-50"
+            >
+              <div className="max-h-[320px] overflow-y-auto no-scrollbar overscroll-contain p-2">
                 {displayPosts.map((post, idx) => (
-                  <motion.div
+                  <div
                     key={post.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.01, duration: 0.15 }}
                     className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
                     onClick={(e) => handleItemClick(e, post)}
                   >
@@ -155,13 +143,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     <p className="text-xs font-bold text-gray-800 truncate flex-1">
                       {post.content}
                     </p>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   );
 };
