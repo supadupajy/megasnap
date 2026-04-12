@@ -169,7 +169,7 @@ const Index = () => {
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="bg-white/90 backdrop-blur-md h-[44px] px-6 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
+            className="bg-white/90 backdrop-blur-md h-[44px] px-4 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="whitespace-nowrap">재검색</span>
