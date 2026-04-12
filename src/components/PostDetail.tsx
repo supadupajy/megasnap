@@ -89,27 +89,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? 800 : -800,
+      y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
     }),
     center: {
       y: 0,
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.3 },
-        scale: { duration: 0.4 }
+        y: { type: "spring", damping: 35, stiffness: 300, mass: 0.8 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.3 }
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? -800 : 800,
+      y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.3 }
+        y: { type: "spring", damping: 35, stiffness: 300, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -129,7 +129,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* Vertical Scroll Indicator - Attached to the far left */}
+        {/* Vertical Scroll Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -150,8 +150,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         </div>
 
         {/* Post Card Container */}
-        <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} mode="popLayout">
+        <div className="relative w-full h-full flex items-center justify-center pointer-events-none overflow-hidden">
+          <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={post.id}
               custom={direction}
@@ -161,16 +161,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               exit="exit"
               drag="y"
               dragControls={dragControls}
-              dragListener={false} // Only drag via handle
+              dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.5}
+              dragElastic={0.2}
               onDragEnd={handleDragEnd}
-              className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center"
+              className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center will-change-transform"
               style={{
-                border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
+                border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none"),
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                transformStyle: 'preserve-3d',
+                WebkitTransformStyle: 'preserve-3d'
               }}
             >
-              {/* Content Area - Fully Scrollable */}
+              {/* Content Area */}
               <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
                 <div className="flex flex-col">
                   {/* Image Section */}
@@ -179,6 +183,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                       src={post.image} 
                       alt="" 
                       className="w-full h-full object-cover"
+                      loading="eager"
+                      decoding="async"
                     />
                     {isAd ? (
                       <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
@@ -241,7 +247,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                       </button>
                     </div>
 
-                    {/* Comments Section - Now visible via scroll */}
                     <div className="space-y-6 pb-10">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
                       {Array.from({ length: 8 }).map((_, i) => (
@@ -257,7 +262,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 </div>
               </ScrollArea>
               
-              {/* Bottom Drag Handle - Swipe to explore */}
+              {/* Bottom Drag Handle */}
               <div 
                 onPointerDown={(e) => dragControls.start(e)}
                 className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
