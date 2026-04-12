@@ -23,6 +23,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // 초기 인덱스 설정
   useEffect(() => {
     if (isOpen && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -30,13 +31,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     }
   }, [isOpen, initialIndex]);
 
-  // 포스팅이 바뀔 때마다 스크롤을 맨 위로 이동
+  // 포스팅이 열리거나 인덱스가 바뀔 때 스크롤을 맨 위로 강제 이동
   useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (viewport) {
-      viewport.scrollTop = 0;
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTop = 0;
+        }
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [currentIndex]);
+  }, [currentIndex, isOpen]);
 
   if (!isOpen || !posts || posts.length === 0) return null;
   
@@ -71,12 +77,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? 600 : -600,
-      x: 0,
       opacity: 0,
     }),
     center: {
       y: 0,
-      x: 0,
       opacity: 1,
       transition: {
         y: { type: "spring", damping: 25, stiffness: 200 },
@@ -85,7 +89,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     },
     exit: (direction: number) => ({
       y: direction > 0 ? -600 : 600,
-      x: 0,
       opacity: 0,
       transition: {
         y: { type: "spring", damping: 25, stiffness: 200 },
@@ -138,14 +141,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.4}
               onDragEnd={handleDragEnd}
-              className="pointer-events-auto w-[82vw] sm:max-w-[400px] bg-white rounded-[40px] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] flex flex-col max-h-[82vh] relative origin-center"
+              className="pointer-events-auto w-[88vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] flex flex-col h-[85vh] relative origin-center"
               style={{
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
               }}
             >
-              <ScrollArea ref={scrollAreaRef} className="flex-1">
-                <div className="flex flex-col">
-                  <div className="aspect-square w-full bg-gray-100 relative overflow-hidden">
+              <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
+                <div className="flex flex-col min-h-full">
+                  {/* Image Section */}
+                  <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                     <img 
                       src={post.image} 
                       alt="" 
@@ -163,24 +167,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                     )}
                   </div>
 
-                  <div className="p-8">
+                  {/* Content Section */}
+                  <div className="p-6 sm:p-8 flex-1">
                     <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
+                      <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
                         <img 
                           src={post.user.avatar} 
                           alt="" 
                           className="w-full h-full rounded-full object-cover border-2 border-white" 
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-bold text-gray-900 text-base leading-none">{post.user.name}</p>
+                          <p className="font-bold text-gray-900 text-base leading-none truncate">{post.user.name}</p>
                           {isAd && (
                             <a
                               href="https://s.baemin.com/t3000fBqlbHGL"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors"
+                              className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
                               onClick={(e) => e.stopPropagation()}
                             >
                               앱에서 보기
@@ -189,7 +194,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                         </div>
                         <div className="flex items-center text-green-500 gap-1 mt-1.5">
                           <MapPin className="w-3.5 h-3.5" />
-                          <span className="text-xs font-bold">{post.location}</span>
+                          <span className="text-xs font-bold truncate">{post.location}</span>
                         </div>
                       </div>
                     </div>
@@ -212,7 +217,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                       </button>
                     </div>
 
-                    <div className="space-y-4 pb-4">
+                    {/* Comments Section */}
+                    <div className="space-y-4 pb-10">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
                       <div className="flex gap-3 items-start">
                         <span className="font-bold text-sm text-gray-900 whitespace-nowrap">여행가_A</span>
@@ -222,13 +228,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                         <span className="font-bold text-sm text-gray-900 whitespace-nowrap">SeoulLife</span>
                         <span className="text-sm text-gray-500 leading-snug">날씨 좋을 때 가면 최고죠 ㅎㅎ</span>
                       </div>
+                      <div className="flex gap-3 items-start">
+                        <span className="font-bold text-sm text-gray-900 whitespace-nowrap">Explorer</span>
+                        <span className="text-sm text-gray-500 leading-snug">주차 공간은 넉넉한가요?</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </ScrollArea>
               
-              <div className="h-12 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm border-t border-gray-100 shrink-0">
-                <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-1.5" />
+              {/* Bottom Indicator */}
+              <div className="h-14 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md border-t border-gray-100 shrink-0">
+                <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-1.5" />
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Swipe to explore</p>
               </div>
             </motion.div>
