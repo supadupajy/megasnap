@@ -21,7 +21,7 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
     "인생샷 건지기 딱 좋은 곳 📸"
   ];
 
-  return Array.from({ length: count }).map((_, i) => {
+  const posts = Array.from({ length: count }).map((_, i) => {
     const isAd = Math.random() > 0.92;
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
@@ -45,12 +45,23 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
       isLiked: Math.random() > 0.5,
       createdAt,
       borderType: Math.random() > 0.8 ? 'popular' : 'none' as any,
-      isInfluencer: false // 기본값
+      isInfluencer: false
     };
 
     if (post.borderType === 'popular') post.likes += 2000;
     return post;
   });
+
+  // 생성된 포스트 중 가장 좋아요가 많은 것을 인플루언서로 고정 (광고 제외)
+  const influencerCandidate = [...posts]
+    .filter(p => !p.isAd)
+    .sort((a, b) => b.likes - a.likes)[0];
+  
+  if (influencerCandidate) {
+    influencerCandidate.isInfluencer = true;
+  }
+
+  return posts;
 };
 
 const Index = () => {
@@ -91,22 +102,12 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    const inView = allPosts.filter(post => {
+    return allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
-
-    // 화면 내 포스트 중 가장 좋아요가 많은 하나를 인플루언서로 지정 (광고 제외)
-    const influencerCandidate = [...inView]
-      .filter(p => !p.isAd)
-      .sort((a, b) => b.likes - a.likes)[0];
-
-    return inView.map(post => ({
-      ...post,
-      isInfluencer: influencerCandidate ? post.id === influencerCandidate.id : false
-    }));
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
   const trendingPosts = useMemo(() => {
