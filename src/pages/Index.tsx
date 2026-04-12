@@ -177,17 +177,17 @@ const Index = () => {
         </div>
 
         {/* Right: Refresh Button & Count Display */}
-        <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0">
+        <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="bg-white/90 backdrop-blur-md h-[44px] px-4 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
+            className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-green-600 active:scale-95 transition-all"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="whitespace-nowrap">재검색</span>
           </button>
           
-          <div className="bg-white/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-100/50 shadow-sm">
+          <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
             <p className="text-[10px] font-bold text-gray-500 whitespace-nowrap">
               현재 화면 <span className="text-green-600 ml-0.5">{filteredPosts.length}</span>
             </p>
