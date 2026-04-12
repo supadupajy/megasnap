@@ -25,16 +25,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 선택된 포스트가 항상 맨 처음에 오도록 리스트 재정렬
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
-    
     const selected = posts[initialIndex];
     const others = posts.filter((_, idx) => idx !== initialIndex);
     return [selected, ...others];
   }, [isOpen, posts, initialIndex]);
 
-  // 모달이 열릴 때 인덱스 초기화
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(0);
@@ -42,21 +39,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen]);
 
-  // 현재 보고 있는 포스팅을 읽음 처리
   useEffect(() => {
     if (isOpen && displayPosts[currentIndex] && onViewPost) {
       onViewPost(displayPosts[currentIndex].id);
     }
   }, [currentIndex, isOpen, displayPosts, onViewPost]);
 
-  // 포스팅 전환 시 스크롤 최상단 이동
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
         const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) {
-          viewport.scrollTop = 0;
-        }
+        if (viewport) viewport.scrollTop = 0;
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -71,8 +64,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const swipeThreshold = 30; // 임계값 낮춤
-    const velocityThreshold = 100; // 속도 임계값 낮춤
+    const swipeThreshold = 50;
+    const velocityThreshold = 200;
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
       if (currentIndex < displayPosts.length - 1) {
@@ -91,21 +84,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : "-100%",
       opacity: 0,
+      scale: 0.95,
     }),
     center: {
       y: 0,
       opacity: 1,
+      scale: 1,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 400, mass: 0.8 }, // 더 빠르고 묵직한 느낌
-        opacity: { duration: 0.15 }
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
+      scale: 0.95,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 400, mass: 0.8 },
-        opacity: { duration: 0.15 }
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.2 }
       }
     })
   };
@@ -113,7 +111,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
-        {/* Close Button */}
         <div className="absolute top-6 right-6 z-50">
           <Button 
             variant="ghost" 
@@ -125,7 +122,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* Vertical Scroll Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -138,15 +134,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
           </div>
-          <div className="mt-4 flex flex-col items-center gap-1">
-            <span className="text-[10px] font-black text-[#ccff00] drop-shadow-md">{currentIndex + 1}</span>
-            <div className="w-2 h-[1px] bg-white/20" />
-            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
-          </div>
         </div>
 
-        {/* Post Card Container */}
-        <div className="relative w-full h-full flex items-center justify-center pointer-events-none overflow-hidden">
+        <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={post.id}
@@ -159,28 +149,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.1}
+              dragElastic={0.05}
               onDragEnd={handleDragEnd}
-              className="pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] relative origin-center will-change-transform"
+              className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform"
               style={{
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none"),
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
-                transformStyle: 'preserve-3d',
-                WebkitTransformStyle: 'preserve-3d'
               }}
             >
-              {/* Content Area */}
               <ScrollArea ref={scrollAreaRef} className="flex-1 h-full">
                 <div className="flex flex-col">
-                  {/* Image Section */}
                   <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                     <img 
                       src={post.image} 
                       alt="" 
                       className="w-full h-full object-cover"
-                      loading="eager"
-                      decoding="async"
                     />
                     {isAd ? (
                       <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
@@ -194,7 +178,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     )}
                   </div>
 
-                  {/* Content Section */}
                   <div className="p-6 sm:p-8">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
@@ -258,7 +241,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 </div>
               </ScrollArea>
               
-              {/* Bottom Drag Handle */}
               <div 
                 onPointerDown={(e) => dragControls.start(e)}
                 className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
