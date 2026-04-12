@@ -10,7 +10,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import { RefreshCw } from 'lucide-react';
 
-// 포스팅 생성 함수를 컴포넌트 외부로 분리하여 일관성 유지
+// 포스팅 생성 함수: 생성 시간을 현재로부터 최대 12시간 전까지 랜덤하게 설정
 const createMockPosts = (centerLat: number, centerLng: number, count: number = 15) => {
   const contentPool = [
     "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
@@ -24,10 +24,13 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
 
   return Array.from({ length: count }).map((_, i) => {
     const isAd = Math.random() > 0.92;
-    // 중심 좌표 주변으로 랜덤하게 배치 (약 2-3km 반경)
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     
+    // 현재로부터 0~12시간 사이의 랜덤한 과거 시간 생성
+    const randomHoursAgo = Math.random() * 12;
+    const createdAt = new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000);
+
     const post = {
       id: Math.random().toString(36).substr(2, 9),
       rank: 0,
@@ -43,7 +46,7 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
       likes: Math.floor(Math.random() * 2000),
       image: `https://picsum.photos/seed/${Math.random()}/800/800`,
       isLiked: Math.random() > 0.5,
-      createdAt: new Date(),
+      createdAt,
       borderType: Math.random() > 0.8 ? 'popular' : 'none' as any
     };
 
@@ -60,44 +63,46 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(6); // 기본값 6시간
+  const [timeValue, setTimeValue] = useState(12); // 기본값 12시간으로 변경
 
   // 초기 데이터 생성
   useEffect(() => {
-    setAllPosts(createMockPosts(37.5665, 126.9780, 20));
+    setAllPosts(createMockPosts(37.5665, 126.9780, 30));
   }, []);
 
-  // 지도가 이동하여 멈출 때마다 실행되는 자동 생성 로직
+  // 지도가 이동할 때 데이터 보충
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       const centerLat = (ne.lat + sw.lat) / 2;
       const centerLng = (ne.lng + sw.lng) / 2;
 
-      // 현재 화면에 보이는 포스팅 개수 확인
       const visibleCount = allPosts.filter(post => 
         post.lat >= sw.lat && post.lat <= ne.lat &&
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
-      // 화면에 마커가 부족하면 자동으로 추가 생성
-      if (visibleCount < 8) {
-        const newPosts = createMockPosts(centerLat, centerLng, 12);
+      if (visibleCount < 10) {
+        const newPosts = createMockPosts(centerLat, centerLng, 15);
         setAllPosts(prev => [...prev, ...newPosts]);
       }
     }
-  }, [mapData]);
+  }, [mapData, allPosts.length]);
 
-  // 현재 지도 영역에 있는 포스팅만 필터링하여 MapContainer에 전달
+  // 현재 지도 영역 + 선택된 시간 내의 포스팅 필터링
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
+    const now = Date.now();
+    const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    return allPosts.filter(post => 
-      post.lat >= sw.lat && post.lat <= ne.lat &&
-      post.lng >= sw.lng && post.lng <= ne.lng
-    );
-  }, [allPosts, mapData]);
+    return allPosts.filter(post => {
+      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
+                             post.lng >= sw.lng && post.lng <= ne.lng;
+      const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
+      return isWithinBounds && isWithinTime;
+    });
+  }, [allPosts, mapData, timeValue]);
 
   const trendingPosts = useMemo(() => {
     return [...allPosts]
@@ -132,8 +137,7 @@ const Index = () => {
       const centerLng = (ne.lng + sw.lng) / 2;
       
       setTimeout(() => {
-        // 현재 위치 기반으로 완전히 새로운 데이터셋으로 교체
-        setAllPosts(createMockPosts(centerLat, centerLng, 25));
+        setAllPosts(createMockPosts(centerLat, centerLng, 35));
         setIsRefreshing(false);
       }, 600);
     }
@@ -177,7 +181,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Time Slider */}
       <TimeSlider value={timeValue} onChange={setTimeValue} />
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
