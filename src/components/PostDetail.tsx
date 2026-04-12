@@ -22,6 +22,7 @@ interface PostDetailProps {
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [isClosingLeft, setIsClosingLeft] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
@@ -36,6 +37,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen) {
       setCurrentIndex(0);
       setDirection(0);
+      setIsClosingLeft(false);
     }
   }, [isOpen]);
 
@@ -68,16 +70,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const swipeThreshold = 50;
     const velocityThreshold = 200;
 
-    if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-      if (currentIndex < displayPosts.length - 1) {
-        setDirection(1);
-        setCurrentIndex(currentIndex + 1);
+    // 수직 스와이프 (포스팅 탐색)
+    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
+      if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+        if (currentIndex < displayPosts.length - 1) {
+          setDirection(1);
+          setCurrentIndex(currentIndex + 1);
+        }
+      } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
+        if (currentIndex > 0) {
+          setDirection(-1);
+          setCurrentIndex(currentIndex - 1);
+        }
       }
-    } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-      if (currentIndex > 0) {
-        setDirection(-1);
-        setCurrentIndex(currentIndex - 1);
-      }
+    } 
+    // 수평 스와이프 (왼쪽으로 스와이프하여 닫기)
+    else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      setIsClosingLeft(true);
+      onClose();
     }
   };
 
@@ -96,15 +106,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         opacity: { duration: 0.2 }
       }
     },
-    exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : "100%",
-      opacity: 0,
-      x: 0,
-      transition: {
-        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.2 }
+    exit: (direction: number) => {
+      if (isClosingLeft) {
+        return {
+          x: "-100%",
+          opacity: 0,
+          transition: { duration: 0.3, ease: "easeOut" }
+        };
       }
-    })
+      return {
+        y: direction > 0 ? "-100%" : "100%",
+        opacity: 0,
+        x: 0,
+        transition: {
+          y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+          opacity: { duration: 0.2 }
+        }
+      };
+    }
   };
 
   return (
@@ -152,11 +171,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate="center"
               exit="exit"
-              drag="y"
+              drag
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.02}
+              dragConstraints={{ top: 0, bottom: 0, right: 0 }}
+              dragElastic={{ top: 0.02, bottom: 0.02, left: 0.5, right: 0 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
@@ -168,7 +187,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               }}
             >
               <div className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col">
-                <ScrollArea ref={scrollAreaRef} className="flex-1 h-full no-scrollbar">
+                <ScrollArea 
+                  ref={scrollAreaRef} 
+                  className="flex-1 h-full no-scrollbar"
+                  onPointerDown={(e) => {
+                    // 스크롤 영역에서도 왼쪽 스와이프 감지를 위해 드래그 시작
+                    // 단, 수직 스크롤과 겹치지 않도록 framer-motion이 처리함
+                    dragControls.start(e);
+                  }}
+                >
                   <div className="flex flex-col">
                     <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                       <img 
