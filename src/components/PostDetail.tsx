@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ interface PostDetailProps {
 const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && initialIndex !== -1) {
@@ -28,6 +29,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
       setDirection(0);
     }
   }, [isOpen, initialIndex]);
+
+  // 포스팅이 바뀔 때마다 스크롤을 맨 위로 이동
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.scrollTop = 0;
+    }
+  }, [currentIndex]);
 
   if (!isOpen || !posts || posts.length === 0) return null;
   
@@ -100,7 +109,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Navigation Indicators - Always on the far left */}
+        {/* Navigation Indicators */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4 px-1">
           {posts.map((p, idx) => (
             <div 
@@ -134,7 +143,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                 border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")
               }}
             >
-              <ScrollArea className="flex-1">
+              <ScrollArea ref={scrollAreaRef} className="flex-1">
                 <div className="flex flex-col">
                   <div className="aspect-square w-full bg-gray-100 relative overflow-hidden">
                     <img 
@@ -203,7 +212,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
                       </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 pb-4">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
                       <div className="flex gap-3 items-start">
                         <span className="font-bold text-sm text-gray-900 whitespace-nowrap">여행가_A</span>
