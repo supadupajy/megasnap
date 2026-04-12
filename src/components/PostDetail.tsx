@@ -41,7 +41,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, controls]);
 
-  // 포스트가 바뀔 때마다 애니메이션 상태 초기화
   useEffect(() => {
     if (isOpen) {
       controls.set({ x: 0, opacity: 1 });
@@ -91,27 +90,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           setCurrentIndex(currentIndex - 1);
         }
       }
-      // 수직 스와이프 후 위치 복구
-      controls.start({ y: 0, transition: { type: "spring", damping: 25, stiffness: 200 } });
+      // 수직 스와이프 후 위치 복구 (더 빠르게)
+      controls.start({ y: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
       return;
     }
 
     // 2. 수평 스와이프 감지 (왼쪽으로 닫기)
-    // 화면 절반 이상 드래그했거나 왼쪽으로 빠른 속도로 스와이프했을 때
     if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
-      // 닫기 애니메이션 실행 (Fade out + Slide Left)
+      // 닫기 애니메이션 (더 빠르게: 0.3s -> 0.2s)
       await controls.start({ 
         x: -screenWidth, 
         opacity: 0, 
-        transition: { duration: 0.3, ease: "easeOut" } 
+        transition: { duration: 0.2, ease: "circOut" } 
       });
       onClose();
     } else {
-      // 원래 위치로 부드럽게 복귀
+      // 원래 위치로 복귀 (더 탄성있고 빠르게)
       controls.start({ 
         x: 0, 
         opacity: 1,
-        transition: { type: "spring", damping: 25, stiffness: 250 } 
+        transition: { type: "spring", damping: 25, stiffness: 450 } 
       });
     }
   };
@@ -127,16 +125,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       opacity: 1,
       x: 0,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.3 }
+        y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : "100%",
       opacity: 0,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        opacity: { duration: 0.2 }
+        y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
+        opacity: { duration: 0.15 }
       }
     })
   };
@@ -144,7 +142,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
-        {/* Close Button */}
         <div className="absolute top-6 right-6 z-50">
           <Button 
             variant="ghost" 
@@ -156,7 +153,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* Progress Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -186,7 +182,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               custom={direction}
               variants={variants}
               initial="enter"
-              animate={controls} // useAnimation 컨트롤러 연결
+              animate={controls}
               exit="exit"
               drag="x"
               dragControls={dragControls}
