@@ -19,7 +19,8 @@ const generateMockPosts = () => {
     "야경이 정말 아름다운 곳이에요 🌙"
   ];
 
-  for (let i = 0; i < 50; i++) {
+  // 마커 개수를 20개로 조정 (사용자 요청: 15~20개)
+  for (let i = 0; i < 20; i++) {
     const isAd = Math.random() > 0.9;
     const lat = 37.5665 + (Math.random() - 0.5) * 0.05;
     const lng = 126.9780 + (Math.random() - 0.5) * 0.05;
@@ -91,8 +92,6 @@ const Index = () => {
     return filteredPosts.findIndex(p => p.id === selectedPostId);
   }, [selectedPostId, filteredPosts]);
 
-  // useCallback을 사용하여 마커 클릭 핸들러가 매번 생성되지 않도록 함
-  // 이를 통해 MapContainer에서 마커가 불필요하게 다시 그려지는 것을 방지
   const handleMarkerClick = useCallback((post: any) => {
     setSelectedPostId(post.id);
     setViewedPostIds(prev => {
@@ -129,18 +128,20 @@ const Index = () => {
         />
       </main>
 
+      {/* Refresh Button - Text color set to green-600 */}
       <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10">
         <button 
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-gray-700 active:scale-95 transition-all"
+          className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 text-sm font-bold text-green-600 active:scale-95 transition-all"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           재검색
         </button>
       </div>
 
-      <div className="absolute top-24 right-4 z-10 w-64">
+      {/* Trending Posts Overlay - Moved back to left-4 */}
+      <div className="absolute top-24 left-4 z-10 w-64">
         <TrendingPosts 
           posts={trendingPosts}
           isExpanded={isTrendingExpanded}
