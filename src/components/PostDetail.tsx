@@ -67,12 +67,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isInfluencer = !isAd && post.isInfluencer;
 
   const handleDragEnd = (event: any, info: PanInfo) => {
+    const screenWidth = window.innerWidth;
     const swipeThreshold = 50;
     const velocityThreshold = 200;
-    const screenWidth = window.innerWidth;
 
-    // 수직 스와이프 (포스팅 탐색)
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
+    // 수직 스와이프 감지 (포스팅 탐색)
+    if (Math.abs(info.offset.y) > Math.abs(info.offset.x) + 20) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
@@ -84,16 +84,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           setCurrentIndex(currentIndex - 1);
         }
       }
-    } 
-    // 수평 스와이프 (왼쪽으로 스와이프하여 닫기)
-    else {
-      // 화면 너비의 절반 이상 드래그했거나, 왼쪽으로 빠른 속도로 스와이프했을 때
-      if (info.offset.x < -screenWidth / 2 || info.velocity.x < -velocityThreshold) {
-        setIsClosingLeft(true);
-        onClose();
-      }
-      // 절반 미만 드래그 시에는 framer-motion이 dragConstraints에 의해 자동으로 0으로 복귀함
+      return;
     }
+
+    // 수평 스와이프 감지 (왼쪽으로 닫기)
+    // 화면 절반 이상 드래그했거나 왼쪽으로 빠른 속도로 스와이프했을 때
+    if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
+      setIsClosingLeft(true);
+      onClose();
+    }
+    // 그 외의 경우는 dragConstraints={{left:0, right:0}}에 의해 자동으로 0으로 복귀함
   };
 
   const variants = {
@@ -109,7 +109,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       transition: {
         y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
         opacity: { duration: 0.3 },
-        x: { type: "spring", damping: 25, stiffness: 200 }
+        x: { type: "spring", damping: 25, stiffness: 200 } // 복귀 시 부드러운 스프링 효과
       }
     },
     exit: (direction: number) => {
@@ -138,6 +138,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
+        {/* Close Button */}
         <div className="absolute top-6 right-6 z-50">
           <Button 
             variant="ghost" 
@@ -149,6 +150,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
+        {/* Progress Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -180,11 +182,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate="center"
               exit="exit"
-              drag="x" // 수평 드래그만 명시적으로 허용 (수직은 onDragEnd에서 처리)
+              drag="x"
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0 }}
-              dragElastic={{ left: 0.1, right: 0 }}
+              dragConstraints={{ left: 0, right: 0 }} // 0으로 복귀하도록 강제
+              dragElastic={{ left: 1, right: 0 }} // 왼쪽으로는 자유롭게 드래그 가능
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
