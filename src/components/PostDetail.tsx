@@ -16,9 +16,10 @@ interface PostDetailProps {
   initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  onViewPost?: (id: string) => void;
 }
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -40,6 +41,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
       setDirection(0);
     }
   }, [isOpen]);
+
+  // 현재 보고 있는 포스팅을 읽음 처리
+  useEffect(() => {
+    if (isOpen && displayPosts[currentIndex] && onViewPost) {
+      onViewPost(displayPosts[currentIndex].id);
+    }
+  }, [currentIndex, isOpen, displayPosts, onViewPost]);
 
   // 포스팅 전환 시 스크롤 최상단 이동
   useEffect(() => {

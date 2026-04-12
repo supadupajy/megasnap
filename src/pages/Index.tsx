@@ -111,10 +111,13 @@ const Index = () => {
 
   const handleMarkerClick = useCallback((post: any) => {
     setSelectedPostId(post.id);
+  }, []);
+
+  const markAsViewed = useCallback((id: string) => {
     setViewedPostIds(prev => {
-      if (prev.has(post.id)) return prev;
+      if (prev.has(id)) return prev;
       const next = new Set(prev);
-      next.add(post.id);
+      next.add(id);
       return next;
     });
   }, []);
@@ -180,6 +183,7 @@ const Index = () => {
           initialIndex={selectedIndex}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
+          onViewPost={markAsViewed}
         />
       )}
 
