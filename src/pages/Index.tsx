@@ -25,7 +25,6 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
     const isAd = Math.random() > 0.92;
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
-    // 0~12시간 전 사이의 랜덤한 시간 생성
     const randomHoursAgo = Math.random() * 12;
     const createdAt = new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000);
 
@@ -45,7 +44,8 @@ const createMockPosts = (centerLat: number, centerLng: number, count: number = 1
       image: `https://picsum.photos/seed/${Math.random()}/800/800`,
       isLiked: Math.random() > 0.5,
       createdAt,
-      borderType: Math.random() > 0.8 ? 'popular' : 'none' as any
+      borderType: Math.random() > 0.8 ? 'popular' : 'none' as any,
+      isInfluencer: false // 기본값
     };
 
     if (post.borderType === 'popular') post.likes += 2000;
@@ -91,14 +91,22 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    return allPosts.filter(post => {
+    const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      
-      // 지도 범위 내에 있고 시간 조건도 만족하거나, 현재 선택된 포스트인 경우 노출
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
+
+    // 화면 내 포스트 중 가장 좋아요가 많은 하나를 인플루언서로 지정 (광고 제외)
+    const influencerCandidate = [...inView]
+      .filter(p => !p.isAd)
+      .sort((a, b) => b.likes - a.likes)[0];
+
+    return inView.map(post => ({
+      ...post,
+      isInfluencer: influencerCandidate ? post.id === influencerCandidate.id : false
+    }));
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
   const trendingPosts = useMemo(() => {

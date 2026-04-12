@@ -18,7 +18,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
   const actionOverlayRef = useRef<any>(null);
 
-  // Long press logic
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const lastLongPressTime = useRef(0);
 
@@ -46,7 +45,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     const map = new google.maps.Map(mapElement.current, mapOptions);
     mapInstance.current = map;
 
-    // Event Listeners for Long Press
     map.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
       if (pressTimer.current) clearTimeout(pressTimer.current);
       
@@ -101,7 +99,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     };
   }, []);
 
-  // Smooth Pan Animation for long distances
   useEffect(() => {
     if (mapInstance.current && center) {
       const map = mapInstance.current;
@@ -109,56 +106,43 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       if (!start) return;
 
       const startTime = performance.now();
-      const duration = 1000; // 1 second animation
+      const duration = 1000;
 
       const animate = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
-        // Ease-in-out cubic function
         const ease = progress < 0.5 
           ? 4 * progress * progress * progress 
           : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
         const lat = start.lat() + (center.lat - start.lat()) * ease;
         const lng = start.lng() + (center.lng - start.lng()) * ease;
-        
         map.setCenter({ lat, lng });
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
+        if (progress < 1) requestAnimationFrame(animate);
       };
-
       requestAnimationFrame(animate);
     }
   }, [center]);
 
-  // Action Pin Overlay
   useEffect(() => {
     if (!mapInstance.current || !window.google) return;
-
     if (actionOverlayRef.current) {
       actionOverlayRef.current.setMap(null);
       actionOverlayRef.current = null;
     }
-
     if (actionPin) {
       class ActionMarker extends google.maps.OverlayView {
         latlng: google.maps.LatLng;
         div: HTMLDivElement | null = null;
-
         constructor(lat: number, lng: number) {
           super();
           this.latlng = new google.maps.LatLng(lat, lng);
         }
-
         onAdd() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
           div.style.cursor = 'pointer';
           div.style.zIndex = '1000';
-          
           div.innerHTML = `
             <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 8px;">
               <div id="map-write-btn" style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
@@ -176,18 +160,15 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               }
             </style>
           `;
-
           div.onclick = (e) => {
             e.stopPropagation();
             onMapWriteClick();
             setActionPin(null);
           };
-
           this.div = div;
           const panes = this.getPanes();
           panes?.overlayMouseTarget.appendChild(div);
         }
-
         draw() {
           const overlayProjection = this.getProjection();
           const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
@@ -196,7 +177,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
             this.div.style.top = point.y + 'px';
           }
         }
-
         onRemove() {
           if (this.div) {
             this.div.parentNode?.removeChild(this.div);
@@ -204,17 +184,14 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           }
         }
       }
-
       const overlay = new ActionMarker(actionPin.lat, actionPin.lng);
       overlay.setMap(mapInstance.current);
       actionOverlayRef.current = overlay;
     }
   }, [actionPin]);
 
-  // Post Markers
   useEffect(() => {
     if (!mapInstance.current || !window.google) return;
-
     const map = mapInstance.current;
     
     class HTMLMarker extends google.maps.OverlayView {
@@ -241,18 +218,19 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         
         const isAd = this.post.isAd;
         const isPopular = !isAd && this.post.borderType === 'popular';
+        const isInfluencer = !isAd && this.post.isInfluencer;
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            <div class="${isPopular ? 'popular-border-container animate-popular-glow' : ''} ${this.isViewed ? 'viewed' : ''}"
+            <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px;
-                        ${isPopular ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
+                        ${(isPopular || isInfluencer) ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${isPopular ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
-                        filter: ${!isAd && !isPopular && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+                        background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
+                        filter: ${!isAd && !isPopular && !isInfluencer && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
-                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${isPopular && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
@@ -262,7 +240,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${this.isViewed ? '#94a3b8' : (isPopular ? '#ccff00' : borderColor)};
+                        width: 12px; height: 12px; background: ${this.isViewed ? '#94a3b8' : (isInfluencer ? '#ff0000' : (isPopular ? '#ccff00' : borderColor))};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;
@@ -295,7 +273,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
-
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -308,7 +285,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed) {
+        // 인플루언서 상태나 조회 상태가 바뀌면 다시 그림
+        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
           overlay.setMap(map);
@@ -322,9 +300,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     });
   }, [posts, viewedPostIds, onMarkerClick]);
 
-  return (
-    <div ref={mapElement} className="w-full h-full bg-gray-100" />
-  );
+  return <div ref={mapElement} className="w-full h-full bg-gray-100" />;
 };
 
 export default MapContainer;

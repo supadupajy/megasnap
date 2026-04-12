@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -62,6 +62,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
+  const isInfluencer = !isAd && post.isInfluencer;
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const swipeThreshold = 50;
@@ -122,11 +123,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* Vertical Scroll Indicator with Counter */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
-              className="absolute w-full bg-[#ccff00] rounded-full shadow-[0_0_20px_rgba(204,255,0,1)]"
+              className={cn(
+                "absolute w-full rounded-full",
+                isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
+              )}
               initial={false}
               animate={{ 
                 height: `${Math.max(15, 100 / displayPosts.length)}%`,
@@ -135,9 +138,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
           </div>
-          {/* Post Counter Text */}
           <div className="mt-4 flex flex-col items-center gap-1">
-            <span className="text-[10px] font-black text-[#ccff00] drop-shadow-md">{currentIndex + 1}</span>
+            <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
             <div className="w-2 h-[1px] bg-white/20" />
             <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
           </div>
@@ -158,9 +160,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.05}
               onDragEnd={handleDragEnd}
-              className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform"
+              className={cn(
+                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] origin-center will-change-transform",
+                isInfluencer && "influencer-border-container animate-influencer-glow"
+              )}
               style={{
-                border: isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none"),
+                border: isAd ? "4px solid #3b82f6" : (isPopular && !isInfluencer ? "4px solid #ccff00" : "none"),
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
               }}
@@ -176,6 +181,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     {isAd ? (
                       <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
                         AD
+                      </div>
+                    ) : isInfluencer ? (
+                      <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                        <Star className="w-3.5 h-3.5 fill-white" />
+                        INFLUENCER
                       </div>
                     ) : isPopular && (
                       <div className="absolute top-6 left-6 z-20 bg-[#ccff00] text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
