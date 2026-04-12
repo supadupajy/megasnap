@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,19 +19,28 @@ interface PostDetailProps {
 }
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) => {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // 초기 인덱스 설정
+  // 선택된 포스트가 항상 맨 처음에 오도록 리스트 재정렬
+  const displayPosts = useMemo(() => {
+    if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
+    
+    const selected = posts[initialIndex];
+    const others = posts.filter((_, idx) => idx !== initialIndex);
+    return [selected, ...others];
+  }, [isOpen, posts, initialIndex]);
+
+  // 모달이 열릴 때 인덱스 초기화
   useEffect(() => {
-    if (isOpen && initialIndex !== -1) {
-      setCurrentIndex(initialIndex);
+    if (isOpen) {
+      setCurrentIndex(0);
       setDirection(0);
     }
-  }, [isOpen, initialIndex]);
+  }, [isOpen]);
 
-  // 포스팅이 열리거나 인덱스가 바뀔 때 스크롤을 맨 위로 강제 이동
+  // 포스팅 전환 시 스크롤 최상단 이동
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
@@ -44,14 +53,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     }
   }, [currentIndex, isOpen]);
 
-  if (!isOpen || !posts || posts.length === 0) return null;
+  if (!isOpen || displayPosts.length === 0) return null;
   
-  const activeIndex = (currentIndex >= 0 && currentIndex < posts.length) 
-    ? currentIndex 
-    : (initialIndex >= 0 ? initialIndex : 0);
-    
-  const post = posts[activeIndex];
-  
+  const post = displayPosts[currentIndex];
   if (!post) return null;
 
   const isAd = post.isAd;
@@ -62,14 +66,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
     const velocityThreshold = 200;
 
     if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-      if (activeIndex < posts.length - 1) {
+      if (currentIndex < displayPosts.length - 1) {
         setDirection(1);
-        setCurrentIndex(activeIndex + 1);
+        setCurrentIndex(currentIndex + 1);
       }
     } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-      if (activeIndex > 0) {
+      if (currentIndex > 0) {
         setDirection(-1);
-        setCurrentIndex(activeIndex - 1);
+        setCurrentIndex(currentIndex - 1);
       }
     }
   };
@@ -112,19 +116,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose }: PostDetailProps) =
           </Button>
         </div>
 
-        {/* Navigation Indicators - Moved to far left (left-2) to avoid overlap */}
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 max-h-[70vh] overflow-hidden py-4 px-1">
-          {posts.map((p, idx) => (
-            <div 
-              key={p.id}
-              className={cn(
-                "w-1 rounded-full transition-all duration-300 shadow-sm",
-                idx === activeIndex 
-                  ? "h-10 bg-[#ccff00] shadow-[0_0_15px_rgba(204,255,0,1)]" 
-                  : "h-1.5 bg-white/40"
-              )}
+        {/* Vertical Scroll Indicator - Always starts from top */}
+        <div className="absolute left-4 top-32 bottom-32 w-1 z-50 flex flex-col items-center">
+          <div className="w-[2px] h-full bg-white/20 rounded-full relative overflow-hidden">
+            <motion.div 
+              className="absolute w-full bg-[#ccff00] rounded-full shadow-[0_0_15px_rgba(204,255,0,1)]"
+              initial={false}
+              animate={{ 
+                height: `${Math.max(10, 100 / displayPosts.length)}%`,
+                top: `${(currentIndex / displayPosts.length) * 100}%`
+              }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
-          ))}
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-1">
+            <span className="text-[10px] font-black text-[#ccff00]">{currentIndex + 1}</span>
+            <div className="w-1 h-[1px] bg-white/40" />
+            <span className="text-[10px] font-bold text-white/40">{displayPosts.length}</span>
+          </div>
         </div>
 
         {/* Post Card Container */}
