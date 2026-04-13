@@ -67,7 +67,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     // 좌우 스와이프 시 닫기 (어느 방향이든)
     if (absX > absY && absX > 60) {
       if (absX > 120 || Math.abs(velocity.x) > 400) {
-        setDirection(offset.x > 0 ? 100 : -100); // 방향에 따른 종료 애니메이션 설정
+        setDirection(offset.x > 0 ? 100 : -100);
         setIsClosing(true);
         return;
       }
@@ -194,15 +194,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   isPopular && "animate-popular-glow",
                   isInfluencer && "animate-influencer-glow"
                 )}
+                onPointerDown={(e) => {
+                  // 댓글이 닫혀있을 때는 카드 전체가 드래그 핸들이 됨 (버튼 제외)
+                  if (!showComments) {
+                    const target = e.target as HTMLElement;
+                    if (!target.closest('button') && !target.closest('a')) {
+                      dragControls.start(e);
+                    }
+                  }
+                }}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
                   <ScrollArea 
                     ref={scrollAreaRef} 
-                    className="flex-1 h-full no-scrollbar"
+                    className={cn(
+                      "flex-1 h-full no-scrollbar",
+                      !showComments && "touch-none" // 댓글이 없을 때는 네이티브 스크롤 방지하여 스와이프 우선순위 높임
+                    )}
                     onPointerDown={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (!target.closest('.radix-scroll-area-scrollbar') && !target.closest('button') && !target.closest('a')) {
-                        dragControls.start(e);
+                      // 댓글이 열려있을 때도 버튼이 아닌 영역은 드래그 가능하게 설정
+                      if (showComments) {
+                        const target = e.target as HTMLElement;
+                        if (!target.closest('.radix-scroll-area-scrollbar') && !target.closest('button') && !target.closest('a')) {
+                          dragControls.start(e);
+                        }
                       }
                     }}
                   >
