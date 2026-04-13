@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
@@ -11,12 +11,29 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
 const Popular = () => {
+  const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   
-  const posts = useMemo(() => createMockPosts(37.5665, 126.9780, 30).sort((a, b) => b.likes - a.likes), []);
+  useEffect(() => {
+    const initialPosts = createMockPosts(37.5665, 126.9780, 30).sort((a, b) => b.likes - a.likes);
+    setPosts(initialPosts);
+  }, []);
   
-  // 선택된 포스팅이 리스트의 맨 처음에 오도록 재정렬
+  const handleLikeToggle = useCallback((postId: string) => {
+    setPosts(prev => prev.map(post => {
+      if (post.id === postId) {
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likes: isLiked ? post.likes + 1 : post.likes - 1
+        };
+      }
+      return post;
+    }));
+  }, []);
+
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return posts;
     const selected = posts.find(p => p.id === selectedPostId);
@@ -42,6 +59,7 @@ const Popular = () => {
                 isGif={post.isGif}
                 isInfluencer={post.isInfluencer}
                 borderType={post.borderType}
+                onLikeToggle={() => handleLikeToggle(post.id)}
               />
             </div>
           ))}
@@ -51,9 +69,10 @@ const Popular = () => {
       {selectedPostId && (
         <PostDetail 
           posts={detailPosts} 
-          initialIndex={0} // 항상 0번(최상단)에서 시작
+          initialIndex={0}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
+          onLikeToggle={handleLikeToggle}
         />
       )}
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />

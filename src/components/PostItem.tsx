@@ -20,9 +20,22 @@ interface PostItemProps {
   isGif?: boolean;
   isInfluencer?: boolean;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
+  onLikeToggle?: (e: React.MouseEvent) => void;
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, isInfluencer, borderType = 'none' }: PostItemProps) => {
+const PostItem = ({ 
+  user, 
+  content, 
+  location, 
+  likes, 
+  image, 
+  isLiked, 
+  isAd, 
+  isGif, 
+  isInfluencer, 
+  borderType = 'none',
+  onLikeToggle 
+}: PostItemProps) => {
   const navigate = useNavigate();
   const isPopular = !isAd && borderType === 'popular';
 
@@ -32,7 +45,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
   };
 
   const handleUserClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // 부모의 포스팅 상세 보기 클릭 이벤트 방지
+    e.stopPropagation();
     navigate(`/profile/${user.id}`);
   };
 
@@ -112,7 +125,13 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <button className="transition-transform active:scale-125" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="transition-transform active:scale-125" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onLikeToggle?.(e);
+              }}
+            >
               <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
             </button>
             <button onClick={(e) => e.stopPropagation()}>

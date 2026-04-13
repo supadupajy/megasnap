@@ -35,7 +35,6 @@ const Index = () => {
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
-      // 화면에 보이는 마커가 적을 때 새로운 랜덤 데이터(GIF 포함) 추가 생성
       if (visibleCount < 12) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
@@ -71,6 +70,20 @@ const Index = () => {
       .slice(0, 20)
       .map((post, index) => ({ ...post, rank: index + 1 }));
   }, [allPosts]);
+
+  const handleLikeToggle = useCallback((postId: string) => {
+    setAllPosts(prev => prev.map(post => {
+      if (post.id === postId) {
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likes: isLiked ? post.likes + 1 : post.likes - 1
+        };
+      }
+      return post;
+    }));
+  }, []);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -136,7 +149,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* 현재 위치 버튼 - 왼쪽 하단 */}
       <div className="absolute bottom-32 left-4 z-20">
         <button 
           onClick={handleCurrentLocation}
@@ -163,6 +175,7 @@ const Index = () => {
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}
+          onLikeToggle={handleLikeToggle}
         />
       )}
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />

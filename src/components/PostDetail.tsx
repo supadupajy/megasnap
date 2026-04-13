@@ -17,9 +17,10 @@ interface PostDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onViewPost?: (id: string) => void;
+  onLikeToggle?: (postId: string) => void;
 }
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle }: PostDetailProps) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -301,7 +302,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                         </p>
 
                         <div className="flex items-center gap-6 mb-8">
-                          <button className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors group">
+                          <button 
+                            className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors group"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onLikeToggle?.(post.id);
+                            }}
+                          >
                             <Heart className={cn("w-6 h-6 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
                             <span className="text-sm font-bold text-gray-500">{post.likes}</span>
                           </button>
