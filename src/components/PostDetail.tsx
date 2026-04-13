@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const [direction, setDirection] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -33,6 +34,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
       setDirection(0);
+      setShowComments(false);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -45,6 +47,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen && currentPost && onViewPost) {
       onViewPost(currentPost.id);
     }
+    // 포스트가 바뀌면 댓글창을 닫습니다.
+    setShowComments(false);
   }, [currentIndex, isOpen, onViewPost]);
 
   if (!isOpen || posts.length === 0) return null;
@@ -61,6 +65,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
+    // 오른쪽으로 스와이프 시 닫기 (iOS 스타일)
     if (absX > absY && offset.x < -60) {
       if (offset.x < -120 || velocity.x < -400) {
         setDirection(0);
@@ -72,6 +77,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const threshold = 70;
     const velThreshold = 400;
 
+    // 상하 스와이프로 포스트 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -117,7 +123,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     })
   };
 
-  // 테두리 색상 결정
   const getBorderColor = () => {
     if (isInfluencer) return "#ff0000";
     if (isAd) return "#3b82f6";
@@ -135,6 +140,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           }
         `}</style>
         
+        {/* Close Button */}
         <div className="absolute top-6 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -146,6 +152,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
+        {/* Progress Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -160,11 +167,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
-          </div>
-          <div className="mt-4 flex flex-col items-center gap-1">
-            <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
-            <div className="w-2 h-[1px] bg-white/20" />
-            <span className="text-[10px] font-bold text-white/30">{posts.length}</span>
           </div>
         </div>
 
@@ -201,12 +203,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     className="flex-1 h-full no-scrollbar"
                     onPointerDown={(e) => {
                       const target = e.target as HTMLElement;
-                      if (!target.closest('.radix-scroll-area-scrollbar')) {
+                      // 스크롤바나 버튼이 아닌 영역에서만 드래그 시작
+                      if (!target.closest('.radix-scroll-area-scrollbar') && !target.closest('button') && !target.closest('a')) {
                         dragControls.start(e);
                       }
                     }}
                   >
                     <div className="flex flex-col">
+                      {/* Image Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <img 
                           src={post.image} 
@@ -230,6 +234,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                         )}
                       </div>
 
+                      {/* Content Section */}
                       <div className="p-6 sm:p-8">
                         <div className="flex items-center gap-4 mb-6">
                           <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
@@ -264,12 +269,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           {post.content}
                         </p>
 
-                        <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-100">
+                        {/* Interaction Bar */}
+                        <div className="flex items-center gap-6 mb-8">
                           <button className="flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors group">
                             <Heart className={cn("w-6 h-6 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : '')} />
                             <span className="text-sm font-bold">{post.likes}</span>
                           </button>
-                          <button className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition-colors">
+                          <button 
+                            onClick={() => setShowComments(!showComments)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition-colors"
+                          >
                             <MessageCircle className="w-6 h-6" />
                             <span className="text-sm font-bold">12</span>
                           </button>
@@ -278,28 +287,51 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           </button>
                         </div>
 
-                        <div className="space-y-6 pb-10">
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
-                          {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="flex gap-3 items-start">
-                              <span className="font-bold text-sm text-gray-900 whitespace-nowrap">User_{i + 1}</span>
-                              <span className="text-sm text-gray-500 leading-snug">
-                                {["와 여기 진짜 가보고 싶었는데! 정보 감사합니다.", "날씨 좋을 때 가면 최고죠 ㅎㅎ", "주차 공간은 넉넉한가요?", "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!"][i % 4]}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                        {/* Comments Toggle Button */}
+                        <button 
+                          onClick={() => setShowComments(!showComments)}
+                          className="w-full py-4 flex items-center justify-between border-t border-gray-100 group"
+                        >
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
+                            {showComments ? 'Hide Comments' : 'Recent Comments'}
+                          </p>
+                          {showComments ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
+                        </button>
+
+                        {/* Comments List */}
+                        <AnimatePresence>
+                          {showComments && (
+                            <motion.div 
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="space-y-6 py-4 pb-10">
+                                {Array.from({ length: 8 }).map((_, i) => (
+                                  <div key={i} className="flex gap-3 items-start">
+                                    <span className="font-bold text-sm text-gray-900 whitespace-nowrap">User_{i + 1}</span>
+                                    <span className="text-sm text-gray-500 leading-snug">
+                                      {["와 여기 진짜 가보고 싶었는데! 정보 감사합니다.", "날씨 좋을 때 가면 최고죠 ㅎㅎ", "주차 공간은 넉넉한가요?", "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!"][i % 4]}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                     <ScrollBar className="hidden" />
                   </ScrollArea>
                   
+                  {/* Swipe Hint Footer */}
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
                     className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
                   >
                     <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-2" />
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Swipe to explore</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Swipe up/down to explore</p>
                   </div>
                 </div>
               </motion.div>
