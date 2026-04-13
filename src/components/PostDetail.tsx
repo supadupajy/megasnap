@@ -97,19 +97,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    if (absX > absY && absX > 20) return;
-
-    if (absX > absY && absX > 60) {
-      if (absX > 120 || Math.abs(velocity.x) > 400) {
-        setDirection(offset.x > 0 ? 100 : -100);
-        setIsClosing(true);
-        return;
-      }
+    // 좌우 스와이프 닫기 감지 (임계값 80px 또는 빠른 속도)
+    if (absX > absY && (absX > 80 || Math.abs(velocity.x) > 500)) {
+      setDirection(offset.x > 0 ? 100 : -100);
+      setIsClosing(true);
+      return;
     }
 
     const threshold = 70;
     const velThreshold = 400;
 
+    // 상하 스와이프 포스팅 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -140,18 +138,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       transition: {
         y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
         x: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 }
+        opacity: { duration: 0.3 }
       }
     },
     exit: (direction: number) => ({
       y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
       x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
       transition: {
         y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        x: { duration: 0.25, ease: "easeInOut" },
-        opacity: { duration: 0.2 }
+        x: { duration: 0.3, ease: "easeInOut" },
+        opacity: { duration: 0.3 }
       }
     })
   };
@@ -241,6 +239,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
+                          // 이미지 슬라이더 영역에서는 드래그 시작 방지 (프레임 고정)
                           if (!target.closest('button') && !target.closest('a') && !target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
@@ -251,6 +250,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
+                          onPointerDown={(e) => e.stopPropagation()} // 이미지 영역 터치 시 부모 드래그 방지
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
@@ -264,7 +264,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   target.src = FALLBACK_IMAGE;
                                 }}
                               />
-                              {/* 이미지 슬라이드 내 광고 배지 표시 */}
                               {idx === post.adImageIndex && (
                                 <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
                                   AD
