@@ -35,15 +35,13 @@ const Index = () => {
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
-      // 화면에 보이는 포스트가 너무 적을 때만 추가하되, 전체 개수가 너무 커지지 않게 조절
       if (visibleCount < 15) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
         setAllPosts(prev => {
           const newPosts = createMockPosts(centerLat, centerLng, 15);
-          // 전체 포스트가 100개를 넘으면 오래된 것부터 제거하여 성능 유지
           const combined = [...prev, ...newPosts];
-          return combined.length > 100 ? combined.slice(-100) : combined;
+          return combined.length > 150 ? combined.slice(-150) : combined;
         });
       }
     }
@@ -55,15 +53,39 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // 1. 현재 영역 및 시간 내의 모든 포스트 필터링
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
+      return isWithinBounds && isWithinTime;
     });
 
-    // 한 화면에는 최대 30개까지만 노출 (인기순/최신순 등으로 정렬 후 슬라이싱 가능)
-    return inView.slice(0, 30);
+    // 2. 카테고리별 분리
+    const influencers = inView.filter(p => p.isInfluencer);
+    const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
+    const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
+
+    // 3. 개수 제한 적용 (인플루언서 1개, 인기 3개)
+    const selectedInfluencer = influencers.slice(0, 1);
+    const selectedPopulars = populars.slice(0, 3);
+    
+    // 4. 전체 개수가 25~30개가 되도록 일반 포스트 추가
+    const remainingCount = 26; // 30 - 1 - 3
+    const selectedNormals = normals.slice(0, remainingCount);
+
+    let finalPosts = [...selectedInfluencer, ...selectedPopulars, ...selectedNormals];
+
+    // 5. 선택된 포스트가 있다면 반드시 포함 (중복 제거)
+    if (selectedPostId) {
+      const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
+      if (!isAlreadyIncluded) {
+        const selectedPost = allPosts.find(p => p.id === selectedPostId);
+        if (selectedPost) finalPosts.push(selectedPost);
+      }
+    }
+
+    return finalPosts;
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
   const detailPosts = useMemo(() => {
