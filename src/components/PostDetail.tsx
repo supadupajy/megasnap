@@ -45,6 +45,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       };
       
       reset();
+      // 브라우저 렌더링 사이클에 맞춰 한 번 더 실행
       const rafId = requestAnimationFrame(reset);
       return () => cancelAnimationFrame(rafId);
     }
@@ -176,6 +177,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
+        {/* 왼쪽 포스팅 인덱스 인디케이터 */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
