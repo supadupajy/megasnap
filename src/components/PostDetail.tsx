@@ -216,7 +216,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 exit="exit"
                 drag={true}
                 dragControls={dragControls}
-                dragListener={!showComments}
+                dragListener={false} // 자동 드래그 리스너 비활성화 (이미지 스크롤 간섭 방지)
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
@@ -239,7 +239,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
-                          // 이미지 슬라이더 영역에서는 드래그 시작 방지 (프레임 고정)
+                          // 이미지 슬라이더 영역이 아닐 때만 드래그 시작
                           if (!target.closest('button') && !target.closest('a') && !target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
