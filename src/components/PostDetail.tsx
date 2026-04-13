@@ -34,8 +34,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
   useLayoutEffect(() => {
@@ -50,6 +52,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setDirection(0);
       setShowComments(false);
+      setCurrentImageIndex(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -63,21 +66,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       onViewPost(currentPost.id);
     }
     setShowComments(false);
+    setCurrentImageIndex(0);
   }, [currentIndex, isOpen, onViewPost]);
+
+  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    setCurrentImageIndex(index);
+  };
 
   if (!isOpen || posts.length === 0) return null;
   
   const post = posts[currentIndex];
   if (!post) return null;
 
+  const images = post.images || [post.image];
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = `https://picsum.photos/seed/${post.id}/800/800`;
-  };
 
   const handleUserClick = () => {
     onClose();
@@ -89,6 +95,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
+    // 가로 스크롤 중일 때는 드래그 무시 (이미지 슬라이더 보호)
+    if (absX > absY && absX > 20) return;
+
     if (absX > absY && absX > 60) {
       if (absX > 120 || Math.abs(velocity.x) > 400) {
         setDirection(offset.x > 0 ? 100 : -100);
@@ -231,19 +240,49 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
-                          if (!target.closest('button') && !target.closest('a')) {
+                          if (!target.closest('button') && !target.closest('a') && !target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
                         }
                       }}
                     >
+                      {/* Image Slider Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
-                        <img 
-                          src={post.image} 
-                          alt="" 
-                          className="w-full h-full object-cover"
-                          onError={handleImageError}
-                        />
+                        <div 
+                          ref={imageScrollRef}
+                          onScroll={handleImageScroll}
+                          className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                        >
+                          {images.map((img: string, idx: number) => (
+                            <div key={idx} className="w-full h-full shrink-0 snap-center">
+                              <img 
+                                src={img} 
+                                alt="" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = `https://picsum.photos/seed/${post.id}_${idx}/800/800`;
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pagination Dots */}
+                        {images.length > 1 && (
+                          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
+                            {images.map((_: any, idx: number) => (
+                              <div 
+                                key={idx}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                  currentImageIndex === idx ? "bg-white w-4" : "bg-white/40"
+                                )}
+                              />
+                            ))}
+                          </div>
+                        )}
+
                         {isAd ? (
                           <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
                             AD

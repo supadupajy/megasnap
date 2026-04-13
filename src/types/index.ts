@@ -15,7 +15,7 @@ export interface Post {
   rank?: number;
   isAd?: boolean;
   isInfluencer?: boolean;
-  isGif?: boolean; // GIF 여부 추가
+  isGif?: boolean;
   user: User;
   content: string;
   location: string;
@@ -23,6 +23,7 @@ export interface Post {
   lng: number;
   likes: number;
   image: string;
+  images?: string[]; // 여러 장의 이미지를 위한 배열 추가
   isLiked: boolean;
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';

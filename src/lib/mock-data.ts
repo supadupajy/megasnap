@@ -1,26 +1,26 @@
 import { Post, User } from '@/types';
 
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1599412227383-b7d4751c8765?auto=format&fit=crop&w=800&q=80", // 차량 충돌
-  "https://images.unsplash.com/photo-1617113931036-f3039093094b?auto=format&fit=crop&w=800&q=80", // 파손된 차량
-  "https://images.unsplash.com/photo-1578491252704-0696f696e981?auto=format&fit=crop&w=800&q=80", // 사고 현장
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"  // 도로 위 사고
+  "https://images.unsplash.com/photo-1599412227383-b7d4751c8765?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1617113931036-f3039093094b?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1578491252704-0696f696e981?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
 ];
 
 const FIRE_IMAGES = [
-  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80", // 소방차 출동
-  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80", // 거센 불길
-  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80", // 불타는 건물
-  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80", // 소방관과 화재
-  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"  // 연기 자욱한 현장
+  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_IMAGES = [
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80", // 스테이크
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80", // 팬케이크
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80", // 피자
-  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80", // 토스트
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"  // 파스타
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_CONTENT = [
@@ -94,17 +94,24 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let image = `https://picsum.photos/seed/${id}/800/800`;
+    let mainImage = `https://picsum.photos/seed/${id}/800/800`;
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
-      image = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+      mainImage = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
-      image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+      mainImage = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
-      image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+      mainImage = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
     } else if (isGif) {
-      image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      mainImage = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+    }
+
+    // 2~3장의 랜덤 이미지 생성
+    const imageCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
+    const images = [mainImage];
+    for (let j = 1; j < imageCount; j++) {
+      images.push(`https://picsum.photos/seed/${id}_${j}/800/800`);
     }
 
     const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
@@ -123,7 +130,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lat,
       lng,
       likes,
-      image,
+      image: mainImage,
+      images,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType
