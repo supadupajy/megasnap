@@ -14,7 +14,7 @@ interface MapContainerProps {
 }
 
 // 요청하신 새로운 API 키를 적용했습니다.
-const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=f9b6516691d1ef61d26067e6fedfd7a7&libraries=services,clusterer,drawing&autoload=false";
+const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=42f621300ec3aca6cea3ac328c5a73d3&libraries=services,clusterer,drawing&autoload=false";
 
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
