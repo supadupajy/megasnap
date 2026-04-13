@@ -8,9 +8,10 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
+import { showSuccess } from '@/utils/toast';
 
 const Index = () => {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
@@ -22,6 +23,14 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
+
+  // 현재 도메인 확인용
+  const currentOrigin = window.location.origin;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(currentOrigin);
+    showSuccess("주소가 복사되었습니다!");
+  };
 
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 40));
@@ -53,7 +62,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 현재 영역 및 시간 내의 모든 포스트 필터링
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -61,22 +69,17 @@ const Index = () => {
       return isWithinBounds && isWithinTime;
     });
 
-    // 2. 카테고리별 분리
     const influencers = inView.filter(p => p.isInfluencer);
     const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
-    // 3. 개수 제한 적용 (인플루언서 1개, 인기 3개)
     const selectedInfluencer = influencers.slice(0, 1);
     const selectedPopulars = populars.slice(0, 3);
-    
-    // 4. 전체 개수가 25~30개가 되도록 일반 포스트 추가
-    const remainingCount = 26; // 30 - 1 - 3
+    const remainingCount = 26;
     const selectedNormals = normals.slice(0, remainingCount);
 
     let finalPosts = [...selectedInfluencer, ...selectedPopulars, ...selectedNormals];
 
-    // 5. 선택된 포스트가 있다면 반드시 포함 (중복 제거)
     if (selectedPostId) {
       const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
       if (!isAlreadyIncluded) {
@@ -148,6 +151,14 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
+      {/* URL 확인용 임시 바 */}
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-black text-white text-[10px] py-1 px-4 flex items-center justify-between">
+        <span className="truncate mr-2">카카오 등록용 주소: {currentOrigin}</span>
+        <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded">
+          <Copy className="w-3 h-3" /> 복사
+        </button>
+      </div>
+
       <Header />
       <main className="absolute inset-0 z-0">
         <MapContainer 
