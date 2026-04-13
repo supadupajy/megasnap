@@ -36,12 +36,12 @@ const USERNAME_PARTS = [
 export const createMockUser = (id: string): User => ({
   id,
   name: id,
-  nickname: `Explorer_${id}`,
+  nickname: id.includes('_') ? id : `Explorer_${id}`,
   avatar: `https://i.pravatar.cc/150?u=${id}`,
   bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
-  followers: Math.floor(Math.random() * 5000),
-  following: Math.floor(Math.random() * 1000),
-  postsCount: Math.floor(Math.random() * 100),
+  followers: Math.floor(Math.random() * 5000) + 100,
+  following: Math.floor(Math.random() * 1000) + 50,
+  postsCount: Math.floor(Math.random() * 100) + 5,
   isFollowing: Math.random() > 0.8
 });
 
@@ -50,13 +50,14 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
     const isGif = !isAd && Math.random() > 0.7;
+    const isInfluencer = !isAd && Math.random() > 0.85; // 인플루언서 확률 추가
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     const randomHoursAgo = Math.random() * 12;
     
-    const borderType = Math.random() > 0.8 ? 'popular' : 'none';
-    const likes = borderType === 'popular' 
+    const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
+    const likes = (borderType === 'popular' || isInfluencer)
       ? Math.floor(Math.random() * 1001) + 1000 
       : Math.floor(Math.random() * 491) + 10;
 
@@ -64,6 +65,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       id,
       isAd,
       isGif,
+      isInfluencer,
       user: createMockUser(isAd ? "sponsored" : id),
       content: CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)],
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
@@ -75,8 +77,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
         : `https://picsum.photos/seed/${id}/800/800`,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
-      borderType,
-      isInfluencer: false
+      borderType
     };
   });
 };

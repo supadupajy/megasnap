@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Grid, Bookmark, Map as MapIcon, ChevronLeft, UserPlus, Check, MessageCircle, User as UserIcon, MoreVertical } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Grid, Bookmark, Map as MapIcon, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -14,12 +14,21 @@ const UserProfile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
 
+  // ID에 따라 일관된 닉네임 생성
+  const nickname = useMemo(() => {
+    if (!userId) return '여행가';
+    if (userId.includes('_')) {
+      return userId.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    }
+    return `Explorer ${userId.slice(0, 4)}`;
+  }, [userId]);
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
 
       <div className="pt-[88px]">
-        {/* Title Section - Profile 페이지와 동일한 레이아웃 */}
+        {/* Title Section */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -44,7 +53,7 @@ const UserProfile = () => {
           {/* Profile Info */}
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-blue-400 to-green-500">
+              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-green-500">
                 <img 
                   src={`https://i.pravatar.cc/150?u=${userId}`} 
                   alt="profile" 
@@ -53,7 +62,7 @@ const UserProfile = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{userId?.split('_')[0] || '여행가'}</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{nickname}</h2>
               <p className="text-sm text-gray-500 mb-4">새로운 장소를 찾는 것을 좋아합니다 ✈️</p>
               <div className="flex gap-4">
                 <div className="text-center">
