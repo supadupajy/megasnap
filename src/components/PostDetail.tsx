@@ -21,7 +21,7 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
+  const [direction, setDirection] = useState(0); // 1: Next(Up), -1: Prev(Down), 0: Close(Left)
   const [isClosing, setIsClosing] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -69,32 +69,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absY = Math.abs(offset.y);
     
     // 1. 좌측 스와이프 (닫기) - 절대 유지
-    if (absX > absY && offset.x < -50) {
-      if (offset.x < -screenWidth / 6 || velocity.x < -300) {
+    if (absX > absY && offset.x < -40) {
+      if (offset.x < -screenWidth / 8 || velocity.x < -250) {
         setDirection(0);
         setIsClosing(true);
         return;
       }
     }
 
-    // 2. 상하 스와이프 (포스트 전환) - 자연스럽게 복구
-    const swipeThreshold = 50;
-    const velocityThreshold = 200;
+    // 2. 상하 스와이프 (포스트 전환)
+    const swipeThreshold = 40;
+    const velocityThreshold = 150;
 
     if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-        // 위로 스와이프 -> 다음 포스트
+        // 위로 스와이프 -> 다음 포스트 (Next)
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
+          // 즉시 드래그 값 초기화하여 튀는 현상 방지
           dragX.set(0);
           dragY.set(0);
         }
       } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-        // 아래로 스와이프 -> 이전 포스트
+        // 아래로 스와이프 -> 이전 포스트 (Prev)
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
+          // 즉시 드래그 값 초기화하여 튀는 현상 방지
           dragX.set(0);
           dragY.set(0);
         }
@@ -106,7 +108,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? 800 : direction < 0 ? -800 : 0,
+      y: direction > 0 ? 1000 : direction < 0 ? -1000 : 0,
       x: 0,
       opacity: 0,
       scale: 0.9,
@@ -117,22 +119,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 300 },
-        x: { type: "spring", damping: 25, stiffness: 300 },
+        y: { type: "spring", damping: 28, stiffness: 250 },
+        x: { type: "spring", damping: 28, stiffness: 250 },
         opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      // direction 0: 왼쪽으로 초고속 닫기 (유지)
+      // direction 0: 왼쪽으로 닫기 (유지)
       x: direction === 0 ? -screenWidth * 1.5 : 0,
-      // direction 1/-1: 상하로 포스트 전환 (자연스럽게)
-      y: direction > 0 ? -800 : direction < 0 ? 800 : 0,
+      // direction 1: 다음 포스트 (위로 나감)
+      // direction -1: 이전 포스트 (아래로 나감)
+      y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
       scale: 0.95,
       transition: {
         x: { duration: 0.2, ease: "easeIn" }, 
-        y: { type: "spring", damping: 30, stiffness: 350 },
-        opacity: { duration: 0.1 }
+        y: { type: "spring", damping: 30, stiffness: 300 },
+        opacity: { duration: 0.15 }
       }
     })
   };
@@ -188,7 +191,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           }}>
             {!isClosing && (
               <motion.div
-                key={post.id}
+                key={`${post.id}-${currentIndex}`}
                 custom={direction}
                 variants={variants}
                 initial="enter"
@@ -198,7 +201,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 dragControls={dragControls}
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.7}
+                dragElastic={0.6}
                 style={{ x: dragX, y: dragY, opacity }}
                 onDragEnd={handleDragEnd}
                 className={cn(
