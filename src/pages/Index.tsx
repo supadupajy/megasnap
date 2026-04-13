@@ -8,10 +8,9 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, ExternalLink, ShieldCheck, CheckCircle2, Info } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { showSuccess } from '@/utils/toast';
 
 const Index = () => {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
@@ -23,14 +22,6 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
-
-  // 현재 브라우저가 인식하는 실시간 Origin (포트 포함)
-  const currentOrigin = window.location.origin;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(currentOrigin);
-    showSuccess("현재 주소가 복사되었습니다!");
-  };
 
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 40));
@@ -151,48 +142,6 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
-      {/* 네이버 인증 실패 해결 가이드 */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-slate-900 text-white py-4 px-4 shadow-2xl border-b border-white/10">
-        <div className="max-w-md mx-auto flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm font-black">포트 번호가 바뀌었나요?</span>
-            </div>
-            <button onClick={copyToClipboard} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-black active:scale-95 transition-all shadow-lg">
-              <Copy className="w-3.5 h-3.5" /> 현재 주소 복사
-            </button>
-          </div>
-          
-          <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-2">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-snug text-slate-200">
-                개발 환경 특성상 포트가 계속 변할 수 있습니다. 아래 주소를 복사하여 네이버 콘솔의 <b>서비스 URL</b>에 추가해 주세요. (최대 10개까지 가능)
-              </p>
-            </div>
-            <div className="bg-black/40 p-2.5 rounded-lg font-mono text-xs break-all border border-white/20 text-center font-bold text-blue-400 select-all">
-              {currentOrigin}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1">
-            <a 
-              href="https://console.ncloud.com/naver-service/application" 
-              target="_blank" 
-              rel="noreferrer"
-              className="flex items-center gap-1.5 text-[10px] text-slate-400 hover:text-white transition-colors underline underline-offset-4"
-            >
-              네이버 콘솔 바로가기 <ExternalLink className="w-3 h-3" />
-            </a>
-            <div className="flex items-center gap-1.5 text-[10px] text-green-500 font-bold">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>ID: ipu2vry3sw</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <Header />
       <main className="absolute inset-0 z-0">
         <MapContainer 
@@ -205,7 +154,7 @@ const Index = () => {
         />
       </main>
 
-      <div className="absolute top-56 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+      <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
