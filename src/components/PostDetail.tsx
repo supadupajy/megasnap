@@ -68,8 +68,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 가로 움직임이 현저히 클 때 (닫기 판정)
-    if (absX > absY && absX > 20) {
+    // 1. 좌측 스와이프 (닫기) - 절대 유지
+    if (absX > absY && offset.x < -50) {
       if (offset.x < -screenWidth / 6 || velocity.x < -300) {
         setDirection(0);
         setIsClosing(true);
@@ -77,11 +77,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     }
 
-    // 2. 세로 움직임이 클 때 (포스팅 전환 판정)
-    const swipeThreshold = 40;
-    const velocityThreshold = 150;
+    // 2. 상하 스와이프 (포스트 전환) - 자연스럽게 복구
+    const swipeThreshold = 50;
+    const velocityThreshold = 200;
 
-    if (absY > absX && absY > 20) {
+    if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
         // 위로 스와이프 -> 다음 포스트
         if (currentIndex < displayPosts.length - 1) {
@@ -123,14 +123,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      // direction 0: 왼쪽으로 초고속 닫기
+      // direction 0: 왼쪽으로 초고속 닫기 (유지)
       x: direction === 0 ? -screenWidth * 1.5 : 0,
-      // direction 1/-1: 상하로 포스트 전환
+      // direction 1/-1: 상하로 포스트 전환 (자연스럽게)
       y: direction > 0 ? -800 : direction < 0 ? 800 : 0,
       opacity: 0,
       scale: 0.95,
       transition: {
-        x: { duration: 0.2, ease: "easeIn" }, // 닫기 속도 극대화
+        x: { duration: 0.2, ease: "easeIn" }, 
         y: { type: "spring", damping: 30, stiffness: 350 },
         opacity: { duration: 0.1 }
       }
