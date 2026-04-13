@@ -43,6 +43,12 @@ const AVATAR_IMAGES = [
   "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
 ];
 
+const AD_BANNER_IMAGES = [
+  "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80"
+];
+
 const AD_FOOD_CONTENT = [
   "배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔",
   "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩",
@@ -130,12 +136,17 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       mainImage = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
 
-    // 2~3장의 랜덤 이미지 생성
-    const imageCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
+    // 3~4장의 랜덤 이미지 생성 (광고 삽입을 위해 최소 3장 보장)
+    const imageCount = Math.floor(Math.random() * 2) + 3; 
     const images = [mainImage];
     for (let j = 1; j < imageCount; j++) {
       images.push(GENERAL_IMAGES[(Math.floor(Math.random() * GENERAL_IMAGES.length))]);
     }
+
+    // 2번째(index 1) 또는 3번째(index 2) 위치에 광고 이미지 삽입
+    const adImageIndex = Math.random() > 0.5 ? 1 : 2;
+    const adImage = AD_BANNER_IMAGES[Math.floor(Math.random() * AD_BANNER_IMAGES.length)];
+    images[adImageIndex] = adImage;
 
     const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
     const likes = (borderType === 'popular' || isInfluencer)
@@ -155,6 +166,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       likes,
       image: mainImage,
       images,
+      adImageIndex,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType

@@ -254,7 +254,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always]">
+                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                               <img 
                                 src={img} 
                                 alt="" 
@@ -264,6 +264,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   target.src = FALLBACK_IMAGE;
                                 }}
                               />
+                              {/* 이미지 슬라이드 내 광고 배지 표시 */}
+                              {idx === post.adImageIndex && (
+                                <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                                  AD
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

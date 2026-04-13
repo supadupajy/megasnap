@@ -23,7 +23,8 @@ export interface Post {
   lng: number;
   likes: number;
   image: string;
-  images?: string[]; // 여러 장의 이미지를 위한 배열 추가
+  images?: string[];
+  adImageIndex?: number; // 광고 이미지가 위치한 인덱스
   isLiked: boolean;
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
