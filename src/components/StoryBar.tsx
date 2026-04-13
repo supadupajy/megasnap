@@ -6,9 +6,9 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 
 const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => ({
-  id: `user_${i + 1}`,
-  name: `user_${i + 1}`,
-  avatar: `https://i.pravatar.cc/150?u=user_${i + 1}`,
+  id: `${i + 1}`, // user_ 접두사 제거
+  name: `${i + 1}`, // user_ 접두사 제거
+  avatar: `https://i.pravatar.cc/150?u=${i + 1}`,
   hasUpdate: Math.random() > 0.3
 }));
 

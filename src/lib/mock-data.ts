@@ -30,7 +30,7 @@ const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강
 
 export const createMockUser = (id: string): User => ({
   id,
-  name: `user_${id}`,
+  name: id, // user_ 접두사 제거
   nickname: `Explorer_${id}`,
   avatar: `https://i.pravatar.cc/150?u=${id}`,
   bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
@@ -52,7 +52,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     const borderType = Math.random() > 0.8 ? 'popular' : 'none';
     
-    // 좋아요 수 설정: 인기 포스팅은 1000~2000, 일반은 10~500
     const likes = borderType === 'popular' 
       ? Math.floor(Math.random() * 1001) + 1000 
       : Math.floor(Math.random() * 491) + 10;
@@ -85,7 +84,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   return posts;
 };
 
-export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUser(`user_${i + 100}`));
+export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUser(`${i + 100}`)); // user_ 접두사 제거
 
 export const MOCK_NOTIFICATIONS = [
   {
