@@ -99,14 +99,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    if (absX > absY && (absX > 80 || Math.abs(velocity.x) > 500)) {
+    // 가로 스와이프 (닫기) - 더 민감하게 반응하도록 조정
+    if (absX > absY && (absX > 60 || Math.abs(velocity.x) > 400)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    const threshold = 70;
-    const velThreshold = 400;
+    // 세로 스와이프 (다음/이전 포스트) - 임계값 하향 조정
+    const threshold = 50;
+    const velThreshold = 300;
 
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
@@ -123,12 +125,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
+  // 더 빠르고 탄력적인 스프링 설정
+  const springConfig = { type: "spring", damping: 25, stiffness: 400, mass: 0.8 };
+
   const variants = {
     enter: (direction: number) => ({
       y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
       x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
-      scale: 1,
+      scale: 0.95,
     }),
     center: {
       y: 0,
@@ -136,20 +141,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
-        x: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
-        opacity: { duration: 0.2 }
+        y: springConfig,
+        x: springConfig,
+        opacity: { duration: 0.15 }
       }
     },
     exit: (direction: number) => ({
       y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
       x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
-      scale: 1,
+      scale: 0.95,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
-        x: { duration: 0.25, ease: "easeInOut" },
-        opacity: { duration: 0.2 }
+        y: springConfig,
+        x: { duration: 0.2, ease: "easeOut" },
+        opacity: { duration: 0.15 }
       }
     })
   };
@@ -262,7 +267,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   height: '82vh'
                 }}
               >
-                {/* Background Border Layer - Separated to prevent layout shifts */}
+                {/* Background Border Layer */}
                 <div className={cn(
                   "absolute inset-0 z-0 rounded-[40px]",
                   isAd && "border-4 border-blue-500",
@@ -272,7 +277,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                 {/* Main Content Container */}
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] m-[4px] z-10">
-                  {/* Status Bar for Influencer/Popular */}
+                  {/* Status Bar */}
                   {isInfluencer && (
                     <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
                       <Star className="w-4 h-4 fill-black" />
