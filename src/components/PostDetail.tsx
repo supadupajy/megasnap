@@ -68,10 +68,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = async (event: any, info: PanInfo) => {
     const screenWidth = window.innerWidth;
     const swipeThreshold = 50;
-    const velocityThreshold = 300;
+    const velocityThreshold = 200;
 
-    // 1. 왼쪽 스와이프 (닫기) - 페이드 아웃 포함
-    if (info.offset.x < -screenWidth / 4 || info.velocity.x < -velocityThreshold) {
+    // 1. 왼쪽 스와이프 (닫기)
+    if (info.offset.x < -screenWidth / 4 || info.velocity.x < -500) {
       await controls.start({ 
         x: -screenWidth, 
         opacity: 0, 
@@ -84,14 +84,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     // 2. 상하 스와이프 (포스팅 전환)
     if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-        // 위로 스와이프 -> 다음 포스트
+        // 위로 스와이프 -> 다음 포스트 (아래에서 위로 올라옴)
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
           return;
         }
       } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-        // 아래로 스와이프 -> 이전 포스트
+        // 아래로 스와이프 -> 이전 포스트 (위에서 아래로 내려옴)
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
@@ -101,14 +101,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
 
     // 액션이 없으면 제자리로 복구
-    controls.start("center");
+    controls.start({ x: 0, y: 0, opacity: 1, scale: 1 });
   };
 
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
     }),
     center: {
       y: 0,
@@ -116,18 +116,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       x: 0,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 400, mass: 0.8 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.2 }
+        y: { type: "spring", damping: 25, stiffness: 300 },
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.3 }
       }
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 400, mass: 0.8 },
-        opacity: { duration: 0.15 }
+        y: { type: "spring", damping: 25, stiffness: 300 },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -169,7 +169,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
+          <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={post.id}
               custom={direction}
@@ -180,8 +180,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               drag
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0, top: -window.innerHeight, bottom: window.innerHeight }}
-              dragElastic={{ left: 0.8, right: 0, top: 0.5, bottom: 0.5 }}
+              dragConstraints={{ left: -window.innerWidth, right: 0, top: -200, bottom: 200 }}
+              dragElastic={{ left: 0.5, right: 0, top: 0.2, bottom: 0.2 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
