@@ -21,7 +21,7 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0); // 1: Next(Up), -1: Prev(Down), 0: Close(Left)
+  const [direction, setDirection] = useState(0); // 1: Next(Up swipe), -1: Prev(Down swipe), 0: Close(Left)
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   
@@ -65,8 +65,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absY = Math.abs(offset.y);
     
     // 1. 좌측 스와이프 (닫기) - 수평 이동이 지배적일 때
-    if (absX > absY && offset.x < -60) {
-      if (offset.x < -120 || velocity.x < -400) {
+    if (absX > absY && offset.x < -50) {
+      if (offset.x < -100 || velocity.x < -300) {
         setDirection(0);
         setIsClosing(true);
         return;
@@ -74,12 +74,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
 
     // 2. 상하 스와이프 (포스트 전환) - 수직 이동이 지배적일 때
-    const swipeThreshold = 80;
-    const velocityThreshold = 400;
+    const swipeThreshold = 60;
+    const velocityThreshold = 300;
 
     if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-        // 위로 스와이프 (Finger Up) -> 다음 포스트 (Next)
+        // 위로 밀기 (Finger Up) -> 다음 포스트 (Next)
         if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
@@ -87,7 +87,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           dragY.set(0);
         }
       } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-        // 아래로 스와이프 (Finger Down) -> 이전 포스트 (Prev)
+        // 아래로 밀기 (Finger Down) -> 이전 포스트 (Prev)
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
