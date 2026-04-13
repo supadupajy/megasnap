@@ -245,9 +245,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] h-[82vh] flex flex-col",
-                  isInfluencer && "influencer-border-container p-[4px]",
-                  isPopular && "popular-border-container p-[4px]",
-                  isAd && "bg-blue-500 p-[4px]",
+                  isInfluencer && "influencer-border-container p-[2px]",
+                  isPopular && "popular-border-container p-[2px]",
+                  isAd && "bg-blue-500 p-[2px]",
                   (!isInfluencer && !isPopular && !isAd) && "bg-white"
                 )}
                 style={{ 
@@ -257,7 +257,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 }}
               >
                 {/* Content Layer - Nested inside border container for perfect 4-side coverage */}
-                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px] relative z-10">
+                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[38px] relative z-10">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
