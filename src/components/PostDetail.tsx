@@ -33,17 +33,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     return [selected, ...others];
   }, [isOpen, posts, initialIndex]);
 
+  // 초기 오픈 시 상태 설정
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(0);
       setDirection(0);
-      controls.set({ x: 0, y: 0, opacity: 1 });
+      controls.start("center");
     }
   }, [isOpen, controls]);
 
+  // 인덱스 변경 시 애니메이션 실행
   useEffect(() => {
     if (isOpen) {
-      controls.set({ x: 0, y: 0, opacity: 1 });
+      controls.start("center");
     }
   }, [currentIndex, isOpen, controls]);
 
@@ -74,11 +76,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = async (event: any, info: PanInfo) => {
     const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
     const swipeThreshold = 50;
     const velocityThreshold = 300;
 
-    // 1. 수직 스와이프 우선 판정 (포스팅 전환)
+    // 1. 수직 스와이프 판정 (포스팅 전환)
     if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
         // 위로 스와이프 -> 다음 포스트
@@ -93,8 +94,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           setCurrentIndex(currentIndex - 1);
         }
       }
-      // 위치 복구
-      controls.start({ y: 0, x: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
+      // 위치 복구 애니메이션
+      controls.start("center");
       return;
     }
 
@@ -108,12 +109,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       onClose();
     } else {
       // 원래 위치로 복귀
-      controls.start({ 
-        x: 0, 
-        y: 0,
-        opacity: 1,
-        transition: { type: "spring", damping: 25, stiffness: 450 } 
-      });
+      controls.start("center");
     }
   };
 
@@ -129,6 +125,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       x: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
+        x: { type: "spring", damping: 30, stiffness: 450 },
         opacity: { duration: 0.2 }
       }
     },
@@ -187,10 +184,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate={controls}
               exit="exit"
-              drag // 상하좌우 드래그 허용
+              drag 
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0, top: 0, bottom: 0 }}
+              dragConstraints={{ left: -window.innerWidth, right: 0, top: -window.innerHeight, bottom: window.innerHeight }}
               dragElastic={{ left: 1, right: 0, top: 0.2, bottom: 0.2 }}
               onDragEnd={handleDragEnd}
               className={cn(
@@ -207,7 +204,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
-                    // 드래그 핸들러가 이벤트를 가로채도록 설정
                     dragControls.start(e);
                   }}
                 >
