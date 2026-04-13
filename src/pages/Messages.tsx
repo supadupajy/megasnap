@@ -35,6 +35,11 @@ const Messages = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
+  const handleAvatarClick = (e: React.MouseEvent, userName: string) => {
+    e.stopPropagation(); // 채팅방 이동 이벤트 방지
+    navigate(`/profile/${userName}`);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
@@ -73,7 +78,10 @@ const Messages = () => {
                 onClick={() => navigate(`/chat/${msg.id}`)}
                 className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity"
               >
-                <Avatar className="w-14 h-14 shrink-0">
+                <Avatar 
+                  className="w-14 h-14 shrink-0 hover:ring-2 hover:ring-green-500 transition-all"
+                  onClick={(e) => handleAvatarClick(e, msg.user.name)}
+                >
                   <AvatarImage src={msg.user.avatar} />
                   <AvatarFallback>{msg.user.name[0]}</AvatarFallback>
                 </Avatar>
