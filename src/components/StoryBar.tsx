@@ -19,7 +19,7 @@ const StoryBar = () => {
               onClick={() => navigate(`/profile/${story.id}`)}
               className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
             >
-              <div className={`p-[2.5px] rounded-full ${story.hasUpdate ? 'bg-gradient-to-tr from-yellow-400 to-green-500' : 'bg-gray-200'}`}>
+              <div className={`p-[2.5px] rounded-full ${story.hasUpdate ? 'bg-gradient-to-tr from-yellow-400 to-indigo-600' : 'bg-gray-200'}`}>
                 <Avatar className="w-16 h-16 border-2 border-white">
                   <AvatarImage src={story.avatar} />
                   <AvatarFallback>{story.name[0].toUpperCase()}</AvatarFallback>

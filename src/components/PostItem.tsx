@@ -125,7 +125,7 @@ const PostItem = ({
               className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
             >
               {displayImages.map((img, idx) => (
-                <div key={idx} className="w-full h-full shrink-0 snap-center relative">
+                <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                   <img
                     src={img}
                     alt={`post-${idx}`}
