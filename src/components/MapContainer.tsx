@@ -223,32 +223,30 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isInfluencer = !isAd && this.post.isInfluencer;
         const category = this.post.category || 'none';
         
-        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        // Border color logic: keep original colors even if viewed
+        const borderColor = isAd ? '#3b82f6' : '#ffffff';
         
-        // Pin color logic: turn gray if viewed, even for special posts
         let pinColor = borderColor;
-        if (this.isViewed) {
-          pinColor = '#94a3b8';
-        } else if (isInfluencer) {
+        if (isInfluencer) {
           pinColor = '#fbbf24';
         } else if (isPopular) {
           pinColor = '#ff0000';
         }
 
-        // Category Icon Logic
+        // Category Icon Logic: keep original colors even if viewed
         let categoryIconHtml = '';
         if (category !== 'none') {
           let iconSvg = '';
           let bgColor = '';
           if (category === 'food') {
             iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>';
-            bgColor = this.isViewed ? '#64748b' : '#f97316';
+            bgColor = '#f97316';
           } else if (category === 'accident') {
             iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>';
-            bgColor = this.isViewed ? '#64748b' : '#dc2626';
+            bgColor = '#dc2626';
           } else if (category === 'place') {
             iconSvg = '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2a1 1 0 0 1-.8-1.7L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"></path><path d="M12 22v-3"></path>';
-            bgColor = this.isViewed ? '#64748b' : '#16a34a';
+            bgColor = '#16a34a';
           }
 
           categoryIconHtml = `
@@ -264,7 +262,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative;
                         ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;">
+                        background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
               <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
                 <img src="${this.post.image}" 
                      onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"

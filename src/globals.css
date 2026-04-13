@@ -73,7 +73,7 @@
   }
 }
 
-/* HOT Red Gradient Border - Updated padding to 4px for consistency */
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
@@ -82,23 +82,13 @@
   animation: rotate-border 1.5s linear infinite;
 }
 
-/* Viewed HOT: Gray Gradient */
-.popular-border-container.viewed {
-  background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8);
-}
-
-/* Influencer Gold Gradient Border - Updated padding to 4px for consistency */
+/* Influencer Gold Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
-}
-
-/* Viewed Influencer: Silver/Gray Gradient */
-.influencer-border-container.viewed {
-  background-image: conic-gradient(from var(--angle), #64748b, #94a3b8, #64748b, #94a3b8, #64748b);
 }
 
 /* Pulse Animation for HOT Posts */
@@ -110,22 +100,6 @@
   50% { 
     transform: scale(1.06); 
     box-shadow: 0 0 25px 8px rgba(239, 68, 68, 0.25); 
-  }
-}
-
-/* Viewed Pulse: Gray Shadow */
-.animate-hot-pulse.viewed {
-  animation: hot-pulse-viewed 2s ease-in-out infinite;
-}
-
-@keyframes hot-pulse-viewed {
-  0%, 100% { 
-    transform: scale(1); 
-    box-shadow: 0 0 0 0 rgba(148, 163, 184, 0.4); 
-  }
-  50% { 
-    transform: scale(1.06); 
-    box-shadow: 0 0 25px 8px rgba(148, 163, 184, 0.25); 
   }
 }
 
@@ -168,7 +142,7 @@
   z-index: 20;
 }
 
-/* Viewed state - Only gray out the content, keep the container effects */
+/* Viewed state - Keep the container effects colorful */
 .popular-border-container.viewed,
 .influencer-border-container.viewed {
   box-shadow: none;
