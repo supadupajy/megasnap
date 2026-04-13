@@ -191,7 +191,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-visible outline-none focus:ring-0 z-[100] data-[state=open]:animate-none data-[state=closed]:animate-none"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-visible translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none focus:ring-0"
       >
         <style>{`
           [data-radix-portal] div[data-state] {
@@ -244,17 +244,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col",
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu",
                   isInfluencer && "influencer-border-container p-[2px]",
                   isPopular && "popular-border-container p-[2px]",
                   isAd && "bg-blue-500 p-[2px]",
-                  (!isInfluencer && !isPopular && !isAd) && "bg-white"
+                  (!isInfluencer && !isPopular && !isAd) && "bg-white rounded-[40px]"
                 )}
                 style={{ 
-                  borderRadius: '40px',
                   boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)',
                   willChange: 'transform, opacity',
                   backfaceVisibility: 'hidden',
+                  transformStyle: 'preserve-3d',
                   isolation: 'isolate'
                 }}
               >
