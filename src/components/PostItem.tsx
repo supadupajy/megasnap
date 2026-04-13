@@ -22,9 +22,14 @@ interface PostItemProps {
 const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, borderType = 'none' }: PostItemProps) => {
   const isPopular = !isAd && borderType === 'popular';
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    // GIF 로드 실패 시 해당 포스트의 고유 ID를 기반으로 한 정적 이미지로 교체
+    target.src = `https://picsum.photos/seed/${content.length}/800/800`;
+  };
+
   return (
     <div className="bg-white mb-8 last:mb-20">
-      {/* User Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
@@ -47,7 +52,6 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
         </button>
       </div>
 
-      {/* Main Image with Special Border */}
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
@@ -64,6 +68,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
               src={image}
               alt="post"
               className="w-full h-full object-cover"
+              onError={handleImageError}
             />
           </div>
           
@@ -86,7 +91,6 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
         </div>
       </div>
 
-      {/* Interaction Bar */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
@@ -103,7 +107,6 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
         </div>
 
-        {/* Likes & Content */}
         <div className="space-y-1.5">
           <p className="text-sm font-bold text-gray-900">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">

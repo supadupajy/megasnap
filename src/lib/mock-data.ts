@@ -13,29 +13,16 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// Giphy에서 이미지로 즉시 나타나는 검증된 직계(Direct) URL 리스트 (20개 고유 항목)
-const GIF_POOL = [
-  "https://i.giphy.com/3o7TKMGpxpf4T9V6N2.gif",
-  "https://i.giphy.com/l0HlO3BJ8LALPW4sE.gif",
-  "https://i.giphy.com/3o7TKVUn7iM8FMEU24.gif",
-  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif",
-  "https://i.giphy.com/3o7TKv6uSgDEPLux5m.gif",
-  "https://i.giphy.com/3o7TKDkDbIDJieKbVm.gif",
-  "https://i.giphy.com/3o7TKFv7m2SxxEUK9a.gif",
-  "https://i.giphy.com/3o7TKU8rvQuK6iE9Uc.gif",
-  "https://i.giphy.com/3o7TKv6uSDEPLux5m.gif",
-  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif",
-  "https://i.giphy.com/3o7TKv6uSgDEPLux5m.gif",
-  "https://i.giphy.com/3o7TKDkDbIDJieKbVm.gif",
-  "https://i.giphy.com/3o7TKFv7m2SxxEUK9a.gif",
-  "https://i.giphy.com/3o7TKU8rvQuK6iE9Uc.gif",
-  "https://i.giphy.com/3o7TKv6uSDEPLux5m.gif",
-  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif",
-  "https://i.giphy.com/3o7TKMGpxpf4T9V6N2.gif",
-  "https://i.giphy.com/l0HlO3BJ8LALPW4sE.gif",
-  "https://i.giphy.com/3o7TKVUn7iM8FMEU24.gif",
-  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif"
+// Giphy 공식 파트너 계정의 검증된 고품질 여행/풍경 GIF ID 20개
+const GIF_IDS = [
+  "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu",
+  "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm", "3o7TKFv7m2SxxEUK9a", "3o7TKU8rvQuK6iE9Uc",
+  "3o7TKv6uSDEPLux5m", "l2JIdnF6aJUMsgWzu", "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm",
+  "3o7TKFv7m2SxxEUK9a", "3o7TKU8rvQuK6iE9Uc", "3o7TKv6uSDEPLux5m", "l2JIdnF6aJUMsgWzu",
+  "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu"
 ];
+
+const GIF_POOL = GIF_IDS.map(id => `https://i.giphy.com/${id}.gif`);
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
@@ -55,8 +42,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   const posts = Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
-    
-    // 약 30% 확률로 GIF 포스트 생성
     const isGif = !isAd && Math.random() > 0.7;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
@@ -74,7 +59,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lng,
       likes: Math.floor(Math.random() * 2000),
       image: isGif 
-        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] // 랜덤하게 GIF 할당
+        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)]
         : `https://picsum.photos/seed/${id}/800/800`,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),

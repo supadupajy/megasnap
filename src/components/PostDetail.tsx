@@ -28,14 +28,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
   }, [currentIndex, isOpen]);
 
-  // 초기 인덱스 설정
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -49,7 +47,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, initialIndex, hasInitialized]);
 
-  // 포스팅 변경 감지 및 조회 처리
   useEffect(() => {
     const currentPost = posts[currentIndex];
     if (isOpen && currentPost && onViewPost) {
@@ -66,6 +63,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = `https://picsum.photos/seed/${post.id}/800/800`;
+  };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
@@ -139,7 +141,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 이동 방지
+        onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
       >
@@ -206,7 +208,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
-                  {/* key={post.id}를 사용하여 포스팅 전환 시 스크롤 상태 강제 초기화 */}
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
@@ -231,6 +232,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           src={post.image} 
                           alt="" 
                           className="w-full h-full object-cover"
+                          onError={handleImageError}
                         />
                         {isAd ? (
                           <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">

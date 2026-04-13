@@ -234,7 +234,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
                         filter: ${!isAd && !isPopular && !isInfluencer && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
-                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                <img src="${this.post.image}" 
+                     onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
+                     style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
                 ${isGif ? `
                   <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
