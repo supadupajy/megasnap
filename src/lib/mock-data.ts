@@ -1,51 +1,26 @@
 import { Post, User } from '@/types';
 
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1581262177000-8139a463e531?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1599412227383-b7d4751c8765?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1617113931036-f3039093094b?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1578491252704-0696f696e981?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
 ];
 
 const FIRE_IMAGES = [
   "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80"
-];
-
-const GENERAL_IMAGES = [
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?auto=format&fit=crop&w=800&q=80"
-];
-
-const AVATAR_IMAGES = [
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=150&q=80",
-  "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80",
-  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
-];
-
-const AD_BANNER_IMAGES = [
-  "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1554866585-cd94860890b7?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1594498653385-d5172c532c00?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1543253687-c931c8e01820?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_CONTENT = [
@@ -76,9 +51,16 @@ const CONTENT_POOL = [
 ];
 
 const GIF_POOL = [
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHR6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHR6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHR6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eXN6eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif"
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
@@ -89,12 +71,19 @@ const USERNAME_PARTS = [
 ];
 
 export const createMockUser = (id: string): User => {
-  const avatarIndex = Math.abs(id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_IMAGES.length;
+  // ID를 기반으로 일관된 닉네임 생성
+  let nickname = `Explorer_${id}`;
+  if (id.includes('_')) {
+    nickname = id.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  } else if (id === 'me') {
+    nickname = 'Dyad_Explorer';
+  }
+
   return {
     id,
     name: id,
-    nickname: id.includes('_') ? id : `Explorer_${id}`,
-    avatar: AVATAR_IMAGES[avatarIndex],
+    nickname: nickname,
+    avatar: `https://i.pravatar.cc/150?u=${id}`,
     bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
     followers: Math.floor(Math.random() * 5000) + 100,
     following: Math.floor(Math.random() * 1000) + 50,
@@ -103,8 +92,14 @@ export const createMockUser = (id: string): User => {
   };
 };
 
+// 특정 ID의 사용자 정보를 가져오거나 생성하는 함수
+export const getUserById = (id: string): User => {
+  const found = MOCK_USERS.find(u => u.id === id);
+  if (found) return found;
+  return createMockUser(id);
+};
+
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
-  let foodCount = 0;
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
@@ -116,37 +111,18 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let mainImage = GENERAL_IMAGES[Math.floor(Math.random() * GENERAL_IMAGES.length)];
-    let category: Post['category'] = 'none';
+    let image = `https://picsum.photos/seed/${id}/800/800`;
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
-      mainImage = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
-      category = 'food';
+      image = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
-      mainImage = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
-      category = 'accident';
+      image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
-      mainImage = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
-      category = 'accident';
-    } else if (content.includes('점심') || content.includes('커피') || (foodCount < 6 && Math.random() > 0.7)) {
-      category = 'food';
-      foodCount++;
-    } else if (content.includes('명소') || content.includes('여행지') || content.includes('산책')) {
-      category = 'place';
+      image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
     } else if (isGif) {
-      mainImage = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
-
-    const imageCount = Math.floor(Math.random() * 2) + 3; 
-    const images = [mainImage];
-    for (let j = 1; j < imageCount; j++) {
-      images.push(GENERAL_IMAGES[(Math.floor(Math.random() * GENERAL_IMAGES.length))]);
-    }
-
-    const adImageIndex = Math.random() > 0.5 ? 1 : 2;
-    const adImage = AD_BANNER_IMAGES[Math.floor(Math.random() * AD_BANNER_IMAGES.length)];
-    images[adImageIndex] = adImage;
 
     const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
     const likes = (borderType === 'popular' || isInfluencer)
@@ -158,16 +134,13 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isAd,
       isGif,
       isInfluencer,
-      category,
-      user: createMockUser(isAd ? "sponsored" : id),
+      user: getUserById(isAd ? "sponsored" : id),
       content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
       lng,
       likes,
-      image: mainImage,
-      images,
-      adImageIndex,
+      image,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType
@@ -183,7 +156,7 @@ export const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
   return {
     id,
     name: id,
-    avatar: AVATAR_IMAGES[i % AVATAR_IMAGES.length],
+    avatar: `https://i.pravatar.cc/150?u=${id}`,
     hasUpdate: Math.random() > 0.3
   };
 });
@@ -194,7 +167,7 @@ export const MOCK_NOTIFICATIONS = [
   {
     id: 1,
     type: 'follow',
-    user: { name: 'travel_maker', avatar: AVATAR_IMAGES[0] },
+    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=travel_maker' },
     content: '님이 회원님을 팔로우하기 시작했습니다.',
     time: '2시간',
     isFollowing: false
@@ -202,23 +175,23 @@ export const MOCK_NOTIFICATIONS = [
   {
     id: 2,
     type: 'like',
-    user: { name: 'seoul_snap', avatar: AVATAR_IMAGES[1] },
+    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=seoul_snap' },
     content: '님이 회원님의 사진을 좋아합니다.',
     time: '4시간',
-    image: GENERAL_IMAGES[0]
+    image: 'https://picsum.photos/seed/notif1/100/100'
   },
   {
     id: 3,
     type: 'comment',
-    user: { name: 'explorer_kim', avatar: AVATAR_IMAGES[2] },
+    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=explorer_kim' },
     content: '님이 댓글을 남겼습니다: "여기 진짜 예쁘네요! 어디인가요?"',
     time: '1일',
-    image: GENERAL_IMAGES[1]
+    image: 'https://picsum.photos/seed/notif2/100/100'
   },
   {
     id: 4,
     type: 'follow',
-    user: { name: 'nature_lover', avatar: AVATAR_IMAGES[3] },
+    user: { name: 'nature_lover', avatar: 'https://i.pravatar.cc/150?u=nature_lover' },
     content: '님이 회원님을 팔로우하기 시작했습니다.',
     time: '2일',
     isFollowing: true

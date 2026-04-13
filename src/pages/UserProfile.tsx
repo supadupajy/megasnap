@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
+import { getUserById } from '@/lib/mock-data';
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -14,13 +15,9 @@ const UserProfile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
 
-  // ID에 따라 일관된 닉네임 생성
-  const nickname = useMemo(() => {
-    if (!userId) return '여행가';
-    if (userId.includes('_')) {
-      return userId.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-    }
-    return `Explorer ${userId.slice(0, 4)}`;
+  // 통합된 사용자 데이터 가져오기
+  const user = useMemo(() => {
+    return getUserById(userId || 'traveler');
   }, [userId]);
 
   return (
@@ -40,7 +37,7 @@ const UserProfile = () => {
               </button>
               <div>
                 <h2 className="text-xl font-black text-gray-900">유저 프로필</h2>
-                <p className="text-xs text-gray-400 font-medium">@{userId || 'traveler'} 님의 활동</p>
+                <p className="text-xs text-gray-400 font-medium">@{user.id} 님의 활동</p>
               </div>
             </div>
             <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -55,26 +52,26 @@ const UserProfile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img 
-                  src={`https://i.pravatar.cc/150?u=${userId}`} 
+                  src={user.avatar} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                 />
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{nickname}</h2>
-              <p className="text-sm text-gray-500 mb-4">새로운 장소를 찾는 것을 좋아합니다 ✈️</p>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{user.nickname}</h2>
+              <p className="text-sm text-gray-500 mb-4">{user.bio}</p>
               <div className="flex gap-4">
                 <div className="text-center">
-                  <p className="font-bold text-gray-900">42</p>
+                  <p className="font-bold text-gray-900">{user.postsCount || 42}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
                 <div className="text-center">
-                  <p className="font-bold text-gray-900">856</p>
+                  <p className="font-bold text-gray-900">{user.followers?.toLocaleString() || '856'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
                 <div className="text-center">
-                  <p className="font-bold text-gray-900">320</p>
+                  <p className="font-bold text-gray-900">{user.following?.toLocaleString() || '320'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
               </div>
@@ -123,7 +120,7 @@ const UserProfile = () => {
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="aspect-square bg-gray-100 overflow-hidden rounded-sm">
                 <img 
-                  src={`https://picsum.photos/seed/${userId}${i}/300/300`} 
+                  src={`https://picsum.photos/seed/${user.id}${i}/300/300`} 
                   alt="" 
                   className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
                 />
