@@ -269,12 +269,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         const animationClass = isInfluencer ? 'animate-influencer-float' : (isPopular ? 'animate-hot-pulse' : '');
 
         div.innerHTML = `
-          <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; ${this.isHighlighted ? 'transform: scale(1.2); transition: transform 0.3s;' : ''}">
+          <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; 
+               transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+               ${this.isHighlighted ? 'transform: scale(1.35);' : 'transform: scale(1);'}">
             ${this.isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
             ${labelHtml}
             <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${this.isHighlighted ? '#4f46e5' : borderColor};`}
+                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${this.isHighlighted ? '#22d3ee' : borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
               <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
@@ -301,7 +303,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${this.isHighlighted ? '#4f46e5' : pinColor};
+                        width: 12px; height: 12px; background: ${this.isHighlighted ? '#22d3ee' : pinColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: 1;"></div>
           </div>
         `;

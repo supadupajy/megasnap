@@ -116,14 +116,17 @@
   100% { left: 100%; }
 }
 
-/* Marker Highlight Ping Animation */
+/* Marker Highlight Ping Animation - Brighter & Smoother */
 @keyframes marker-ping {
   0% {
-    transform: translate(-50%, -50%) scale(0.5);
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  20% {
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) scale(2.5);
+    transform: translate(-50%, -50%) scale(3.5);
     opacity: 0;
   }
 }
@@ -142,11 +145,12 @@
   left: 50%;
   width: 80px;
   height: 80px;
-  background: rgba(79, 70, 229, 0.4);
+  background: rgba(34, 211, 238, 0.6); /* Bright Cyan */
+  box-shadow: 0 0 25px 5px rgba(34, 211, 238, 0.4);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
-  animation: marker-ping 1.5s ease-out infinite;
+  animation: marker-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 .shine-overlay::after {
