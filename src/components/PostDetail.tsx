@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 
@@ -26,8 +25,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+
+  // 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정
+  useLayoutEffect(() => {
+    if (isOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [currentIndex, isOpen]);
 
   // 초기 인덱스 설정
   useEffect(() => {
@@ -133,7 +139,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 튐 방지
+        onOpenAutoFocus={(e) => e.preventDefault()} 
+        onCloseAutoFocus={(e) => e.preventDefault()}
         className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
       >
         <style>{`
@@ -199,12 +206,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
-                  {/* key={post.id}를 부여하여 포스팅 전환 시 ScrollArea를 강제로 새로 마운트 (스크롤 0 초기화 보장) */}
-                  <ScrollArea 
-                    key={post.id}
-                    ref={scrollAreaRef} 
+                  {/* 표준 div를 사용하여 스크롤 제어의 신뢰성 확보 */}
+                  <div 
+                    key={`scroll-${post.id}`}
+                    ref={scrollContainerRef} 
                     className={cn(
-                      "flex-1 h-full no-scrollbar",
+                      "flex-1 h-full overflow-y-auto no-scrollbar",
                       !showComments && "touch-none"
                     )}
                   >
@@ -332,8 +339,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                         </AnimatePresence>
                       </div>
                     </div>
-                    <ScrollBar className="hidden" />
-                  </ScrollArea>
+                  </div>
                   
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
