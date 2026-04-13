@@ -113,7 +113,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
             <button className="transition-transform active:scale-125" onClick={(e) => e.stopPropagation()}>
-              <Heart className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
             </button>
             <button onClick={(e) => e.stopPropagation()}>
               <MessageCircle className="w-6 h-6 text-gray-700" />
@@ -126,7 +126,7 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-sm font-bold text-gray-900">좋아요 {likes.toLocaleString()}개</p>
+          <p className="text-sm font-bold text-gray-500">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
             <span 
               className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-green-600 transition-colors"
