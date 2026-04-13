@@ -71,7 +71,6 @@ const USERNAME_PARTS = [
 ];
 
 export const createMockUser = (id: string): User => {
-  // ID를 기반으로 일관된 닉네임 생성
   let nickname = `Explorer_${id}`;
   if (id.includes('_')) {
     nickname = id.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
@@ -92,7 +91,6 @@ export const createMockUser = (id: string): User => {
   };
 };
 
-// 특정 ID의 사용자 정보를 가져오거나 생성하는 함수
 export const getUserById = (id: string): User => {
   const found = MOCK_USERS.find(u => u.id === id);
   if (found) return found;
@@ -100,11 +98,27 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
+  // 인덱스를 무작위로 섞어서 특수 포스트 지정
+  const indices = Array.from({ length: count }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+
+  // 인플루언서 1개, 인기 포스팅 2~3개 지정
+  const influencerIndex = indices[0];
+  const popularCount = Math.floor(Math.random() * 2) + 2; // 2 또는 3
+  const popularIndices = new Set(indices.slice(1, 1 + popularCount));
+
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const isAd = Math.random() > 0.92;
-    const isGif = !isAd && Math.random() > 0.7;
-    const isInfluencer = !isAd && Math.random() > 0.85;
+    
+    // 인플루언서와 인기 포스팅은 광고가 될 수 없음
+    const isInfluencer = i === influencerIndex;
+    const isPopular = popularIndices.has(i);
+    const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
+    
+    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
@@ -124,8 +138,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
 
-    const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
-    const likes = (borderType === 'popular' || isInfluencer)
+    const borderType = isPopular ? 'popular' : 'none';
+    const likes = (isPopular || isInfluencer)
       ? Math.floor(Math.random() * 1001) + 1000 
       : Math.floor(Math.random() * 491) + 10;
 
