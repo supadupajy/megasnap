@@ -186,7 +186,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
     return (
       <div className={cn(
-        "absolute bottom-4 right-4 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        "absolute top-6 right-6 z-30 w-9 h-9 rounded-2xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
         bgColor
       )}>
         <Icon className={iconClass} />
@@ -306,9 +306,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           ))}
                         </div>
 
-                        {/* Category Icon Badge - Moved to bottom right */}
-                        {renderCategoryIcon()}
-
                         {images.length > 1 && (
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                             {images.map((_: any, idx: number) => (
@@ -340,7 +337,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
-                      <div className="p-5 sm:p-6">
+                      <div className="p-5 sm:p-6 relative">
+                        {/* Category Icon Badge - Moved to content area */}
+                        {renderCategoryIcon()}
+
                         <div className="flex items-center gap-3 mb-3">
                           <div 
                             className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
@@ -382,7 +382,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </div>
                         </div>
 
-                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium">
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium pr-10">
                           {post.content}
                         </p>
 
