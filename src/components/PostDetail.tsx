@@ -75,34 +75,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     const screenWidth = window.innerWidth;
-    const swipeThreshold = 40; 
-    const velocityThreshold = 150;
-
-    // 1. 왼쪽 스와이프 (닫기 판정)
-    if (offset.x < -screenWidth / 5 || velocity.x < -300) {
-      setDirection(0);
-      setIsClosing(true);
-      onClose(); // 즉시 닫기 호출
+    
+    // 1. 가로 스와이프 판정 (닫기)
+    const isHorizontal = Math.abs(offset.x) > Math.abs(offset.y);
+    if (isHorizontal) {
+      // 화면의 1/3 이상 밀었거나, 왼쪽으로 빠르게 튕겼을 때만 닫기
+      if (offset.x < -screenWidth / 3 || velocity.x < -500) {
+        setDirection(0);
+        setIsClosing(true);
+        onClose();
+      } else {
+        // 임계값을 넘지 못하면 dragConstraints에 의해 자동으로 0으로 복구됨
+        // 추가적인 애니메이션 처리가 필요하다면 여기서 dragX.set(0) 등을 호출할 수 있음
+      }
       return;
     }
 
-    // 2. 상하 스와이프 (포스팅 전환)
-    const isVertical = Math.abs(offset.y) > Math.abs(offset.x);
-    if (isVertical) {
-      if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-        // 위로 스와이프 -> 다음 포스트
-        if (currentIndex < displayPosts.length - 1) {
-          setDirection(1);
-          setCurrentIndex(prev => prev + 1);
-          dragX.set(0);
-        }
-      } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-        // 아래로 스와이프 -> 이전 포스트
-        if (currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(prev => prev - 1);
-          dragX.set(0);
-        }
+    // 2. 세로 스와이프 판정 (포스팅 전환)
+    const swipeThreshold = 40;
+    const velocityThreshold = 150;
+
+    if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
+      // 위로 스와이프 -> 다음 포스트
+      if (currentIndex < displayPosts.length - 1) {
+        setDirection(1);
+        setCurrentIndex(prev => prev + 1);
+        dragX.set(0);
+      }
+    } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
+      // 아래로 스와이프 -> 이전 포스트
+      if (currentIndex > 0) {
+        setDirection(-1);
+        setCurrentIndex(prev => prev - 1);
+        dragX.set(0);
       }
     }
   };
@@ -135,7 +140,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       transition: {
         x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
         y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.1 } // 종료 시 투명도 변화를 더 빠르게
+        opacity: { duration: 0.1 }
       }
     })
   };
