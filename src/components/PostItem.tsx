@@ -85,14 +85,6 @@ const PostItem = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {lat !== undefined && lng !== undefined && (
-            <button 
-              onClick={handleLocationClick}
-              className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 active:scale-90 transition-all"
-            >
-              <Navigation className="w-4 h-4 fill-green-600" />
-            </button>
-          )}
           <button className="text-gray-400" onClick={(e) => e.stopPropagation()}>
             <MoreHorizontal className="w-5 h-5" />
           </button>
@@ -164,7 +156,17 @@ const PostItem = ({
               <Share2 className="w-6 h-6 text-gray-700" />
             </button>
           </div>
-          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+          
+          {/* 위치 아이콘을 하단 액션 바 영역으로 이동 */}
+          {lat !== undefined && lng !== undefined && (
+            <button 
+              onClick={handleLocationClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100 active:scale-90 transition-all border border-green-100"
+            >
+              <Navigation className="w-3.5 h-3.5 fill-green-600" />
+              <span className="text-[10px] font-black">위치보기</span>
+            </button>
+          )}
         </div>
 
         <div className="space-y-1.5">
