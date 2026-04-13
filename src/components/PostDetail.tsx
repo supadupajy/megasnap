@@ -64,18 +64,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 좌측 스와이프 (닫기) - 수평 이동이 더 클 때
-    if (absX > absY && offset.x < -50) {
-      if (offset.x < -100 || velocity.x < -300) {
+    // 1. 좌측 스와이프 (닫기) - 수평 이동이 지배적일 때
+    if (absX > absY && offset.x < -60) {
+      if (offset.x < -120 || velocity.x < -400) {
         setDirection(0);
         setIsClosing(true);
         return;
       }
     }
 
-    // 2. 상하 스와이프 (포스트 전환) - 수직 이동이 더 클 때
-    const swipeThreshold = 50;
-    const velocityThreshold = 300;
+    // 2. 상하 스와이프 (포스트 전환) - 수직 이동이 지배적일 때
+    const swipeThreshold = 80;
+    const velocityThreshold = 400;
 
     if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
@@ -83,7 +83,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
-          // 좌표 리셋
           dragX.set(0);
           dragY.set(0);
         }
@@ -92,7 +91,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
-          // 좌표 리셋
           dragX.set(0);
           dragY.set(0);
         }
@@ -105,7 +103,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
       x: 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
     }),
     center: {
       y: 0,
@@ -113,21 +111,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 200, mass: 0.8 },
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      // direction 0: 왼쪽으로 닫기
       x: direction === 0 ? "-100%" : 0,
-      // direction 1: 다음 포스트 (위로 나감)
-      // direction -1: 이전 포스트 (아래로 나감)
       y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
       transition: {
         x: { duration: 0.25, ease: "easeInOut" },
-        y: { type: "spring", damping: 25, stiffness: 200, mass: 0.8 },
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
     })
