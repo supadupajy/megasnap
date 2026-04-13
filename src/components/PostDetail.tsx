@@ -21,8 +21,10 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0); // 1: Next(Up), -1: Prev(Down), 0: Close(Left)
+  const [direction, setDirection] = useState(0); // 1: Next(Up swipe), -1: Prev(Down swipe), 0: Close(Left)
   const [isClosing, setIsClosing] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
   
@@ -30,28 +32,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const dragY = useMotionValue(0);
   const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
-  // 포스트 목록 유지
-  const displayPosts = posts;
-
+  // 다이얼로그가 열릴 때만 초기 인덱스 설정 (스와이프 중 리셋 방지)
   useEffect(() => {
-    if (isOpen && initialIndex !== -1) {
+    if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
-      setDirection(0);
+      setHasInitialized(true);
+    }
+    if (!isOpen) {
+      setHasInitialized(false);
       setIsClosing(false);
-      dragX.set(0);
-      dragY.set(0);
     }
-  }, [isOpen, initialIndex]);
+  }, [isOpen, initialIndex, hasInitialized]);
 
+  // 현재 포스트 조회 처리
   useEffect(() => {
-    if (isOpen && displayPosts[currentIndex] && onViewPost) {
-      onViewPost(displayPosts[currentIndex].id);
+    if (isOpen && posts[currentIndex] && onViewPost) {
+      onViewPost(posts[currentIndex].id);
     }
-  }, [currentIndex, isOpen, displayPosts, onViewPost]);
+  }, [currentIndex, isOpen, posts, onViewPost]);
 
-  if (!isOpen || displayPosts.length === 0) return null;
+  if (!isOpen || posts.length === 0) return null;
   
-  const post = displayPosts[currentIndex];
+  const post = posts[currentIndex];
   if (!post) return null;
 
   const isAd = post.isAd;
@@ -64,7 +66,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 좌측 스와이프 (닫기) - 절대 유지
+    // 1. 좌측 스와이프 (닫기)
     if (absX > absY && offset.x < -40) {
       if (offset.x < -screenWidth / 8 || velocity.x < -250) {
         setDirection(0);
@@ -73,21 +75,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     }
 
-    // 2. 상하 스와이프 (포스트 전환) - 자연스러운 감도 조절
+    // 2. 상하 스와이프 (포스트 전환)
     const swipeThreshold = 50;
     const velocityThreshold = 200;
 
     if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-        // 위로 스와이프 -> 다음 포스트
-        if (currentIndex < displayPosts.length - 1) {
+        // 위로 스와이프 (Finger Up) -> 다음 포스트 (Next)
+        if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
           dragX.set(0);
           dragY.set(0);
         }
       } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-        // 아래로 스와이프 -> 이전 포스트
+        // 아래로 스와이프 (Finger Down) -> 이전 포스트 (Prev)
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
@@ -102,26 +104,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
     }),
     center: {
       y: 0,
       opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        y: { type: "spring", damping: 25, stiffness: 200, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      x: direction === 0 ? "-150%" : 0,
+      x: direction === 0 ? "-100%" : 0,
       y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
       transition: {
-        x: { duration: 0.2, ease: "easeIn" }, 
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.15 }
+        x: { duration: 0.2 },
+        y: { type: "spring", damping: 25, stiffness: 200, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -158,8 +160,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               )}
               initial={false}
               animate={{ 
-                height: `${Math.max(10, 100 / displayPosts.length)}%`,
-                top: `${(currentIndex / (displayPosts.length - 1 || 1)) * (100 - Math.max(10, 100 / displayPosts.length))}%`
+                height: `${Math.max(10, 100 / posts.length)}%`,
+                top: `${(currentIndex / (posts.length - 1 || 1)) * (100 - Math.max(10, 100 / posts.length))}%`
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
@@ -167,7 +169,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           <div className="mt-4 flex flex-col items-center gap-1">
             <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
             <div className="w-2 h-[1px] bg-white/20" />
-            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
+            <span className="text-[10px] font-bold text-white/30">{posts.length}</span>
           </div>
         </div>
 
