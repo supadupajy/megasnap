@@ -4,24 +4,7 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-
-const USERNAME_PARTS = [
-  'pixel', 'snap', 'wander', 'cloud', 'urban', 'wild', 'blue', 'golden', 
-  'mystic', 'vivid', 'silent', 'epic', 'nova', 'luna', 'atlas', 'flow'
-];
-
-const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
-  const part1 = USERNAME_PARTS[Math.floor(Math.random() * USERNAME_PARTS.length)];
-  const part2 = USERNAME_PARTS[Math.floor(Math.random() * USERNAME_PARTS.length)];
-  const id = `${part1}_${part2}${i > 9 ? i : '0' + i}`;
-  
-  return {
-    id,
-    name: id,
-    avatar: `https://i.pravatar.cc/150?u=${id}`,
-    hasUpdate: Math.random() > 0.3
-  };
-});
+import { MOCK_STORIES } from '@/lib/mock-data';
 
 const StoryBar = () => {
   const navigate = useNavigate();

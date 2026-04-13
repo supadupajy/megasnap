@@ -24,7 +24,7 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
 
   useEffect(() => {
-    setAllPosts(createMockPosts(37.5665, 126.9780, 30));
+    setAllPosts(createMockPosts(37.5665, 126.9780, 40));
   }, []);
 
   useEffect(() => {
@@ -35,13 +35,19 @@ const Index = () => {
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
-      if (visibleCount < 12) {
+      // 화면에 보이는 포스트가 너무 적을 때만 추가하되, 전체 개수가 너무 커지지 않게 조절
+      if (visibleCount < 15) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15)]);
+        setAllPosts(prev => {
+          const newPosts = createMockPosts(centerLat, centerLng, 15);
+          // 전체 포스트가 100개를 넘으면 오래된 것부터 제거하여 성능 유지
+          const combined = [...prev, ...newPosts];
+          return combined.length > 100 ? combined.slice(-100) : combined;
+        });
       }
     }
-  }, [mapData, allPosts]);
+  }, [mapData]);
 
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
@@ -49,12 +55,15 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    return allPosts.filter(post => {
+    const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
+
+    // 한 화면에는 최대 30개까지만 노출 (인기순/최신순 등으로 정렬 후 슬라이싱 가능)
+    return inView.slice(0, 30);
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
   const detailPosts = useMemo(() => {
@@ -90,7 +99,7 @@ const Index = () => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       setTimeout(() => {
-        setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 35));
+        setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 40));
         setIsRefreshing(false);
       }, 600);
     }

@@ -28,9 +28,14 @@ const GIF_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
+const USERNAME_PARTS = [
+  'pixel', 'snap', 'wander', 'cloud', 'urban', 'wild', 'blue', 'golden', 
+  'mystic', 'vivid', 'silent', 'epic', 'nova', 'luna', 'atlas', 'flow'
+];
+
 export const createMockUser = (id: string): User => ({
   id,
-  name: id, // user_ 접두사 제거
+  name: id,
   nickname: `Explorer_${id}`,
   avatar: `https://i.pravatar.cc/150?u=${id}`,
   bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
@@ -41,7 +46,7 @@ export const createMockUser = (id: string): User => ({
 });
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
-  const posts = Array.from({ length: count }).map((_, i) => {
+  return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
     const isGif = !isAd && Math.random() > 0.7;
@@ -51,12 +56,11 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     const borderType = Math.random() > 0.8 ? 'popular' : 'none';
-    
     const likes = borderType === 'popular' 
       ? Math.floor(Math.random() * 1001) + 1000 
       : Math.floor(Math.random() * 491) + 10;
 
-    const post: Post = {
+    return {
       id,
       isAd,
       isGif,
@@ -74,17 +78,24 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       borderType,
       isInfluencer: false
     };
-
-    return post;
   });
-
-  const influencer = [...posts].filter(p => !p.isAd).sort((a, b) => b.likes - a.likes)[0];
-  if (influencer) influencer.isInfluencer = true;
-
-  return posts;
 };
 
-export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUser(`${i + 100}`)); // user_ 접두사 제거
+// 고정된 스토리 데이터 생성
+export const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
+  const part1 = USERNAME_PARTS[i % USERNAME_PARTS.length];
+  const part2 = USERNAME_PARTS[(i + 5) % USERNAME_PARTS.length];
+  const id = `${part1}_${part2}${i > 9 ? i : '0' + i}`;
+  
+  return {
+    id,
+    name: id,
+    avatar: `https://i.pravatar.cc/150?u=${id}`,
+    hasUpdate: Math.random() > 0.3
+  };
+});
+
+export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUser(`${i + 100}`));
 
 export const MOCK_NOTIFICATIONS = [
   {
