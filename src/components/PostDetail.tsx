@@ -28,26 +28,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 1. 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정 (가장 확실한 시점)
+  // 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
-    }
-  }, [currentIndex, isOpen]);
-
-  // 2. 애니메이션이나 포커스 이동 후 발생할 수 있는 미세한 스크롤 튐 방지
-  useEffect(() => {
-    if (isOpen) {
-      const reset = () => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = 0;
-        }
-      };
-      
-      reset();
-      // 브라우저 렌더링 사이클에 맞춰 한 번 더 실행
-      const rafId = requestAnimationFrame(reset);
-      return () => cancelAnimationFrame(rafId);
     }
   }, [currentIndex, isOpen]);
 
@@ -155,7 +139,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 이동 원천 차단
+        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 이동 방지
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
       >
@@ -177,7 +161,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* 왼쪽 포스팅 인덱스 인디케이터 */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -223,7 +206,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
-                  {/* key={post.id}를 사용하여 포스팅 전환 시 div를 강제로 새로 마운트하여 스크롤 초기화 보장 */}
+                  {/* key={post.id}를 사용하여 포스팅 전환 시 스크롤 상태 강제 초기화 */}
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
