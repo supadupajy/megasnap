@@ -149,19 +149,18 @@ const PostItem = ({
 
       <div className="px-4">
         <div className={cn(
-          "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isInfluencer ? "influencer-border-container" : (
-            isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-              isPopular ? "popular-border-container" : (
-                borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
-                  borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
-                )
-              )
+          "relative aspect-square w-full rounded-[20px] transition-all duration-500 overflow-hidden",
+          isInfluencer && "influencer-border-container p-[3px]",
+          isPopular && "popular-border-container p-[3px]",
+          isAd && "p-[3px] bg-blue-500 shadow-lg shadow-blue-500/20",
+          !isInfluencer && !isPopular && !isAd && (
+            borderType === 'silver' ? "p-[3px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
+              borderType === 'gold' ? "p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
             )
           )
         )}>
           <div className={cn(
-            "w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10",
+            "w-full h-full rounded-[17px] overflow-hidden bg-white relative z-10",
             isInfluencer && "shine-overlay"
           )}>
             <div 
