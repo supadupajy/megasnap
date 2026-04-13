@@ -16,16 +16,19 @@ const Profile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const listRef = useRef<HTMLDivElement>(null);
 
-  // 내 포스트 데이터 생성
+  // 내 포스트 데이터 생성 (인플루언서 포스트 제외)
   useEffect(() => {
-    const myPosts = createMockPosts(37.5665, 126.9780, 12).map(p => ({
-      ...p,
-      user: {
-        id: 'me',
-        name: 'Dyad_Explorer',
-        avatar: 'https://i.pravatar.cc/150?u=me'
-      }
-    }));
+    const myPosts = createMockPosts(37.5665, 126.9780, 20)
+      .filter(p => !p.isInfluencer && !p.isAd) // 인플루언서 및 광고 포스트 제외
+      .slice(0, 12) // 12개로 제한
+      .map(p => ({
+        ...p,
+        user: {
+          id: 'me',
+          name: 'Dyad_Explorer',
+          avatar: 'https://i.pravatar.cc/150?u=me'
+        }
+      }));
     setPosts(myPosts);
   }, []);
 
@@ -182,6 +185,7 @@ const Profile = () => {
                     isGif={post.isGif}
                     isInfluencer={post.isInfluencer}
                     borderType={post.borderType}
+                    disablePulse={true} // 프로필 리스트 뷰에서는 펄스 애니메이션 비활성화
                     onLikeToggle={() => handleLikeToggle(post.id)}
                   />
                 </div>
