@@ -143,9 +143,10 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           const div = document.createElement('div');
           div.style.position = 'absolute';
           div.style.cursor = 'pointer';
-          div.style.zIndex = '1000';
+          div.style.zIndex = '2000';
+          div.style.transform = 'translate(-50%, -100%)';
           div.innerHTML = `
-            <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
               <div id="map-write-btn" style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 글쓰기
@@ -216,6 +217,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         div.style.cursor = 'pointer';
         div.style.width = '56px';
         div.style.height = '56px';
+        // 마커 컨테이너 자체를 좌표 중앙 상단으로 정렬하여 클릭 영역 일치
+        div.style.transform = 'translate(-50%, -100%)';
         
         const isAd = this.post.isAd;
         const isGif = this.post.isGif;
@@ -223,17 +226,18 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isInfluencer = !isAd && this.post.isInfluencer;
         const category = this.post.category || 'none';
         
-        // Border color logic: keep original colors even if viewed
-        const borderColor = isAd ? '#3b82f6' : '#ffffff';
-        
-        let pinColor = borderColor;
-        if (isInfluencer) {
-          pinColor = '#fbbf24';
-        } else if (isPopular) {
-          pinColor = '#ff0000';
-        }
+        // 우선순위에 따른 z-index 설정
+        let zIndex = 100;
+        if (isAd) zIndex = 500;
+        if (isPopular) zIndex = 400;
+        if (isInfluencer) zIndex = 300;
+        div.style.zIndex = zIndex.toString();
 
-        // Category Icon Logic: keep original colors even if viewed
+        const borderColor = isAd ? '#3b82f6' : '#ffffff';
+        let pinColor = borderColor;
+        if (isInfluencer) pinColor = '#fbbf24';
+        else if (isPopular) pinColor = '#ff0000';
+
         let categoryIconHtml = '';
         if (category !== 'none') {
           let iconSvg = '';
@@ -257,7 +261,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         }
 
         div.innerHTML = `
-          <div style="position: relative; transform: translate(-50%, -100%);">
+          <div style="position: relative; width: 100%; height: 100%;">
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-float' : (isPopular ? 'popular-border-container animate-hot-pulse' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative;
                         ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}
