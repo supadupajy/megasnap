@@ -25,6 +25,7 @@ interface PostItemProps {
   isInfluencer?: boolean;
   category?: 'food' | 'accident' | 'place' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
+  disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
 }
@@ -45,6 +46,7 @@ const PostItem = ({
   isInfluencer, 
   category = 'none',
   borderType = 'none',
+  disablePulse = false,
   onLikeToggle,
   onLocationClick
 }: PostItemProps) => {
@@ -116,7 +118,7 @@ const PostItem = ({
     <div className={cn(
       "bg-white mb-8 last:mb-20 transition-all duration-500",
       isInfluencer && "animate-influencer-float",
-      isPopular && "animate-hot-pulse"
+      isPopular && !disablePulse && "animate-hot-pulse"
     )}>
       <div className="flex items-center justify-between px-4 py-3">
         <div 

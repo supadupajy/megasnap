@@ -70,6 +70,7 @@ const Popular = () => {
                 isGif={post.isGif}
                 isInfluencer={post.isInfluencer}
                 borderType={post.borderType}
+                disablePulse={true}
                 onLikeToggle={() => handleLikeToggle(post.id)}
                 onLocationClick={handleLocationClick}
               />
