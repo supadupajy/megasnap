@@ -29,34 +29,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 스크롤 초기화 함수
-  const resetScroll = () => {
-    if (scrollAreaRef.current) {
-      // Radix ScrollArea의 실제 뷰포트 요소를 찾아서 스크롤 초기화
-      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTop = 0;
-      }
-      // 일반적인 경우도 대비
-      scrollAreaRef.current.scrollTop = 0;
-    }
-  };
-
-  // 포스팅이 변경될 때마다 스크롤 초기화 (애니메이션 타이밍 고려)
-  useEffect(() => {
-    if (isOpen) {
-      // 즉시 초기화 시도
-      resetScroll();
-      
-      // 브라우저 레이아웃 업데이트 후 다시 한 번 확실히 초기화
-      const rafId = requestAnimationFrame(() => {
-        resetScroll();
-      });
-      
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [currentIndex, isOpen]);
-
+  // 초기 인덱스 설정
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -70,6 +43,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, initialIndex, hasInitialized]);
 
+  // 포스팅 변경 감지 및 조회 처리
   useEffect(() => {
     const currentPost = posts[currentIndex];
     if (isOpen && currentPost && onViewPost) {
@@ -158,7 +132,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
+      <DialogContent 
+        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 튐 방지
+        className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
+      >
         <style>{`
           [data-radix-portal] div[data-state] {
             background-color: transparent !important;
@@ -222,7 +199,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
+                  {/* key={post.id}를 부여하여 포스팅 전환 시 ScrollArea를 강제로 새로 마운트 (스크롤 0 초기화 보장) */}
                   <ScrollArea 
+                    key={post.id}
                     ref={scrollAreaRef} 
                     className={cn(
                       "flex-1 h-full no-scrollbar",
