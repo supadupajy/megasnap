@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'export default';
+import React, { useState } from 'react';
 import { ChevronLeft, Search, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
