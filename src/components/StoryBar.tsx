@@ -5,12 +5,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 
-const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => ({
-  id: `${i + 1}`, // user_ 접두사 제거
-  name: `${i + 1}`, // user_ 접두사 제거
-  avatar: `https://i.pravatar.cc/150?u=${i + 1}`,
-  hasUpdate: Math.random() > 0.3
-}));
+const USERNAME_PARTS = [
+  'pixel', 'snap', 'wander', 'cloud', 'urban', 'wild', 'blue', 'golden', 
+  'mystic', 'vivid', 'silent', 'epic', 'nova', 'luna', 'atlas', 'flow'
+];
+
+const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
+  const part1 = USERNAME_PARTS[Math.floor(Math.random() * USERNAME_PARTS.length)];
+  const part2 = USERNAME_PARTS[Math.floor(Math.random() * USERNAME_PARTS.length)];
+  const id = `${part1}_${part2}${i > 9 ? i : '0' + i}`;
+  
+  return {
+    id,
+    name: id,
+    avatar: `https://i.pravatar.cc/150?u=${id}`,
+    hasUpdate: Math.random() > 0.3
+  };
+});
 
 const StoryBar = () => {
   const navigate = useNavigate();
@@ -28,7 +39,7 @@ const StoryBar = () => {
               <div className={`p-[2.5px] rounded-full ${story.hasUpdate ? 'bg-gradient-to-tr from-yellow-400 to-green-500' : 'bg-gray-200'}`}>
                 <Avatar className="w-16 h-16 border-2 border-white">
                   <AvatarImage src={story.avatar} />
-                  <AvatarFallback>{story.name[0]}</AvatarFallback>
+                  <AvatarFallback>{story.name[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
               </div>
               <span className="text-[11px] font-medium text-gray-600 truncate w-16 text-center">
