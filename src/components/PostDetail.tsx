@@ -63,25 +63,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     const screenWidth = window.innerWidth;
-    const swipeThreshold = 80;
-    const velocityThreshold = 300;
+    const swipeThreshold = 50; // 감도 조절
+    const velocityThreshold = 200;
 
-    // 1. 왼쪽 스와이프 (닫기) - 화면 절반 이상 밀었거나 빠른 속도로 밀었을 때
-    if (offset.x < -screenWidth / 3 || velocity.x < -500) {
-      setDirection(0); // 닫기 방향 설정
-      setIsClosing(true); // 애니메이션 트리거를 위해 상태 변경
+    // 1. 왼쪽 스와이프 (닫기)
+    if (offset.x < -screenWidth / 4 || velocity.x < -400) {
+      setDirection(0);
+      setIsClosing(true);
       return;
     }
 
     // 2. 상하 스와이프 (포스팅 전환)
-    if (Math.abs(offset.y) > Math.abs(offset.x)) {
+    const isVertical = Math.abs(offset.y) > Math.abs(offset.x);
+    if (isVertical) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
+        // 위로 스와이프 -> 다음 포스트
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
           dragX.set(0);
         }
       } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
+        // 아래로 스와이프 -> 이전 포스트
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
@@ -107,6 +110,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       scale: 1,
       transition: {
         y: { type: "spring", damping: 30, stiffness: 300 },
+        x: { type: "spring", damping: 30, stiffness: 300 },
         opacity: { duration: 0.2 }
       }
     },
@@ -117,18 +121,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       opacity: 0,
       scale: 0.95,
       transition: {
-        x: { type: "spring", damping: 25, stiffness: 200 },
-        opacity: { duration: 0.3 },
-        y: { type: "spring", damping: 30, stiffness: 300 }
+        x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
+        y: { type: "spring", damping: 30, stiffness: 300 },
+        opacity: { duration: 0.25 }
       }
     })
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
+      <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
         {/* Close Button */}
-        <div className="absolute top-6 right-6 z-50">
+        <div className="absolute top-6 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -140,7 +144,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         </div>
 
         {/* Progress Indicator */}
-        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
+        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
               className={cn(
@@ -163,7 +167,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} onExitComplete={() => isClosing && onClose()}>
+          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+            if (isClosing) onClose();
+          }}>
             {!isClosing && (
               <motion.div
                 key={post.id}
