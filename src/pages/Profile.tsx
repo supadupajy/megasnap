@@ -46,6 +46,7 @@ const Profile = () => {
   const handleGridItemClick = (postId: string) => {
     setViewMode('list');
     // 클릭한 포스트 위치로 스크롤하기 위해 약간의 지연 후 실행
+    // scroll-margin-top이 적용되어 있어 헤더 아래로 적절히 위치합니다.
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
       if (element) {
@@ -167,7 +168,11 @@ const Profile = () => {
             {/* Post List */}
             <div className="flex flex-col pt-4">
               {posts.map((post) => (
-                <div key={post.id} id={`post-${post.id}`}>
+                <div 
+                  key={post.id} 
+                  id={`post-${post.id}`}
+                  className="scroll-mt-[150px]" // 헤더 높이를 고려한 스크롤 마진 추가
+                >
                   <PostItem
                     user={post.user}
                     content={post.content}
