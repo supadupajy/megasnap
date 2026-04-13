@@ -13,193 +13,200 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
-// 요청하신 새로운 API 키(79d8615ee18c3979de0b737fd62b2f90)를 적용했습니다.
-const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer,drawing&autoload=false";
+// 발급받으신 네이버 Client ID를 여기에 입력하세요.
+const NAVER_CLIENT_ID = "YOUR_NAVER_CLIENT_ID"; 
+const NAVER_SDK_URL = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
 
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const overlaysRef = useRef<Map<string, any>>(new Map());
-  const actionOverlayRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const actionMarkerRef = useRef<any>(null);
   
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const loadKakaoMap = () => {
+  const loadNaverMap = () => {
+    if (NAVER_CLIENT_ID === "YOUR_NAVER_CLIENT_ID") {
+      setStatus('error');
+      return;
+    }
+
     setStatus('loading');
     
-    const existingScript = document.getElementById('kakao-map-sdk');
+    const existingScript = document.getElementById('naver-map-sdk');
     if (existingScript) existingScript.remove();
 
     const script = document.createElement('script');
-    script.id = 'kakao-map-sdk';
-    script.src = KAKAO_SDK_URL;
+    script.id = 'naver-map-sdk';
+    script.src = NAVER_SDK_URL;
     script.async = true;
 
     script.onload = () => {
-      if (!window.kakao || !window.kakao.maps) {
+      if (!window.naver || !window.naver.maps) {
         setStatus('error');
         return;
       }
 
-      window.kakao.maps.load(() => {
-        if (!mapContainer.current) return;
+      const naver = window.naver;
+      if (!mapContainer.current) return;
 
-        const kakao = window.kakao;
-        const initialCenter = new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780);
+      const initialCenter = new naver.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780);
+      
+      const mapOptions = {
+        center: initialCenter,
+        zoom: 15,
+        minZoom: 10,
+        maxZoom: 21,
+        logoControl: false,
+        mapDataControl: false,
+        scaleControl: false,
+      };
+
+      const map = new naver.maps.Map(mapContainer.current, mapOptions);
+      mapInstance.current = map;
+      setStatus('ready');
+
+      // 지도 이벤트 설정
+      const handleIdle = () => {
+        const bounds = map.getBounds();
+        const sw = bounds.getSW();
+        const ne = bounds.getNE();
         
-        const options = {
-          center: initialCenter,
-          level: 4
-        };
-
-        const map = new kakao.maps.Map(mapContainer.current, options);
-        mapInstance.current = map;
-        setStatus('ready');
-
-        // 지도 이벤트 설정
-        const handleIdle = () => {
-          const bounds = map.getBounds();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          
-          onMapChange({
-            bounds: {
-              sw: { lat: sw.getLat(), lng: sw.getLng() },
-              ne: { lat: ne.getLat(), lng: ne.getLng() }
-            }
-          });
-        };
-
-        kakao.maps.event.addListener(map, 'idle', handleIdle);
-        
-        kakao.maps.event.addListener(map, 'mousedown', (mouseEvent: any) => {
-          const latlng = mouseEvent.latLng;
-          pressTimer.current = setTimeout(() => {
-            setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
-          }, 1000);
-        });
-
-        const clearTimer = () => {
-          if (pressTimer.current) {
-            clearTimeout(pressTimer.current);
-            pressTimer.current = null;
+        onMapChange({
+          bounds: {
+            sw: { lat: sw.lat(), lng: sw.lng() },
+            ne: { lat: ne.lat(), lng: ne.lng() }
           }
-        };
+        });
+      };
 
-        kakao.maps.event.addListener(map, 'mouseup', clearTimer);
-        kakao.maps.event.addListener(map, 'dragstart', clearTimer);
-        kakao.maps.event.addListener(map, 'click', () => setActionPin(null));
-
-        handleIdle();
+      naver.maps.Event.addListener(map, 'idle', handleIdle);
+      
+      // 롱프레스(길게 누르기)로 글쓰기 핀 생성
+      naver.maps.Event.addListener(map, 'mousedown', (e: any) => {
+        const latlng = e.coord;
+        pressTimer.current = setTimeout(() => {
+          setActionPin({ lat: latlng.lat(), lng: latlng.lng() });
+          if (window.navigator.vibrate) window.navigator.vibrate(50);
+        }, 800);
       });
+
+      const clearTimer = () => {
+        if (pressTimer.current) {
+          clearTimeout(pressTimer.current);
+          pressTimer.current = null;
+        }
+      };
+
+      naver.maps.Event.addListener(map, 'mouseup', clearTimer);
+      naver.maps.Event.addListener(map, 'dragstart', clearTimer);
+      naver.maps.Event.addListener(map, 'click', () => setActionPin(null));
+
+      handleIdle();
     };
 
     script.onerror = () => setStatus('error');
     document.head.appendChild(script);
-
-    const timeout = setTimeout(() => {
-      if (status === 'loading') setStatus('error');
-    }, 8000);
-
-    return () => clearTimeout(timeout);
   };
 
   useEffect(() => {
-    loadKakaoMap();
+    loadNaverMap();
   }, []);
 
+  // 센터 변경 시 이동
   useEffect(() => {
-    if (mapInstance.current && center && window.kakao && window.kakao.maps) {
-      const moveLatLon = new window.kakao.maps.LatLng(center.lat, center.lng);
+    if (mapInstance.current && center && window.naver) {
+      const moveLatLon = new window.naver.maps.LatLng(center.lat, center.lng);
       mapInstance.current.panTo(moveLatLon);
     }
   }, [center]);
 
+  // 글쓰기 액션 핀 업데이트
   useEffect(() => {
-    if (!mapInstance.current || !window.kakao || status !== 'ready') return;
-    const kakao = window.kakao;
+    if (!mapInstance.current || !window.naver || status !== 'ready') return;
+    const naver = window.naver;
 
-    if (actionOverlayRef.current) actionOverlayRef.current.setMap(null);
+    if (actionMarkerRef.current) actionMarkerRef.current.setMap(null);
 
     if (actionPin) {
-      const content = document.createElement('div');
-      content.innerHTML = `
-        <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto;">
-          <div style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            글쓰기
-          </div>
-          <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          </div>
-        </div>
-      `;
-      content.onclick = (e) => {
-        e.stopPropagation();
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(actionPin.lat, actionPin.lng),
+        map: mapInstance.current,
+        icon: {
+          content: `
+            <div style="position: relative; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;">
+              <div style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                글쓰기
+              </div>
+              <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #22c55e;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+            </div>
+          `,
+          anchor: new naver.maps.Point(0, 0),
+        }
+      });
+
+      naver.maps.Event.addListener(marker, 'click', () => {
         onMapWriteClick();
         setActionPin(null);
-      };
-      const overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(actionPin.lat, actionPin.lng),
-        content: content,
-        yAnchor: 1
       });
-      overlay.setMap(mapInstance.current);
-      actionOverlayRef.current = overlay;
+
+      actionMarkerRef.current = marker;
     }
   }, [actionPin, status]);
 
+  // 포스트 마커 업데이트
   useEffect(() => {
-    if (!mapInstance.current || !window.kakao || status !== 'ready') return;
-    const kakao = window.kakao;
+    if (!mapInstance.current || !window.naver || status !== 'ready') return;
+    const naver = window.naver;
     const map = mapInstance.current;
 
     const currentPostIds = new Set(posts.map(p => p.id));
-    overlaysRef.current.forEach((overlay, id) => {
+    markersRef.current.forEach((marker, id) => {
       if (!currentPostIds.has(id)) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
+        marker.setMap(null);
+        markersRef.current.delete(id);
       }
     });
 
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
-      const existingOverlay = overlaysRef.current.get(post.id);
+      const existingMarker = markersRef.current.get(post.id);
 
-      if (!existingOverlay || existingOverlay._isViewed !== isViewed) {
-        if (existingOverlay) existingOverlay.setMap(null);
+      if (!existingMarker || existingMarker._isViewed !== isViewed) {
+        if (existingMarker) existingMarker.setMap(null);
 
         const isAd = post.isAd;
         const isPopular = !isAd && post.borderType === 'popular';
         const isInfluencer = !isAd && post.isInfluencer;
         const pinColor = (isInfluencer || isPopular) ? (isViewed ? '#94a3b8' : (isInfluencer ? '#ffff00' : '#ff0000')) : (isAd ? '#3b82f6' : (isViewed ? '#94a3b8' : '#ffffff'));
 
-        const content = document.createElement('div');
-        content.style.cursor = 'pointer';
-        content.innerHTML = `
-          <div style="position: relative; transform: translate(-50%, -100%);">
-            <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${isViewed ? 'viewed' : ''}"
-                 style="width: 56px; height: 56px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${pinColor}; transition: all 0.3s;">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
-                <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(post.lat, post.lng),
+          map: map,
+          icon: {
+            content: `
+              <div style="position: relative; transform: translate(-50%, -100%); cursor: pointer;">
+                <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${isViewed ? 'viewed' : ''}"
+                     style="width: 56px; height: 56px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                            background-color: ${pinColor}; transition: all 0.3s;">
+                  <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
+                    <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                  </div>
+                </div>
+                <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: ${pinColor};"></div>
               </div>
-            </div>
-            <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: ${pinColor};"></div>
-          </div>
-        `;
-        content.onclick = () => onMarkerClick(post);
-
-        const overlay = new kakao.maps.CustomOverlay({
-          position: new kakao.maps.LatLng(post.lat, post.lng),
-          content: content,
-          yAnchor: 1
+            `,
+            anchor: new naver.maps.Point(0, 0),
+          }
         });
-        overlay._isViewed = isViewed;
-        overlay.setMap(map);
-        overlaysRef.current.set(post.id, overlay);
+
+        marker._isViewed = isViewed;
+        naver.maps.Event.addListener(marker, 'click', () => onMarkerClick(post));
+        markersRef.current.set(post.id, marker);
       }
     });
   }, [posts, viewedPostIds, status]);
@@ -220,12 +227,12 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">지도를 불러올 수 없습니다</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">네이버 지도 설정 필요</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            카카오맵 API 키가 유효하지 않거나 네트워크 연결에 문제가 있습니다.
+            네이버 클라우드 플랫폼에서 발급받은 <b>Client ID</b>를 코드에 입력해야 지도가 나타납니다.
           </p>
           <Button 
-            onClick={loadKakaoMap}
+            onClick={loadNaverMap}
             className="bg-green-500 hover:bg-green-600 text-white rounded-xl px-6 gap-2"
           >
             <RefreshCw className="w-4 h-4" /> 다시 시도

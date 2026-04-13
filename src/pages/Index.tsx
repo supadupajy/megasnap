@@ -24,12 +24,11 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 끝에 슬래시를 제거한 순수 도메인 주소
   const currentOrigin = window.location.origin.replace(/\/$/, "");
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentOrigin);
-    showSuccess("슬래시 없는 주소가 복사되었습니다!");
+    showSuccess("주소가 복사되었습니다!");
   };
 
   useEffect(() => {
@@ -151,27 +150,27 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
-      {/* 도메인 등록 가이드 바 */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white py-3 px-4 shadow-2xl">
+      {/* 네이버 도메인 등록 가이드 바 */}
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-blue-600 text-white py-3 px-4 shadow-2xl">
         <div className="max-w-md mx-auto flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
-              <span className="text-xs font-bold">카카오 "유효하지 않은 URL" 해결법</span>
+              <span className="text-xs font-bold">네이버 지도 설정 가이드</span>
             </div>
-            <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white text-red-600 px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
-              <Copy className="w-3 h-3" /> 끝에 / 없이 복사하기
+            <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
+              <Copy className="w-3 h-3" /> 주소 복사하기
             </button>
           </div>
           <p className="text-[10px] leading-tight opacity-90">
-            주소 끝에 <b>슬래시(/)가 있으면 안 됩니다.</b> 아래 박스의 내용을 그대로 복사해서 [사이트 도메인]에 넣으세요.
+            네이버 클라우드 플랫폼의 [AI·Naver API > Web Dynamic Map] 설정에서 아래 주소를 <b>서비스 URL</b>에 등록하세요.
           </p>
           <div className="bg-black/20 p-2 rounded-lg font-mono text-[12px] break-all border border-white/20 text-center font-bold">
             {currentOrigin}
           </div>
           <div className="flex items-center gap-1 text-[9px] opacity-70 mt-1">
             <HelpCircle className="w-3 h-3" />
-            <span>반드시 'JavaScript 키'를 사용 중인지 확인하세요.</span>
+            <span>코드의 NAVER_CLIENT_ID 부분에 발급받은 키를 넣어야 합니다.</span>
           </div>
         </div>
       </div>
