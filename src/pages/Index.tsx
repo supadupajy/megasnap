@@ -74,8 +74,11 @@ const Index = () => {
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
 
-    const influencers = inView.filter(p => p.isInfluencer);
-    const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
+    // 인플루언서 포스팅은 최대 1개
+    const influencers = inView.filter(p => p.isInfluencer).slice(0, 1);
+    // 인기 포스팅은 최대 3개
+    const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer).slice(0, 3);
+    // 일반 포스팅
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
     let finalPosts = [...influencers, ...populars, ...normals.slice(0, 30)];
