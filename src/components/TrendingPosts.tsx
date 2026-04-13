@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Flame } from "lucide-react";
+import { ChevronDown, Flame, ExternalLink, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Post = {
@@ -89,7 +89,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     initial={{ y: 15, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -15, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                     className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                   >
                     {currentPost?.content}
@@ -124,7 +124,28 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="overflow-hidden border-t border-gray-50"
             >
-              <div className="max-h-[320px] overflow-y-auto no-scrollbar overscroll-contain p-2">
+              <div className="max-h-[400px] overflow-y-auto no-scrollbar overscroll-contain p-2 space-y-1">
+                {/* AD Banner: 2x height of standard item */}
+                <div className="relative h-[112px] w-full rounded-xl overflow-hidden mb-2 group cursor-pointer">
+                  <img 
+                    src="https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80" 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    alt="Ad Background"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center px-4">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-sm">AD</span>
+                      <Sparkles className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                    </div>
+                    <h3 className="text-white font-black text-sm leading-tight mb-1">
+                      프리미엄 멤버십<br/>첫 달 0원 혜택!
+                    </h3>
+                    <p className="text-white/70 text-[10px] font-medium flex items-center gap-1">
+                      지금 바로 시작하기 <ExternalLink className="w-2.5 h-2.5" />
+                    </p>
+                  </div>
+                </div>
+
                 {displayPosts.map((post) => (
                   <div
                     key={post.id}
