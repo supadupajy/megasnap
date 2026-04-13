@@ -13,9 +13,10 @@ interface WritePostProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated?: (newPost: any) => void;
+  initialLocation?: { lat: number; lng: number };
 }
 
-const WritePost = ({ isOpen, onClose, onPostCreated }: WritePostProps) => {
+const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePostProps) => {
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
@@ -40,7 +41,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated }: WritePostProps) => {
   };
 
   const handlePost = () => {
-    // 실제 카메라로 찍은 사진이 있더라도, 요청하신 대로 임의의 사진을 섞어서 새 포스팅 생성
+    // 전달받은 좌표가 있으면 해당 좌표를 사용하고, 없으면 기본 좌표(서울시청) 근처에 생성
+    const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
+    const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
+
     const newPost = {
       id: Math.random().toString(36).substr(2, 9),
       isAd: false,
@@ -52,9 +56,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated }: WritePostProps) => {
         avatar: 'https://i.pravatar.cc/150?u=me'
       },
       content: content,
-      location: '서울특별시 중구 세종대로 110',
-      lat: 37.5665 + (Math.random() - 0.5) * 0.01,
-      lng: 126.9780 + (Math.random() - 0.5) * 0.01,
+      location: initialLocation ? '지정된 위치' : '서울특별시 중구 세종대로 110',
+      lat,
+      lng,
       likes: 0,
       image: capturedImage || `https://picsum.photos/seed/${Date.now()}/800/800`,
       isLiked: false,
@@ -138,10 +142,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated }: WritePostProps) => {
                 <MapPin className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">Current Location</p>
-                <p className="text-sm font-bold text-gray-800">서울특별시 중구 세종대로 110</p>
+                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">Location</p>
+                <p className="text-sm font-bold text-gray-800">
+                  {initialLocation 
+                    ? `${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}` 
+                    : '서울특별시 중구 세종대로 110'}
+                </p>
               </div>
-              <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">CHANGE</Button>
+              {!initialLocation && (
+                <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">CHANGE</Button>
+              )}
             </div>
 
             {/* Content Input */}

@@ -22,6 +22,7 @@ const Index = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
@@ -154,6 +155,11 @@ const Index = () => {
     setMapCenter({ lat: 37.5665, lng: 126.9780 });
   };
 
+  const handleMapWriteClick = (location?: { lat: number; lng: number }) => {
+    setPendingLocation(location);
+    setIsWriteOpen(true);
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
@@ -163,7 +169,7 @@ const Index = () => {
           viewedPostIds={viewedPostIds}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
-          onMapWriteClick={() => setIsWriteOpen(true)}
+          onMapWriteClick={handleMapWriteClick}
           center={mapCenter}
         />
       </main>
@@ -205,7 +211,10 @@ const Index = () => {
       </div>
 
       <TimeSlider value={timeValue} onChange={setTimeValue} />
-      <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+      <BottomNav onWriteClick={() => {
+        setPendingLocation(undefined);
+        setIsWriteOpen(true);
+      }} />
 
       {selectedPostId && (
         <PostDetail 
@@ -219,8 +228,12 @@ const Index = () => {
       )}
       <WritePost 
         isOpen={isWriteOpen} 
-        onClose={() => setIsWriteOpen(false)} 
+        onClose={() => {
+          setIsWriteOpen(false);
+          setPendingLocation(undefined);
+        }} 
         onPostCreated={handlePostCreated}
+        initialLocation={pendingLocation}
       />
     </div>
   );

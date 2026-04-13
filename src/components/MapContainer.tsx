@@ -8,7 +8,7 @@ interface MapContainerProps {
   viewedPostIds: Set<any>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
-  onMapWriteClick: () => void;
+  onMapWriteClick: (location?: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
 }
 
@@ -55,7 +55,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
           if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
-      }, 2000);
+      }, 1000); // 1초로 단축
     });
 
     map.addListener('mouseup', () => {
@@ -163,7 +163,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           `;
           div.onclick = (e) => {
             e.stopPropagation();
-            onMapWriteClick();
+            onMapWriteClick({ lat: actionPin.lat, lng: actionPin.lng });
             setActionPin(null);
           };
           this.div = div;
