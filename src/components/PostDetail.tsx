@@ -21,7 +21,7 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0); // 1: down, -1: up, 100: right close, -100: left close
+  const [direction, setDirection] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -29,15 +29,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 상세 화면이 열리거나 포스팅이 바뀔 때 스크롤을 최상단으로 이동
-  useEffect(() => {
-    if (isOpen && scrollAreaRef.current) {
+  // 스크롤 초기화 함수
+  const resetScroll = () => {
+    if (scrollAreaRef.current) {
+      // Radix ScrollArea의 실제 뷰포트 요소를 찾아서 스크롤 초기화
       const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (viewport) {
         viewport.scrollTop = 0;
-      } else {
-        scrollAreaRef.current.scrollTop = 0;
       }
+      // 일반적인 경우도 대비
+      scrollAreaRef.current.scrollTop = 0;
+    }
+  };
+
+  // 포스팅이 변경될 때마다 스크롤 초기화 (애니메이션 타이밍 고려)
+  useEffect(() => {
+    if (isOpen) {
+      // 즉시 초기화 시도
+      resetScroll();
+      
+      // 브라우저 레이아웃 업데이트 후 다시 한 번 확실히 초기화
+      const rafId = requestAnimationFrame(() => {
+        resetScroll();
+      });
+      
+      return () => cancelAnimationFrame(rafId);
     }
   }, [currentIndex, isOpen]);
 
