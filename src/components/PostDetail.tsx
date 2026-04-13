@@ -27,7 +27,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const dragControls = useDragControls();
   
   const dragX = useMotionValue(0);
-  // -200px 이동 시 투명도가 0이 되도록 설정
+  // -200px 이동 시 투명도가 0이 되도록 설정 (시각적 피드백용)
   const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
@@ -36,17 +36,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const others = posts.filter((_, idx) => idx !== initialIndex);
     return [selected, ...others];
   }, [isOpen, posts, initialIndex]);
-
-  // 투명도가 0이 되면 즉시 닫기 위한 리스너
-  useEffect(() => {
-    const unsubscribe = dragX.onChange((latest) => {
-      if (latest <= -200 && !isClosing) {
-        setIsClosing(true);
-        onClose();
-      }
-    });
-    return () => unsubscribe();
-  }, [dragX, isClosing, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,14 +68,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     // 1. 가로 스와이프 판정 (닫기)
     const isHorizontal = Math.abs(offset.x) > Math.abs(offset.y);
     if (isHorizontal) {
-      // 화면의 1/3 이상 밀었거나, 왼쪽으로 빠르게 튕겼을 때만 닫기
-      if (offset.x < -screenWidth / 3 || velocity.x < -500) {
+      // 화면의 1/4 이상 밀었거나, 왼쪽으로 빠르게 튕겼을 때 닫기 시작
+      if (offset.x < -screenWidth / 4 || velocity.x < -400) {
         setDirection(0);
-        setIsClosing(true);
-        onClose();
-      } else {
-        // 임계값을 넘지 못하면 dragConstraints에 의해 자동으로 0으로 복구됨
-        // 추가적인 애니메이션 처리가 필요하다면 여기서 dragX.set(0) 등을 호출할 수 있음
+        setIsClosing(true); // AnimatePresence의 exit 애니메이션을 트리거함
       }
       return;
     }
@@ -96,14 +81,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const velocityThreshold = 150;
 
     if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-      // 위로 스와이프 -> 다음 포스트
       if (currentIndex < displayPosts.length - 1) {
         setDirection(1);
         setCurrentIndex(prev => prev + 1);
         dragX.set(0);
       }
     } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-      // 아래로 스와이프 -> 이전 포스트
       if (currentIndex > 0) {
         setDirection(-1);
         setCurrentIndex(prev => prev - 1);
@@ -133,14 +116,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
+      // direction이 0이면 왼쪽으로 날아감 (닫기), 그 외엔 상하로 날아감 (전환)
       x: direction === 0 ? -screenWidth : 0,
       y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.9,
       transition: {
         x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
         y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.1 }
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -192,6 +176,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
           <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+            // 애니메이션이 완전히 끝난 후에만 부모의 onClose를 호출하여 컴포넌트를 제거함
             if (isClosing) onClose();
           }}>
             {!isClosing && (
