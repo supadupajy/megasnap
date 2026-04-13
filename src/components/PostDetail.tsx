@@ -29,6 +29,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
+  // 상세 화면이 열리거나 포스팅이 바뀔 때 스크롤을 최상단으로 이동
+  useEffect(() => {
+    if (isOpen && scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = 0;
+      } else {
+        scrollAreaRef.current.scrollTop = 0;
+      }
+    }
+  }, [currentIndex, isOpen]);
+
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -204,7 +216,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     <div 
                       className="flex flex-col"
                       onPointerDown={(e) => {
-                        // 댓글이 닫혀있을 때 버튼이 아닌 영역을 터치하면 드래그 시작
                         if (!showComments) {
                           const target = e.target as HTMLElement;
                           if (!target.closest('button') && !target.closest('a')) {
