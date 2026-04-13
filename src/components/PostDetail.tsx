@@ -183,10 +183,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
-              className={cn(
-                "absolute w-full rounded-full",
-                isInfluencer ? "bg-yellow-400 shadow-[0_0_20px_rgba(255,255,0,1)]" : "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]"
-              )}
+              className="absolute w-full rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]"
               initial={false}
               animate={{ 
                 height: `${Math.max(10, 100 / posts.length)}%`,
