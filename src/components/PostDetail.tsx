@@ -98,7 +98,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 가로 스와이프 (닫기)
     if (absX > absY && (absX > 80 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
@@ -108,7 +107,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 70;
     const velThreshold = 400;
 
-    // 세로 스와이프 (포스트 전환)
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -124,7 +122,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  // 애니메이션 변형: scale을 제거하여 갈라짐 현상 방지
   const variants = {
     enter: (direction: number) => ({
       y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
@@ -248,7 +245,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
-                  isInfluencer && "influencer-border-container animate-influencer-float",
+                  isInfluencer && "influencer-border-container", // 상세 화면에서는 animate-influencer-float 제거 (충돌 방지)
                   isPopular && "popular-border-container",
                   isAd && "p-[4px] bg-blue-500"
                 )}
