@@ -9,6 +9,7 @@ import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, Chev
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface PostDetailProps {
   posts: any[];
@@ -19,6 +20,7 @@ interface PostDetailProps {
 }
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
@@ -67,6 +69,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
     target.src = `https://picsum.photos/seed/${post.id}/800/800`;
+  };
+
+  const handleUserClick = () => {
+    onClose();
+    navigate(`/profile/${post.user.id}`);
   };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
@@ -253,7 +260,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
                       <div className="p-6 sm:p-8">
                         <div className="flex items-center gap-4 mb-6">
-                          <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
+                          <div 
+                            className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            onClick={handleUserClick}
+                          >
                             <img 
                               src={post.user.avatar} 
                               alt="" 
@@ -262,7 +272,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-gray-900 text-base leading-none truncate">{post.user.name}</p>
+                              <p 
+                                className="font-bold text-gray-900 text-base leading-none truncate cursor-pointer hover:text-green-600 transition-colors"
+                                onClick={handleUserClick}
+                              >
+                                {post.user.name}
+                              </p>
                               {isAd && (
                                 <a
                                   href="https://s.baemin.com/t3000fBqlbHGL"
