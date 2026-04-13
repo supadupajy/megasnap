@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
@@ -13,6 +14,7 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
 const Index = () => {
+  const location = useLocation();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -25,7 +27,12 @@ const Index = () => {
 
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 40));
-  }, []);
+    
+    // Check for location state from Popular page
+    if (location.state?.center) {
+      setMapCenter(location.state.center);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (mapData?.bounds) {
@@ -53,7 +60,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 현재 영역 및 시간 내의 모든 포스트 필터링
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -61,22 +67,17 @@ const Index = () => {
       return isWithinBounds && isWithinTime;
     });
 
-    // 2. 카테고리별 분리
     const influencers = inView.filter(p => p.isInfluencer);
     const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
-    // 3. 개수 제한 적용 (인플루언서 1개, 인기 3개)
     const selectedInfluencer = influencers.slice(0, 1);
     const selectedPopulars = populars.slice(0, 3);
-    
-    // 4. 전체 개수가 25~30개가 되도록 일반 포스트 추가
-    const remainingCount = 26; // 30 - 1 - 3
+    const remainingCount = 26;
     const selectedNormals = normals.slice(0, remainingCount);
 
     let finalPosts = [...selectedInfluencer, ...selectedPopulars, ...selectedNormals];
 
-    // 5. 선택된 포스트가 있다면 반드시 포함 (중복 제거)
     if (selectedPostId) {
       const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
       if (!isAlreadyIncluded) {

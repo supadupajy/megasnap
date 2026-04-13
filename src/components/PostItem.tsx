@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,12 +15,15 @@ interface PostItemProps {
   location: string;
   likes: number;
   image: string;
+  lat?: number;
+  lng?: number;
   isLiked?: boolean;
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
   onLikeToggle?: (e: React.MouseEvent) => void;
+  onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
 }
 
 const PostItem = ({ 
@@ -29,12 +32,15 @@ const PostItem = ({
   location, 
   likes, 
   image, 
+  lat,
+  lng,
   isLiked, 
   isAd, 
   isGif, 
   isInfluencer, 
   borderType = 'none',
-  onLikeToggle 
+  onLikeToggle,
+  onLocationClick
 }: PostItemProps) => {
   const navigate = useNavigate();
   const isPopular = !isAd && borderType === 'popular';
@@ -47,6 +53,13 @@ const PostItem = ({
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/profile/${user.id}`);
+  };
+
+  const handleLocationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lat !== undefined && lng !== undefined && onLocationClick) {
+      onLocationClick(e, lat, lng);
+    }
   };
 
   return (
@@ -71,9 +84,19 @@ const PostItem = ({
             </div>
           </div>
         </div>
-        <button className="text-gray-400" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {lat !== undefined && lng !== undefined && (
+            <button 
+              onClick={handleLocationClick}
+              className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 active:scale-90 transition-all"
+            >
+              <Navigation className="w-4 h-4 fill-green-600" />
+            </button>
+          )}
+          <button className="text-gray-400" onClick={(e) => e.stopPropagation()}>
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4">

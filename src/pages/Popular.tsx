@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
@@ -11,6 +12,7 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
 const Popular = () => {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
@@ -34,6 +36,10 @@ const Popular = () => {
     }));
   }, []);
 
+  const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
+    navigate('/', { state: { center: { lat, lng } } });
+  }, [navigate]);
+
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return posts;
     const selected = posts.find(p => p.id === selectedPostId);
@@ -55,11 +61,14 @@ const Popular = () => {
                 location={post.location}
                 likes={post.likes}
                 image={post.image}
+                lat={post.lat}
+                lng={post.lng}
                 isLiked={post.isLiked}
                 isGif={post.isGif}
                 isInfluencer={post.isInfluencer}
                 borderType={post.borderType}
                 onLikeToggle={() => handleLikeToggle(post.id)}
+                onLocationClick={handleLocationClick}
               />
             </div>
           ))}
