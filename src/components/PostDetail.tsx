@@ -47,6 +47,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen && currentPost && onViewPost) {
       onViewPost(currentPost.id);
     }
+    // 포스트가 바뀌면 댓글창은 항상 닫힌 상태로 시작
     setShowComments(false);
   }, [currentIndex, isOpen, onViewPost]);
 
@@ -64,7 +65,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 스와이프 시 닫기 (어느 방향이든)
+    // 좌우 스와이프 시 닫기
     if (absX > absY && absX > 60) {
       if (absX > 120 || Math.abs(velocity.x) > 400) {
         setDirection(offset.x > 0 ? 100 : -100);
@@ -182,7 +183,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 exit="exit"
                 drag={true}
                 dragControls={dragControls}
-                dragListener={false}
+                dragListener={!showComments} // 댓글이 닫혀있을 때만 전체 영역 드래그 리스너 활성화
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
@@ -194,32 +195,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   isPopular && "animate-popular-glow",
                   isInfluencer && "animate-influencer-glow"
                 )}
-                onPointerDown={(e) => {
-                  // 댓글이 닫혀있을 때는 카드 전체가 드래그 핸들이 됨 (버튼 제외)
-                  if (!showComments) {
-                    const target = e.target as HTMLElement;
-                    if (!target.closest('button') && !target.closest('a')) {
-                      dragControls.start(e);
-                    }
-                  }
-                }}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
                   <ScrollArea 
                     ref={scrollAreaRef} 
                     className={cn(
                       "flex-1 h-full no-scrollbar",
-                      !showComments && "touch-none" // 댓글이 없을 때는 네이티브 스크롤 방지하여 스와이프 우선순위 높임
+                      !showComments && "touch-none pointer-events-none" // 댓글이 없을 때는 스크롤 및 내부 터치 이벤트 차단 (스와이프 우선)
                     )}
-                    onPointerDown={(e) => {
-                      // 댓글이 열려있을 때도 버튼이 아닌 영역은 드래그 가능하게 설정
-                      if (showComments) {
-                        const target = e.target as HTMLElement;
-                        if (!target.closest('.radix-scroll-area-scrollbar') && !target.closest('button') && !target.closest('a')) {
-                          dragControls.start(e);
-                        }
-                      }
-                    }}
                   >
                     <div className="flex flex-col">
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
@@ -285,20 +268,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                             <span className="text-sm font-bold">{post.likes}</span>
                           </button>
                           <button 
-                            onClick={() => setShowComments(!showComments)}
-                            className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowComments(!showComments);
+                            }}
+                            className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition-colors pointer-events-auto"
                           >
                             <MessageCircle className="w-6 h-6" />
                             <span className="text-sm font-bold">12</span>
                           </button>
-                          <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
+                          <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors pointer-events-auto">
                             <Share2 className="w-6 h-6" />
                           </button>
                         </div>
 
                         <button 
-                          onClick={() => setShowComments(!showComments)}
-                          className="w-full py-4 flex items-center justify-between border-t border-gray-100 group"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowComments(!showComments);
+                          }}
+                          className="w-full py-4 flex items-center justify-between border-t border-gray-100 group pointer-events-auto"
                         >
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
                             {showComments ? 'Hide Comments' : 'Recent Comments'}
@@ -332,9 +321,37 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     <ScrollBar className="hidden" />
                   </ScrollArea>
                   
+                  {/* 댓글이 닫혀있을 때도 버튼들은 클릭 가능해야 하므로 별도 레이어 처리 */}
+                  {!showComments && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute bottom-20 left-0 right-0 p-6 sm:p-8 flex items-center gap-6">
+                        <button className="pointer-events-auto flex items-center gap-2 text-gray-600">
+                          <Heart className={cn("w-6 h-6", post.isLiked ? 'fill-red-500 text-red-500' : '')} />
+                          <span className="text-sm font-bold">{post.likes}</span>
+                        </button>
+                        <button 
+                          onClick={() => setShowComments(true)}
+                          className="pointer-events-auto flex items-center gap-2 text-gray-600"
+                        >
+                          <MessageCircle className="w-6 h-6" />
+                          <span className="text-sm font-bold">12</span>
+                        </button>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-20 flex items-center justify-center">
+                        <button 
+                          onClick={() => setShowComments(true)}
+                          className="pointer-events-auto w-full h-full flex items-center justify-between px-6 sm:px-8 border-t border-gray-100 bg-white/50"
+                        >
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
+                          <ChevronDown className="w-4 h-4 text-gray-300" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
-                    className="h-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                    className="h-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10"
                   >
                     <Move className="w-5 h-5 text-gray-300 mb-2 animate-pulse" />
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
