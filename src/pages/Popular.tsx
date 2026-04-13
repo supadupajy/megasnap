@@ -38,7 +38,7 @@ const Popular = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);
-    navigate('/', { state: { center: { lat, lng }, post } });
+    navigate('/map', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
 
   const detailPosts = useMemo(() => {
@@ -87,7 +87,7 @@ const Popular = () => {
           onClose={() => setSelectedPostId(null)} 
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
-            navigate('/', { state: { center: { lat, lng } } });
+            navigate('/map', { state: { center: { lat, lng } } });
           }}
         />
       )}

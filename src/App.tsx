@@ -40,8 +40,8 @@ const App = () => {
           ) : (
             <BrowserRouter key="app">
               <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/popular" element={<Popular />} />
+                <Route path="/" element={<Popular />} />
+                <Route path="/map" element={<Index />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/messages" element={<Messages />} />

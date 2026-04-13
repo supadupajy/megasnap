@@ -21,22 +21,22 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         onClick={() => navigate('/')}
         className={cn(
           "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
-          isActive('/') ? "text-indigo-600" : "text-gray-400"
+          isActive('/') ? "text-orange-500" : "text-gray-400"
         )}
       >
-        <Map className={cn("w-6 h-6", isActive('/') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">지도</span>
+        <Flame className={cn("w-6 h-6", isActive('/') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">HOT</span>
       </button>
 
       <button 
-        onClick={() => navigate('/popular')}
+        onClick={() => navigate('/map')}
         className={cn(
           "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
-          isActive('/popular') ? "text-orange-500" : "text-gray-400"
+          isActive('/map') ? "text-indigo-600" : "text-gray-400"
         )}
       >
-        <Flame className={cn("w-6 h-6", isActive('/popular') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">HOT</span>
+        <Map className={cn("w-6 h-6", isActive('/map') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">지도</span>
       </button>
       
       <div className="relative -top-8">
