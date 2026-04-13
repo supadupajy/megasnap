@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy, ExternalLink } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { showSuccess } from '@/utils/toast';
@@ -24,8 +24,9 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 현재 도메인 확인용
+  // 현재 도메인 확인용 (localhost가 나오면 새 탭에서 열기를 권장)
   const currentOrigin = window.location.origin;
+  const isLocalhost = currentOrigin.includes('localhost');
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentOrigin);
@@ -152,11 +153,23 @@ const Index = () => {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       {/* URL 확인용 임시 바 */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-black text-white text-[10px] py-1 px-4 flex items-center justify-between">
-        <span className="truncate mr-2">카카오 등록용 주소: {currentOrigin}</span>
-        <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded">
-          <Copy className="w-3 h-3" /> 복사
-        </button>
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-black text-white text-[10px] py-2 px-4 flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-yellow-400">
+            {isLocalhost ? "⚠️ localhost 대신 실제 도메인을 등록해야 합니다." : "✅ 아래 주소를 카카오에 등록하세요."}
+          </span>
+          <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded hover:bg-white/30 transition-colors">
+            <Copy className="w-3 h-3" /> 복사
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="truncate opacity-80">{currentOrigin}</span>
+          {isLocalhost && (
+            <span className="text-[9px] opacity-60 flex items-center gap-1">
+              우측 상단 <ExternalLink className="w-2.5 h-2.5" /> 아이콘 클릭 권장
+            </span>
+          )}
+        </div>
       </div>
 
       <Header />
