@@ -20,27 +20,35 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
-  const [address, setAddress] = useState<string>('서울특별시 중구 세종대로 110');
+  const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
   useEffect(() => {
-    if (isOpen && initialLocation && window.google) {
-      setIsLoadingAddress(true);
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode(
-        { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-        (results, status) => {
-          if (status === "OK" && results && results[0]) {
-            // 전체 주소에서 너무 상세한 부분은 제외하고 적절한 길이로 자름
-            setAddress(results[0].formatted_address);
-          } else {
-            setAddress(`${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+    if (isOpen) {
+      if (initialLocation && window.google) {
+        setIsLoadingAddress(true);
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode(
+          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
+          (results, status) => {
+            if (status === "OK" && results && results[0]) {
+              // 구글 맵에서 가져온 실제 주소 설정
+              setAddress(results[0].formatted_address);
+            } else {
+              // 실패 시 좌표라도 예쁘게 표시
+              setAddress(`${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+            }
+            setIsLoadingAddress(false);
           }
-          setIsLoadingAddress(false);
-        }
-      );
-    } else if (!initialLocation) {
-      setAddress('서울특별시 중구 세종대로 110');
+        );
+      } else if (!initialLocation) {
+        setAddress('서울특별시 중구 세종대로 110');
+        setIsLoadingAddress(false);
+      }
+    } else {
+      // 닫힐 때 초기화
+      setAddress('');
+      setIsLoadingAddress(false);
     }
   }, [isOpen, initialLocation]);
 
@@ -78,7 +86,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         avatar: 'https://i.pravatar.cc/150?u=me'
       },
       content: content,
-      location: address,
+      location: address, // 변환된 주소 상태값을 직접 사용
       lat,
       lng,
       likes: 0,
@@ -88,6 +96,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       borderType: 'none'
     };
 
+    // 폭죽 효과
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
@@ -162,7 +171,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                     <span className="text-xs text-gray-400">주소를 불러오는 중...</span>
                   </div>
                 ) : (
-                  <p className="text-sm font-bold text-gray-800 truncate">{address}</p>
+                  <p className="text-sm font-bold text-gray-800 truncate">{address || '위치 정보 없음'}</p>
                 )}
               </div>
               {!initialLocation && (
