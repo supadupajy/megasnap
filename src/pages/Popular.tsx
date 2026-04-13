@@ -15,7 +15,14 @@ const Popular = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   
   const posts = useMemo(() => createMockPosts(37.5665, 126.9780, 30).sort((a, b) => b.likes - a.likes), []);
-  const selectedIndex = useMemo(() => posts.findIndex(p => p.id === selectedPostId), [selectedPostId, posts]);
+  
+  // 선택된 포스팅이 리스트의 맨 처음에 오도록 재정렬
+  const detailPosts = useMemo(() => {
+    if (!selectedPostId) return posts;
+    const selected = posts.find(p => p.id === selectedPostId);
+    const others = posts.filter(p => p.id !== selectedPostId);
+    return selected ? [selected, ...others] : posts;
+  }, [posts, selectedPostId]);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -41,8 +48,8 @@ const Popular = () => {
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       {selectedPostId && (
         <PostDetail 
-          posts={posts} 
-          initialIndex={selectedIndex} 
+          posts={detailPosts} 
+          initialIndex={0} // 항상 0번(최상단)에서 시작
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
         />

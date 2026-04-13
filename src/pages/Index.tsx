@@ -57,16 +57,20 @@ const Index = () => {
     });
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
+  // 상세 화면용 포스팅 리스트: 선택된 포스팅이 무조건 0번 인덱스(최상단)에 오도록 재정렬
+  const detailPosts = useMemo(() => {
+    if (!selectedPostId) return filteredPosts;
+    const selected = filteredPosts.find(p => p.id === selectedPostId);
+    const others = filteredPosts.filter(p => p.id !== selectedPostId);
+    return selected ? [selected, ...others] : filteredPosts;
+  }, [filteredPosts, selectedPostId]);
+
   const trendingPosts = useMemo(() => {
     return [...allPosts]
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 20)
       .map((post, index) => ({ ...post, rank: index + 1 }));
   }, [allPosts]);
-
-  const selectedIndex = useMemo(() => 
-    filteredPosts.findIndex(p => p.id === selectedPostId), 
-  [selectedPostId, filteredPosts]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -85,7 +89,6 @@ const Index = () => {
     setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
 
-  // 무한 루프 방지를 위해 useCallback 사용
   const handleViewPost = useCallback((id: string) => {
     setViewedPostIds(prev => {
       if (prev.has(id)) return prev;
@@ -141,8 +144,8 @@ const Index = () => {
 
       {selectedPostId && (
         <PostDetail 
-          posts={filteredPosts}
-          initialIndex={selectedIndex}
+          posts={detailPosts}
+          initialIndex={0} // 재정렬했으므로 항상 0번부터 시작
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}
