@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -26,36 +26,61 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
+  // 이미 포스팅이 생성된 타일(격자)을 추적
+  const populatedTiles = useRef<Set<string>>(new Set());
+  const TILE_SIZE = 0.02; // 약 2km 단위의 그리드
+
+  // 초기 데이터 설정
   useEffect(() => {
-    const initialPosts = createMockPosts(37.5665, 126.9780, 60);
-    
     if (location.state?.post) {
       const incomingPost = location.state.post;
-      setAllPosts([incomingPost, ...initialPosts]);
+      setAllPosts(prev => [incomingPost, ...prev]);
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
+    } else if (location.state?.center) {
+      setMapCenter(location.state.center);
     } else {
-      setAllPosts(initialPosts);
-      if (location.state?.center) {
-        setMapCenter(location.state.center);
-      }
+      // 기본 위치 (서울)
+      setMapCenter({ lat: 37.5665, lng: 126.9780 });
     }
   }, [location.state]);
 
+  // 지도 이동에 따른 그리드 기반 포스팅 생성
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
-      const visibleCount = allPosts.filter(post => 
-        post.lat >= sw.lat && post.lat <= ne.lat &&
-        post.lng >= sw.lng && post.lng <= ne.lng
-      ).length;
+      
+      // 현재 화면에 보이는 타일 범위 계산 (버퍼 포함)
+      const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
+      const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
+      const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
+      const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
-      if (visibleCount < 15) {
-        const centerLat = (ne.lat + sw.lat) / 2;
-        const centerLng = (ne.lng + sw.lng) / 2;
+      const newPosts: Post[] = [];
+      let tilesAdded = false;
+
+      for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
+        for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
+          const tileKey = `${latIdx},${lngIdx}`;
+          if (!populatedTiles.current.has(tileKey)) {
+            populatedTiles.current.add(tileKey);
+            tilesAdded = true;
+            
+            // 타일의 중심 좌표 계산
+            const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
+            const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
+            
+            // 해당 타일 영역에 포스트 생성 (타일당 5~8개로 밀도 조절)
+            const tilePosts = createMockPosts(tileCenterLat, tileCenterLng, 6);
+            newPosts.push(...tilePosts);
+          }
+        }
+      }
+
+      if (tilesAdded) {
         setAllPosts(prev => {
-          const newPosts = createMockPosts(centerLat, centerLng, 20);
           const combined = [...prev, ...newPosts];
-          return combined.length > 200 ? combined.slice(-200) : combined;
+          // 성능을 위해 최대 400개까지만 유지
+          return combined.length > 400 ? combined.slice(-400) : combined;
         });
       }
     }
@@ -124,10 +149,14 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    // 타일 기록 초기화 후 현재 위치에서 다시 생성
+    populatedTiles.current.clear();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       setTimeout(() => {
-        setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 50));
+        const centerLat = (ne.lat + sw.lat) / 2;
+        const centerLng = (ne.lng + sw.lng) / 2;
+        setAllPosts(createMockPosts(centerLat, centerLng, 40));
         setIsRefreshing(false);
       }, 600);
     }
