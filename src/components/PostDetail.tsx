@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen && currentPost && onViewPost) {
       onViewPost(currentPost.id);
     }
-    // 포스트가 바뀌면 댓글창을 닫습니다.
     setShowComments(false);
   }, [currentIndex, isOpen, onViewPost]);
 
@@ -65,7 +64,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 오른쪽으로 스와이프 시 닫기 (iOS 스타일)
     if (absX > absY && offset.x < -60) {
       if (offset.x < -120 || velocity.x < -400) {
         setDirection(0);
@@ -77,7 +75,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const threshold = 70;
     const velThreshold = 400;
 
-    // 상하 스와이프로 포스트 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -140,7 +137,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           }
         `}</style>
         
-        {/* Close Button */}
         <div className="absolute top-6 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -152,7 +148,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        {/* Progress Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -203,14 +198,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     className="flex-1 h-full no-scrollbar"
                     onPointerDown={(e) => {
                       const target = e.target as HTMLElement;
-                      // 스크롤바나 버튼이 아닌 영역에서만 드래그 시작
                       if (!target.closest('.radix-scroll-area-scrollbar') && !target.closest('button') && !target.closest('a')) {
                         dragControls.start(e);
                       }
                     }}
                   >
                     <div className="flex flex-col">
-                      {/* Image Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <img 
                           src={post.image} 
@@ -234,7 +227,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                         )}
                       </div>
 
-                      {/* Content Section */}
                       <div className="p-6 sm:p-8">
                         <div className="flex items-center gap-4 mb-6">
                           <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
@@ -269,7 +261,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           {post.content}
                         </p>
 
-                        {/* Interaction Bar */}
                         <div className="flex items-center gap-6 mb-8">
                           <button className="flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors group">
                             <Heart className={cn("w-6 h-6 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : '')} />
@@ -287,7 +278,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           </button>
                         </div>
 
-                        {/* Comments Toggle Button */}
                         <button 
                           onClick={() => setShowComments(!showComments)}
                           className="w-full py-4 flex items-center justify-between border-t border-gray-100 group"
@@ -298,7 +288,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                           {showComments ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
                         </button>
 
-                        {/* Comments List */}
                         <AnimatePresence>
                           {showComments && (
                             <motion.div 
@@ -328,10 +317,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   {/* Swipe Hint Footer */}
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
-                    className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                    className="h-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
                   >
-                    <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-2" />
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Swipe up/down to explore</p>
+                    <Move className="w-5 h-5 text-gray-300 mb-2 animate-pulse" />
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
                   </div>
                 </div>
               </motion.div>
