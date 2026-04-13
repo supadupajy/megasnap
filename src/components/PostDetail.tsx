@@ -140,9 +140,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   };
 
   const getBorderColor = () => {
-    if (isInfluencer) return "#ff0000";
+    if (isInfluencer) return "#ffff00";
     if (isAd) return "#3b82f6";
-    if (isPopular) return "#ccff00";
+    if (isPopular) return "#ff0000";
     return "transparent";
   };
 
@@ -176,7 +176,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             <motion.div 
               className={cn(
                 "absolute w-full rounded-full",
-                isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
+                isInfluencer ? "bg-yellow-400 shadow-[0_0_20px_rgba(255,255,0,1)]" : "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]"
               )}
               initial={false}
               animate={{ 
@@ -247,13 +247,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             AD
                           </div>
                         ) : isInfluencer ? (
-                          <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-                            <Star className="w-3.5 h-3.5 fill-white" />
+                          <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                            <Star className="w-3.5 h-3.5 fill-black" />
                             INFLUENCER
                           </div>
                         ) : isPopular && (
-                          <div className="absolute top-6 left-6 z-20 bg-[#ccff00] text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-                            <Flame className="w-3.5 h-3.5 fill-black" />
+                          <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                            <Flame className="w-3.5 h-3.5 fill-white" />
                             HOT
                           </div>
                         )}

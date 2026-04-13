@@ -73,20 +73,21 @@
   }
 }
 
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem; /* 20px */
-  background-image: conic-gradient(from var(--angle), #ccff00, #ffff00, #ccff00, #ffff00, #ccff00);
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
   animation: rotate-border 2s linear infinite;
 }
 
-/* Influencer Red Gradient Border */
+/* Influencer Yellow Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
-  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
+  background-image: conic-gradient(from var(--angle), #ffff00, #fffb00, #ffff00, #fffb00, #ffff00);
   animation: rotate-border 2s linear infinite;
 }
 
@@ -96,16 +97,16 @@
   animation: rotate-border 3s linear infinite;
 }
 
-/* Popular Fluorescent Glow Animation */
+/* HOT Red Glow Animation */
 @keyframes popular-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(204, 255, 0, 0.7)); }
-  50% { filter: drop-shadow(0 0 20px rgba(204, 255, 0, 1)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
 }
 
-/* Influencer Glow Animation */
+/* Influencer Yellow Glow Animation */
 @keyframes influencer-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.5)); }
-  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.5)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)); }
 }
 
 /* Brighter White Glow Animation for Viewed Popular Posts */

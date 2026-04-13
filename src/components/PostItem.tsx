@@ -79,9 +79,9 @@ const PostItem = ({
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isInfluencer ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/10" : (
+          isInfluencer ? "p-[4px] bg-yellow-400 shadow-lg shadow-yellow-400/10" : (
             isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-              isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
+              isPopular ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/20" : (
                 borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
                   borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
                 )
@@ -99,8 +99,8 @@ const PostItem = ({
           </div>
           
           {isInfluencer ? (
-            <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-              <Star className="w-3.5 h-3.5 fill-white" />
+            <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+              <Star className="w-3.5 h-3.5 fill-black" />
               INFLUENCER
             </div>
           ) : isAd ? (
@@ -108,8 +108,8 @@ const PostItem = ({
               AD
             </div>
           ) : isPopular && (
-            <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-              <Flame className="w-3.5 h-3.5 fill-black" />
+            <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+              <Flame className="w-3.5 h-3.5 fill-white" />
               HOT
             </div>
           )}

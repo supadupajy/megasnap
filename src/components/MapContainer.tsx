@@ -221,9 +221,10 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isGif = this.post.isGif;
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
-        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
-        const pinColor = isInfluencer ? '#ff0000' : (this.isViewed ? '#94a3b8' : (isPopular ? '#ccff00' : borderColor));
+        // HOT: 빨강, Influencer: 노랑
+        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        const pinColor = isInfluencer ? '#ffff00' : (this.isViewed ? '#94a3b8' : (isPopular ? '#ff0000' : borderColor));
 
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
