@@ -186,7 +186,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
     return (
       <div className={cn(
-        "absolute top-6 right-6 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        "absolute bottom-4 right-4 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
         bgColor
       )}>
         <Icon className={iconClass} />
@@ -272,7 +272,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
-                          if (!target.closest('button') && !target.closest('a') && !target.closest('.image-slider')) {
+                          // 이미지 슬라이더 내부가 아닐 때만 드래그 시작
+                          if (!target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
                         }
@@ -305,7 +306,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           ))}
                         </div>
 
-                        {/* Category Icon Badge */}
+                        {/* Category Icon Badge - Moved to bottom right */}
                         {renderCategoryIcon()}
 
                         {images.length > 1 && (
