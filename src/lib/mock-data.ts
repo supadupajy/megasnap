@@ -104,6 +104,7 @@ export const createMockUser = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
+  let foodCount = 0;
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
@@ -116,14 +117,23 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let mainImage = GENERAL_IMAGES[Math.floor(Math.random() * GENERAL_IMAGES.length)];
+    let category: Post['category'] = 'none';
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       mainImage = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+      category = 'food';
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
       mainImage = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+      category = 'accident';
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
       mainImage = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+      category = 'accident';
+    } else if (content.includes('점심') || content.includes('커피') || (foodCount < 6 && Math.random() > 0.7)) {
+      category = 'food';
+      foodCount++;
+    } else if (content.includes('명소') || content.includes('여행지') || content.includes('산책')) {
+      category = 'place';
     } else if (isGif) {
       mainImage = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
@@ -148,6 +158,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isAd,
       isGif,
       isInfluencer,
+      category,
       user: createMockUser(isAd ? "sponsored" : id),
       content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],

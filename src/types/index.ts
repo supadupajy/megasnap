@@ -16,6 +16,7 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
+  category?: 'food' | 'accident' | 'place' | 'none'; // 카테고리 필드 추가
   user: User;
   content: string;
   location: string;
@@ -24,7 +25,7 @@ export interface Post {
   likes: number;
   image: string;
   images?: string[];
-  adImageIndex?: number; // 광고 이미지가 위치한 인덱스
+  adImageIndex?: number;
   isLiked: boolean;
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';

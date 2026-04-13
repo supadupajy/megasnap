@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, Trees } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
@@ -86,6 +86,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
+  const category = post.category || 'none';
 
   const handleUserClick = () => {
     onClose();
@@ -157,6 +158,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return "#3b82f6";
     if (isPopular) return "#ff0000";
     return "transparent";
+  };
+
+  const renderCategoryIcon = () => {
+    if (category === 'none') return null;
+    
+    const iconClass = "w-4 h-4 text-white";
+    let Icon = null;
+    let bgColor = "";
+
+    switch (category) {
+      case 'food':
+        Icon = Utensils;
+        bgColor = "bg-orange-500";
+        break;
+      case 'accident':
+        Icon = Car;
+        bgColor = "bg-red-600";
+        break;
+      case 'place':
+        Icon = Trees;
+        bgColor = "bg-green-600";
+        break;
+    }
+
+    if (!Icon) return null;
+
+    return (
+      <div className={cn(
+        "absolute top-6 right-6 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        bgColor
+      )}>
+        <Icon className={iconClass} />
+      </div>
+    );
   };
 
   const lastComment = MOCK_COMMENTS[MOCK_COMMENTS.length - 1];
@@ -269,6 +304,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </div>
                           ))}
                         </div>
+
+                        {/* Category Icon Badge */}
+                        {renderCategoryIcon()}
 
                         {images.length > 1 && (
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">

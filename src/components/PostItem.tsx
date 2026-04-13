@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, Trees } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +23,7 @@ interface PostItemProps {
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
+  category?: 'food' | 'accident' | 'place' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
@@ -42,6 +43,7 @@ const PostItem = ({
   isAd, 
   isGif, 
   isInfluencer, 
+  category = 'none',
   borderType = 'none',
   onLikeToggle,
   onLocationClick
@@ -74,6 +76,40 @@ const PostItem = ({
     if (lat !== undefined && lng !== undefined && onLocationClick) {
       onLocationClick(e, lat, lng);
     }
+  };
+
+  const renderCategoryIcon = () => {
+    if (category === 'none') return null;
+    
+    const iconClass = "w-3.5 h-3.5 text-white";
+    let Icon = null;
+    let bgColor = "";
+
+    switch (category) {
+      case 'food':
+        Icon = Utensils;
+        bgColor = "bg-orange-500";
+        break;
+      case 'accident':
+        Icon = Car;
+        bgColor = "bg-red-600";
+        break;
+      case 'place':
+        Icon = Trees;
+        bgColor = "bg-green-600";
+        break;
+    }
+
+    if (!Icon) return null;
+
+    return (
+      <div className={cn(
+        "absolute top-4 right-4 z-30 w-7 h-7 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        bgColor
+      )}>
+        <Icon className={iconClass} />
+      </div>
+    );
   };
 
   return (
@@ -140,6 +176,9 @@ const PostItem = ({
                 </div>
               ))}
             </div>
+
+            {/* Category Icon Badge */}
+            {renderCategoryIcon()}
 
             {/* Pagination Dots */}
             {displayImages.length > 1 && (
