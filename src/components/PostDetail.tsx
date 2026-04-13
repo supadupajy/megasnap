@@ -98,6 +98,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
+    // 가로 스와이프 (닫기)
     if (absX > absY && (absX > 80 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
@@ -107,6 +108,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 70;
     const velThreshold = 400;
 
+    // 세로 스와이프 (포스트 전환)
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -122,33 +124,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
+  // 애니메이션 변형: scale을 제거하여 갈라짐 현상 방지
   const variants = {
     enter: (direction: number) => ({
       y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
       x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
-      scale: 0.95,
     }),
     center: {
       y: 0,
       x: 0,
       opacity: 1,
-      scale: 1,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        x: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.3 }
+        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        x: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
       y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
       x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
-      scale: 0.9,
       transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        x: { duration: 0.3, ease: "easeInOut" },
-        opacity: { duration: 0.3 }
+        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        x: { duration: 0.25, ease: "easeInOut" },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -194,7 +194,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
+        className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100] data-[state=open]:animate-none data-[state=closed]:animate-none"
       >
         <style>{`
           [data-radix-portal] div[data-state] {
@@ -252,6 +252,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   isPopular && "popular-border-container",
                   isAd && "p-[4px] bg-blue-500"
                 )}
+                style={{ willChange: 'transform, opacity' }}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px]">
                   <div 
