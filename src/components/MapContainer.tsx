@@ -212,7 +212,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         div.style.position = 'absolute';
         div.style.cursor = 'pointer';
         div.style.width = '56px';
-        div.style.height = '72px'; // 삼각형 공간 확보를 위해 높이 증가
+        div.style.height = '72px';
         div.style.transform = 'translate(-50%, -100%)';
         
         const isAd = this.post.isAd;
@@ -228,12 +228,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         if (this.isHighlighted) zIndex = 1000;
         div.style.zIndex = zIndex.toString();
 
-        // 삼각형 색상 결정 (특수 마커 우선)
-        let pinColor = '#ffffff';
+        // 삼각형 색상 결정 (특수 마커 전용)
+        let pinColor = '';
         if (isInfluencer) pinColor = '#fbbf24';
         else if (isPopular) pinColor = '#ef4444';
-        else if (this.isHighlighted) pinColor = '#22d3ee';
-        else if (isAd) pinColor = '#3b82f6';
 
         let categoryIconHtml = '';
         if (category !== 'none') {
@@ -297,12 +295,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                 </div>
               ` : ''}
             </div>
-            <!-- SVG 기반 삼각형 핀 포인터 -->
-            <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>
-              </svg>
-            </div>
+            ${pinColor ? `
+              <!-- 특수 마커 전용 SVG 삼각형 핀 포인터 -->
+              <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>
+                </svg>
+              </div>
+            ` : ''}
           </div>
         `;
 
