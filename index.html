@@ -1,17 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MegaSnap - Kakao Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>MegaSnap</title>
     <style>
-      /* 지도 관련 기본 스타일 */
-      #root { height: 100vh; }
+      body, html, #root { 
+        margin: 0; 
+        padding: 0; 
+        width: 100%; 
+        height: 100%; 
+        overflow: hidden;
+        background-color: #f9fafb;
+      }
     </style>
-    <!-- Kakao Maps API - 발급받은 앱 키를 appkey 파라미터에 넣어야 합니다 -->
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services,clusterer,drawing"></script>
+    <!-- Kakao Maps API - https 프로토콜 명시 및 autoload=false 설정 -->
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services,clusterer,drawing&autoload=false"></script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
