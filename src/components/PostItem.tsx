@@ -55,9 +55,10 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isInfluencer ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/20 animate-influencer-glow" : (
+          // 인플루언서: 빨간색 테두리는 유지하되 글로우 애니메이션(animate-influencer-glow) 제거
+          isInfluencer ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/10" : (
             isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-              isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
+              isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20 animate-popular-glow" : (
                 borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
                   borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
                 )
