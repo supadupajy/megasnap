@@ -250,7 +250,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu bg-white rounded-[40px] overflow-hidden",
-                  isAd && "border-2 border-blue-500"
+                  isAd && "border-4 border-blue-500",
+                  isPopular && "popular-border-container",
+                  isInfluencer && "influencer-border-container"
                 )}
                 style={{ 
                   boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)',
@@ -283,7 +285,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                 )}
 
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative">
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
@@ -322,7 +324,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 }}
                               />
                               {idx === post.adImageIndex && (
-                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                                   AD
                                 </div>
                               )}
