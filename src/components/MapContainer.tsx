@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
@@ -217,11 +218,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         div.style.height = '56px';
         
         const isAd = this.post.isAd;
+        const isGif = this.post.isGif;
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
-        // 인플루언서인 경우 조회 여부와 상관없이 핀 색상을 빨간색으로 고정
         const pinColor = isInfluencer ? '#ff0000' : (this.isViewed ? '#94a3b8' : (isPopular ? '#ccff00' : borderColor));
 
         div.innerHTML = `
@@ -232,8 +233,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
                         filter: ${!isAd && !isPopular && !isInfluencer && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
+              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
                 <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                ${isGif ? `
+                  <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </div>
+                ` : ''}
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
@@ -288,7 +294,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer) {
+        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
           overlay.setMap(map);

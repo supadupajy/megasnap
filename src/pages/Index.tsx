@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
@@ -23,7 +23,6 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 현재 사용 중인 GIF URL들을 추출하는 헬퍼 함수
   const getUsedGifs = useCallback((posts: Post[]) => {
     return new Set(posts.filter(p => p.isGif).map(p => p.image));
   }, []);
@@ -43,7 +42,6 @@ const Index = () => {
       if (visibleCount < 10) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        // 기존에 사용 중인 GIF를 제외하고 새로운 포스트 생성
         const usedGifs = getUsedGifs(allPosts);
         setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15, usedGifs)]);
       }
@@ -83,7 +81,6 @@ const Index = () => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       setTimeout(() => {
-        // 새로고침 시에는 모든 포스트를 새로 생성하므로 빈 Set 전달
         setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 35));
         setIsRefreshing(false);
       }, 600);
@@ -104,6 +101,11 @@ const Index = () => {
       return next;
     });
   }, []);
+
+  const handleCurrentLocation = () => {
+    // 서울 시청을 기본 현재 위치로 설정
+    setMapCenter({ lat: 37.5665, lng: 126.9780 });
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
@@ -137,6 +139,16 @@ const Index = () => {
             <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-green-600">{filteredPosts.length}</span></p>
           </div>
         </div>
+      </div>
+
+      {/* 현재 위치 버튼 - 왼쪽 하단 */}
+      <div className="absolute bottom-32 left-4 z-20">
+        <button 
+          onClick={handleCurrentLocation}
+          className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
+        >
+          <Navigation className="w-6 h-6 fill-gray-700" />
+        </button>
       </div>
 
       <div className="absolute bottom-32 right-4 z-20">
