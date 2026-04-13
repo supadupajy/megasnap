@@ -76,7 +76,7 @@
 /* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
-  padding: 4px;
+  padding: 2px;
   border-radius: 1.25rem; /* 20px */
   background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
   animation: rotate-border 2s linear infinite;
@@ -85,7 +85,7 @@
 /* Influencer Yellow Gradient Border */
 .influencer-border-container {
   position: relative;
-  padding: 4px;
+  padding: 2px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #ffff00, #fffb00, #ffff00, #fffb00, #ffff00);
   animation: rotate-border 2s linear infinite;

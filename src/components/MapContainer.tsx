@@ -229,7 +229,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           <div style="position: relative; transform: translate(-50%, -100%);">
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px;
-                        ${(isPopular || isInfluencer) ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
+                        ${(isPopular || isInfluencer) ? 'padding: 2px;' : `border: 2px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
                         filter: ${this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
