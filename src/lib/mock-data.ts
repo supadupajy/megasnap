@@ -15,6 +15,22 @@ const FIRE_IMAGES = [
   "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"  // 연기 자욱한 현장
 ];
 
+const AD_FOOD_IMAGES = [
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80", // 스테이크
+  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80", // 팬케이크
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80", // 피자
+  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80", // 토스트
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"  // 파스타
+];
+
+const AD_FOOD_CONTENT = [
+  "배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔",
+  "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩",
+  "입안 가득 퍼지는 달콤함, 신메뉴 디저트 출시! 🍰",
+  "주말엔 가족과 함께 맛있는 피자 파티! 🍕 지금 주문하세요.",
+  "신선한 재료로 만든 건강한 한 끼, 샐러드 정기 배송 서비스 🥗"
+];
+
 const CONTENT_POOL = [
   "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
   "여기 분위기 진짜 대박... 꼭 와보세요! ✨",
@@ -77,21 +93,24 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     const randomHoursAgo = Math.random() * 12;
     
-    const content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
-    const likes = (borderType === 'popular' || isInfluencer)
-      ? Math.floor(Math.random() * 1001) + 1000 
-      : Math.floor(Math.random() * 491) + 10;
-
-    // 사고 유형에 따른 이미지 선택
+    let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let image = `https://picsum.photos/seed/${id}/800/800`;
-    if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
+
+    if (isAd) {
+      content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
+      image = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+    } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
       image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
       image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
     } else if (isGif) {
       image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
+
+    const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
+    const likes = (borderType === 'popular' || isInfluencer)
+      ? Math.floor(Math.random() * 1001) + 1000 
+      : Math.floor(Math.random() * 491) + 10;
 
     return {
       id,
