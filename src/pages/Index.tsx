@@ -23,10 +23,6 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  const getUsedGifs = useCallback((posts: Post[]) => {
-    return new Set(posts.filter(p => p.isGif).map(p => p.image));
-  }, []);
-
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 30));
   }, []);
@@ -39,14 +35,14 @@ const Index = () => {
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
-      if (visibleCount < 10) {
+      // 화면에 보이는 마커가 적을 때 새로운 랜덤 데이터(GIF 포함) 추가 생성
+      if (visibleCount < 12) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const usedGifs = getUsedGifs(allPosts);
-        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15, usedGifs)]);
+        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15)]);
       }
     }
-  }, [mapData, allPosts, getUsedGifs]);
+  }, [mapData, allPosts]);
 
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
@@ -103,7 +99,6 @@ const Index = () => {
   }, []);
 
   const handleCurrentLocation = () => {
-    // 서울 시청을 기본 현재 위치로 설정
     setMapCenter({ lat: 37.5665, lng: 126.9780 });
   };
 
