@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, Send, MoreVertical, Phone, Video } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,18 +8,36 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const INITIAL_MESSAGES = [
-  { id: 1, text: "안녕하세요! 성수동 카페 정보 좀 알려주실 수 있나요?", sender: 'other', time: '오후 2:12' },
-  { id: 2, text: "네, 당연하죠! 어떤 스타일의 카페를 찾으시나요?", sender: 'me', time: '오후 2:15' },
-  { id: 3, text: "조용하고 작업하기 좋은 곳이면 좋겠어요.", sender: 'other', time: '오후 2:16' },
-  { id: 4, text: "그렇다면 '카페 어니언'이나 '대림창고' 보다는 '로우키'를 추천드려요. 커피 맛도 훌륭하고 분위기도 차분하거든요.", sender: 'me', time: '오후 2:18' },
-  { id: 5, text: "오! 감사합니다. 바로 가봐야겠네요!", sender: 'other', time: '오후 2:20' },
-];
+const CHAT_DATA: Record<string, any[]> = {
+  'travel_maker': [
+    { id: 1, text: "안녕하세요! 성수동 카페 정보 좀 알려주실 수 있나요?", sender: 'other', time: '오후 2:12' },
+    { id: 2, text: "네, 당연하죠! 어떤 스타일의 카페를 찾으시나요?", sender: 'me', time: '오후 2:15' },
+    { id: 3, text: "조용하고 작업하기 좋은 곳이면 좋겠어요.", sender: 'other', time: '오후 2:16' },
+    { id: 4, text: "그렇다면 '카페 어니언'이나 '대림창고' 보다는 '로우키'를 추천드려요. 커피 맛도 훌륭하고 분위기도 차분하거든요.", sender: 'me', time: '오후 2:18' },
+    { id: 5, text: "오! 감사합니다. 바로 가봐야겠네요!", sender: 'other', time: '오후 2:20' },
+  ],
+  'seoul_snap': [
+    { id: 1, text: "작가님 어제 올리신 남산 타워 사진 정말 멋져요!", sender: 'me', time: '오전 10:05' },
+    { id: 2, text: "감사합니다! 날씨가 좋아서 운이 좋았네요.", sender: 'other', time: '오전 10:30' },
+    { id: 3, text: "혹시 보정은 어떤 프로그램 사용하시나요?", sender: 'me', time: '오전 10:32' },
+    { id: 4, text: "저는 주로 라이트룸으로 색감 보정을 하고 있어요.", sender: 'other', time: '오전 11:00' },
+    { id: 5, text: "사진 너무 잘 찍으시네요! 👍", sender: 'other', time: '오전 11:05' },
+  ],
+  'explorer_kim': [
+    { id: 1, text: "이번 주말에 경복궁 야간 개장 가시나요?", sender: 'other', time: '어제' },
+    { id: 2, text: "아직 고민 중이에요. 사람 많을 것 같아서요.", sender: 'me', time: '어제' },
+    { id: 3, text: "그래도 야경이 정말 예쁘다고 하더라고요.", sender: 'other', time: '어제' },
+    { id: 4, text: "그럼 일요일 저녁쯤 어떠세요?", sender: 'me', time: '오전 9:15' },
+    { id: 5, text: "좋아요! 다음에 같이 출사 가요!", sender: 'other', time: '오전 9:20' },
+  ]
+};
 
 const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const initialMessages = useMemo(() => (chatId && CHAT_DATA[chatId]) || CHAT_DATA['travel_maker'], [chatId]);
+  
+  const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
