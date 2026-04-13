@@ -32,14 +32,18 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       disableDefaultUI: true,
       clickableIcons: false,
       gestureHandling: 'greedy',
+      // 더 밝고 깨끗한 스타일로 변경
       styles: [
-        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+        { elementType: "geometry", stylers: [{ color: "#fdfdfd" }] },
         { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
         { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#f0f0f0" }] },
+        { featureType: "transit", stylers: [{ visibility: "off" }] },
+        { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "off" }] }
       ],
     };
 
@@ -315,7 +319,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     });
   }, [posts, viewedPostIds, onMarkerClick]);
 
-  return <div ref={mapElement} className="w-full h-full bg-gray-100" />;
+  return (
+    <div 
+      ref={mapElement} 
+      className="w-full h-full bg-gray-100" 
+      style={{ filter: 'brightness(1.05) contrast(1.02) saturate(1.1)' }}
+    />
+  );
 };
 
 export default MapContainer;

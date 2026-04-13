@@ -12,6 +12,14 @@
       a[href^="https://maps.google.com/maps/contrib"] { display: none !important; }
       a[href^="https://www.google.com/intl/ko-KR_US/help/terms_maps.html"] { display: none !important; }
       .gmnoprint { display: none !important; }
+      
+      /* 'Development purposes only' 오버레이 및 텍스트 숨김 */
+      .gm-style > div:first-child > div:first-child > div:last-child > div {
+        display: none !important;
+      }
+      .gm-style-pbc {
+        display: none !important;
+      }
     </style>
     <script>
       // 구글 맵 API 경고 팝업 자동 확인 스크립트
@@ -20,7 +28,6 @@
           for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
               if (node.nodeType === 1) {
-                // 'OK' 또는 '확인' 버튼을 찾아 자동으로 클릭
                 const buttons = node.querySelectorAll('button');
                 for (const btn of buttons) {
                   if (btn.textContent === 'OK' || btn.textContent === '확인') {
