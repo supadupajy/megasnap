@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Copy, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
 
@@ -14,6 +14,7 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
+// 사용자의 Client ID가 맞는지 다시 한번 확인이 필요할 수 있습니다.
 const NAVER_CLIENT_ID = "ipu2vry3sw"; 
 const NAVER_SDK_URL = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
 
@@ -21,16 +22,22 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
-  const actionMarkerRef = useRef<any>(null);
   const isScriptLoading = useRef(false);
   
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
-  const currentOrigin = window.location.origin;
+  const [showDebug, setShowDebug] = useState(false);
 
-  const copyOrigin = () => {
-    navigator.clipboard.writeText(currentOrigin);
-    showSuccess("주소가 복사되었습니다!");
+  // 네이버가 체크할 가능성이 있는 주소들
+  const urlOptions = [
+    window.location.origin,
+    window.location.origin + "/",
+    `${window.location.protocol}//127.0.0.1:${window.location.port}`,
+    `${window.location.protocol}//127.0.0.1:${window.location.port}/`
+  ];
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess("복사되었습니다!");
   };
 
   const initMap = () => {
@@ -54,7 +61,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       mapInstance.current = map;
       setStatus('ready');
 
-      // 인증 실패 시 네이버가 지도를 지워버리는 경우를 감지
+      // 인증 실패 시 네이버가 지도를 지워버리는 경우를 감지 (1.5초 후 체크)
       setTimeout(() => {
         if (mapContainer.current && mapContainer.current.children.length === 0) {
           setStatus('error');
@@ -114,7 +121,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     loadNaverMap();
   }, []);
 
-  // 마커 업데이트 로직 (생략 - 기존과 동일)
+  // 마커 업데이트 로직
   useEffect(() => {
     if (!mapInstance.current || !window.naver || status !== 'ready') return;
     const naver = window.naver;
@@ -160,53 +167,68 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
   }, [posts, viewedPostIds, status]);
 
   return (
-    <div className="relative w-full h-full bg-slate-50">
+    <div className="relative w-full h-full bg-slate-900">
       <div ref={mapContainer} className="w-full h-full" />
       
       {status === 'loading' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10">
           <Loader2 className="w-10 h-10 text-green-500 animate-spin mb-4" />
-          <p className="text-sm font-bold text-gray-500">네이버 지도를 불러오는 중...</p>
+          <p className="text-sm font-bold text-slate-400">네이버 지도를 불러오는 중...</p>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-[100] px-8 text-center text-white">
-          <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
-            <AlertCircle className="w-10 h-10 text-red-500" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-[100] px-6 overflow-y-auto py-10">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6 shrink-0">
+            <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-xl font-black mb-2">지도 인증에 실패했습니다</h3>
-          <p className="text-sm text-slate-400 mb-8 leading-relaxed">
-            네이버 클라우드 콘솔에 아래 주소를 등록해야 합니다.<br/>
-            포트 번호가 바뀌면 매번 새로 등록해줘야 합니다.
+          
+          <h3 className="text-xl font-black text-white mb-2">지도 인증 실패 (해결 가이드)</h3>
+          <p className="text-sm text-slate-400 mb-8 text-center max-w-xs">
+            네이버는 보안상 등록된 주소와 100% 일치해야만 지도를 보여줍니다. 아래 주소들을 **모두** 등록해 보세요.
           </p>
           
-          <div className="w-full max-w-xs bg-black/40 border border-white/10 rounded-2xl p-4 mb-8">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 text-left">현재 접속 주소</p>
-            <div className="flex items-center justify-between gap-3">
-              <code className="text-blue-400 font-bold text-sm truncate">{currentOrigin}</code>
-              <button onClick={copyOrigin} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="w-full max-w-sm space-y-3 mb-8">
+            {urlOptions.map((url, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 p-3 rounded-xl group hover:border-blue-500/50 transition-colors">
+                <code className="text-xs text-blue-400 font-mono truncate flex-1">{url}</code>
+                <button 
+                  onClick={() => copyToClipboard(url)}
+                  className="p-2 bg-white/10 hover:bg-blue-500 text-white rounded-lg transition-all active:scale-90"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
 
-          <div className="flex flex-col w-full max-w-xs gap-3">
-            <Button 
-              asChild
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl"
-            >
+          <div className="flex flex-col w-full max-w-sm gap-3 mb-8">
+            <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl">
               <a href="https://console.ncloud.com/naver-service/application" target="_blank" rel="noreferrer">
-                네이버 콘솔에서 주소 추가 <ExternalLink className="w-4 h-4 ml-2" />
+                네이버 콘솔 바로가기 <ExternalLink className="w-4 h-4 ml-2" />
               </a>
             </Button>
-            <Button 
-              variant="ghost"
-              onClick={() => window.location.reload()}
-              className="text-slate-400 hover:text-white h-12 font-bold"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" /> 페이지 새로고침
+            <Button variant="ghost" onClick={() => window.location.reload()} className="text-slate-400 hover:text-white h-12 font-bold">
+              <RefreshCw className="w-4 h-4 mr-2" /> 설정 후 새로고침
             </Button>
+          </div>
+
+          <div className="w-full max-w-sm border-t border-white/10 pt-6">
+            <button 
+              onClick={() => setShowDebug(!showDebug)}
+              className="flex items-center justify-between w-full text-slate-500 text-xs font-bold uppercase tracking-widest"
+            >
+              상세 디버깅 정보 {showDebug ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            
+            {showDebug && (
+              <div className="mt-4 p-4 bg-black/40 rounded-xl text-[10px] font-mono text-slate-400 space-y-2 text-left overflow-x-auto">
+                <p><span className="text-slate-600">Client ID:</span> {NAVER_CLIENT_ID}</p>
+                <p><span className="text-slate-600">User Agent:</span> {navigator.userAgent.slice(0, 50)}...</p>
+                <p><span className="text-slate-600">Referrer:</span> {document.referrer || 'None'}</p>
+                <p className="text-red-400/80 mt-2">※ Client ID가 본인의 것이 맞는지 꼭 확인하세요!</p>
+              </div>
+            )}
           </div>
         </div>
       )}
