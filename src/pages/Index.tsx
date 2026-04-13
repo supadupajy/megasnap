@@ -26,11 +26,21 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
 
   useEffect(() => {
-    setAllPosts(createMockPosts(37.5665, 126.9780, 40));
+    // 초기 데이터 생성
+    const initialPosts = createMockPosts(37.5665, 126.9780, 40);
     
-    // Check for location state from Popular page
-    if (location.state?.center) {
-      setMapCenter(location.state.center);
+    // HOT 탭에서 전달된 포스팅이 있다면 데이터 풀에 추가
+    if (location.state?.post) {
+      const incomingPost = location.state.post;
+      setAllPosts([incomingPost, ...initialPosts]);
+      setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
+      // 약간의 지연 후 상세 보기 오픈 (지도 이동 애니메이션 고려)
+      setTimeout(() => setSelectedPostId(incomingPost.id), 500);
+    } else {
+      setAllPosts(initialPosts);
+      if (location.state?.center) {
+        setMapCenter(location.state.center);
+      }
     }
   }, [location.state]);
 
@@ -64,7 +74,7 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return isWithinBounds && isWithinTime;
+      return isWithinBounds || post.id === selectedPostId; // 선택된 포스트는 항상 표시
     });
 
     const influencers = inView.filter(p => p.isInfluencer);
