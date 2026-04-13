@@ -259,8 +259,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         }
 
         const labelHtml = isInfluencer ? 
-          `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0; border-radius: 8px 8px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: -0.02em;">INFLUENCER</div>` :
-          (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0; border-radius: 8px 8px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: 0.05em;">HOT</div>` : '');
+          `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -10px; position: relative; z-index: 1;">INFLUENCER</div>` :
+          (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -10px; position: relative; z-index: 1;">HOT</div>` : '');
 
         const animationClass = isInfluencer ? 'animate-influencer-float' : (isPopular ? 'animate-hot-pulse' : '');
 
@@ -268,7 +268,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           <div class="${animationClass}" style="position: relative; width: 56px; height: 56px;">
             ${labelHtml}
             <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${this.isViewed ? 'viewed' : ''}"
-                 style="width: 56px; height: 56px; border-radius: 16px; position: relative;
+                 style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                         ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
@@ -297,7 +297,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
                         width: 12px; height: 12px; background: ${pinColor};
-                        box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+                        box-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: 1;"></div>
           </div>
         `;
 
