@@ -243,24 +243,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
-                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] h-[82vh]"
+                className={cn(
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] h-[82vh] flex flex-col",
+                  isInfluencer && "influencer-border-container p-[4px]",
+                  isPopular && "popular-border-container p-[4px]",
+                  isAd && "bg-blue-500 p-[4px]",
+                  (!isInfluencer && !isPopular && !isAd) && "bg-white"
+                )}
                 style={{ 
                   willChange: 'transform, opacity',
                   backfaceVisibility: 'hidden',
                   isolation: 'isolate'
                 }}
               >
-                {/* Animated Border Layer - Isolated from main transform */}
-                <div className={cn(
-                  "absolute inset-0 z-0",
-                  isInfluencer && "influencer-border-container",
-                  isPopular && "popular-border-container",
-                  isAd && "bg-blue-500",
-                  (!isInfluencer && !isPopular && !isAd) && "bg-white"
-                )} style={{ borderRadius: '40px' }} />
-
-                {/* Content Layer - Using absolute inset to ensure border visibility on all sides */}
-                <div className="absolute inset-[4px] overflow-hidden flex flex-col bg-white rounded-[36px] z-10">
+                {/* Content Layer - Nested inside border container for perfect 4-side coverage */}
+                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px] relative z-10">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
