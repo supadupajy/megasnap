@@ -60,7 +60,7 @@
   display: none !important;
 }
 
-/* Moving Gradient Border Animation using Conic Gradient */
+/* Moving Gradient Border Animation */
 @property --angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -76,55 +76,71 @@
 /* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
-  padding: 2px;
-  border-radius: 1.25rem; /* 20px */
-  background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
-  animation: rotate-border 2s linear infinite;
+  padding: 3px;
+  border-radius: 1.25rem;
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000);
+  animation: rotate-border 1.5s linear infinite;
 }
 
-/* Influencer Yellow Gradient Border */
+/* Influencer Gold Gradient Border */
 .influencer-border-container {
   position: relative;
-  padding: 2px;
+  padding: 3px;
   border-radius: 1.25rem;
-  background-image: conic-gradient(from var(--angle), #ffff00, #fffb00, #ffff00, #fffb00, #ffff00);
+  background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
 }
 
-/* Viewed state for popular and influencer border */
+/* Pulse Animation for HOT Posts */
+@keyframes hot-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2); }
+}
+
+/* Floating Animation for Influencer Posts */
+@keyframes influencer-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Shine Sweep Animation */
+@keyframes shine-sweep {
+  0% { left: -100%; }
+  20% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.animate-hot-pulse {
+  animation: hot-pulse 2s ease-in-out infinite;
+}
+
+.animate-influencer-float {
+  animation: influencer-float 3s ease-in-out infinite;
+}
+
+.shine-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: shine-sweep 4s infinite;
+  z-index: 20;
+}
+
+/* Viewed state */
 .popular-border-container.viewed,
 .influencer-border-container.viewed {
-  background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8) !important;
-  animation: rotate-border 3s linear infinite;
-}
-
-/* HOT Red Glow Animation */
-@keyframes popular-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
-  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
-}
-
-/* Influencer Yellow Glow Animation */
-@keyframes influencer-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.5)); }
-  50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)); }
-}
-
-/* Brighter White Glow Animation for Viewed Posts */
-@keyframes viewed-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)); }
-  50% { filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)); }
-}
-
-.animate-popular-glow {
-  animation: popular-glow 1.5s ease-in-out infinite;
-}
-
-.animate-influencer-glow {
-  animation: influencer-glow 1.5s ease-in-out infinite;
-}
-
-.animate-popular-glow.viewed,
-.animate-influencer-glow.viewed {
-  animation: viewed-glow 2s ease-in-out infinite;
+  background-image: none !important;
+  background-color: #94a3b8 !important;
+  animation: none !important;
+  box-shadow: none !important;
 }

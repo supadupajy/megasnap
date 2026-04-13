@@ -224,7 +224,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const category = this.post.category || 'none';
         
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
-        const pinColor = (isInfluencer || isPopular) ? (this.isViewed ? '#94a3b8' : (isInfluencer ? '#ffff00' : '#ff0000')) : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : borderColor));
+        const pinColor = (isInfluencer || isPopular) ? (this.isViewed ? '#94a3b8' : (isInfluencer ? '#fbbf24' : '#ff0000')) : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : borderColor));
 
         // Category Icon Logic
         let categoryIconHtml = '';
@@ -233,14 +233,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           let bgColor = '';
           if (category === 'food') {
             iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>';
-            bgColor = '#f97316'; // orange-500
+            bgColor = '#f97316';
           } else if (category === 'accident') {
             iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>';
-            bgColor = '#dc2626'; // red-600
+            bgColor = '#dc2626';
           } else if (category === 'place') {
-            // TreePine icon SVG
             iconSvg = '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2a1 1 0 0 1-.8-1.7L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"></path><path d="M12 22v-3"></path>';
-            bgColor = '#16a34a'; // green-600
+            bgColor = '#16a34a';
           }
 
           categoryIconHtml = `
@@ -252,13 +251,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
 
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
+            <div class="${isInfluencer ? 'influencer-border-container animate-influencer-float' : (isPopular ? 'popular-border-container animate-hot-pulse' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative;
-                        ${(isPopular || isInfluencer) ? 'padding: 2px;' : `border: 2px solid ${borderColor};`}
+                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
                         filter: ${this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
+              <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
                 <img src="${this.post.image}" 
                      onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
                      style="width: 100%; height: 100%; object-fit: cover; ${this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />

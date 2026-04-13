@@ -113,7 +113,11 @@ const PostItem = ({
   };
 
   return (
-    <div className="bg-white mb-8 last:mb-20">
+    <div className={cn(
+      "bg-white mb-8 last:mb-20 transition-all duration-500",
+      isInfluencer && "animate-influencer-float",
+      isPopular && "animate-hot-pulse"
+    )}>
       <div className="flex items-center justify-between px-4 py-3">
         <div 
           className="flex items-center gap-3 cursor-pointer group"
@@ -144,9 +148,9 @@ const PostItem = ({
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isInfluencer ? "p-[4px] bg-yellow-400 shadow-lg shadow-yellow-400/10" : (
+          isInfluencer ? "influencer-border-container" : (
             isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-              isPopular ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/20" : (
+              isPopular ? "popular-border-container" : (
                 borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
                   borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
                 )
@@ -154,7 +158,10 @@ const PostItem = ({
             )
           )
         )}>
-          <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
+          <div className={cn(
+            "w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10",
+            isInfluencer && "shine-overlay"
+          )}>
             <div 
               ref={scrollRef}
               onScroll={handleImageScroll}
