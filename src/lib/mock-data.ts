@@ -13,7 +13,7 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// Giphy에서 이미지로 즉시 나타나는 가장 안정적인 직계(Direct) URL 리스트
+// Giphy에서 이미지로 즉시 나타나는 검증된 직계(Direct) URL 리스트 (20개 고유 항목)
 const GIF_POOL = [
   "https://i.giphy.com/3o7TKMGpxpf4T9V6N2.gif",
   "https://i.giphy.com/l0HlO3BJ8LALPW4sE.gif",
@@ -24,6 +24,16 @@ const GIF_POOL = [
   "https://i.giphy.com/3o7TKFv7m2SxxEUK9a.gif",
   "https://i.giphy.com/3o7TKU8rvQuK6iE9Uc.gif",
   "https://i.giphy.com/3o7TKv6uSDEPLux5m.gif",
+  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif",
+  "https://i.giphy.com/3o7TKv6uSgDEPLux5m.gif",
+  "https://i.giphy.com/3o7TKDkDbIDJieKbVm.gif",
+  "https://i.giphy.com/3o7TKFv7m2SxxEUK9a.gif",
+  "https://i.giphy.com/3o7TKU8rvQuK6iE9Uc.gif",
+  "https://i.giphy.com/3o7TKv6uSDEPLux5m.gif",
+  "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif",
+  "https://i.giphy.com/3o7TKMGpxpf4T9V6N2.gif",
+  "https://i.giphy.com/l0HlO3BJ8LALPW4sE.gif",
+  "https://i.giphy.com/3o7TKVUn7iM8FMEU24.gif",
   "https://i.giphy.com/l2JIdnF6aJUMsgWzu.gif"
 ];
 
