@@ -37,7 +37,6 @@ const Popular = () => {
   }, []);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
-    // 해당 좌표를 가진 포스트를 찾아 함께 전달
     const post = posts.find(p => p.lat === lat && p.lng === lng);
     navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
@@ -63,6 +62,8 @@ const Popular = () => {
                 location={post.location}
                 likes={post.likes}
                 image={post.image}
+                images={post.images}
+                adImageIndex={post.adImageIndex}
                 lat={post.lat}
                 lng={post.lng}
                 isLiked={post.isLiked}

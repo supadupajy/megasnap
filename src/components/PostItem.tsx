@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ interface PostItemProps {
   location: string;
   likes: number;
   image: string;
+  images?: string[];
+  adImageIndex?: number;
   lat?: number;
   lng?: number;
   isLiked?: boolean;
@@ -32,6 +34,8 @@ const PostItem = ({
   location, 
   likes, 
   image, 
+  images = [],
+  adImageIndex,
   lat,
   lng,
   isLiked, 
@@ -43,7 +47,17 @@ const PostItem = ({
   onLocationClick
 }: PostItemProps) => {
   const navigate = useNavigate();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
   const isPopular = !isAd && borderType === 'popular';
+  const displayImages = images.length > 0 ? images : [image];
+
+  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    setCurrentImageIndex(index);
+  };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
@@ -105,12 +119,42 @@ const PostItem = ({
           )
         )}>
           <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-            <img
-              src={image}
-              alt="post"
-              className="w-full h-full object-cover"
-              onError={handleImageError}
-            />
+            <div 
+              ref={scrollRef}
+              onScroll={handleImageScroll}
+              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+            >
+              {displayImages.map((img, idx) => (
+                <div key={idx} className="w-full h-full shrink-0 snap-center relative">
+                  <img
+                    src={img}
+                    alt={`post-${idx}`}
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                  {idx === adImageIndex && (
+                    <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                      AD
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Dots */}
+            {displayImages.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
+                {displayImages.map((_, idx) => (
+                  <div 
+                    key={idx}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                      currentImageIndex === idx ? "bg-white w-4" : "bg-white/40"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           
           {isInfluencer ? (
