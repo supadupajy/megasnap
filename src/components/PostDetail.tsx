@@ -28,7 +28,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 초기 인덱스 설정
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -41,13 +40,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, initialIndex, hasInitialized]);
 
-  // 포스트 조회 처리 (무한 루프 방지를 위해 ID 기반으로만 실행)
   useEffect(() => {
     const currentPost = posts[currentIndex];
     if (isOpen && currentPost && onViewPost) {
       onViewPost(currentPost.id);
     }
-  }, [currentIndex, isOpen, onViewPost]); // posts 전체가 아닌 currentIndex와 onViewPost에만 의존
+  }, [currentIndex, isOpen, onViewPost]);
 
   if (!isOpen || posts.length === 0) return null;
   
@@ -119,6 +117,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     })
   };
 
+  // 테두리 색상 결정
+  const getBorderColor = () => {
+    if (isInfluencer) return "#ff0000";
+    if (isAd) return "#3b82f6";
+    if (isPopular) return "#ccff00";
+    return "transparent";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
@@ -180,16 +186,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
+                style={{
+                  border: (isInfluencer || isAd || isPopular) ? `4px solid ${getBorderColor()}` : "none",
+                }}
                 className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
+                  isPopular && "animate-popular-glow",
+                  isInfluencer && "animate-influencer-glow"
                 )}
               >
-                <div 
-                  className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col"
-                  style={{
-                    border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
-                  }}
-                >
+                <div className="flex-1 h-full overflow-hidden flex flex-col">
                   <ScrollArea 
                     ref={scrollAreaRef} 
                     className="flex-1 h-full no-scrollbar"
