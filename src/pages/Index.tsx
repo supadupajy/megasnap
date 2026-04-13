@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, ExternalLink, ShieldCheck, CheckCircle2, Info } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { showSuccess } from '@/utils/toast';
@@ -24,12 +24,12 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 브라우저가 네이버 서버로 보내는 실제 Origin 주소입니다.
+  // 현재 브라우저가 인식하는 실시간 Origin (포트 포함)
   const currentOrigin = window.location.origin;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentOrigin);
-    showSuccess("주소가 복사되었습니다! 콘솔에 붙여넣으세요.");
+    showSuccess("현재 주소가 복사되었습니다!");
   };
 
   useEffect(() => {
@@ -157,30 +157,23 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm font-black">인증 실패 해결 (필독)</span>
+              <span className="text-sm font-black">포트 번호가 바뀌었나요?</span>
             </div>
             <button onClick={copyToClipboard} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-black active:scale-95 transition-all shadow-lg">
-              <Copy className="w-3.5 h-3.5" /> 주소 복사
+              <Copy className="w-3.5 h-3.5" /> 현재 주소 복사
             </button>
           </div>
           
-          <div className="space-y-2 bg-white/5 p-3 rounded-xl border border-white/10">
-            <div className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+          <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-2">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[11px] leading-snug text-slate-200">
-                <b>[서비스 선택]</b> 탭에서 <b>Web Dynamic Map</b>을 반드시 체크하고 하단의 <b>[저장]</b>을 누르셨나요? (가장 많이 놓치는 부분)
+                개발 환경 특성상 포트가 계속 변할 수 있습니다. 아래 주소를 복사하여 네이버 콘솔의 <b>서비스 URL</b>에 추가해 주세요. (최대 10개까지 가능)
               </p>
             </div>
-            <div className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-snug text-slate-200">
-                <b>[서비스 URL]</b>에 아래 주소를 포트번호까지 <b>정확히</b> 입력하셨나요?
-              </p>
+            <div className="bg-black/40 p-2.5 rounded-lg font-mono text-xs break-all border border-white/20 text-center font-bold text-blue-400 select-all">
+              {currentOrigin}
             </div>
-          </div>
-
-          <div className="bg-black/40 p-3 rounded-xl font-mono text-xs break-all border border-white/20 text-center font-bold text-blue-400 select-all">
-            {currentOrigin}
           </div>
 
           <div className="flex items-center justify-between mt-1">
