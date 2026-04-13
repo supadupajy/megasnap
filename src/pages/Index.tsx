@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { showSuccess } from '@/utils/toast';
@@ -24,7 +24,7 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 실제 브라우저가 인식하는 정확한 Origin
+  // 브라우저가 네이버 서버로 보내는 실제 Referer 주소입니다.
   const currentOrigin = window.location.origin;
 
   const copyToClipboard = () => {
@@ -157,31 +157,46 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-yellow-400" />
-              <span className="text-xs font-bold">인증 실패 해결 방법</span>
+              <span className="text-xs font-bold">인증 실패 해결 (최종 확인)</span>
             </div>
             <button onClick={copyToClipboard} className="flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
               <Copy className="w-3 h-3" /> 주소 복사
             </button>
           </div>
-          <div className="space-y-1">
-            <p className="text-[10px] leading-tight text-slate-300">
-              1. 네이버 콘솔 <b>[서비스 선택]</b> 탭에서 <b>Web Dynamic Map</b>이 체크되었는지 확인.
-            </p>
-            <p className="text-[10px] leading-tight text-slate-300">
-              2. <b>[서비스 URL]</b>에 아래 주소를 <b>정확히</b> 입력 (http/https 구분 필수).
-            </p>
+          
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</div>
+              <p className="text-[10px] leading-tight text-slate-300">
+                네이버 콘솔 <b>[서비스 선택]</b> 탭에서 <b>Web Dynamic Map</b>이 체크되어 있는지 확인 (가장 흔한 실수)
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</div>
+              <p className="text-[10px] leading-tight text-slate-300">
+                <b>[서비스 URL]</b>에 아래 주소를 <b>정확히</b> 입력 (끝에 슬래시 없이)
+              </p>
+            </div>
           </div>
-          <div className="bg-white/10 p-2 rounded-lg font-mono text-[11px] break-all border border-white/10 text-center font-bold text-blue-300">
+
+          <div className="bg-white/10 p-2 rounded-lg font-mono text-[11px] break-all border border-white/10 text-center font-bold text-blue-300 select-all">
             {currentOrigin}
           </div>
-          <a 
-            href="https://console.ncloud.com/naver-service/application" 
-            target="_blank" 
-            rel="noreferrer"
-            className="flex items-center justify-center gap-1 text-[9px] text-slate-400 hover:text-white transition-colors mt-1"
-          >
-            네이버 콘솔 바로가기 <ExternalLink className="w-2.5 h-2.5" />
-          </a>
+
+          <div className="flex items-center justify-between mt-1">
+            <a 
+              href="https://console.ncloud.com/naver-service/application" 
+              target="_blank" 
+              rel="noreferrer"
+              className="flex items-center gap-1 text-[9px] text-slate-400 hover:text-white transition-colors"
+            >
+              네이버 콘솔 바로가기 <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+            <div className="flex items-center gap-1 text-[9px] text-green-400">
+              <ShieldCheck className="w-3 h-3" />
+              <span>Client ID: ipu2vry3sw</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -197,7 +212,7 @@ const Index = () => {
         />
       </main>
 
-      <div className="absolute top-44 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+      <div className="absolute top-48 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
