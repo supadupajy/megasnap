@@ -234,7 +234,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+          <AnimatePresence mode="wait" initial={false} custom={direction} onExitComplete={() => {
             if (isClosing) onClose();
           }}>
             {!isClosing && (
@@ -251,44 +251,50 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
-                className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden",
-                  isAd && "border-4 border-blue-500",
-                  isPopular && "popular-border-container",
-                  isInfluencer && "influencer-border-container"
-                )}
+                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col rounded-[40px] overflow-hidden"
                 style={{ 
                   boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)',
                   willChange: 'transform, opacity',
                   backfaceVisibility: 'hidden',
                   transformStyle: 'preserve-3d',
-                  isolation: 'isolate'
+                  isolation: 'isolate',
+                  width: '90vw',
+                  height: '82vh'
                 }}
               >
-                {/* Status Bar for Influencer/Popular */}
-                {isInfluencer && (
-                  <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
-                    <Star className="w-4 h-4 fill-black" />
-                    <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
-                    <Star className="w-4 h-4 fill-black" />
-                  </div>
-                )}
-                {isPopular && (
-                  <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
-                    <Flame className="w-4 h-4 fill-white text-white" />
-                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
-                    <Flame className="w-4 h-4 fill-white text-white" />
-                  </div>
-                )}
-                {isAd && (
-                  <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
-                    <Sparkles className="w-4 h-4 fill-white text-white" />
-                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
-                    <Sparkles className="w-4 h-4 fill-white text-white" />
-                  </div>
-                )}
+                {/* Background Border Layer - Separated to prevent layout shifts */}
+                <div className={cn(
+                  "absolute inset-0 z-0 rounded-[40px]",
+                  isAd && "border-4 border-blue-500",
+                  isPopular && "popular-border-container",
+                  isInfluencer && "influencer-border-container"
+                )} />
 
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
+                {/* Main Content Container */}
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] m-[4px] z-10">
+                  {/* Status Bar for Influencer/Popular */}
+                  {isInfluencer && (
+                    <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
+                      <Star className="w-4 h-4 fill-black" />
+                      <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
+                      <Star className="w-4 h-4 fill-black" />
+                    </div>
+                  )}
+                  {isPopular && (
+                    <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
+                      <Flame className="w-4 h-4 fill-white text-white" />
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
+                      <Flame className="w-4 h-4 fill-white text-white" />
+                    </div>
+                  )}
+                  {isAd && (
+                    <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
+                      <Sparkles className="w-4 h-4 fill-white text-white" />
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
+                      <Sparkles className="w-4 h-4 fill-white text-white" />
+                    </div>
+                  )}
+
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
