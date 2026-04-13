@@ -249,11 +249,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
                   isInfluencer && "influencer-border-container animate-influencer-float",
-                  isPopular && "popular-border-container animate-hot-pulse",
-                  isAd && "p-[4px] bg-blue-500"
+                  isPopular && "popular-border-container",
+                  isAd && "p-[3px] bg-blue-500"
                 )}
               >
-                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px]">
+                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[37px]">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
