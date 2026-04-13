@@ -23,6 +23,11 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
+  // 현재 사용 중인 GIF URL들을 추출하는 헬퍼 함수
+  const getUsedGifs = useCallback((posts: Post[]) => {
+    return new Set(posts.filter(p => p.isGif).map(p => p.image));
+  }, []);
+
   useEffect(() => {
     setAllPosts(createMockPosts(37.5665, 126.9780, 30));
   }, []);
@@ -38,10 +43,12 @@ const Index = () => {
       if (visibleCount < 10) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15)]);
+        // 기존에 사용 중인 GIF를 제외하고 새로운 포스트 생성
+        const usedGifs = getUsedGifs(allPosts);
+        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15, usedGifs)]);
       }
     }
-  }, [mapData, allPosts.length]);
+  }, [mapData, allPosts, getUsedGifs]);
 
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
@@ -57,7 +64,6 @@ const Index = () => {
     });
   }, [allPosts, mapData, timeValue, selectedPostId]);
 
-  // 상세 화면용 포스팅 리스트: 선택된 포스팅이 무조건 0번 인덱스(최상단)에 오도록 재정렬
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return filteredPosts;
     const selected = filteredPosts.find(p => p.id === selectedPostId);
@@ -77,6 +83,7 @@ const Index = () => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       setTimeout(() => {
+        // 새로고침 시에는 모든 포스트를 새로 생성하므로 빈 Set 전달
         setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 35));
         setIsRefreshing(false);
       }, 600);
@@ -145,7 +152,7 @@ const Index = () => {
       {selectedPostId && (
         <PostDetail 
           posts={detailPosts}
-          initialIndex={0} // 재정렬했으므로 항상 0번부터 시작
+          initialIndex={0}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}
