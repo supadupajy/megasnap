@@ -9,21 +9,21 @@ import BottomNav from '@/components/BottomNav';
 
 const MESSAGES = [
   {
-    id: 1,
+    id: 'travel_maker',
     user: { name: 'travel_maker' },
     lastMessage: '성수동 카페 정보 좀 알려주실 수 있나요?',
     time: '12분',
     unread: true
   },
   {
-    id: 2,
+    id: 'seoul_snap',
     user: { name: 'seoul_snap' },
     lastMessage: '사진 너무 잘 찍으시네요! 👍',
     time: '2시간',
     unread: false
   },
   {
-    id: 3,
+    id: 'explorer_kim',
     user: { name: 'explorer_kim' },
     lastMessage: '다음에 같이 출사 가요!',
     time: '1일',

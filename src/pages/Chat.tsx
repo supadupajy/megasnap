@@ -43,6 +43,10 @@ const Chat = () => {
     setInputValue('');
   };
 
+  const handleAvatarClick = () => {
+    navigate(`/profile/${chatId}`);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* Header */}
@@ -52,12 +56,18 @@ const Chat = () => {
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <div className="flex items-center gap-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={`https://i.pravatar.cc/150?u=${chatId}`} />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
+            <div 
+              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+              onClick={handleAvatarClick}
+            >
+              <img 
+                src={`https://i.pravatar.cc/150?u=${chatId}`} 
+                alt="user" 
+                className="w-full h-full rounded-full object-cover border-2 border-white" 
+              />
+            </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-gray-900">travel_maker</span>
+              <span className="text-sm font-bold text-gray-900">{chatId}</span>
               <span className="text-[10px] text-green-500 font-bold">현재 활동 중</span>
             </div>
           </div>
