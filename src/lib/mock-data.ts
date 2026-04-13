@@ -13,18 +13,7 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// 실제 애니메이션이 확실히 작동하는 20개의 검증된 Giphy 직계 URL
 const GIF_POOL = [
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
   "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
   "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
   "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
@@ -91,3 +80,38 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 };
 
 export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUser(`user_${i + 100}`));
+
+export const MOCK_NOTIFICATIONS = [
+  {
+    id: 1,
+    type: 'follow',
+    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=1' },
+    content: '님이 회원님을 팔로우하기 시작했습니다.',
+    time: '2시간',
+    isFollowing: false
+  },
+  {
+    id: 2,
+    type: 'like',
+    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=2' },
+    content: '님이 회원님의 사진을 좋아합니다.',
+    time: '4시간',
+    image: 'https://picsum.photos/seed/notif1/100/100'
+  },
+  {
+    id: 3,
+    type: 'comment',
+    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=3' },
+    content: '님이 댓글을 남겼습니다: "여기 진짜 예쁘네요! 어디인가요?"',
+    time: '1일',
+    image: 'https://picsum.photos/seed/notif2/100/100'
+  },
+  {
+    id: 4,
+    type: 'follow',
+    user: { name: 'nature_lover', avatar: 'https://i.pravatar.cc/150?u=4' },
+    content: '님이 회원님을 팔로우하기 시작했습니다.',
+    time: '2일',
+    isFollowing: true
+  }
+];

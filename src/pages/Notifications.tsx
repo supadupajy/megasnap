@@ -6,45 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'follow',
-    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=1' },
-    content: '님이 회원님을 팔로우하기 시작했습니다.',
-    time: '2시간',
-    isFollowing: false
-  },
-  {
-    id: 2,
-    type: 'like',
-    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=2' },
-    content: '님이 회원님의 사진을 좋아합니다.',
-    time: '4시간',
-    image: 'https://picsum.photos/seed/notif1/100/100'
-  },
-  {
-    id: 3,
-    type: 'comment',
-    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=3' },
-    content: '님이 댓글을 남겼습니다: "여기 진짜 예쁘네요! 어디인가요?"',
-    time: '1일',
-    image: 'https://picsum.photos/seed/notif2/100/100'
-  },
-  {
-    id: 4,
-    type: 'follow',
-    user: { name: 'nature_lover', avatar: 'https://i.pravatar.cc/150?u=4' },
-    content: '님이 회원님을 팔로우하기 시작했습니다.',
-    time: '2일',
-    isFollowing: true
-  }
-];
+import { MOCK_NOTIFICATIONS } from '@/lib/mock-data';
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
   const handleBack = () => {
     if (window.history.length > 1 && window.history.state?.idx > 0) {
