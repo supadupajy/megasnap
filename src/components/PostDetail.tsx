@@ -64,7 +64,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 우측으로 스와이프 시 닫기 (iOS 스타일)
+    // 우측으로 스와이프 시 닫기
     if (absX > absY && offset.x > 60) {
       if (offset.x > 120 || velocity.x > 400) {
         setDirection(0);
@@ -76,6 +76,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const threshold = 70;
     const velThreshold = 400;
 
+    // 상하 스와이프로 포스트 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -110,198 +111,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     },
     exit: (direction: number) => ({
       y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
-      x: direction === 0 ? "100%" : 0, // 우측으로 사라짐
-      opacity: 0,
-      scale: 0.95,
-      transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        x: { duration: 0.25, ease: "easeInOut" },
-        opacity: { duration: 0.2 }
-      }
-    })
-  };
-
-  const getBorderColor = () => {
-    if (isInfluencer) return "#ff0000";
-    if (isAd) return "#3b82f6";
-    if (isPopular) return "#ccff00";
-    return "transparent";
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
-        <style>{`
-          [data-radix-portal] div[data-state] {
-            background-color: transparent !important;
-            backdrop-filter: none !important;
-          }
-        `}</style>
-        
-        <div className="absolute top-6 right-6 z-[110]">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onClose}
-            className="rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 text-white border border-white/20 w-12 h-12"
-          >
-            <X className="w-6 h-6" />
-          </Button>
-        </div>
-
-        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
-          <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
-            <motion.div 
-              className={cn(
-                "absolute w-full rounded-full",
-                isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
-              )}
-              initial={false}
-              animate={{ 
-                height: `${Math.max(10, 100 / posts.length)}%`,
-                top: `${(currentIndex / (posts.length - 1 || 1)) * (100 - Math.max(10, 100 / posts.length))}%`
-              }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            />
-          </div>
-        </div>
-
-        <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
-            if (isClosing) onClose();
-          }}>
-            {!isClosing && (
-              <motion.div
-                key={post.id}
-                custom={direction}
-                variants={variants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                drag={true}
-                dragControls={dragControls}
-                dragListener={false}
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.6}
-                onDragEnd={handleDragEnd}
-                style={{
-                  border: (isInfluencer || isAd || isPopular) ? `4px solid ${getBorderColor()}` : "none",
-                }}
-                className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,<dyad-write path="src/components/PostDetail.tsx" description="우측 스와이프 시 포스팅 상세 화면이 닫히도록 수정">
-"use client";
-
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
-
-interface PostDetailProps {
-  posts: any[];
-  initialIndex: number;
-  isOpen: boolean;
-  onClose: () => void;
-  onViewPost?: (id: string) => void;
-}
-
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [isClosing, setIsClosing] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const dragControls = useDragControls();
-
-  useEffect(() => {
-    if (isOpen && !hasInitialized && initialIndex !== -1) {
-      setCurrentIndex(initialIndex);
-      setHasInitialized(true);
-      setDirection(0);
-      setShowComments(false);
-    }
-    if (!isOpen) {
-      setHasInitialized(false);
-      setIsClosing(false);
-    }
-  }, [isOpen, initialIndex, hasInitialized]);
-
-  useEffect(() => {
-    const currentPost = posts[currentIndex];
-    if (isOpen && currentPost && onViewPost) {
-      onViewPost(currentPost.id);
-    }
-    setShowComments(false);
-  }, [currentIndex, isOpen, onViewPost]);
-
-  if (!isOpen || posts.length === 0) return null;
-  
-  const post = posts[currentIndex];
-  if (!post) return null;
-
-  const isAd = post.isAd;
-  const isPopular = !isAd && post.borderType === 'popular';
-  const isInfluencer = !isAd && post.isInfluencer;
-
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    const { offset, velocity } = info;
-    const absX = Math.abs(offset.x);
-    const absY = Math.abs(offset.y);
-    
-    // 우측으로 스와이프 시 닫기 (iOS 스타일)
-    if (absX > absY && offset.x > 60) {
-      if (offset.x > 120 || velocity.x > 400) {
-        setDirection(0);
-        setIsClosing(true);
-        return;
-      }
-    }
-
-    const threshold = 70;
-    const velThreshold = 400;
-
-    if (absY > absX) {
-      if (offset.y < -threshold || velocity.y < -velThreshold) {
-        if (currentIndex < posts.length - 1) {
-          setDirection(1);
-          setCurrentIndex(prev => prev + 1);
-        }
-      } else if (offset.y > threshold || velocity.y > velThreshold) {
-        if (currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(prev => prev - 1);
-        }
-      }
-    }
-  };
-
-  const variants = {
-    enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
-      x: 0,
-      opacity: 0,
-      scale: 0.95,
-    }),
-    center: {
-      y: 0,
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      transition: {
-        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
-        opacity: { duration: 0.2 }
-      }
-    },
-    exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
-      x: direction === 0 ? "100%" : 0, // 우측으로 사라짐
+      x: direction === 0 ? "100%" : 0,
       opacity: 0,
       scale: 0.95,
       transition: {
@@ -506,7 +316,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                     <ScrollBar className="hidden" />
                   </ScrollArea>
                   
-                  {/* Swipe Hint Footer */}
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
                     className="h-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
