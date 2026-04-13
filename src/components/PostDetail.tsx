@@ -186,7 +186,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
     return (
       <div className={cn(
-        "absolute top-6 left-6 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        "absolute top-6 right-6 z-30 w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
         bgColor
       )}>
         <Icon className={iconClass} />
@@ -210,6 +210,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           }
         `}</style>
         
+        <div className="absolute top-4 right-6 z-[110]">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/40 w-11 h-11 active:scale-90 transition-all"
+          >
+            <X className="w-6 h-6 stroke-[2.5px]" />
+          </Button>
+        </div>
+
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -261,7 +272,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
-                          // 이미지 슬라이더나 버튼이 아닌 영역을 누르면 드래그 시작
                           if (!target.closest('button') && !target.closest('a') && !target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
@@ -295,21 +305,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           ))}
                         </div>
 
-                        {/* Close Button: Moved to bottom right of image */}
-                        <div className="absolute bottom-4 right-4 z-[40]">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onClose();
-                            }}
-                            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-lg border border-white/40 w-10 h-10 active:scale-90 transition-all"
-                          >
-                            <X className="w-5 h-5 stroke-[3px]" />
-                          </Button>
-                        </div>
-
                         {/* Category Icon Badge */}
                         {renderCategoryIcon()}
 
@@ -328,16 +323,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
 
                         {isAd ? (
-                          <div className="absolute top-6 right-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                          <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
                             AD
                           </div>
                         ) : isInfluencer ? (
-                          <div className="absolute top-6 right-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                          <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
                             <Star className="w-3.5 h-3.5 fill-black" />
                             INFLUENCER
                           </div>
                         ) : isPopular && (
-                          <div className="absolute top-6 right-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                          <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
                             <Flame className="w-3.5 h-3.5 fill-white" />
                             HOT
                           </div>
