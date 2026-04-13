@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState } from 'export default';
 import { ChevronLeft, Search, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,7 +11,7 @@ const MESSAGES = [
   {
     id: 'travel_maker',
     user: { name: 'travel_maker' },
-    lastMessage: '성수동 카페 정보 좀 알려주실 수 있나요?',
+    lastMessage: '오! 감사합니다. 바로 가봐야겠네요!',
     time: '12분',
     unread: true
   },
