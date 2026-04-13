@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, Search, Edit, Camera } from 'lucide-react';
+import { ChevronLeft, Search, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -68,7 +68,11 @@ const Messages = () => {
 
           <div className="space-y-5">
             {MESSAGES.map((msg) => (
-              <div key={msg.id} className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity">
+              <div 
+                key={msg.id} 
+                onClick={() => navigate(`/chat/${msg.id}`)}
+                className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity"
+              >
                 <Avatar className="w-14 h-14 shrink-0">
                   <AvatarImage src={msg.user.avatar} />
                   <AvatarFallback>{msg.user.name[0]}</AvatarFallback>
@@ -87,9 +91,6 @@ const Messages = () => {
                 {msg.unread && (
                   <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
                 )}
-                <button className="p-1">
-                  <Camera className="w-6 h-6 text-gray-400" />
-                </button>
               </div>
             ))}
           </div>
