@@ -3,9 +3,11 @@
 import React from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface PostItemProps {
   user: {
+    id: string;
     name: string;
     avatar: string;
   };
@@ -21,6 +23,7 @@ interface PostItemProps {
 }
 
 const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, isInfluencer, borderType = 'none' }: PostItemProps) => {
+  const navigate = useNavigate();
   const isPopular = !isAd && borderType === 'popular';
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -28,11 +31,19 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
     target.src = `https://picsum.photos/seed/${content.length}/800/800`;
   };
 
+  const handleUserClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 부모의 포스팅 상세 보기 클릭 이벤트 방지
+    navigate(`/profile/${user.id}`);
+  };
+
   return (
     <div className="bg-white mb-8 last:mb-20">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500">
+        <div 
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={handleUserClick}
+        >
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 transition-transform group-active:scale-90">
             <img 
               src={user.avatar} 
               alt={user.name} 
@@ -40,14 +51,14 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
             />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 leading-none">{user.name}</p>
+            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-green-600 transition-colors">{user.name}</p>
             <div className="flex items-center text-green-500 gap-0.5 mt-0.5">
               <MapPin className="w-3 h-3" />
               <span className="text-[10px] font-medium">{location}</span>
             </div>
           </div>
         </div>
-        <button className="text-gray-400">
+        <button className="text-gray-400" onClick={(e) => e.stopPropagation()}>
           <MoreHorizontal className="w-5 h-5" />
         </button>
       </div>
@@ -55,7 +66,6 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          // 인플루언서 및 인기 게시물 모두 글로우 애니메이션 제거
           isInfluencer ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/10" : (
             isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
               isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
@@ -102,13 +112,13 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <button className="transition-transform active:scale-125">
+            <button className="transition-transform active:scale-125" onClick={(e) => e.stopPropagation()}>
               <Heart className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
             </button>
-            <button>
+            <button onClick={(e) => e.stopPropagation()}>
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </button>
-            <button>
+            <button onClick={(e) => e.stopPropagation()}>
               <Share2 className="w-6 h-6 text-gray-700" />
             </button>
           </div>
@@ -118,12 +128,17 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
         <div className="space-y-1.5">
           <p className="text-sm font-bold text-gray-900">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
-            <span className="text-sm font-bold text-gray-900 whitespace-nowrap">{user.name}</span>
+            <span 
+              className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-green-600 transition-colors"
+              onClick={handleUserClick}
+            >
+              {user.name}
+            </span>
             <p className="text-sm text-gray-800 leading-snug line-clamp-2">
               {content}
             </p>
           </div>
-          <button className="text-xs text-gray-400 font-medium">댓글 12개 모두 보기</button>
+          <button className="text-xs text-gray-400 font-medium" onClick={(e) => e.stopPropagation()}>댓글 12개 모두 보기</button>
         </div>
       </div>
     </div>
