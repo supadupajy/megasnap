@@ -99,16 +99,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 가로 스와이프 (닫기) - 더 민감하게 반응하도록 조정
-    if (absX > absY && (absX > 60 || Math.abs(velocity.x) > 400)) {
+    // 가로 스와이프 (닫기) - 민감도 유지
+    if (absX > absY && (absX > 50 || Math.abs(velocity.x) > 300)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    // 세로 스와이프 (다음/이전 포스트) - 임계값 하향 조정
-    const threshold = 50;
-    const velThreshold = 300;
+    // 세로 스와이프 (다음/이전 포스트) - 트리거 임계값 대폭 하향 (더 빨리 반응)
+    const threshold = 20;
+    const velThreshold = 100;
 
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
@@ -239,7 +239,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence mode="wait" initial={false} custom={direction} onExitComplete={() => {
+          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
             if (isClosing) onClose();
           }}>
             {!isClosing && (
@@ -254,7 +254,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragControls={dragControls}
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.6}
+                dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col rounded-[40px] overflow-hidden"
                 style={{ 
