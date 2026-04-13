@@ -13,28 +13,18 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// 정상 작동이 확인된 고유한 GIF URL 리스트 (중복 없음)
+// 정상 작동이 확인된 가장 안정적인 Giphy 임베드 URL 리스트
 const GIF_POOL = [
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif"
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKv6uSDEPLux5m/giphy.gif",
+  "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
