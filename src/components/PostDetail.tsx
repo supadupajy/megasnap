@@ -336,12 +336,55 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
-                      <div className="px-4 py-5 sm:px-5 sm:py-6 relative">
+                      <div className="px-4 py-4 sm:px-5 sm:py-5 relative">
                         {renderCategoryIcon()}
 
+                        {/* Action Bar - Moved directly under image */}
+                        <div className="flex items-center justify-between mb-5">
+                          <div className="flex items-center gap-3.5">
+                            <button 
+                              className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors group"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onLikeToggle?.(post.id);
+                              }}
+                            >
+                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                              <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowComments(!showComments);
+                              }}
+                              className="flex items-center gap-1 text-gray-500 hover:text-blue-500 transition-colors"
+                            >
+                              <MessageCircle className="w-[18px] h-[18px]" />
+                              <span className="text-[11px] font-bold text-gray-500">12</span>
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                              <Share2 className="w-[18px] h-[18px]" />
+                            </button>
+                          </div>
+
+                          {post.lat !== undefined && post.lng !== undefined && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onLocationClick?.(post.lat, post.lng);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+                            >
+                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                              <span className="text-[10px] font-black">위치보기</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* User Info */}
                         <div className="flex items-center gap-3 mb-3">
                           <div 
-                            className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
                             onClick={handleUserClick}
                           >
                             <img 
@@ -383,47 +426,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium pr-10">
                           {post.content}
                         </p>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <button 
-                              className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onLikeToggle?.(post.id);
-                              }}
-                            >
-                              <Heart className={cn("w-5 h-5 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
-                              <span className="text-xs font-bold text-gray-500">{post.likes}</span>
-                            </button>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowComments(!showComments);
-                              }}
-                              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors"
-                            >
-                              <MessageCircle className="w-5 h-5" />
-                              <span className="text-xs font-bold text-gray-500">12</span>
-                            </button>
-                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                              <Share2 className="w-5 h-5" />
-                            </button>
-                          </div>
-
-                          {post.lat !== undefined && post.lng !== undefined && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onLocationClick?.(post.lat, post.lng);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
-                            >
-                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                              <span className="text-[10px] font-black">위치보기</span>
-                            </button>
-                          )}
-                        </div>
 
                         <div className="border-t border-gray-100 pt-2">
                           <button 
