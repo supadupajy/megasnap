@@ -78,13 +78,16 @@ const Messages = () => {
                 onClick={() => navigate(`/chat/${msg.id}`)}
                 className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity"
               >
-                <Avatar 
-                  className="w-14 h-14 shrink-0 hover:ring-2 hover:ring-green-500 transition-all"
+                <div 
+                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
                   onClick={(e) => handleAvatarClick(e, msg.user.name)}
                 >
-                  <AvatarImage src={msg.user.avatar} />
-                  <AvatarFallback>{msg.user.name[0]}</AvatarFallback>
-                </Avatar>
+                  <img 
+                    src={msg.user.avatar} 
+                    alt={msg.user.name} 
+                    className="w-full h-full rounded-full object-cover border-2 border-white" 
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm ${msg.unread ? 'font-bold text-gray-900' : 'text-gray-900'}`}>
                     {msg.user.name}
