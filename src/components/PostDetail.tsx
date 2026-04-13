@@ -322,7 +322,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 }}
                               />
                               {idx === post.adImageIndex && (
-                                <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
                                   AD
                                 </div>
                               )}
