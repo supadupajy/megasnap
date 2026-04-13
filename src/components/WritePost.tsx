@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess } from '@/utils/toast';
@@ -20,6 +20,29 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [address, setAddress] = useState<string>('서울특별시 중구 세종대로 110');
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && initialLocation && window.google) {
+      setIsLoadingAddress(true);
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode(
+        { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
+        (results, status) => {
+          if (status === "OK" && results && results[0]) {
+            // 전체 주소에서 너무 상세한 부분은 제외하고 적절한 길이로 자름
+            setAddress(results[0].formatted_address);
+          } else {
+            setAddress(`${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+          }
+          setIsLoadingAddress(false);
+        }
+      );
+    } else if (!initialLocation) {
+      setAddress('서울특별시 중구 세종대로 110');
+    }
+  }, [isOpen, initialLocation]);
 
   const takePhoto = async () => {
     try {
@@ -41,7 +64,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   };
 
   const handlePost = () => {
-    // 전달받은 좌표가 있으면 해당 좌표를 사용하고, 없으면 기본 좌표(서울시청) 근처에 생성
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
@@ -56,7 +78,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         avatar: 'https://i.pravatar.cc/150?u=me'
       },
       content: content,
-      location: initialLocation ? '지정된 위치' : '서울특별시 중구 세종대로 110',
+      location: address,
       lat,
       lng,
       likes: 0,
@@ -66,7 +88,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       borderType: 'none'
     };
 
-    // 특별한 이펙트: 컨페티(폭죽) 효과
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
@@ -75,19 +96,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
     const interval: any = setInterval(function() {
       const timeLeft = animationEnd - Date.now();
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
-
+      if (timeLeft <= 0) return clearInterval(interval);
       const particleCount = 50 * (timeLeft / duration);
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
     }, 250);
 
-    if (onPostCreated) {
-      onPostCreated(newPost);
-    }
+    if (onPostCreated) onPostCreated(newPost);
 
     showSuccess('새로운 추억이 지도에 등록되었습니다! ✨');
     onClose();
@@ -111,7 +126,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           </div>
 
           <div className="flex-1 space-y-6 overflow-y-auto pb-24 no-scrollbar">
-            {/* Photo Upload Area */}
             <div 
               onClick={takePhoto}
               className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden"
@@ -136,25 +150,26 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               )}
             </div>
 
-            {/* Location Selector */}
             <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                 <MapPin className="w-5 h-5 text-indigo-600" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">Location</p>
-                <p className="text-sm font-bold text-gray-800">
-                  {initialLocation 
-                    ? `${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}` 
-                    : '서울특별시 중구 세종대로 110'}
-                </p>
+                {isLoadingAddress ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
+                    <span className="text-xs text-gray-400">주소를 불러오는 중...</span>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold text-gray-800 truncate">{address}</p>
+                )}
               </div>
               {!initialLocation && (
                 <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">CHANGE</Button>
               )}
             </div>
 
-            {/* Content Input */}
             <div className="space-y-2">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Caption</p>
               <Textarea 
@@ -170,7 +185,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={!content || isTakingPhoto}
+              disabled={!content || isTakingPhoto || isLoadingAddress}
             >
               지도에 등록하기
             </Button>
