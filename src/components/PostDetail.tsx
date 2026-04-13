@@ -27,6 +27,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const dragControls = useDragControls();
   
   const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
   const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
@@ -42,6 +43,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       setDirection(0);
       setIsClosing(false);
       dragX.set(0);
+      dragY.set(0);
     }
   }, [isOpen]);
 
@@ -66,32 +68,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 가로 움직임이 더 클 때 (닫기 판정)
-    if (absX > absY) {
+    // 1. 가로 움직임이 현저히 클 때 (닫기 판정)
+    if (absX > absY && absX > 20) {
       if (offset.x < -screenWidth / 6 || velocity.x < -300) {
         setDirection(0);
         setIsClosing(true);
+        return;
       }
-      return;
     }
 
-    // 2. 세로 움직임이 더 클 때 (포스팅 전환 판정)
-    const swipeThreshold = 30;
-    const velocityThreshold = 100;
+    // 2. 세로 움직임이 클 때 (포스팅 전환 판정)
+    const swipeThreshold = 40;
+    const velocityThreshold = 150;
 
-    if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
-      // 위로 스와이프 -> 다음 포스트
-      if (currentIndex < displayPosts.length - 1) {
-        setDirection(1);
-        setCurrentIndex(prev => prev + 1);
-        dragX.set(0);
-      }
-    } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
-      // 아래로 스와이프 -> 이전 포스트
-      if (currentIndex > 0) {
-        setDirection(-1);
-        setCurrentIndex(prev => prev - 1);
-        dragX.set(0);
+    if (absY > absX && absY > 20) {
+      if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
+        // 위로 스와이프 -> 다음 포스트
+        if (currentIndex < displayPosts.length - 1) {
+          setDirection(1);
+          setCurrentIndex(prev => prev + 1);
+          dragX.set(0);
+          dragY.set(0);
+        }
+      } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
+        // 아래로 스와이프 -> 이전 포스트
+        if (currentIndex > 0) {
+          setDirection(-1);
+          setCurrentIndex(prev => prev - 1);
+          dragX.set(0);
+          dragY.set(0);
+        }
       }
     }
   };
@@ -117,16 +123,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      // direction 0: 왼쪽으로 빠르게 닫기
-      x: direction === 0 ? -screenWidth * 1.2 : 0,
+      // direction 0: 왼쪽으로 초고속 닫기
+      x: direction === 0 ? -screenWidth * 1.5 : 0,
       // direction 1/-1: 상하로 포스트 전환
       y: direction > 0 ? -800 : direction < 0 ? 800 : 0,
       opacity: 0,
       scale: 0.95,
       transition: {
-        x: { type: "spring", damping: 35, stiffness: 450, restDelta: 0.5 }, // 닫기 속도 대폭 향상
+        x: { duration: 0.2, ease: "easeIn" }, // 닫기 속도 극대화
         y: { type: "spring", damping: 30, stiffness: 350 },
-        opacity: { duration: 0.15 }
+        opacity: { duration: 0.1 }
       }
     })
   };
@@ -188,12 +194,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 initial="enter"
                 animate="center"
                 exit="exit"
-                drag="x"
+                drag={true}
                 dragControls={dragControls}
                 dragListener={false}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={{ left: 0.8, right: 0 }}
-                style={{ x: dragX, opacity }}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.7}
+                style={{ x: dragX, y: dragY, opacity }}
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
