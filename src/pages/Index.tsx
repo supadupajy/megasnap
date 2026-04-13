@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy, ExternalLink } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy, ExternalLink, AlertCircle } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { showSuccess } from '@/utils/toast';
@@ -24,9 +24,7 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 현재 도메인 확인용 (localhost가 나오면 새 탭에서 열기를 권장)
   const currentOrigin = window.location.origin;
-  const isLocalhost = currentOrigin.includes('localhost');
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentOrigin);
@@ -152,23 +150,24 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
-      {/* URL 확인용 임시 바 */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-black text-white text-[10px] py-2 px-4 flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-yellow-400">
-            {isLocalhost ? "⚠️ localhost 대신 실제 도메인을 등록해야 합니다." : "✅ 아래 주소를 카카오에 등록하세요."}
-          </span>
-          <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded hover:bg-white/30 transition-colors">
-            <Copy className="w-3 h-3" /> 복사
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="truncate opacity-80">{currentOrigin}</span>
-          {isLocalhost && (
-            <span className="text-[9px] opacity-60 flex items-center gap-1">
-              우측 상단 <ExternalLink className="w-2.5 h-2.5" /> 아이콘 클릭 권장
-            </span>
-          )}
+      {/* 도메인 등록 가이드 바 */}
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-green-600 text-white py-3 px-4 shadow-2xl">
+        <div className="max-w-md mx-auto flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-xs font-bold">카카오 설정 필수 단계</span>
+            </div>
+            <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white text-green-600 px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
+              <Copy className="w-3 h-3" /> 주소 복사하기
+            </button>
+          </div>
+          <p className="text-[10px] leading-tight opacity-90">
+            카카오 개발자 센터의 [플랫폼 > Web > 사이트 도메인]에 아래 주소를 <b>포트 번호까지 포함해서</b> 등록해 주세요.
+          </p>
+          <div className="bg-black/20 p-2 rounded-lg font-mono text-[11px] break-all border border-white/10">
+            {currentOrigin}
+          </div>
         </div>
       </div>
 
@@ -184,7 +183,7 @@ const Index = () => {
         />
       </main>
 
-      <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+      <div className="absolute top-32 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
@@ -198,9 +197,6 @@ const Index = () => {
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>재검색</span>
           </button>
-          <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
-            <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-green-600">{filteredPosts.length}</span></p>
-          </div>
         </div>
       </div>
 
