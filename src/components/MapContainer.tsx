@@ -221,6 +221,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isInfluencer = !isAd && this.post.isInfluencer;
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
+        // 인플루언서인 경우 조회 여부와 상관없이 핀 색상을 빨간색으로 고정
+        const pinColor = isInfluencer ? '#ff0000' : (this.isViewed ? '#94a3b8' : (isPopular ? '#ccff00' : borderColor));
+
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
@@ -240,7 +243,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${this.isViewed ? '#94a3b8' : (isInfluencer ? '#ff0000' : (isPopular ? '#ccff00' : borderColor))};
+                        width: 12px; height: 12px; background: ${pinColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;
@@ -285,7 +288,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        // 인플루언서 상태나 조회 상태가 바뀌면 다시 그림
         if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
