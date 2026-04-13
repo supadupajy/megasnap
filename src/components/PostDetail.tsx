@@ -37,13 +37,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen) {
       setCurrentIndex(0);
       setDirection(0);
-      controls.set({ x: 0, opacity: 1, y: 0 });
+      controls.set({ x: 0, y: 0, opacity: 1 });
     }
   }, [isOpen, controls]);
 
   useEffect(() => {
     if (isOpen) {
-      controls.set({ x: 0, opacity: 1 });
+      controls.set({ x: 0, y: 0, opacity: 1 });
     }
   }, [currentIndex, isOpen, controls]);
 
@@ -74,30 +74,32 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = async (event: any, info: PanInfo) => {
     const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
     const swipeThreshold = 50;
-    const velocityThreshold = 200;
+    const velocityThreshold = 300;
 
-    // 1. 수직 스와이프 감지 (포스팅 탐색)
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x) + 20) {
+    // 1. 수직 스와이프 우선 판정 (포스팅 전환)
+    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
       if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+        // 위로 스와이프 -> 다음 포스트
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(currentIndex + 1);
         }
       } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
+        // 아래로 스와이프 -> 이전 포스트
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(currentIndex - 1);
         }
       }
-      // 수직 스와이프 후 위치 복구 (더 빠르게)
-      controls.start({ y: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
+      // 위치 복구
+      controls.start({ y: 0, x: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
       return;
     }
 
-    // 2. 수평 스와이프 감지 (왼쪽으로 닫기)
-    if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
-      // 닫기 애니메이션 (더 빠르게: 0.3s -> 0.2s)
+    // 2. 수평 스와이프 판정 (왼쪽으로 닫기)
+    if (info.offset.x < -screenWidth / 3 || info.velocity.x < -500) {
       await controls.start({ 
         x: -screenWidth, 
         opacity: 0, 
@@ -105,9 +107,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       });
       onClose();
     } else {
-      // 원래 위치로 복귀 (더 탄성있고 빠르게)
+      // 원래 위치로 복귀
       controls.start({ 
         x: 0, 
+        y: 0,
         opacity: 1,
         transition: { type: "spring", damping: 25, stiffness: 450 } 
       });
@@ -116,7 +119,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : "-100%",
+      y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
       opacity: 0,
       x: 0,
     }),
@@ -130,7 +133,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : "100%",
+      y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
       opacity: 0,
       transition: {
         y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
@@ -184,11 +187,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate={controls}
               exit="exit"
-              drag="x"
+              drag // 상하좌우 드래그 허용
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0 }}
-              dragElastic={{ left: 1, right: 0 }}
+              dragConstraints={{ left: -window.innerWidth, right: 0, top: 0, bottom: 0 }}
+              dragElastic={{ left: 1, right: 0, top: 0.2, bottom: 0.2 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
@@ -204,6 +207,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
+                    // 드래그 핸들러가 이벤트를 가로채도록 설정
                     dragControls.start(e);
                   }}
                 >
