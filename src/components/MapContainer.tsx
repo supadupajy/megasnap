@@ -13,8 +13,8 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
-// 발급받으신 네이버 Client ID를 여기에 입력하세요.
-const NAVER_CLIENT_ID = "YOUR_NAVER_CLIENT_ID"; 
+// 발급받으신 네이버 Client ID를 적용했습니다.
+const NAVER_CLIENT_ID = "ipu2vry3sw"; 
 const NAVER_SDK_URL = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
 
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
