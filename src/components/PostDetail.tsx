@@ -9,7 +9,7 @@ import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
 
 interface PostDetailProps {
   posts: any[];
@@ -24,7 +24,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
-  const controls = useAnimation();
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -46,16 +45,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [currentIndex, isOpen, displayPosts, onViewPost]);
 
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) viewport.scrollTop = 0;
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [currentIndex, isOpen]);
-
   if (!isOpen || displayPosts.length === 0) return null;
   
   const post = displayPosts[currentIndex];
@@ -65,68 +54,58 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
 
-  const handleDragEnd = async (event: any, info: PanInfo) => {
-    const screenWidth = window.innerWidth;
-    const swipeThreshold = 50;
-    const velocityThreshold = 200;
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    const { offset, velocity } = info;
+    const swipeThreshold = 80;
+    const velocityThreshold = 300;
 
     // 1. 왼쪽 스와이프 (닫기)
-    if (info.offset.x < -screenWidth / 4 || info.velocity.x < -500) {
-      await controls.start({ 
-        x: -screenWidth, 
-        opacity: 0, 
-        transition: { duration: 0.2, ease: "easeOut" } 
-      });
+    if (offset.x < -100 || velocity.x < -500) {
       onClose();
       return;
     }
 
     // 2. 상하 스와이프 (포스팅 전환)
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) {
-      if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-        // 위로 스와이프 -> 다음 포스트 (아래에서 위로 올라옴)
+    // 수직 이동 거리가 수평 이동 거리보다 클 때만 작동
+    if (Math.abs(offset.y) > Math.abs(offset.x)) {
+      if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
+        // 위로 스와이프 -> 다음 포스트
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
-          return;
         }
-      } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-        // 아래로 스와이프 -> 이전 포스트 (위에서 아래로 내려옴)
+      } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
+        // 아래로 스와이프 -> 이전 포스트
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
-          return;
         }
       }
     }
-
-    // 액션이 없으면 제자리로 복구
-    controls.start({ x: 0, y: 0, opacity: 1, scale: 1 });
   };
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
+      y: direction > 0 ? 1000 : direction < 0 ? -1000 : 0,
       opacity: 0,
       scale: 0.9,
     }),
     center: {
       y: 0,
-      opacity: 1,
       x: 0,
+      opacity: 1,
       scale: 1,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 300 },
-        opacity: { duration: 0.3 },
-        scale: { duration: 0.3 }
+        y: { type: "spring", damping: 30, stiffness: 300 },
+        opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
+      y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
       scale: 0.9,
       transition: {
-        y: { type: "spring", damping: 25, stiffness: 300 },
+        y: { type: "spring", damping: 30, stiffness: 300 },
         opacity: { duration: 0.2 }
       }
     })
@@ -135,6 +114,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
+        {/* Close Button */}
         <div className="absolute top-6 right-6 z-50">
           <Button 
             variant="ghost" 
@@ -146,6 +126,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
+        {/* Progress Indicator */}
         <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
@@ -175,21 +156,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               custom={direction}
               variants={variants}
               initial="enter"
-              animate={controls}
+              animate="center"
               exit="exit"
               drag
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0, top: -200, bottom: 200 }}
-              dragElastic={{ left: 0.5, right: 0, top: 0.2, bottom: 0.2 }}
+              dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+              dragElastic={{ top: 0.8, bottom: 0.8, left: 0.5, right: 0 }}
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
               )}
               style={{
                 border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
               }}
             >
               <div className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col">
@@ -197,7 +176,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
-                    dragControls.start(e);
+                    // 스크롤바 영역이 아닌 곳에서만 드래그 시작
+                    const target = e.target as HTMLElement;
+                    if (!target.closest('.radix-scroll-area-scrollbar')) {
+                      dragControls.start(e);
+                    }
                   }}
                 >
                   <div className="flex flex-col">
@@ -288,6 +271,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   <ScrollBar className="hidden" />
                 </ScrollArea>
                 
+                {/* Bottom Handle */}
                 <div 
                   onPointerDown={(e) => dragControls.start(e)}
                   className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
