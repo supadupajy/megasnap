@@ -27,6 +27,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const dragControls = useDragControls();
   
   const dragX = useMotionValue(0);
+  // -200px 이동 시 투명도가 0이 되도록 설정
   const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
@@ -35,6 +36,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const others = posts.filter((_, idx) => idx !== initialIndex);
     return [selected, ...others];
   }, [isOpen, posts, initialIndex]);
+
+  // 투명도가 0이 되면 즉시 닫기 위한 리스너
+  useEffect(() => {
+    const unsubscribe = dragX.onChange((latest) => {
+      if (latest <= -200 && !isClosing) {
+        setIsClosing(true);
+        onClose();
+      }
+    });
+    return () => unsubscribe();
+  }, [dragX, isClosing, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,13 +75,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     const screenWidth = window.innerWidth;
-    const swipeThreshold = 40; // 감도 상향 조정
+    const swipeThreshold = 40; 
     const velocityThreshold = 150;
 
-    // 1. 왼쪽 스와이프 (닫기)
+    // 1. 왼쪽 스와이프 (닫기 판정)
     if (offset.x < -screenWidth / 5 || velocity.x < -300) {
       setDirection(0);
       setIsClosing(true);
+      onClose(); // 즉시 닫기 호출
       return;
     }
 
@@ -122,14 +135,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       transition: {
         x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
         y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.2 }
+        opacity: { duration: 0.1 } // 종료 시 투명도 변화를 더 빠르게
       }
     })
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* 검은색 레이어(Overlay)를 투명하게 만드는 스타일 주입 */}
       <style>{`
         [data-radix-portal] div[data-state] {
           background-color: transparent !important;
