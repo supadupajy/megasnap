@@ -23,6 +23,26 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"
 ];
 
+const GENERAL_IMAGES = [
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=800&q=80"
+];
+
+const AVATAR_IMAGES = [
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=150&q=80",
+  "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+];
+
 const AD_FOOD_CONTENT = [
   "배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔",
   "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩",
@@ -70,17 +90,20 @@ const USERNAME_PARTS = [
   'mystic', 'vivid', 'silent', 'epic', 'nova', 'luna', 'atlas', 'flow'
 ];
 
-export const createMockUser = (id: string): User => ({
-  id,
-  name: id,
-  nickname: id.includes('_') ? id : `Explorer_${id}`,
-  avatar: `https://i.pravatar.cc/150?u=${id}`,
-  bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
-  followers: Math.floor(Math.random() * 5000) + 100,
-  following: Math.floor(Math.random() * 1000) + 50,
-  postsCount: Math.floor(Math.random() * 100) + 5,
-  isFollowing: Math.random() > 0.8
-});
+export const createMockUser = (id: string): User => {
+  const avatarIndex = Math.abs(id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % AVATAR_IMAGES.length;
+  return {
+    id,
+    name: id,
+    nickname: id.includes('_') ? id : `Explorer_${id}`,
+    avatar: AVATAR_IMAGES[avatarIndex],
+    bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
+    followers: Math.floor(Math.random() * 5000) + 100,
+    following: Math.floor(Math.random() * 1000) + 50,
+    postsCount: Math.floor(Math.random() * 100) + 5,
+    isFollowing: Math.random() > 0.8
+  };
+};
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
@@ -94,7 +117,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let mainImage = `https://picsum.photos/seed/${id}/800/800`;
+    let mainImage = GENERAL_IMAGES[Math.floor(Math.random() * GENERAL_IMAGES.length)];
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
@@ -111,7 +134,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const imageCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
     const images = [mainImage];
     for (let j = 1; j < imageCount; j++) {
-      images.push(`https://picsum.photos/seed/${id}_${j}/800/800`);
+      images.push(GENERAL_IMAGES[(Math.floor(Math.random() * GENERAL_IMAGES.length))]);
     }
 
     const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
@@ -147,7 +170,7 @@ export const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
   return {
     id,
     name: id,
-    avatar: `https://i.pravatar.cc/150?u=${id}`,
+    avatar: AVATAR_IMAGES[i % AVATAR_IMAGES.length],
     hasUpdate: Math.random() > 0.3
   };
 });
@@ -158,7 +181,7 @@ export const MOCK_NOTIFICATIONS = [
   {
     id: 1,
     type: 'follow',
-    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=1' },
+    user: { name: 'travel_maker', avatar: AVATAR_IMAGES[0] },
     content: '님이 회원님을 팔로우하기 시작했습니다.',
     time: '2시간',
     isFollowing: false
@@ -166,23 +189,23 @@ export const MOCK_NOTIFICATIONS = [
   {
     id: 2,
     type: 'like',
-    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=2' },
+    user: { name: 'seoul_snap', avatar: AVATAR_IMAGES[1] },
     content: '님이 회원님의 사진을 좋아합니다.',
     time: '4시간',
-    image: 'https://picsum.photos/seed/notif1/100/100'
+    image: GENERAL_IMAGES[0]
   },
   {
     id: 3,
     type: 'comment',
-    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=3' },
+    user: { name: 'explorer_kim', avatar: AVATAR_IMAGES[2] },
     content: '님이 댓글을 남겼습니다: "여기 진짜 예쁘네요! 어디인가요?"',
     time: '1일',
-    image: 'https://picsum.photos/seed/notif2/100/100'
+    image: GENERAL_IMAGES[1]
   },
   {
     id: 4,
     type: 'follow',
-    user: { name: 'nature_lover', avatar: 'https://i.pravatar.cc/150?u=4' },
+    user: { name: 'nature_lover', avatar: AVATAR_IMAGES[3] },
     content: '님이 회원님을 팔로우하기 시작했습니다.',
     time: '2일',
     isFollowing: true

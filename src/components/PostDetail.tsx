@@ -27,6 +27,8 @@ const MOCK_COMMENTS = [
   { user: "daily_snap", text: "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!" }
 ];
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle }: PostDetailProps) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -177,7 +179,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           }
         `}</style>
         
-        {/* Adjusted Close Button Position */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -260,7 +261,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
-                                  target.src = `https://picsum.photos/seed/${post.id}_${idx}/800/800`;
+                                  target.src = FALLBACK_IMAGE;
                                 }}
                               />
                             </div>
@@ -308,6 +309,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               src={post.user.avatar} 
                               alt="" 
                               className="w-full h-full rounded-full object-cover border-2 border-white" 
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+                              }}
                             />
                           </div>
                           <div className="min-w-0">
