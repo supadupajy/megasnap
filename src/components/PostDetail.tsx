@@ -21,7 +21,7 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
+  const [direction, setDirection] = useState(0); // 1: down, -1: up, 100: right close, -100: left close
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -64,10 +64,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 우측으로 스와이프 시 닫기
-    if (absX > absY && offset.x > 60) {
-      if (offset.x > 120 || velocity.x > 400) {
-        setDirection(0);
+    // 좌우 스와이프 시 닫기 (어느 방향이든)
+    if (absX > absY && absX > 60) {
+      if (absX > 120 || Math.abs(velocity.x) > 400) {
+        setDirection(offset.x > 0 ? 100 : -100); // 방향에 따른 종료 애니메이션 설정
         setIsClosing(true);
         return;
       }
@@ -94,8 +94,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
-      x: 0,
+      y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
+      x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
       scale: 0.95,
     }),
@@ -106,12 +106,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       scale: 1,
       transition: {
         y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        x: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
-      x: direction === 0 ? "100%" : 0,
+      y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
+      x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
       scale: 0.95,
       transition: {
