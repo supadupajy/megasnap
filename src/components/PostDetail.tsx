@@ -128,14 +128,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
       x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
+      scale: 1,
     }),
     center: {
       y: 0,
       x: 0,
       opacity: 1,
+      scale: 1,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
-        x: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
+        x: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
         opacity: { duration: 0.2 }
       }
     },
@@ -143,8 +145,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
       x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
+      scale: 1,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 350, mass: 0.8 },
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 1 },
         x: { duration: 0.25, ease: "easeInOut" },
         opacity: { duration: 0.2 }
       }
@@ -249,7 +252,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu bg-white rounded-[40px] overflow-hidden",
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden",
                   isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
@@ -348,7 +351,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
 
                       <div className="px-4 py-4 sm:px-5 sm:py-5 relative">
-                        {/* Action Bar - Moved directly under image */}
+                        {/* Action Bar */}
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
                             <button 
