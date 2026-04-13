@@ -31,33 +31,35 @@ const Index = () => {
   const populatedTiles = useRef<Set<string>>(new Set());
   const TILE_SIZE = 0.02; // 약 2km 단위의 그리드
 
-  // 초기 데이터 설정
+  // 초기 데이터 설정 및 외부 페이지(인기 탭 등)에서 넘어온 위치 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
-      setAllPosts(prev => [incomingPost, ...prev]);
+      // 기존 포스트 목록에 추가 (중복 방지)
+      setAllPosts(prev => {
+        if (prev.some(p => p.id === incomingPost.id)) return prev;
+        return [incomingPost, ...prev];
+      });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 위치보기로 넘어온 경우 하이라이트 효과 적용
+      // 하이라이트 효과 적용
       setHighlightedPostId(incomingPost.id);
-      const timer = setTimeout(() => setHighlightedPostId(null), 3000);
+      const timer = setTimeout(() => setHighlightedPostId(null), 3500);
       return () => clearTimeout(timer);
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     } else {
-      // 기본 위치 (서울)
       setMapCenter({ lat: 37.5665, lng: 126.9780 });
     }
   }, [location.state]);
 
-  // 지도 이동에 따른 그리드 기반 포스팅 생성 및 원거리 데이터 정리
+  // 지도 이동에 따른 그리드 기반 포스팅 생성
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       const centerLat = (ne.lat + sw.lat) / 2;
       const centerLng = (ne.lng + sw.lng) / 2;
       
-      // 현재 화면에 보이는 타일 범위 계산 (버퍼 포함)
       const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
       const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
       const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -75,8 +77,6 @@ const Index = () => {
             
             const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
             const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-            
-            // 타일당 적절한 밀도로 생성
             const tilePosts = createMockPosts(tileCenterLat, tileCenterLng, 6);
             newPosts.push(...tilePosts);
           }
@@ -86,8 +86,6 @@ const Index = () => {
       if (tilesAdded || allPosts.length > 600) {
         setAllPosts(prev => {
           const combined = [...prev, ...newPosts];
-          
-          // 성능 유지를 위해 너무 멀리 떨어진 데이터만 삭제 (약 10km 이상)
           if (combined.length > 600) {
             return combined.filter(post => {
               const distLat = Math.abs(post.lat - centerLat);
@@ -107,29 +105,14 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    const inView = allPosts.filter(post => {
+    return allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
+      // 하이라이트 중이거나 선택된 포스트는 필터와 상관없이 유지
+      return (isWithinBounds && isWithinTime) || post.id === selectedPostId || post.id === highlightedPostId;
     });
-
-    const influencers = inView.filter(p => p.isInfluencer);
-    const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
-    const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
-
-    let finalPosts = [...influencers, ...populars, ...normals];
-
-    if (selectedPostId) {
-      const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
-      if (!isAlreadyIncluded) {
-        const selectedPost = allPosts.find(p => p.id === selectedPostId);
-        if (selectedPost) finalPosts.push(selectedPost);
-      }
-    }
-
-    return finalPosts;
-  }, [allPosts, mapData, timeValue, selectedPostId]);
+  }, [allPosts, mapData, timeValue, selectedPostId, highlightedPostId]);
 
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return filteredPosts;
@@ -177,9 +160,8 @@ const Index = () => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 트렌딩 클릭 시에도 하이라이트 효과 적용
     setHighlightedPostId(post.id);
-    setTimeout(() => setHighlightedPostId(null), 3000);
+    setTimeout(() => setHighlightedPostId(null), 3500);
     
     setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
@@ -274,6 +256,12 @@ const Index = () => {
           onViewPost={handleViewPost}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
+            // 현재 지도에 있는 포스트 중 해당 좌표를 가진 포스트 찾기
+            const post = allPosts.find(p => p.lat === lat && p.lng === lng);
+            if (post) {
+              setHighlightedPostId(post.id);
+              setTimeout(() => setHighlightedPostId(null), 3500);
+            }
             setMapCenter({ lat, lng });
             setSelectedPostId(null);
           }}

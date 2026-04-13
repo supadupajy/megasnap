@@ -87,7 +87,8 @@ const Popular = () => {
           onClose={() => setSelectedPostId(null)} 
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
-            navigate('/map', { state: { center: { lat, lng } } });
+            const post = posts.find(p => p.lat === lat && p.lng === lng);
+            navigate('/map', { state: { center: { lat, lng }, post } });
           }}
         />
       )}
