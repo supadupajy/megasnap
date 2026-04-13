@@ -9,7 +9,7 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import { RefreshCw, LayoutGrid, Navigation } from 'lucide-react';
-import { createMockPosts, getValidGif } from '@/lib/mock-data';
+import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
 const Index = () => {
@@ -23,25 +23,8 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 포스트들의 GIF 유효성을 검사하고 업데이트하는 함수
-  const validateGifsInPosts = async (posts: Post[]) => {
-    const validatedPosts = await Promise.all(posts.map(async (post) => {
-      if (post.isGif) {
-        const validUrl = await getValidGif(post.image);
-        return { ...post, image: validUrl };
-      }
-      return post;
-    }));
-    return validatedPosts;
-  };
-
   useEffect(() => {
-    const initPosts = async () => {
-      const posts = createMockPosts(37.5665, 126.9780, 30);
-      const validated = await validateGifsInPosts(posts);
-      setAllPosts(validated);
-    };
-    initPosts();
+    setAllPosts(createMockPosts(37.5665, 126.9780, 30));
   }, []);
 
   useEffect(() => {
@@ -52,13 +35,11 @@ const Index = () => {
         post.lng >= sw.lng && post.lng <= ne.lng
       ).length;
 
+      // 화면에 보이는 마커가 적을 때 새로운 랜덤 데이터(GIF 포함) 추가 생성
       if (visibleCount < 12) {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const newPosts = createMockPosts(centerLat, centerLng, 15);
-        validateGifsInPosts(newPosts).then(validated => {
-          setAllPosts(prev => [...prev, ...validated]);
-        });
+        setAllPosts(prev => [...prev, ...createMockPosts(centerLat, centerLng, 15)]);
       }
     }
   }, [mapData, allPosts]);
@@ -95,11 +76,10 @@ const Index = () => {
     setIsRefreshing(true);
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
-      const newPosts = createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 35);
-      validateGifsInPosts(newPosts).then(validated => {
-        setAllPosts(validated);
+      setTimeout(() => {
+        setAllPosts(createMockPosts((ne.lat + sw.lat) / 2, (ne.lng + sw.lng) / 2, 35));
         setIsRefreshing(false);
-      });
+      }, 600);
     }
   }, [mapData]);
 
@@ -156,6 +136,7 @@ const Index = () => {
         </div>
       </div>
 
+      {/* 현재 위치 버튼 - 왼쪽 하단 */}
       <div className="absolute bottom-32 left-4 z-20">
         <button 
           onClick={handleCurrentLocation}

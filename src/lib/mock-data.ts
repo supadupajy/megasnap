@@ -13,6 +13,7 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
+// Giphy에서 이미지로 즉시 나타나는 검증된 직계(Direct) URL 리스트 (20개 고유 항목)
 const GIF_POOL = [
   "https://i.giphy.com/3o7TKMGpxpf4T9V6N2.gif",
   "https://i.giphy.com/l0HlO3BJ8LALPW4sE.gif",
@@ -38,24 +39,6 @@ const GIF_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
-export const getNewRandomGif = () => {
-  return GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
-};
-
-// 제시해주신 유효성 검사 로직 (비동기)
-export async function getValidGif(url: string): Promise<string> {
-  try {
-    // CORS 정책에 따라 HEAD 요청이 제한될 수 있으므로, 실제 환경에서는 img.onload 등을 활용하기도 합니다.
-    // 여기서는 요청하신 대로 fetch HEAD 방식을 구현합니다.
-    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-    // no-cors 모드에서는 response.ok를 확인할 수 없으므로, 
-    // 여기서는 URL이 존재한다고 가정하거나 실제 로드 가능 여부를 판단하는 로직으로 보완될 수 있습니다.
-    return url; 
-  } catch (error) {
-    return getValidGif(getNewRandomGif());
-  }
-}
-
 export const createMockUser = (id: string): User => ({
   id,
   name: `user_${id}`,
@@ -72,6 +55,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   const posts = Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
+    
+    // 약 30% 확률로 GIF 포스트 생성
     const isGif = !isAd && Math.random() > 0.7;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
@@ -89,7 +74,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lng,
       likes: Math.floor(Math.random() * 2000),
       image: isGif 
-        ? getNewRandomGif()
+        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] // 랜덤하게 GIF 할당
         : `https://picsum.photos/seed/${id}/800/800`,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
