@@ -8,7 +8,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, HelpCircle } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Copy, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { showSuccess } from '@/utils/toast';
@@ -24,11 +24,12 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  const currentOrigin = window.location.origin.replace(/\/$/, "");
+  // 실제 브라우저가 인식하는 정확한 Origin
+  const currentOrigin = window.location.origin;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentOrigin);
-    showSuccess("주소가 복사되었습니다!");
+    showSuccess("정확한 주소가 복사되었습니다!");
   };
 
   useEffect(() => {
@@ -150,28 +151,37 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
-      {/* 네이버 도메인 등록 가이드 바 */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-blue-600 text-white py-3 px-4 shadow-2xl">
+      {/* 네이버 인증 실패 해결 가이드 */}
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-slate-900 text-white py-3 px-4 shadow-2xl border-b border-white/10">
         <div className="max-w-md mx-auto flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs font-bold">네이버 지도 설정 가이드</span>
+              <AlertCircle className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs font-bold">인증 실패 해결 방법</span>
             </div>
-            <button onClick={copyToClipboard} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
-              <Copy className="w-3 h-3" /> 주소 복사하기
+            <button onClick={copyToClipboard} className="flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black active:scale-95 transition-all">
+              <Copy className="w-3 h-3" /> 주소 복사
             </button>
           </div>
-          <p className="text-[10px] leading-tight opacity-90">
-            네이버 클라우드 플랫폼의 [AI·Naver API > Web Dynamic Map] 설정에서 아래 주소를 <b>서비스 URL</b>에 등록하세요.
-          </p>
-          <div className="bg-black/20 p-2 rounded-lg font-mono text-[12px] break-all border border-white/20 text-center font-bold">
+          <div className="space-y-1">
+            <p className="text-[10px] leading-tight text-slate-300">
+              1. 네이버 콘솔 <b>[서비스 선택]</b> 탭에서 <b>Web Dynamic Map</b>이 체크되었는지 확인.
+            </p>
+            <p className="text-[10px] leading-tight text-slate-300">
+              2. <b>[서비스 URL]</b>에 아래 주소를 <b>정확히</b> 입력 (http/https 구분 필수).
+            </p>
+          </div>
+          <div className="bg-white/10 p-2 rounded-lg font-mono text-[11px] break-all border border-white/10 text-center font-bold text-blue-300">
             {currentOrigin}
           </div>
-          <div className="flex items-center gap-1 text-[9px] opacity-70 mt-1">
-            <HelpCircle className="w-3 h-3" />
-            <span>코드의 NAVER_CLIENT_ID 부분에 발급받은 키를 넣어야 합니다.</span>
-          </div>
+          <a 
+            href="https://console.ncloud.com/naver-service/application" 
+            target="_blank" 
+            rel="noreferrer"
+            className="flex items-center justify-center gap-1 text-[9px] text-slate-400 hover:text-white transition-colors mt-1"
+          >
+            네이버 콘솔 바로가기 <ExternalLink className="w-2.5 h-2.5" />
+          </a>
         </div>
       </div>
 
@@ -187,7 +197,7 @@ const Index = () => {
         />
       </main>
 
-      <div className="absolute top-36 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+      <div className="absolute top-44 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
