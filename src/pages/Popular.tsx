@@ -39,6 +39,7 @@ const Popular = () => {
                 likes={post.likes}
                 image={post.image}
                 isLiked={post.isLiked}
+                isGif={post.isGif}
                 borderType={post.borderType}
               />
             </div>

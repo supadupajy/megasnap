@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PostItemProps {
@@ -15,10 +15,11 @@ interface PostItemProps {
   image: string;
   isLiked?: boolean;
   isAd?: boolean;
+  isGif?: boolean;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked, isAd, borderType = 'none' }: PostItemProps) => {
+const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, borderType = 'none' }: PostItemProps) => {
   const isPopular = !isAd && borderType === 'popular';
 
   return (
@@ -72,8 +73,14 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, border
             </div>
           ) : isPopular && (
             <div className="absolute top-4 left-4 z-20 bg-[#ccff00] text-black px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-              <Flame className="w-3 h-3 fill-black" />
+              <Flame className="w-3.5 h-3.5 fill-black" />
               HOT
+            </div>
+          )}
+
+          {isGif && (
+            <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20">
+              <Play className="w-3 h-3 fill-white" />
             </div>
           )}
         </div>

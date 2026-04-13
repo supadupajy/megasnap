@@ -15,6 +15,7 @@ export interface Post {
   rank?: number;
   isAd?: boolean;
   isInfluencer?: boolean;
+  isGif?: boolean; // GIF 여부 추가
   user: User;
   content: string;
   location: string;

@@ -10,6 +10,13 @@ const CONTENT_POOL = [
   "인생샷 건지기 딱 좋은 곳 📸"
 ];
 
+const GIF_POOL = [
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif"
+];
+
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
 export const createMockUser = (id: string): User => ({
@@ -28,6 +35,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   const posts = Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
+    const isGif = !isAd && Math.random() > 0.7; // 30% 확률로 GIF 설정
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     const randomHoursAgo = Math.random() * 12;
@@ -35,13 +43,16 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const post: Post = {
       id,
       isAd,
+      isGif,
       user: createMockUser(isAd ? "sponsored" : id),
       content: CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)],
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
       lng,
       likes: Math.floor(Math.random() * 2000),
-      image: `https://picsum.photos/seed/${id}/800/800`,
+      image: isGif 
+        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)]
+        : `https://picsum.photos/seed/${id}/800/800`,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType: Math.random() > 0.8 ? 'popular' : 'none',
@@ -52,7 +63,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     return post;
   });
 
-  // 인플루언서 선정 로직
   const influencer = [...posts].filter(p => !p.isAd).sort((a, b) => b.likes - a.likes)[0];
   if (influencer) influencer.isInfluencer = true;
 
