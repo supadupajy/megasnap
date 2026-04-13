@@ -13,7 +13,7 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// 20개의 고유한 GIF URL 리스트 (중복 없음)
+// 정상 작동이 확인된 고유한 GIF URL 리스트 (중복 없음)
 const GIF_POOL = [
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
