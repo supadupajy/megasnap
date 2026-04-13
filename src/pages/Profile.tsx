@@ -1,21 +1,64 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Settings, Grid, Bookmark, Map as MapIcon, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
+import PostDetail from '@/components/PostDetail';
+import { createMockPosts } from '@/lib/mock-data';
+import { Post } from '@/types';
 
 const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  // 내 포스트 데이터 생성
+  useEffect(() => {
+    const myPosts = createMockPosts(37.5665, 126.9780, 12).map(p => ({
+      ...p,
+      user: {
+        id: 'me',
+        name: 'Dyad_Explorer',
+        avatar: 'https://i.pravatar.cc/150?u=me'
+      }
+    }));
+    setPosts(myPosts);
+  }, []);
+
+  const handleLikeToggle = useCallback((postId: string) => {
+    setPosts(prev => prev.map(post => {
+      if (post.id === postId) {
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likes: isLiked ? post.likes + 1 : post.likes - 1
+        };
+      }
+      return post;
+    }));
+  }, []);
+
+  const detailPosts = useMemo(() => {
+    if (!selectedPostId) return posts;
+    const selectedIndex = posts.findIndex(p => p.id === selectedPostId);
+    if (selectedIndex === -1) return posts;
+    
+    // 선택된 포스트를 시작으로 리스트 재구성
+    const selected = posts[selectedIndex];
+    const others = posts.filter(p => p.id !== selectedPostId);
+    return [selected, ...others];
+  }, [posts, selectedPostId]);
 
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
 
       <div className="pt-[88px]">
-        {/* Title Section - Popular 페이지와 동일한 레이아웃 */}
+        {/* Title Section */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -50,7 +93,7 @@ const Profile = () => {
               <p className="text-sm text-gray-500 mb-4">지도를 여행하는 탐험가 📍</p>
               <div className="flex gap-4">
                 <div className="text-center">
-                  <p className="font-bold text-gray-900">128</p>
+                  <p className="font-bold text-gray-900">{posts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
                 <div className="text-center">
@@ -84,13 +127,22 @@ const Profile = () => {
 
           {/* Grid Posts */}
           <div className="grid grid-cols-3 gap-1">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="aspect-square bg-gray-100 overflow-hidden rounded-sm">
+            {posts.map((post) => (
+              <div 
+                key={post.id} 
+                className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
+                onClick={() => setSelectedPostId(post.id)}
+              >
                 <img 
-                  src={`https://picsum.photos/seed/${i + 50}/300/300`} 
+                  src={post.image} 
                   alt="" 
                   className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
                 />
+                {post.isGif && (
+                  <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -99,6 +151,16 @@ const Profile = () => {
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      
+      {selectedPostId && (
+        <PostDetail 
+          posts={detailPosts}
+          initialIndex={0}
+          isOpen={true}
+          onClose={() => setSelectedPostId(null)}
+          onLikeToggle={handleLikeToggle}
+        />
+      )}
     </div>
   );
 };
