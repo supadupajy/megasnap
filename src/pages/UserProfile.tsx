@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Grid, Bookmark, Map as MapIcon, ChevronLeft, UserPlus, MessageCircle, User as UserIcon, MoreVertical } from 'lucide-react';
+import { Grid, Bookmark, Map as MapIcon, ChevronLeft, UserPlus, Check, MessageCircle, User as UserIcon, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -12,6 +12,7 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -72,8 +73,23 @@ const UserProfile = () => {
           </div>
 
           <div className="flex gap-2 mb-8">
-            <Button className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl gap-2 h-12">
-              <UserPlus className="w-4 h-4" /> 팔로우
+            <Button 
+              onClick={() => setIsFollowing(!isFollowing)}
+              className={`flex-1 font-bold rounded-xl gap-2 h-12 transition-all ${
+                isFollowing 
+                  ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
+                  : "bg-green-500 hover:bg-green-600 text-white"
+              }`}
+            >
+              {isFollowing ? (
+                <>
+                  <Check className="w-4 h-4" /> 팔로잉
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" /> 팔로우
+                </>
+              )}
             </Button>
             <Button variant="outline" className="flex-1 border-gray-200 text-gray-900 font-bold rounded-xl gap-2 h-12">
               <MessageCircle className="w-4 h-4" /> 메시지

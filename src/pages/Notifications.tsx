@@ -1,13 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 
-const NOTIFICATIONS = [
+const INITIAL_NOTIFICATIONS = [
   {
     id: 1,
     type: 'follow',
@@ -44,6 +44,13 @@ const NOTIFICATIONS = [
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+
+  const toggleFollow = (id: number) => {
+    setNotifications(prev => prev.map(notif => 
+      notif.id === id ? { ...notif, isFollowing: !notif.isFollowing } : notif
+    ));
+  };
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -58,7 +65,7 @@ const Notifications = () => {
         <div className="px-4 py-4">
           <h2 className="text-sm font-bold text-gray-900 mb-4">이번 주</h2>
           <div className="space-y-6">
-            {NOTIFICATIONS.map((notif) => (
+            {notifications.map((notif) => (
               <div key={notif.id} className="flex items-center gap-3">
                 <Avatar className="w-11 h-11 shrink-0">
                   <AvatarImage src={notif.user.avatar} />
@@ -73,7 +80,11 @@ const Notifications = () => {
                   <Button 
                     size="sm" 
                     variant={notif.isFollowing ? "secondary" : "default"}
-                    className={notif.isFollowing ? "bg-gray-100 text-gray-900 font-bold h-8 px-4 rounded-lg" : "bg-green-500 hover:bg-green-600 text-white font-bold h-8 px-4 rounded-lg"}
+                    onClick={() => toggleFollow(notif.id)}
+                    className={notif.isFollowing 
+                      ? "bg-gray-100 text-gray-900 font-bold h-8 px-4 rounded-lg hover:bg-gray-200" 
+                      : "bg-green-500 hover:bg-green-600 text-white font-bold h-8 px-4 rounded-lg"
+                    }
                   >
                     {notif.isFollowing ? '팔로잉' : '팔로우'}
                   </Button>

@@ -9,18 +9,26 @@ import WritePost from '@/components/WritePost';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MOCK_USERS } from '@/lib/mock-data';
+import { MOCK_USERS as INITIAL_USERS } from '@/lib/mock-data';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [users, setUsers] = useState(INITIAL_USERS);
   const navigate = useNavigate();
+
+  const toggleFollow = (e: React.MouseEvent, userId: string) => {
+    e.stopPropagation();
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
+    ));
+  };
 
   const filteredUsers = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return MOCK_USERS.slice(0, 10);
-    return MOCK_USERS.filter(u => u.id.includes(query) || u.name.includes(query)).slice(0, 15);
-  }, [searchQuery]);
+    if (!query) return users.slice(0, 10);
+    return users.filter(u => u.id.includes(query) || u.nickname?.includes(query) || u.name.includes(query)).slice(0, 15);
+  }, [searchQuery, users]);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -55,8 +63,16 @@ const Search = () => {
                 </div>
                 <p className="text-xs text-gray-500 truncate">{user.bio}</p>
               </div>
-              <Button variant={user.isFollowing ? "outline" : "default"} size="sm" className="rounded-xl h-8 px-3">
-                {user.isFollowing ? <Check className="w-4 h-4 text-gray-400" /> : <UserPlus className="w-4 h-4" />}
+              <Button 
+                variant={user.isFollowing ? "secondary" : "default"} 
+                size="sm" 
+                onClick={(e) => toggleFollow(e, user.id)}
+                className={user.isFollowing 
+                  ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200" 
+                  : "rounded-xl h-8 px-3 bg-green-500 hover:bg-green-600 text-white"
+                }
+              >
+                {user.isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
               </Button>
             </div>
           ))}
