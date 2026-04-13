@@ -153,13 +153,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     })
   };
 
-  const getBorderColor = () => {
-    if (isInfluencer) return "#ffff00";
-    if (isAd) return "#3b82f6";
-    if (isPopular) return "#ff0000";
-    return "transparent";
-  };
-
   const renderCategoryIcon = () => {
     if (category === 'none') return null;
     
@@ -253,12 +246,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
-                style={{
-                  border: (isInfluencer || isAd || isPopular) ? `4px solid ${getBorderColor()}` : "none",
-                }}
-                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
+                className={cn(
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
+                  isInfluencer && "influencer-border-container animate-influencer-float",
+                  isPopular && "popular-border-container animate-hot-pulse",
+                  isAd && "p-[4px] bg-blue-500"
+                )}
               >
-                <div className="flex-1 h-full overflow-hidden flex flex-col">
+                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px]">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
@@ -272,14 +267,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       onPointerDown={(e) => {
                         if (!showComments) {
                           const target = e.target as HTMLElement;
-                          // 이미지 슬라이더 내부가 아닐 때만 드래그 시작
                           if (!target.closest('.image-slider')) {
                             dragControls.start(e);
                           }
                         }
                       }}
                     >
-                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
+                      <div className={cn(
+                        "aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0",
+                        isInfluencer && "shine-overlay"
+                      )}>
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
@@ -338,7 +335,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
 
                       <div className="p-5 sm:p-6 relative">
-                        {/* Category Icon Badge - Moved to content area */}
                         {renderCategoryIcon()}
 
                         <div className="flex items-center gap-3 mb-3">
