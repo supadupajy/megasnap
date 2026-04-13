@@ -12,6 +12,7 @@ import Popular from "./pages/Popular";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 
@@ -44,6 +45,7 @@ const App = () => {
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/messages" element={<Messages />} />
+                <Route path="/chat/:chatId" element={<Chat />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="*" element={<NotFound />} />

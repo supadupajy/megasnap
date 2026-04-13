@@ -1,40 +1,45 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-
-// Generate mock posts with popular posts for the badge (but no animated border in PostItem)
-const generateMockPosts = () => {
-  return Array.from({ length: 30 }).map((_, i) => {
-    const isPopular = i % 3 === 0;
-    return {
-      id: `pop-${i}`,
-      user: {
-        name: `star_traveler_${i}`,
-        avatar: `https://i.pravatar.cc/150?u=pop${i}`,
-      },
-      content: isPopular
-        ? "🔥 지금 가장 핫한 장소! 실시간 인기 포스팅입니다. #인기 #핫플 #추천"
-        : "오늘의 추천 장소입니다. 분위기가 정말 좋네요. #일상 #여행 #소통",
-      location: ["서울 성수동", "제주 애월", "부산 해운대", "강릉 안목해변"][i % 4],
-      likes: isPopular ? 5000 - i * 20 : 1200 - i * 10,
-      image: `https://picsum.photos/seed/pop${i}/800/800`,
-      isLiked: true,
-      borderType: isPopular ? 'popular' : 'none' as any,
-    };
-  });
-};
-
-const MOCK_POPULAR = generateMockPosts();
+import { createMockPosts } from '@/lib/mock-data';
+import { Post } from '@/types';
 
 const Popular = () => {
-  const [selectedPost, setSelectedPost] = useState<any | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  
+  useEffect(() => {
+    const initialPosts = createMockPosts(37.5665, 126.9780, 30).sort((a, b) => b.likes - a.likes);
+    setPosts(initialPosts);
+  }, []);
+  
+  const handleLikeToggle = useCallback((postId: string) => {
+    setPosts(prev => prev.map(post => {
+      if (post.id === postId) {
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likes: isLiked ? post.likes + 1 : post.likes - 1
+        };
+      }
+      return post;
+    }));
+  }, []);
+
+  const detailPosts = useMemo(() => {
+    if (!selectedPostId) return posts;
+    const selected = posts.find(p => p.id === selectedPostId);
+    const others = posts.filter(p => p.id !== selectedPostId);
+    return selected ? [selected, ...others] : posts;
+  }, [posts, selectedPostId]);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -42,8 +47,8 @@ const Popular = () => {
       <div className="pt-[88px]">
         <StoryBar />
         <div className="flex flex-col">
-          {MOCK_POPULAR.map((post) => (
-            <div key={post.id} onClick={() => setSelectedPost(post)}>
+          {posts.map((post) => (
+            <div key={post.id} onClick={() => setSelectedPostId(post.id)}>
               <PostItem
                 user={post.user}
                 content={post.content}
@@ -51,14 +56,25 @@ const Popular = () => {
                 likes={post.likes}
                 image={post.image}
                 isLiked={post.isLiked}
+                isGif={post.isGif}
+                isInfluencer={post.isInfluencer}
                 borderType={post.borderType}
+                onLikeToggle={() => handleLikeToggle(post.id)}
               />
             </div>
           ))}
         </div>
       </div>
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <PostDetail post={selectedPost} isOpen={!!selectedPost} onClose={() => setSelectedPost(null)} />
+      {selectedPostId && (
+        <PostDetail 
+          posts={detailPosts} 
+          initialIndex={0}
+          isOpen={true} 
+          onClose={() => setSelectedPostId(null)} 
+          onLikeToggle={handleLikeToggle}
+        />
+      )}
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );

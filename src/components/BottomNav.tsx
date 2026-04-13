@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Map, LayoutGrid, Plus, Search, User } from 'lucide-react';
+import { Map, Flame, Plus, Search, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -32,11 +32,11 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         onClick={() => navigate('/popular')}
         className={cn(
           "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
-          isActive('/popular') ? "text-green-500" : "text-gray-400"
+          isActive('/popular') ? "text-orange-500" : "text-gray-400"
         )}
       >
-        <LayoutGrid className={cn("w-6 h-6", isActive('/popular') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">My</span>
+        <Flame className={cn("w-6 h-6", isActive('/popular') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">HOT</span>
       </button>
       
       <div className="relative -top-8">

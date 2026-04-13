@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface PostDetailProps {
   posts: any[];
@@ -17,132 +17,159 @@ interface PostDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onViewPost?: (id: string) => void;
+  onLikeToggle?: (postId: string) => void;
 }
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
+const MOCK_COMMENTS = [
+  { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." },
+  { user: "photo_master", text: "날씨 좋을 때 가면 최고죠 ㅎㅎ" },
+  { user: "seoul_explorer", text: "주차 공간은 넉넉한가요?" },
+  { user: "daily_snap", text: "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!" }
+];
+
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle }: PostDetailProps) => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
-  const controls = useAnimation();
 
-  const displayPosts = useMemo(() => {
-    if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
-    const selected = posts[initialIndex];
-    const others = posts.filter((_, idx) => idx !== initialIndex);
-    return [selected, ...others];
-  }, [isOpen, posts, initialIndex]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentIndex(0);
-      setDirection(0);
-      controls.set({ x: 0, opacity: 1, y: 0 });
-    }
-  }, [isOpen, controls]);
-
-  useEffect(() => {
-    if (isOpen) {
-      controls.set({ x: 0, opacity: 1 });
-    }
-  }, [currentIndex, isOpen, controls]);
-
-  useEffect(() => {
-    if (isOpen && displayPosts[currentIndex] && onViewPost) {
-      onViewPost(displayPosts[currentIndex].id);
-    }
-  }, [currentIndex, isOpen, displayPosts, onViewPost]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) viewport.scrollTop = 0;
-      }, 0);
-      return () => clearTimeout(timer);
+  useLayoutEffect(() => {
+    if (isOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
     }
   }, [currentIndex, isOpen]);
 
-  if (!isOpen || displayPosts.length === 0) return null;
+  useEffect(() => {
+    if (isOpen && !hasInitialized && initialIndex !== -1) {
+      setCurrentIndex(initialIndex);
+      setHasInitialized(true);
+      setDirection(0);
+      setShowComments(false);
+    }
+    if (!isOpen) {
+      setHasInitialized(false);
+      setIsClosing(false);
+    }
+  }, [isOpen, initialIndex, hasInitialized]);
+
+  useEffect(() => {
+    const currentPost = posts[currentIndex];
+    if (isOpen && currentPost && onViewPost) {
+      onViewPost(currentPost.id);
+    }
+    setShowComments(false);
+  }, [currentIndex, isOpen, onViewPost]);
+
+  if (!isOpen || posts.length === 0) return null;
   
-  const post = displayPosts[currentIndex];
+  const post = posts[currentIndex];
   if (!post) return null;
 
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
 
-  const handleDragEnd = async (event: any, info: PanInfo) => {
-    const screenWidth = window.innerWidth;
-    const swipeThreshold = 50;
-    const velocityThreshold = 200;
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = `https://picsum.photos/seed/${post.id}/800/800`;
+  };
 
-    // 1. 수직 스와이프 감지 (포스팅 탐색)
-    if (Math.abs(info.offset.y) > Math.abs(info.offset.x) + 20) {
-      if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-        if (currentIndex < displayPosts.length - 1) {
-          setDirection(1);
-          setCurrentIndex(currentIndex + 1);
-        }
-      } else if (info.offset.y > swipeThreshold || info.velocity.y > velocityThreshold) {
-        if (currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(currentIndex - 1);
-        }
+  const handleUserClick = () => {
+    onClose();
+    navigate(`/profile/${post.user.id}`);
+  };
+
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    const { offset, velocity } = info;
+    const absX = Math.abs(offset.x);
+    const absY = Math.abs(offset.y);
+    
+    if (absX > absY && absX > 60) {
+      if (absX > 120 || Math.abs(velocity.x) > 400) {
+        setDirection(offset.x > 0 ? 100 : -100);
+        setIsClosing(true);
+        return;
       }
-      // 수직 스와이프 후 위치 복구 (더 빠르게)
-      controls.start({ y: 0, transition: { type: "spring", damping: 30, stiffness: 400 } });
-      return;
     }
 
-    // 2. 수평 스와이프 감지 (왼쪽으로 닫기)
-    if (info.offset.x < -screenWidth / 2 || info.velocity.x < -500) {
-      // 닫기 애니메이션 (더 빠르게: 0.3s -> 0.2s)
-      await controls.start({ 
-        x: -screenWidth, 
-        opacity: 0, 
-        transition: { duration: 0.2, ease: "circOut" } 
-      });
-      onClose();
-    } else {
-      // 원래 위치로 복귀 (더 탄성있고 빠르게)
-      controls.start({ 
-        x: 0, 
-        opacity: 1,
-        transition: { type: "spring", damping: 25, stiffness: 450 } 
-      });
+    const threshold = 70;
+    const velThreshold = 400;
+
+    if (absY > absX) {
+      if (offset.y < -threshold || velocity.y < -velThreshold) {
+        if (currentIndex < posts.length - 1) {
+          setDirection(1);
+          setCurrentIndex(prev => prev + 1);
+        }
+      } else if (offset.y > threshold || velocity.y > velThreshold) {
+        if (currentIndex > 0) {
+          setDirection(-1);
+          setCurrentIndex(prev => prev - 1);
+        }
+      }
     }
   };
 
   const variants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? "100%" : "-100%",
+      y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
+      x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
-      x: 0,
+      scale: 0.95,
     }),
     center: {
       y: 0,
-      opacity: 1,
       x: 0,
+      opacity: 1,
+      scale: 1,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        x: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
     },
     exit: (direction: number) => ({
-      y: direction > 0 ? "-100%" : "100%",
+      y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
+      x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
+      scale: 0.95,
       transition: {
-        y: { type: "spring", damping: 35, stiffness: 450, mass: 0.8 },
-        opacity: { duration: 0.15 }
+        y: { type: "spring", damping: 30, stiffness: 300, mass: 0.8 },
+        x: { duration: 0.25, ease: "easeInOut" },
+        opacity: { duration: 0.2 }
       }
     })
   };
 
+  const getBorderColor = () => {
+    if (isInfluencer) return "#ffff00";
+    if (isAd) return "#3b82f6";
+    if (isPopular) return "#ff0000";
+    return "transparent";
+  };
+
+  const lastComment = MOCK_COMMENTS[MOCK_COMMENTS.length - 1];
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0">
-        <div className="absolute top-6 right-6 z-50">
+      <DialogContent 
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
+      >
+        <style>{`
+          [data-radix-portal] div[data-state] {
+            background-color: transparent !important;
+            backdrop-filter: none !important;
+          }
+        `}</style>
+        
+        <div className="absolute top-6 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -153,157 +180,215 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
           </Button>
         </div>
 
-        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-50 flex flex-col items-center">
+        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
           <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
             <motion.div 
-              className={cn(
-                "absolute w-full rounded-full",
-                isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
-              )}
+              className="absolute w-full rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)]"
               initial={false}
               animate={{ 
-                height: `${Math.max(15, 100 / displayPosts.length)}%`,
-                top: `${(currentIndex / displayPosts.length) * 100}%`
+                height: `${Math.max(10, 100 / posts.length)}%`,
+                top: `${(currentIndex / (posts.length - 1 || 1)) * (100 - Math.max(10, 100 / posts.length))}%`
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             />
           </div>
-          <div className="mt-4 flex flex-col items-center gap-1">
-            <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
-            <div className="w-2 h-[1px] bg-white/20" />
-            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
-          </div>
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={post.id}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate={controls}
-              exit="exit"
-              drag="x"
-              dragControls={dragControls}
-              dragListener={false}
-              dragConstraints={{ left: -window.innerWidth, right: 0 }}
-              dragElastic={{ left: 1, right: 0 }}
-              onDragEnd={handleDragEnd}
-              className={cn(
-                "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
-              )}
-              style={{
-                border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
-              }}
-            >
-              <div className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col">
-                <ScrollArea 
-                  ref={scrollAreaRef} 
-                  className="flex-1 h-full no-scrollbar"
-                  onPointerDown={(e) => {
-                    dragControls.start(e);
-                  }}
-                >
-                  <div className="flex flex-col">
-                    <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
-                      <img 
-                        src={post.image} 
-                        alt="" 
-                        className="w-full h-full object-cover"
-                      />
-                      {isAd ? (
-                        <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-                          AD
-                        </div>
-                      ) : isInfluencer ? (
-                        <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-                          <Star className="w-3.5 h-3.5 fill-white" />
-                          INFLUENCER
-                        </div>
-                      ) : isPopular && (
-                        <div className="absolute top-6 left-6 z-20 bg-[#ccff00] text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-                          <Flame className="w-3.5 h-3.5 fill-black" />
-                          HOT
-                        </div>
-                      )}
-                    </div>
+          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+            if (isClosing) onClose();
+          }}>
+            {!isClosing && (
+              <motion.div
+                key={post.id}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                drag={true}
+                dragControls={dragControls}
+                dragListener={!showComments}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.6}
+                onDragEnd={handleDragEnd}
+                style={{
+                  border: (isInfluencer || isAd || isPopular) ? `4px solid ${getBorderColor()}` : "none",
+                }}
+                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
+              >
+                <div className="flex-1 h-full overflow-hidden flex flex-col">
+                  <div 
+                    key={`scroll-container-${post.id}`}
+                    ref={scrollContainerRef} 
+                    className={cn(
+                      "flex-1 h-full overflow-y-auto no-scrollbar",
+                      !showComments && "touch-none"
+                    )}
+                  >
+                    <div 
+                      className="flex flex-col"
+                      onPointerDown={(e) => {
+                        if (!showComments) {
+                          const target = e.target as HTMLElement;
+                          if (!target.closest('button') && !target.closest('a')) {
+                            dragControls.start(e);
+                          }
+                        }
+                      }}
+                    >
+                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
+                        <img 
+                          src={post.image} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                          onError={handleImageError}
+                        />
+                        {isAd ? (
+                          <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                            AD
+                          </div>
+                        ) : isInfluencer ? (
+                          <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
+                            <Star className="w-3.5 h-3.5 fill-black" />
+                            INFLUENCER
+                          </div>
+                        ) : isPopular && (
+                          <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+                            <Flame className="w-3.5 h-3.5 fill-white" />
+                            HOT
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="p-6 sm:p-8">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
-                          <img 
-                            src={post.user.avatar} 
-                            alt="" 
-                            className="w-full h-full rounded-full object-cover border-2 border-white" 
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-900 text-base leading-none truncate">{post.user.name}</p>
-                            {isAd && (
-                              <a
-                                href="https://s.baemin.com/t3000fBqlbHGL"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
+                      <div className="p-5 sm:p-6">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div 
+                            className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            onClick={handleUserClick}
+                          >
+                            <img 
+                              src={post.user.avatar} 
+                              alt="" 
+                              className="w-full h-full rounded-full object-cover border-2 border-white" 
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p 
+                                className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer hover:text-green-600 transition-colors"
+                                onClick={handleUserClick}
                               >
-                                앱에서 보기
-                              </a>
-                            )}
-                          </div>
-                          <div className="flex items-center text-green-500 gap-1 mt-1.5">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span className="text-xs font-bold truncate">{post.location}</span>
+                                {post.user.name}
+                              </p>
+                              {isAd && (
+                                <a
+                                  href="https://s.baemin.com/t3000fBqlbHGL"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
+                                >
+                                  앱에서 보기
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex items-center text-green-500 gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-[10px] font-bold truncate">{post.location}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <p className="text-gray-700 text-sm leading-relaxed mb-8 font-medium">
-                        {post.content}
-                      </p>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium">
+                          {post.content}
+                        </p>
 
-                      <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-100">
-                        <button className="flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors group">
-                          <Heart className={cn("w-6 h-6 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : '')} />
-                          <span className="text-sm font-bold">{post.likes}</span>
-                        </button>
-                        <button className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition-colors">
-                          <MessageCircle className="w-6 h-6" />
-                          <span className="text-sm font-bold">12</span>
-                        </button>
-                        <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
-                          <Share2 className="w-6 h-6" />
-                        </button>
-                      </div>
+                        <div className="flex items-center gap-5 mb-4">
+                          <button 
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onLikeToggle?.(post.id);
+                            }}
+                          >
+                            <Heart className={cn("w-5 h-5 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                            <span className="text-xs font-bold text-gray-500">{post.likes}</span>
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowComments(!showComments);
+                            }}
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            <span className="text-xs font-bold text-gray-500">12</span>
+                          </button>
+                          <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
+                            <Share2 className="w-5 h-5" />
+                          </button>
+                        </div>
 
-                      <div className="space-y-6 pb-10">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Comments</p>
-                        {Array.from({ length: 8 }).map((_, i) => (
-                          <div key={i} className="flex gap-3 items-start">
-                            <span className="font-bold text-sm text-gray-900 whitespace-nowrap">User_{i + 1}</span>
-                            <span className="text-sm text-gray-500 leading-snug">
-                              {["와 여기 진짜 가보고 싶었는데! 정보 감사합니다.", "날씨 좋을 때 가면 최고죠 ㅎㅎ", "주차 공간은 넉넉한가요?", "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!"][i % 4]}
-                            </span>
-                          </div>
-                        ))}
+                        {/* Comment Preview or Full List */}
+                        <div className="border-t border-gray-100 pt-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowComments(!showComments);
+                            }}
+                            className="w-full py-2 flex items-center justify-between group"
+                          >
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
+                              {showComments ? 'Hide Comments' : 'View All Comments'}
+                            </p>
+                            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+                          </button>
+
+                          {!showComments && (
+                            <div className="flex gap-2 items-start mt-1 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                              <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{lastComment.user}</span>
+                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">
+                                {lastComment.text}
+                              </span>
+                            </div>
+                          )}
+
+                          <AnimatePresence>
+                            {showComments && (
+                              <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="space-y-4 py-3 pb-6">
+                                  {MOCK_COMMENTS.map((comment, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                      <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{comment.user}</span>
+                                      <span className="text-[13px] text-gray-500 leading-snug">
+                                        {comment.text}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <ScrollBar className="hidden" />
-                </ScrollArea>
-                
-                <div 
-                  onPointerDown={(e) => dragControls.start(e)}
-                  className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
-                >
-                  <div className="w-12 h-1.5 bg-gray-200 rounded-full mb-2" />
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">Swipe to explore</p>
+                  
+                  <div 
+                    onPointerDown={(e) => dragControls.start(e)}
+                    className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10"
+                  >
+                    <Move className="w-4 h-4 text-gray-300 mb-1 animate-pulse" />
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </DialogContent>

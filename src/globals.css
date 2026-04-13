@@ -73,43 +73,45 @@
   }
 }
 
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem; /* 20px */
-  background-image: conic-gradient(from var(--angle), #ccff00, #ffff00, #ccff00, #ffff00, #ccff00);
-  animation: rotate-border 2s linear infinite;
-}
-
-/* Influencer Red Gradient Border */
-.influencer-border-container {
-  position: relative;
-  padding: 4px;
-  border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
   animation: rotate-border 2s linear infinite;
 }
 
-/* Viewed state for popular border */
-.popular-border-container.viewed {
+/* Influencer Yellow Gradient Border */
+.influencer-border-container {
+  position: relative;
+  padding: 4px;
+  border-radius: 1.25rem;
+  background-image: conic-gradient(from var(--angle), #ffff00, #fffb00, #ffff00, #fffb00, #ffff00);
+  animation: rotate-border 2s linear infinite;
+}
+
+/* Viewed state for popular and influencer border */
+.popular-border-container.viewed,
+.influencer-border-container.viewed {
   background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8) !important;
   animation: rotate-border 3s linear infinite;
 }
 
-/* Popular Fluorescent Glow Animation */
+/* HOT Red Glow Animation */
 @keyframes popular-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(204, 255, 0, 0.7)); }
-  50% { filter: drop-shadow(0 0 20px rgba(204, 255, 0, 1)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
 }
 
-/* Influencer Glow Animation */
+/* Influencer Yellow Glow Animation */
 @keyframes influencer-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.5)); }
-  50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.5)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)); }
 }
 
-/* Brighter White Glow Animation for Viewed Popular Posts */
-@keyframes popular-glow-viewed {
+/* Brighter White Glow Animation for Viewed Posts */
+@keyframes viewed-glow {
   0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)); }
   50% { filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)); }
 }
@@ -122,6 +124,7 @@
   animation: influencer-glow 1.5s ease-in-out infinite;
 }
 
-.animate-popular-glow.viewed {
-  animation: popular-glow-viewed 2s ease-in-out infinite;
+.animate-popular-glow.viewed,
+.animate-influencer-glow.viewed {
+  animation: viewed-glow 2s ease-in-out infinite;
 }

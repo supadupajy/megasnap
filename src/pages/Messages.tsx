@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, Search, Edit, Camera } from 'lucide-react';
+import { ChevronLeft, Search, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -9,22 +9,22 @@ import BottomNav from '@/components/BottomNav';
 
 const MESSAGES = [
   {
-    id: 1,
-    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=1' },
-    lastMessage: '성수동 카페 정보 좀 알려주실 수 있나요?',
+    id: 'travel_maker',
+    user: { name: 'travel_maker' },
+    lastMessage: '오! 감사합니다. 바로 가봐야겠네요!',
     time: '12분',
     unread: true
   },
   {
-    id: 2,
-    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=2' },
+    id: 'seoul_snap',
+    user: { name: 'seoul_snap' },
     lastMessage: '사진 너무 잘 찍으시네요! 👍',
     time: '2시간',
     unread: false
   },
   {
-    id: 3,
-    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=3' },
+    id: 'explorer_kim',
+    user: { name: 'explorer_kim' },
     lastMessage: '다음에 같이 출사 가요!',
     time: '1일',
     unread: false
@@ -35,11 +35,24 @@ const Messages = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
+  const handleBack = () => {
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleAvatarClick = (e: React.MouseEvent, userName: string) => {
+    e.stopPropagation(); // 채팅방 이동 이벤트 방지
+    navigate(`/profile/${userName}`);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <h1 className="font-bold text-lg text-gray-900">Direct Message</h1>
@@ -68,11 +81,21 @@ const Messages = () => {
 
           <div className="space-y-5">
             {MESSAGES.map((msg) => (
-              <div key={msg.id} className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity">
-                <Avatar className="w-14 h-14 shrink-0">
-                  <AvatarImage src={msg.user.avatar} />
-                  <AvatarFallback>{msg.user.name[0]}</AvatarFallback>
-                </Avatar>
+              <div 
+                key={msg.id} 
+                onClick={() => navigate(`/chat/${msg.id}`)}
+                className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity"
+              >
+                <div 
+                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  onClick={(e) => handleAvatarClick(e, msg.user.name)}
+                >
+                  <img 
+                    src={`https://i.pravatar.cc/150?u=${msg.user.name}`} 
+                    alt={msg.user.name} 
+                    className="w-full h-full rounded-full object-cover border-2 border-white" 
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm ${msg.unread ? 'font-bold text-gray-900' : 'text-gray-900'}`}>
                     {msg.user.name}
@@ -87,9 +110,6 @@ const Messages = () => {
                 {msg.unread && (
                   <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
                 )}
-                <button className="p-1">
-                  <Camera className="w-6 h-6 text-gray-400" />
-                </button>
               </div>
             ))}
           </div>

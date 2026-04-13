@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
@@ -217,10 +218,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         div.style.height = '56px';
         
         const isAd = this.post.isAd;
+        const isGif = this.post.isGif;
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
-        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         
+        const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
+        const pinColor = (isInfluencer || isPopular) ? (this.isViewed ? '#94a3b8' : (isInfluencer ? '#ffff00' : '#ff0000')) : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : borderColor));
+
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
@@ -228,19 +232,31 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         ${(isPopular || isInfluencer) ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
-                        filter: ${!isAd && !isPopular && !isInfluencer && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
-              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white;">
-                <img src="${this.post.image}" style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                        filter: ${this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+              <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
+                <img src="${this.post.image}" 
+                     onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
+                     style="width: 100%; height: 100%; object-fit: cover; ${this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                
+                <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
+                  ${this.post.likes}
+                </div>
+
+                ${isGif ? `
+                  <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center; z-index: 5;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </div>
+                ` : ''}
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
-                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
+                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
                   AD
                 </div>
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${this.isViewed ? '#94a3b8' : (isInfluencer ? '#ff0000' : (isPopular ? '#ccff00' : borderColor))};
+                        width: 12px; height: 12px; background: ${pinColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
           </div>
         `;
@@ -285,8 +301,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        // 인플루언서 상태나 조회 상태가 바뀌면 다시 그림
-        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer) {
+        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
           overlay.setMap(map);
