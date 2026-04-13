@@ -3,39 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>dyad-generated-app</title>
+    <title>MegaSnap - Kakao Map</title>
     <style>
-      /* 구글 맵 개발용 워터마크 및 경고창 숨김 처리 */
-      .gm-err-container { display: none !important; }
-      .gm-err-modal { display: none !important; }
-      .gm-style-cc { display: none !important; }
-      a[href^="https://maps.google.com/maps/contrib"] { display: none !important; }
-      a[href^="https://www.google.com/intl/ko-KR_US/help/terms_maps.html"] { display: none !important; }
-      .gmnoprint { display: none !important; }
+      /* 지도 관련 기본 스타일 */
+      #root { height: 100vh; }
     </style>
-    <script>
-      // 구글 맵 API 경고 팝업 자동 확인 스크립트
-      (function() {
-        const observer = new MutationObserver((mutations) => {
-          for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-              if (node.nodeType === 1) {
-                // 'OK' 또는 '확인' 버튼을 찾아 자동으로 클릭
-                const buttons = node.querySelectorAll('button');
-                for (const btn of buttons) {
-                  if (btn.textContent === 'OK' || btn.textContent === '확인') {
-                    btn.click();
-                  }
-                }
-              }
-            }
-          }
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-      })();
-    </script>
-    <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=&libraries=places"></script>
+    <!-- Kakao Maps API - 발급받은 앱 키를 appkey 파라미터에 넣어야 합니다 -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services,clusterer,drawing"></script>
   </head>
 
   <body>
