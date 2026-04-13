@@ -34,8 +34,7 @@ const Index = () => {
       const incomingPost = location.state.post;
       setAllPosts([incomingPost, ...initialPosts]);
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
-      // 약간의 지연 후 상세 보기 오픈 (지도 이동 애니메이션 고려)
-      setTimeout(() => setSelectedPostId(incomingPost.id), 500);
+      // 상세 보기 자동 오픈 로직 제거 (사용자 요청)
     } else {
       setAllPosts(initialPosts);
       if (location.state?.center) {
