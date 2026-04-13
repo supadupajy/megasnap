@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MapContainerProps {
   posts: any[];
@@ -12,20 +13,39 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
+const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services,clusterer,drawing&autoload=false";
+
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const initMap = () => {
-      if (!mapContainer.current || !window.kakao || !window.kakao.maps) return;
+  const loadKakaoMap = () => {
+    setStatus('loading');
+    
+    // 이미 스크립트가 있는지 확인
+    const existingScript = document.getElementById('kakao-map-sdk');
+    if (existingScript) existingScript.remove();
+
+    const script = document.createElement('script');
+    script.id = 'kakao-map-sdk';
+    script.src = KAKAO_SDK_URL;
+    script.async = true;
+
+    script.onload = () => {
+      if (!window.kakao || !window.kakao.maps) {
+        setStatus('error');
+        return;
+      }
 
       window.kakao.maps.load(() => {
+        if (!mapContainer.current) return;
+
         const kakao = window.kakao;
         const initialCenter = new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780);
         
@@ -36,8 +56,9 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
 
         const map = new kakao.maps.Map(mapContainer.current, options);
         mapInstance.current = map;
-        setIsLoaded(true);
+        setStatus('ready');
 
+        // 지도 이벤트 설정
         const handleIdle = () => {
           const bounds = map.getBounds();
           const sw = bounds.getSouthWest();
@@ -76,29 +97,32 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       });
     };
 
-    if (window.kakao && window.kakao.maps) {
-      initMap();
-    } else {
-      // SDK가 아직 로드되지 않은 경우 대기
-      const checkInterval = setInterval(() => {
-        if (window.kakao && window.kakao.maps) {
-          clearInterval(checkInterval);
-          initMap();
-        }
-      }, 100);
-      return () => clearInterval(checkInterval);
-    }
-  }, []);
+    script.onerror = () => setStatus('error');
+    document.head.appendChild(script);
+
+    // 8초 후에도 로드가 안되면 에러 처리
+    const timeout = setTimeout(() => {
+      if (status === 'loading') setStatus('error');
+    }, 8000);
+
+    return () => clearTimeout(timeout);
+  };
 
   useEffect(() => {
-    if (mapInstance.current && center && window.kakao) {
+    loadKakaoMap();
+  }, []);
+
+  // 센터 변경 시 이동
+  useEffect(() => {
+    if (mapInstance.current && center && window.kakao && window.kakao.maps) {
       const moveLatLon = new window.kakao.maps.LatLng(center.lat, center.lng);
       mapInstance.current.panTo(moveLatLon);
     }
   }, [center]);
 
+  // 글쓰기 액션 핀 표시
   useEffect(() => {
-    if (!mapInstance.current || !window.kakao || !isLoaded) return;
+    if (!mapInstance.current || !window.kakao || status !== 'ready') return;
     const kakao = window.kakao;
 
     if (actionOverlayRef.current) actionOverlayRef.current.setMap(null);
@@ -128,10 +152,11 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       overlay.setMap(mapInstance.current);
       actionOverlayRef.current = overlay;
     }
-  }, [actionPin, isLoaded]);
+  }, [actionPin, status]);
 
+  // 포스트 마커 업데이트
   useEffect(() => {
-    if (!mapInstance.current || !window.kakao || !isLoaded) return;
+    if (!mapInstance.current || !window.kakao || status !== 'ready') return;
     const kakao = window.kakao;
     const map = mapInstance.current;
 
@@ -181,15 +206,35 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         overlaysRef.current.set(post.id, overlay);
       }
     });
-  }, [posts, viewedPostIds, isLoaded]);
+  }, [posts, viewedPostIds, status]);
 
   return (
-    <div className="relative w-full h-full bg-gray-100">
+    <div className="relative w-full h-full bg-gray-50">
       <div ref={mapContainer} className="w-full h-full" />
-      {!isLoaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+      
+      {status === 'loading' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10">
           <Loader2 className="w-10 h-10 text-green-500 animate-spin mb-4" />
-          <p className="text-sm font-bold text-gray-400">지도를 불러오는 중...</p>
+          <p className="text-sm font-bold text-gray-500">지도를 불러오는 중...</p>
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 px-10 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">지도를 불러올 수 없습니다</h3>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            카카오맵 API 키가 유효하지 않거나 네트워크 연결에 문제가 있습니다. <br/>
+            <span className="text-xs font-mono bg-gray-100 px-1 rounded mt-2 inline-block">YOUR_KAKAO_APP_KEY</span>를 실제 키로 교체해주세요.
+          </p>
+          <Button 
+            onClick={loadKakaoMap}
+            className="bg-green-500 hover:bg-green-600 text-white rounded-xl px-6 gap-2"
+          >
+            <RefreshCw className="w-4 h-4" /> 다시 시도
+          </Button>
         </div>
       )}
     </div>
