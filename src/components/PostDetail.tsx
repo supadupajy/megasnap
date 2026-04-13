@@ -248,8 +248,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
-                  isInfluencer && "influencer-border-container animate-influencer-float p-[3px]",
-                  isPopular && "popular-border-container p-[3px]",
+                  isInfluencer && "influencer-border-container animate-influencer-float",
+                  isPopular && "popular-border-container",
                   isAd && "p-[3px] bg-blue-500"
                 )}
               >

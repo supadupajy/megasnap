@@ -76,6 +76,8 @@
 /* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
+  padding: 3px;
+  border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000);
   animation: rotate-border 1.5s linear infinite;
 }
@@ -88,6 +90,8 @@
 /* Influencer Gold Gradient Border */
 .influencer-border-container {
   position: relative;
+  padding: 3px;
+  border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
 }
