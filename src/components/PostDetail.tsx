@@ -177,8 +177,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           }
         `}</style>
         
-        {/* Improved Close Button */}
-        <div className="absolute top-8 right-6 z-[110]">
+        {/* Adjusted Close Button Position */}
+        <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
