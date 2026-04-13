@@ -28,10 +28,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정
+  // 1. 브라우저가 화면을 그리기 직전에 스크롤을 0으로 강제 고정 (가장 확실한 시점)
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [currentIndex, isOpen]);
+
+  // 2. 애니메이션이나 포커스 이동 후 발생할 수 있는 미세한 스크롤 튐 방지
+  useEffect(() => {
+    if (isOpen) {
+      const reset = () => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      };
+      
+      reset();
+      const rafId = requestAnimationFrame(reset);
+      return () => cancelAnimationFrame(rafId);
     }
   }, [currentIndex, isOpen]);
 
@@ -139,7 +154,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        onOpenAutoFocus={(e) => e.preventDefault()} 
+        onOpenAutoFocus={(e) => e.preventDefault()} // 자동 포커스로 인한 스크롤 이동 원천 차단
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]"
       >
@@ -206,9 +221,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
-                  {/* 표준 div를 사용하여 스크롤 제어의 신뢰성 확보 */}
+                  {/* key={post.id}를 사용하여 포스팅 전환 시 div를 강제로 새로 마운트하여 스크롤 초기화 보장 */}
                   <div 
-                    key={`scroll-${post.id}`}
+                    key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
                     className={cn(
                       "flex-1 h-full overflow-y-auto no-scrollbar",
