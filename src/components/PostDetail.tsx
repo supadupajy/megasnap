@@ -95,7 +95,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 가로 스크롤 중일 때는 드래그 무시 (이미지 슬라이더 보호)
     if (absX > absY && absX > 20) return;
 
     if (absX > absY && absX > 60) {
@@ -178,14 +177,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           }
         `}</style>
         
-        <div className="absolute top-6 right-6 z-[110]">
+        {/* Improved Close Button */}
+        <div className="absolute top-8 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onClose}
-            className="rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 text-white border border-white/20 w-12 h-12"
+            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-green-600 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/40 w-11 h-11 active:scale-90 transition-all"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 stroke-[2.5px]" />
           </Button>
         </div>
 
@@ -246,7 +246,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         }
                       }}
                     >
-                      {/* Image Slider Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
@@ -268,7 +267,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           ))}
                         </div>
 
-                        {/* Pagination Dots */}
                         {images.length > 1 && (
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                             {images.map((_: any, idx: number) => (
@@ -368,7 +366,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </button>
                         </div>
 
-                        {/* Comment Preview or Full List */}
                         <div className="border-t border-gray-100 pt-2">
                           <button 
                             onClick={(e) => {
