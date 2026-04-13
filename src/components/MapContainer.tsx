@@ -243,17 +243,16 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           }
 
           categoryIconHtml = `
-            <div style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: ${bgColor}; border-radius: 6px; display: flex; align-items: center; justify-content: center; z-index: 20; border: 1.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
+            <div style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: ${bgColor}; border-radius: 5px; display: flex; align-items: center; justify-content: center; z-index: 20; border: 1.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
             </div>
           `;
         }
 
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
-            ${categoryIconHtml}
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
-                 style="width: 56px; height: 56px; border-radius: 16px;
+                 style="width: 56px; height: 56px; border-radius: 16px; position: relative;
                         ${(isPopular || isInfluencer) ? 'padding: 2px;' : `border: 2px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
@@ -273,6 +272,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                   </div>
                 ` : ''}
               </div>
+              ${categoryIconHtml}
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
                             font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
