@@ -259,8 +259,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         }
 
         const labelHtml = isInfluencer ? 
-          `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -10px; position: relative; z-index: 1;">INFLUENCER</div>` :
-          (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; border: 1.5px solid white; border-bottom: none; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -10px; position: relative; z-index: 1;">HOT</div>` : '');
+          `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -10px; position: relative; z-index: 1;">INFLUENCER</div>` :
+          (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -10px; position: relative; z-index: 1;">HOT</div>` : '');
 
         const animationClass = isInfluencer ? 'animate-influencer-float' : (isPopular ? 'animate-hot-pulse' : '');
 
