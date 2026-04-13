@@ -25,11 +25,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   
-  // 스크롤 상태 추적
-  const [isAtTop, setIsAtTop] = useState(true);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
   useEffect(() => {
@@ -37,8 +33,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
       setDirection(0);
-      setIsAtTop(true);
-      setIsAtBottom(false);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -52,16 +46,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       onViewPost(currentPost.id);
     }
   }, [currentIndex, isOpen, onViewPost]);
-
-  // 스크롤 위치 감지 함수
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const atTop = scrollTop <= 5;
-    const atBottom = Math.abs(scrollHeight - clientHeight - scrollTop) <= 5;
-    
-    setIsAtTop(atTop);
-    setIsAtBottom(atBottom);
-  };
 
   if (!isOpen || posts.length === 0) return null;
   
@@ -77,7 +61,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 왼쪽으로 스와이프하여 닫기 (항상 허용)
     if (absX > absY && offset.x < -60) {
       if (offset.x < -120 || velocity.x < -400) {
         setDirection(0);
@@ -89,26 +72,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const threshold = 70;
     const velThreshold = 400;
 
-    // 위/아래 스와이프 (포스팅 전환)
     if (absY > absX) {
-      // 위로 스와이프 (다음 포스팅): 스크롤이 최하단일 때만 작동
       if (offset.y < -threshold || velocity.y < -velThreshold) {
-        if (isAtBottom && currentIndex < posts.length - 1) {
+        if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
-          // 전환 후 스크롤 초기화
-          setIsAtTop(true);
-          setIsAtBottom(false);
         }
-      } 
-      // 아래로 스와이프 (이전 포스팅): 스크롤이 최상단일 때만 작동
-      else if (offset.y > threshold || velocity.y > velThreshold) {
-        if (isAtTop && currentIndex > 0) {
+      } else if (offset.y > threshold || velocity.y > velThreshold) {
+        if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
-          // 전환 후 스크롤 초기화
-          setIsAtTop(true);
-          setIsAtBottom(false);
         }
       }
     }
@@ -144,6 +117,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     })
   };
 
+  // 테두리 색상 결정
   const getBorderColor = () => {
     if (isInfluencer) return "#ff0000";
     if (isAd) return "#3b82f6";
@@ -223,11 +197,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
                   <ScrollArea 
+                    ref={scrollAreaRef} 
                     className="flex-1 h-full no-scrollbar"
-                    onScroll={handleScroll}
                     onPointerDown={(e) => {
                       const target = e.target as HTMLElement;
-                      // 스크롤바를 클릭한 게 아니라면 드래그 컨트롤 시작
                       if (!target.closest('.radix-scroll-area-scrollbar')) {
                         dragControls.start(e);
                       }
