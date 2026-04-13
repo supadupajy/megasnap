@@ -53,6 +53,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // 1. 현재 영역 및 시간 내의 모든 포스트 필터링
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -60,17 +61,22 @@ const Index = () => {
       return isWithinBounds && isWithinTime;
     });
 
+    // 2. 카테고리별 분리
     const influencers = inView.filter(p => p.isInfluencer);
     const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
+    // 3. 개수 제한 적용 (인플루언서 1개, 인기 3개)
     const selectedInfluencer = influencers.slice(0, 1);
     const selectedPopulars = populars.slice(0, 3);
-    const remainingCount = 26;
+    
+    // 4. 전체 개수가 25~30개가 되도록 일반 포스트 추가
+    const remainingCount = 26; // 30 - 1 - 3
     const selectedNormals = normals.slice(0, remainingCount);
 
     let finalPosts = [...selectedInfluencer, ...selectedPopulars, ...selectedNormals];
 
+    // 5. 선택된 포스트가 있다면 반드시 포함 (중복 제거)
     if (selectedPostId) {
       const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
       if (!isAlreadyIncluded) {
@@ -168,6 +174,9 @@ const Index = () => {
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>재검색</span>
           </button>
+          <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
+            <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-green-600">{filteredPosts.length}</span></p>
+          </div>
         </div>
       </div>
 

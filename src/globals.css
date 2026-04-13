@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet CSS */
+@import "leaflet/dist/leaflet.css";
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -32,7 +35,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground overflow-hidden;
+    @apply bg-background text-foreground;
   }
 }
 
@@ -46,7 +49,18 @@
   }
 }
 
-/* Moving Gradient Border Animation */
+/* Leaflet Custom Styles */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #f3f4f6 !important;
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Moving Gradient Border Animation using Conic Gradient */
 @property --angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -54,17 +68,21 @@
 }
 
 @keyframes rotate-border {
-  to { --angle: 360deg; }
+  to {
+    --angle: 360deg;
+  }
 }
 
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
-  border-radius: 1.25rem;
+  border-radius: 1.25rem; /* 20px */
   background-image: conic-gradient(from var(--angle), #ff0000, #ff4d4d, #ff0000, #ff4d4d, #ff0000);
   animation: rotate-border 2s linear infinite;
 }
 
+/* Influencer Yellow Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
@@ -73,21 +91,40 @@
   animation: rotate-border 2s linear infinite;
 }
 
+/* Viewed state for popular and influencer border */
 .popular-border-container.viewed,
 .influencer-border-container.viewed {
   background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8) !important;
   animation: rotate-border 3s linear infinite;
 }
 
+/* HOT Red Glow Animation */
 @keyframes popular-glow {
   0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); }
   50% { filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)); }
 }
 
+/* Influencer Yellow Glow Animation */
 @keyframes influencer-glow {
   0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.5)); }
   50% { filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)); }
 }
 
-.animate-popular-glow { animation: popular-glow 1.5s ease-in-out infinite; }
-.animate-influencer-glow { animation: influencer-glow 1.5s ease-in-out infinite; }
+/* Brighter White Glow Animation for Viewed Posts */
+@keyframes viewed-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)); }
+  50% { filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.9)); }
+}
+
+.animate-popular-glow {
+  animation: popular-glow 1.5s ease-in-out infinite;
+}
+
+.animate-influencer-glow {
+  animation: influencer-glow 1.5s ease-in-out infinite;
+}
+
+.animate-popular-glow.viewed,
+.animate-influencer-glow.viewed {
+  animation: viewed-glow 2s ease-in-out infinite;
+}
