@@ -99,14 +99,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 가로 스와이프 (닫기) - 민감도 유지
     if (absX > absY && (absX > 50 || Math.abs(velocity.x) > 300)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    // 세로 스와이프 (다음/이전 포스트) - 트리거 임계값 대폭 하향 (더 빨리 반응)
     const threshold = 20;
     const velThreshold = 100;
 
@@ -125,7 +123,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  // 더 빠르고 탄력적인 스프링 설정
   const springConfig = { type: "spring", damping: 25, stiffness: 400, mass: 0.8 };
 
   const variants = {
@@ -267,16 +264,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   height: '82vh'
                 }}
               >
-                {/* Background Border Layer */}
+                {/* Background Border Layer - Only for Ads */}
                 <div className={cn(
                   "absolute inset-0 z-0 rounded-[40px]",
-                  isAd && "border-4 border-blue-500",
-                  isPopular && "popular-border-container",
-                  isInfluencer && "influencer-border-container"
+                  isAd && "border-4 border-blue-500"
                 )} />
 
                 {/* Main Content Container */}
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] m-[4px] z-10">
+                <div className={cn(
+                  "flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] z-10",
+                  isAd ? "m-[4px]" : "m-0"
+                )}>
                   {/* Status Bar */}
                   {isInfluencer && (
                     <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
