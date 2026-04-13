@@ -86,6 +86,9 @@ const Popular = () => {
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onLikeToggle={handleLikeToggle}
+          onLocationClick={(lat, lng) => {
+            navigate('/', { state: { center: { lat, lng } } });
+          }}
         />
       )}
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />

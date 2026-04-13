@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
@@ -18,6 +18,7 @@ interface PostDetailProps {
   onClose: () => void;
   onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
+  onLocationClick?: (lat: number, lng: number) => void;
 }
 
 const MOCK_COMMENTS = [
@@ -29,7 +30,7 @@ const MOCK_COMMENTS = [
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle }: PostDetailProps) => {
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -335,7 +336,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
-                      <div className="p-5 sm:p-6 relative">
+                      <div className="px-4 py-5 sm:px-5 sm:py-6 relative">
                         {renderCategoryIcon()}
 
                         <div className="flex items-center gap-3 mb-3">
@@ -383,30 +384,45 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {post.content}
                         </p>
 
-                        <div className="flex items-center gap-5 mb-4">
-                          <button 
-                            className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onLikeToggle?.(post.id);
-                            }}
-                          >
-                            <Heart className={cn("w-5 h-5 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
-                            <span className="text-xs font-bold text-gray-500">{post.likes}</span>
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowComments(!showComments);
-                            }}
-                            className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors"
-                          >
-                            <MessageCircle className="w-5 h-5" />
-                            <span className="text-xs font-bold text-gray-500">12</span>
-                          </button>
-                          <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
-                            <Share2 className="w-5 h-5" />
-                          </button>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <button 
+                              className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onLikeToggle?.(post.id);
+                              }}
+                            >
+                              <Heart className={cn("w-5 h-5 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                              <span className="text-xs font-bold text-gray-500">{post.likes}</span>
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowComments(!showComments);
+                              }}
+                              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors"
+                            >
+                              <MessageCircle className="w-5 h-5" />
+                              <span className="text-xs font-bold text-gray-500">12</span>
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                              <Share2 className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          {post.lat !== undefined && post.lng !== undefined && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onLocationClick?.(post.lat, post.lng);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+                            >
+                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                              <span className="text-[10px] font-black">위치보기</span>
+                            </button>
+                          )}
                         </div>
 
                         <div className="border-t border-gray-100 pt-2">

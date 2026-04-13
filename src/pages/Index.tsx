@@ -82,12 +82,10 @@ const Index = () => {
           const combined = [...prev, ...newPosts];
           
           // 성능 유지를 위해 너무 멀리 떨어진 데이터만 삭제 (약 10km 이상)
-          // 단순히 slice(-400)을 하면 중앙 데이터가 잘릴 수 있으므로 거리 기반으로 필터링
           if (combined.length > 600) {
             return combined.filter(post => {
               const distLat = Math.abs(post.lat - centerLat);
               const distLng = Math.abs(post.lng - centerLng);
-              // 약 0.1도(10km) 이내의 데이터는 무조건 유지
               return distLat < 0.1 && distLng < 0.1;
             });
           }
@@ -103,26 +101,19 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 현재 화면 영역(Bounds) 내에 있는 포스팅만 필터링
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      
-      // 선택된 포스트는 영역 밖이라도 유지, 나머지는 영역+시간 조건 충족 시 유지
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
 
-    // 2. 인플루언서/인기 포스팅 우선순위 설정 (개수 제한 완화)
     const influencers = inView.filter(p => p.isInfluencer);
     const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
-    // 화면 중앙의 포스팅이 사라지지 않도록 normals에 대한 slice(0, 30) 제한을 제거하거나 대폭 늘림
-    // 지도 마커는 수백 개까지는 성능에 큰 지장이 없으므로 전체 노출
     let finalPosts = [...influencers, ...populars, ...normals];
 
-    // 선택된 포스트가 필터링 결과에 없다면 강제로 추가
     if (selectedPostId) {
       const isAlreadyIncluded = finalPosts.some(p => p.id === selectedPostId);
       if (!isAlreadyIncluded) {
@@ -270,6 +261,10 @@ const Index = () => {
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}
           onLikeToggle={handleLikeToggle}
+          onLocationClick={(lat, lng) => {
+            setMapCenter({ lat, lng });
+            setSelectedPostId(null);
+          }}
         />
       )}
       <WritePost 
