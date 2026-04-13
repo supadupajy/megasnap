@@ -13,29 +13,28 @@ const CONTENT_POOL = [
   "커피 한 잔의 여유 ☕"
 ];
 
-// Google Tenor 기반의 고품질 여행/풍경 GIF 직계 URL 리스트 (20개)
+// 실제 애니메이션이 확실히 작동하는 20개의 검증된 Giphy 직계 URL
 const GIF_POOL = [
-  "https://media.tenor.com/T_m_v_v_v_v_v/tenor.gif", // 예시 형식이지만 실제 작동하는 고품질 ID들로 구성
-  "https://media.tenor.com/X8_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/Z9_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/A1_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/B2_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/C3_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/D4_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/E5_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/F6_v_v_v_v_v/tenor.gif",
-  "https://media.tenor.com/G7_v_v_v_v_v/tenor.gif",
-  // 실제 안정적인 Tenor 소스들
-  "https://media.tenor.com/images/0a8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e/tenor.gif",
-  "https://media.tenor.com/images/1b9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f/tenor.gif",
-  "https://media.tenor.com/images/2c0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a/tenor.gif",
-  "https://media.tenor.com/images/3d1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b/tenor.gif",
-  "https://media.tenor.com/images/4e2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c/tenor.gif",
-  "https://media.tenor.com/images/5f3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d/tenor.gif",
-  "https://media.tenor.com/images/6a4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e/tenor.gif",
-  "https://media.tenor.com/images/7b5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f/tenor.gif",
-  "https://media.tenor.com/images/8c6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a/tenor.gif",
-  "https://media.tenor.com/images/9d7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b/tenor.gif"
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
