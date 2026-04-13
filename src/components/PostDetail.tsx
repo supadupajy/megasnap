@@ -21,7 +21,7 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0); // 1: Next(Up swipe), -1: Prev(Down swipe), 0: Close(Left)
+  const [direction, setDirection] = useState(0); // 1: Next(Up), -1: Prev(Down), 0: Close(Left)
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   
@@ -32,11 +32,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const dragY = useMotionValue(0);
   const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
-  // 다이얼로그가 열릴 때만 초기 인덱스 설정 (스와이프 중 리셋 방지)
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
+      setDirection(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -44,7 +44,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, initialIndex, hasInitialized]);
 
-  // 현재 포스트 조회 처리
   useEffect(() => {
     if (isOpen && posts[currentIndex] && onViewPost) {
       onViewPost(posts[currentIndex].id);
@@ -62,22 +61,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
-    const screenWidth = window.innerWidth;
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 좌측 스와이프 (닫기)
-    if (absX > absY && offset.x < -40) {
-      if (offset.x < -screenWidth / 8 || velocity.x < -250) {
+    // 1. 좌측 스와이프 (닫기) - 수평 이동이 더 클 때
+    if (absX > absY && offset.x < -50) {
+      if (offset.x < -100 || velocity.x < -300) {
         setDirection(0);
         setIsClosing(true);
         return;
       }
     }
 
-    // 2. 상하 스와이프 (포스트 전환)
+    // 2. 상하 스와이프 (포스트 전환) - 수직 이동이 더 클 때
     const swipeThreshold = 50;
-    const velocityThreshold = 200;
+    const velocityThreshold = 300;
 
     if (absY > absX) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
@@ -85,6 +83,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
+          // 좌표 리셋
           dragX.set(0);
           dragY.set(0);
         }
@@ -93,6 +92,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
+          // 좌표 리셋
           dragX.set(0);
           dragY.set(0);
         }
@@ -103,11 +103,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
+      x: 0,
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
     }),
     center: {
       y: 0,
+      x: 0,
       opacity: 1,
       scale: 1,
       transition: {
@@ -116,12 +118,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
+      // direction 0: 왼쪽으로 닫기
       x: direction === 0 ? "-100%" : 0,
+      // direction 1: 다음 포스트 (위로 나감)
+      // direction -1: 이전 포스트 (아래로 나감)
       y: direction > 0 ? "-100%" : direction < 0 ? "100%" : 0,
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
       transition: {
-        x: { duration: 0.2 },
+        x: { duration: 0.25, ease: "easeInOut" },
         y: { type: "spring", damping: 25, stiffness: 200, mass: 0.8 },
         opacity: { duration: 0.2 }
       }
@@ -189,7 +194,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 dragControls={dragControls}
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.6}
+                dragElastic={0.7}
                 style={{ x: dragX, y: dragY, opacity }}
                 onDragEnd={handleDragEnd}
                 className={cn(
