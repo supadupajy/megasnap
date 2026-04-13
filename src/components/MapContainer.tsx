@@ -13,8 +13,8 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
-// 제공해주신 API 키를 적용했습니다.
-const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer,drawing&autoload=false";
+// 요청하신 새로운 API 키를 적용했습니다.
+const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=f9b6516691d1ef61d26067e6fedfd7a7&libraries=services,clusterer,drawing&autoload=false";
 
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
