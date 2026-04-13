@@ -52,10 +52,12 @@ const Search = () => {
           </p>
           {filteredUsers.map((user) => (
             <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
-              <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback>{user.name[0]}</AvatarFallback>
-              </Avatar>
+              <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
+                <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback>{user.name[0]}</AvatarFallback>
+                </Avatar>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <span className="font-bold text-gray-900 truncate">{user.nickname}</span>
