@@ -26,12 +26,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
   
-  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
-  
-  // 드래그 값 및 투명도 변환 로직
   const dragX = useMotionValue(0);
-  const cardOpacity = useTransform(dragX, [-screenWidth / 2, 0], [0, 1]);
-  const bgAlpha = useTransform(dragX, [-screenWidth / 2, 0], [0, 0.6]); // 배경 투명도 연동
+  const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -66,7 +62,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
-    const swipeThreshold = 40;
+    const screenWidth = window.innerWidth;
+    const swipeThreshold = 40; // 감도 상향 조정
     const velocityThreshold = 150;
 
     // 1. 왼쪽 스와이프 (닫기)
@@ -96,6 +93,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     }
   };
+
+  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
 
   const variants = {
     enter: (direction: number) => ({
@@ -130,7 +129,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* 기본 Radix Overlay를 투명하게 처리 */}
+      {/* 검은색 레이어(Overlay)를 투명하게 만드는 스타일 주입 */}
       <style>{`
         [data-radix-portal] div[data-state] {
           background-color: transparent !important;
@@ -139,14 +138,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       `}</style>
       
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
-        
-        {/* 커스텀 배경 레이어: 드래그 위치에 따라 투명도 조절 */}
-        <motion.div 
-          style={{ opacity: isClosing ? 0 : bgAlpha }}
-          className="fixed inset-0 bg-black z-[-1] pointer-events-none"
-          transition={{ duration: 0.2 }}
-        />
-
         {/* Close Button */}
         <div className="absolute top-6 right-6 z-[110]">
           <Button 
@@ -199,7 +190,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={{ left: 0.8, right: 0 }}
-                style={{ x: dragX, opacity: cardOpacity }}
+                style={{ x: dragX, opacity }}
                 onDragEnd={handleDragEnd}
                 className={cn(
                   "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
