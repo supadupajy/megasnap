@@ -55,7 +55,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           setActionPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
           if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
-      }, 1000); // 1초로 단축
+      }, 1000);
     });
 
     map.addListener('mouseup', () => {
@@ -221,12 +221,37 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isGif = this.post.isGif;
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
+        const category = this.post.category || 'none';
         
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
         const pinColor = (isInfluencer || isPopular) ? (this.isViewed ? '#94a3b8' : (isInfluencer ? '#ffff00' : '#ff0000')) : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : borderColor));
 
+        // Category Icon Logic
+        let categoryIconHtml = '';
+        if (category !== 'none') {
+          let iconSvg = '';
+          let bgColor = '';
+          if (category === 'food') {
+            iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>';
+            bgColor = '#f97316'; // orange-500
+          } else if (category === 'accident') {
+            iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>';
+            bgColor = '#dc2626'; // red-600
+          } else if (category === 'place') {
+            iconSvg = '<path d="M20 10c0-4.4-3.6-8-8-8s-8 3.6-8 8c0 2.1.8 4.1 2.2 5.6L12 22l5.8-6.4c1.4-1.5 2.2-3.5 2.2-5.6Z"></path><circle cx="12" cy="10" r="3"></circle>';
+            bgColor = '#16a34a'; // green-600
+          }
+
+          categoryIconHtml = `
+            <div style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: ${bgColor}; border-radius: 6px; display: flex; align-items: center; justify-content: center; z-index: 20; border: 1.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
+            </div>
+          `;
+        }
+
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
+            ${categoryIconHtml}
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-glow' : (isPopular ? 'popular-border-container animate-popular-glow' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px;
                         ${(isPopular || isInfluencer) ? 'padding: 2px;' : `border: 2px solid ${borderColor};`}
@@ -301,7 +326,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes) {
+        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
           overlay.setMap(map);
