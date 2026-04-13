@@ -142,11 +142,9 @@
   z-index: 20;
 }
 
-/* Viewed state */
+/* Viewed state - Only gray out the content, keep the container effects */
 .popular-border-container.viewed,
 .influencer-border-container.viewed {
-  background-image: none !important;
-  background-color: #94a3b8 !important;
-  animation: none !important;
-  box-shadow: none !important;
+  /* Do not remove background-image or animation here */
+  box-shadow: none;
 }
