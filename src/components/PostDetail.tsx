@@ -254,7 +254,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center">
+                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always]">
                               <img 
                                 src={img} 
                                 alt="" 
