@@ -337,16 +337,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </div>
 
                         {/* Comment Preview or Full List */}
-                        <div className="border-t border-gray-100 pt-3">
-                          {!showComments && (
-                            <div className="flex gap-2 items-start mb-3 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                              <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{lastComment.user}</span>
-                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">
-                                {lastComment.text}
-                              </span>
-                            </div>
-                          )}
-
+                        <div className="border-t border-gray-100 pt-2">
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -359,6 +350,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </p>
                             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
                           </button>
+
+                          {!showComments && (
+                            <div className="flex gap-2 items-start mt-1 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                              <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{lastComment.user}</span>
+                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">
+                                {lastComment.text}
+                              </span>
+                            </div>
+                          )}
 
                           <AnimatePresence>
                             {showComments && (
