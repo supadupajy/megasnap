@@ -243,8 +243,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           }
 
           categoryIconHtml = `
-            <div style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: ${bgColor}; border-radius: 5px; display: flex; align-items: center; justify-content: center; z-index: 20; border: 1.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
+            <div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white; box-shadow: -1px 1px 4px rgba(0,0,0,0.15);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg>
             </div>
           `;
         }
@@ -271,8 +271,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                   </div>
                 ` : ''}
+                ${categoryIconHtml}
               </div>
-              ${categoryIconHtml}
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
                             font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
