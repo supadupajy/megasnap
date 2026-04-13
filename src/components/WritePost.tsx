@@ -35,8 +35,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               // 구글 맵에서 가져온 실제 주소 설정
               setAddress(results[0].formatted_address);
             } else {
-              // 실패 시 좌표라도 예쁘게 표시
-              setAddress(`${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+              // 지오코딩 실패 시에만 좌표 표시 (최후의 수단)
+              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
             setIsLoadingAddress(false);
           }
@@ -46,7 +46,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         setIsLoadingAddress(false);
       }
     } else {
-      // 닫힐 때 초기화
       setAddress('');
       setIsLoadingAddress(false);
     }
@@ -86,7 +85,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         avatar: 'https://i.pravatar.cc/150?u=me'
       },
       content: content,
-      location: address, // 변환된 주소 상태값을 직접 사용
+      location: address,
       lat,
       lng,
       likes: 0,
@@ -96,7 +95,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       borderType: 'none'
     };
 
-    // 폭죽 효과
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
@@ -164,7 +162,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                 <MapPin className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">Location</p>
+                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">선택한 위치</p>
                 {isLoadingAddress ? (
                   <div className="flex items-center gap-2 mt-1">
                     <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
@@ -175,12 +173,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                 )}
               </div>
               {!initialLocation && (
-                <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">CHANGE</Button>
+                <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">변경</Button>
               )}
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Caption</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
                 className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
