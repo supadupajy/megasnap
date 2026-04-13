@@ -26,14 +26,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
   
-  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
-  
-  // 드래그 위치에 따른 실시간 투명도 연동
   const dragX = useMotionValue(0);
-  // 카드의 투명도
-  const cardOpacity = useTransform(dragX, [-screenWidth / 2, 0], [0, 1]);
-  // 배경 레이어의 투명도 (카드보다 조금 더 천천히 사라지게 설정)
-  const bgOpacity = useTransform(dragX, [-screenWidth / 1.5, 0], [0, 1]);
+  const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -68,8 +62,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
-    const swipeThreshold = 40; // 감도 상향 조정
-    const velocityThreshold = 150;
+    const screenWidth = window.innerWidth;
+    const swipeThreshold = 50; // 감도 조절
+    const velocityThreshold = 200;
 
     // 1. 왼쪽 스와이프 (닫기)
     if (offset.x < -screenWidth / 4 || velocity.x < -400) {
@@ -99,6 +94,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   };
 
+  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
+
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? 1000 : direction < 0 ? -1000 : 0,
@@ -118,6 +115,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
+      // 왼쪽 스와이프로 닫힐 때 (direction === 0)
       x: direction === 0 ? -screenWidth : 0,
       y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
@@ -125,83 +123,54 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       transition: {
         x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
         y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.3 }
+        opacity: { duration: 0.25 }
       }
     })
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* 기본 Overlay를 투명하게 처리하기 위한 스타일 주입 */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        [data-radix-portal] [data-state=open].fixed.inset-0 { background-color: transparent !important; backdrop-filter: none !important; }
-      `}} />
-      
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
-        
-        <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
-          if (isClosing) onClose();
-        }}>
-          {!isClosing && (
-            <>
-              {/* 커스텀 배경 레이어: 카드와 함께 페이드 아웃됨 */}
-              <motion.div
-                key="backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{ opacity: bgOpacity }}
-                className="fixed inset-0 bg-black/70 pointer-events-none z-0"
-              />
+        {/* Close Button */}
+        <div className="absolute top-6 right-6 z-[110]">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 text-white border border-white/20 w-12 h-12"
+          >
+            <X className="w-6 h-6" />
+          </Button>
+        </div>
 
-              {/* Close Button */}
-              <motion.div 
-                key="close-btn"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute top-6 right-6 z-[110] pointer-events-auto"
-              >
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={onClose}
-                  className="rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 text-white border border-white/20 w-12 h-12"
-                >
-                  <X className="w-6 h-6" />
-                </Button>
-              </motion.div>
+        {/* Progress Indicator */}
+        <div className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center">
+          <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
+            <motion.div 
+              className={cn(
+                "absolute w-full rounded-full",
+                isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
+              )}
+              initial={false}
+              animate={{ 
+                height: `${Math.max(15, 100 / displayPosts.length)}%`,
+                top: `${(currentIndex / displayPosts.length) * 100}%`
+              }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            />
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-1">
+            <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
+            <div className="w-2 h-[1px] bg-white/20" />
+            <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
+          </div>
+        </div>
 
-              {/* Progress Indicator */}
-              <motion.div 
-                key="progress"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="absolute left-1 top-32 bottom-32 w-1.5 z-[110] flex flex-col items-center pointer-events-none"
-              >
-                <div className="w-[3px] h-full bg-white/10 rounded-full relative overflow-hidden">
-                  <motion.div 
-                    className={cn(
-                      "absolute w-full rounded-full",
-                      isInfluencer ? "bg-red-500 shadow-[0_0_20px_rgba(255,0,0,1)]" : "bg-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,1)]"
-                    )}
-                    initial={false}
-                    animate={{ 
-                      height: `${Math.max(15, 100 / displayPosts.length)}%`,
-                      top: `${(currentIndex / displayPosts.length) * 100}%`
-                    }}
-                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  />
-                </div>
-                <div className="mt-4 flex flex-col items-center gap-1">
-                  <span className={cn("text-[10px] font-black drop-shadow-md", isInfluencer ? "text-red-500" : "text-[#ccff00]")}>{currentIndex + 1}</span>
-                  <div className="w-2 h-[1px] bg-white/20" />
-                  <span className="text-[10px] font-bold text-white/30">{displayPosts.length}</span>
-                </div>
-              </motion.div>
-
-              {/* Main Card */}
+        <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
+          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+            if (isClosing) onClose();
+          }}>
+            {!isClosing && (
               <motion.div
                 key={post.id}
                 custom={direction}
@@ -214,10 +183,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={{ left: 0.8, right: 0 }}
-                style={{ x: dragX, opacity: cardOpacity }}
+                style={{ x: dragX, opacity }}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white z-10"
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
                 )}
               >
                 <div 
@@ -333,9 +302,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   </div>
                 </div>
               </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       </DialogContent>
     </Dialog>
   );
