@@ -243,15 +243,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
-                className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
-                  isInfluencer && "influencer-border-container", // 상세 화면에서는 animate-influencer-float 제거 (충돌 방지)
-                  isPopular && "popular-border-container",
-                  isAd && "p-[4px] bg-blue-500"
-                )}
-                style={{ willChange: 'transform, opacity' }}
+                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] bg-white"
+                style={{ 
+                  willChange: 'transform, opacity',
+                  backfaceVisibility: 'hidden',
+                  isolation: 'isolate'
+                }}
               >
-                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px]">
+                {/* Animated Border Layer - Isolated from main transform */}
+                {(isInfluencer || isPopular || isAd) && (
+                  <div className={cn(
+                    "absolute inset-0 z-0",
+                    isInfluencer && "influencer-border-container",
+                    isPopular && "popular-border-container",
+                    isAd && "p-[4px] bg-blue-500"
+                  )} />
+                )}
+
+                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[36px] relative z-10 m-[4px]">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
