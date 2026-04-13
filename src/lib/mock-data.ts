@@ -1,5 +1,17 @@
 import { Post, User } from '@/types';
 
+const ACCIDENT_IMAGES = [
+  "https://images.unsplash.com/photo-1599412227383-b7d4751c8765?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1617113931036-f3039093094b?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1578491252704-0696f696e981?auto=format&fit=crop&w=800&q=80"
+];
+
+const FIRE_IMAGES = [
+  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80"
+];
+
 const CONTENT_POOL = [
   "오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️",
   "여기 분위기 진짜 대박... 꼭 와보세요! ✨",
@@ -56,16 +68,27 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
     const isGif = !isAd && Math.random() > 0.7;
-    const isInfluencer = !isAd && Math.random() > 0.85; // 인플루언서 확률 추가
+    const isInfluencer = !isAd && Math.random() > 0.85;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     const randomHoursAgo = Math.random() * 12;
     
+    const content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     const borderType = isInfluencer ? 'none' : (Math.random() > 0.8 ? 'popular' : 'none');
     const likes = (borderType === 'popular' || isInfluencer)
       ? Math.floor(Math.random() * 1001) + 1000 
       : Math.floor(Math.random() * 491) + 10;
+
+    // 사고 유형에 따른 이미지 선택
+    let image = `https://picsum.photos/seed/${id}/800/800`;
+    if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
+      image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+    } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
+      image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+    } else if (isGif) {
+      image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+    }
 
     return {
       id,
@@ -73,14 +96,12 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isGif,
       isInfluencer,
       user: createMockUser(isAd ? "sponsored" : id),
-      content: CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)],
+      content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
       lng,
       likes,
-      image: isGif 
-        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)]
-        : `https://picsum.photos/seed/${id}/800/800`,
+      image,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType
@@ -88,7 +109,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   });
 };
 
-// 고정된 스토리 데이터 생성
 export const MOCK_STORIES = Array.from({ length: 15 }).map((_, i) => {
   const part1 = USERNAME_PARTS[i % USERNAME_PARTS.length];
   const part2 = USERNAME_PARTS[(i + 5) % USERNAME_PARTS.length];

@@ -222,9 +222,8 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
         
-        // HOT: 빨강, Influencer: 노랑
         const borderColor = isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#ffffff');
-        const pinColor = isInfluencer ? '#ffff00' : (this.isViewed ? '#94a3b8' : (isPopular ? '#ff0000' : borderColor));
+        const pinColor = (isInfluencer || isPopular) ? (this.isViewed ? '#94a3b8' : (isInfluencer ? '#ffff00' : '#ff0000')) : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : borderColor));
 
         div.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%);">
@@ -233,13 +232,12 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                         ${(isPopular || isInfluencer) ? 'padding: 4px;' : `border: 4px solid ${borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : (this.isViewed ? '#94a3b8' : '#e5e7eb'))}; transition: all 0.3s;
-                        filter: ${!isAd && !isPopular && !isInfluencer && this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
+                        filter: ${this.isViewed ? 'grayscale(1) brightness(0.7)' : 'none'};">
               <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
                 <img src="${this.post.image}" 
                      onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
-                     style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                     style="width: 100%; height: 100%; object-fit: cover; ${this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
                 
-                <!-- 인기도 숫자 배지 -->
                 <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
                   ${this.post.likes}
                 </div>
