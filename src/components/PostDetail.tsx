@@ -63,11 +63,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     const screenWidth = window.innerWidth;
-    const swipeThreshold = 50; // 감도 조절
-    const velocityThreshold = 200;
+    const swipeThreshold = 40; // 감도 상향 조정
+    const velocityThreshold = 150;
 
     // 1. 왼쪽 스와이프 (닫기)
-    if (offset.x < -screenWidth / 4 || velocity.x < -400) {
+    if (offset.x < -screenWidth / 5 || velocity.x < -300) {
       setDirection(0);
       setIsClosing(true);
       return;
@@ -115,7 +115,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      // 왼쪽 스와이프로 닫힐 때 (direction === 0)
       x: direction === 0 ? -screenWidth : 0,
       y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
@@ -123,13 +122,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       transition: {
         x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
         y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.25 }
+        opacity: { duration: 0.2 }
       }
     })
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      {/* 검은색 레이어(Overlay)를 투명하게 만드는 스타일 주입 */}
+      <style>{`
+        [data-radix-portal] div[data-state] {
+          background-color: transparent !important;
+          backdrop-filter: none !important;
+        }
+      `}</style>
+      
       <DialogContent className="p-0 bg-transparent border-none shadow-none w-screen h-screen max-w-none flex items-center justify-center overflow-hidden outline-none focus:ring-0 z-[100]">
         {/* Close Button */}
         <div className="absolute top-6 right-6 z-[110]">
