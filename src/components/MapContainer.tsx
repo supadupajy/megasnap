@@ -13,7 +13,8 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
-const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services,clusterer,drawing&autoload=false";
+// 제공해주신 API 키를 적용했습니다.
+const KAKAO_SDK_URL = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer,drawing&autoload=false";
 
 const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -28,7 +29,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
   const loadKakaoMap = () => {
     setStatus('loading');
     
-    // 이미 스크립트가 있는지 확인
     const existingScript = document.getElementById('kakao-map-sdk');
     if (existingScript) existingScript.remove();
 
@@ -100,7 +100,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     script.onerror = () => setStatus('error');
     document.head.appendChild(script);
 
-    // 8초 후에도 로드가 안되면 에러 처리
     const timeout = setTimeout(() => {
       if (status === 'loading') setStatus('error');
     }, 8000);
@@ -112,7 +111,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     loadKakaoMap();
   }, []);
 
-  // 센터 변경 시 이동
   useEffect(() => {
     if (mapInstance.current && center && window.kakao && window.kakao.maps) {
       const moveLatLon = new window.kakao.maps.LatLng(center.lat, center.lng);
@@ -120,7 +118,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     }
   }, [center]);
 
-  // 글쓰기 액션 핀 표시
   useEffect(() => {
     if (!mapInstance.current || !window.kakao || status !== 'ready') return;
     const kakao = window.kakao;
@@ -154,7 +151,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     }
   }, [actionPin, status]);
 
-  // 포스트 마커 업데이트
   useEffect(() => {
     if (!mapInstance.current || !window.kakao || status !== 'ready') return;
     const kakao = window.kakao;
@@ -226,8 +222,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2">지도를 불러올 수 없습니다</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            카카오맵 API 키가 유효하지 않거나 네트워크 연결에 문제가 있습니다. <br/>
-            <span className="text-xs font-mono bg-gray-100 px-1 rounded mt-2 inline-block">YOUR_KAKAO_APP_KEY</span>를 실제 키로 교체해주세요.
+            카카오맵 API 키가 유효하지 않거나 네트워크 연결에 문제가 있습니다.
           </p>
           <Button 
             onClick={loadKakaoMap}
