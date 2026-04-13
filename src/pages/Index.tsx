@@ -34,7 +34,6 @@ const Index = () => {
       const incomingPost = location.state.post;
       setAllPosts([incomingPost, ...initialPosts]);
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
-      // 상세 보기 자동 오픈 로직 제거 (사용자 요청)
     } else {
       setAllPosts(initialPosts);
       if (location.state?.center) {
@@ -180,12 +179,12 @@ const Index = () => {
           />
         </div>
         <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
-          <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-green-600 active:scale-95 transition-all">
+          <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-95 transition-all">
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>재검색</span>
           </button>
           <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
-            <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-green-600">{filteredPosts.length}</span></p>
+            <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{filteredPosts.length}</span></p>
           </div>
         </div>
       </div>
@@ -200,7 +199,7 @@ const Index = () => {
       </div>
 
       <div className="absolute bottom-32 right-4 z-20">
-        <button onClick={() => filteredPosts.length > 0 && setSelectedPostId(filteredPosts[0].id)} disabled={filteredPosts.length === 0} className="w-14 h-14 bg-blue-500 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50">
+        <button onClick={() => filteredPosts.length > 0 && setSelectedPostId(filteredPosts[0].id)} disabled={filteredPosts.length === 0} className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50">
           <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
           <span className="text-[9px] font-black mt-1">모두 보기</span>
         </button>

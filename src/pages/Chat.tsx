@@ -83,7 +83,7 @@ const Chat = () => {
           </button>
           <div className="flex items-center gap-2">
             <div 
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
               onClick={handleAvatarClick}
             >
               <img 
@@ -94,7 +94,7 @@ const Chat = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-gray-900">{chatId}</span>
-              <span className="text-[10px] text-green-500 font-bold">현재 활동 중</span>
+              <span className="text-[10px] text-indigo-600 font-bold">현재 활동 중</span>
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ const Chat = () => {
               className={cn(
                 "px-4 py-2.5 rounded-2xl text-sm font-medium shadow-sm",
                 msg.sender === 'me' 
-                  ? "bg-green-500 text-white rounded-tr-none" 
+                  ? "bg-indigo-600 text-white rounded-tr-none" 
                   : "bg-gray-100 text-gray-800 rounded-tl-none"
               )}
             >
@@ -155,7 +155,7 @@ const Chat = () => {
             disabled={!inputValue.trim()}
             className={cn(
               "w-10 h-10 rounded-xl transition-all",
-              inputValue.trim() ? "bg-green-500 hover:bg-green-600 text-white" : "bg-gray-200 text-gray-400"
+              inputValue.trim() ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400"
             )}
           >
             <Send className="w-5 h-5" />

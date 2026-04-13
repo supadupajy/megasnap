@@ -32,11 +32,11 @@ const CategoryFilter = ({ selectedId, onSelect }: CategoryFilterProps) => {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-2.5 rounded-full whitespace-nowrap transition-all shadow-sm border",
                 isSelected 
-                  ? "bg-green-500 border-green-500 text-white font-bold scale-105" 
+                  ? "bg-indigo-600 border-indigo-600 text-white font-bold scale-105" 
                   : "bg-white/90 backdrop-blur-md border-gray-100 text-gray-600 hover:bg-white"
               )}
             >
-              <Icon className={cn("w-4 h-4", isSelected ? "text-white" : "text-green-500")} />
+              <Icon className={cn("w-4 h-4", isSelected ? "text-white" : "text-indigo-600")} />
               <span className="text-sm">{cat.label}</span>
             </button>
           );

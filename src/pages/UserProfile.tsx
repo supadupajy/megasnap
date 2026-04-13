@@ -53,7 +53,7 @@ const UserProfile = () => {
           {/* Profile Info */}
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-green-500">
+              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img 
                   src={`https://i.pravatar.cc/150?u=${userId}`} 
                   alt="profile" 
@@ -87,7 +87,7 @@ const UserProfile = () => {
               className={`flex-1 font-bold rounded-xl gap-2 h-12 transition-all ${
                 isFollowing 
                   ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
-                  : "bg-green-500 hover:bg-green-600 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
               }`}
             >
               {isFollowing ? (
@@ -107,8 +107,8 @@ const UserProfile = () => {
 
           {/* Tabs */}
           <div className="flex border-b border-gray-100 mb-4">
-            <button className="flex-1 py-3 flex justify-center border-b-2 border-green-500">
-              <Grid className="w-6 h-6 text-green-500" />
+            <button className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600">
+              <Grid className="w-6 h-6 text-indigo-600" />
             </button>
             <button className="flex-1 py-3 flex justify-center text-gray-300">
               <MapIcon className="w-6 h-6" />

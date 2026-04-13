@@ -69,7 +69,7 @@ const PostItem = ({
           className="flex items-center gap-3 cursor-pointer group"
           onClick={handleUserClick}
         >
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 transition-transform group-active:scale-90">
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
             <img 
               src={user.avatar} 
               alt={user.name} 
@@ -77,8 +77,8 @@ const PostItem = ({
             />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-green-600 transition-colors">{user.name}</p>
-            <div className="flex items-center text-green-500 gap-0.5 mt-0.5">
+            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
               <MapPin className="w-3 h-3" />
               <span className="text-[10px] font-medium">{location}</span>
             </div>
@@ -157,13 +157,12 @@ const PostItem = ({
             </button>
           </div>
           
-          {/* 위치 아이콘을 하단 액션 바 영역으로 이동 */}
           {lat !== undefined && lng !== undefined && (
             <button 
               onClick={handleLocationClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-full hover:bg-green-100 active:scale-90 transition-all border border-green-100"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
             >
-              <Navigation className="w-3.5 h-3.5 fill-green-600" />
+              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
               <span className="text-[10px] font-black">위치보기</span>
             </button>
           )}
@@ -173,7 +172,7 @@ const PostItem = ({
           <p className="text-sm font-bold text-gray-500">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
             <span 
-              className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-green-600 transition-colors"
+              className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors"
               onClick={handleUserClick}
             >
               {user.name}

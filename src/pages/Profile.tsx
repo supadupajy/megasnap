@@ -46,7 +46,6 @@ const Profile = () => {
   const handleGridItemClick = (postId: string) => {
     setViewMode('list');
     // 클릭한 포스트 위치로 스크롤하기 위해 약간의 지연 후 실행
-    // scroll-margin-top이 적용되어 있어 헤더 아래로 적절히 위치합니다.
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
       if (element) {
@@ -66,8 +65,8 @@ const Profile = () => {
             <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center shadow-sm">
-                    <UserIcon className="w-7 h-7 text-green-600" />
+                  <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                    <UserIcon className="w-7 h-7 text-indigo-600" />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-gray-900">내 프로필</h2>
@@ -84,7 +83,7 @@ const Profile = () => {
               {/* Profile Info */}
               <div className="flex items-center gap-6 mb-8">
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-green-500">
+                  <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                     <img 
                       src="https://i.pravatar.cc/150?u=me" 
                       alt="profile" 
@@ -118,8 +117,8 @@ const Profile = () => {
 
               {/* Tabs */}
               <div className="flex border-b border-gray-100 mb-4">
-                <button className="flex-1 py-3 flex justify-center border-b-2 border-green-500">
-                  <Grid className="w-6 h-6 text-green-500" />
+                <button className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600">
+                  <Grid className="w-6 h-6 text-indigo-600" />
                 </button>
                 <button className="flex-1 py-3 flex justify-center text-gray-300">
                   <MapIcon className="w-6 h-6" />
@@ -171,7 +170,7 @@ const Profile = () => {
                 <div 
                   key={post.id} 
                   id={`post-${post.id}`}
-                  className="scroll-mt-[150px]" // 헤더 높이를 고려한 스크롤 마진 추가
+                  className="scroll-mt-[150px]"
                 >
                   <PostItem
                     user={post.user}

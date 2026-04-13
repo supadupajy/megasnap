@@ -63,7 +63,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
               placeholder="장소, 주소 검색" 
-              className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-green-500 text-base shadow-sm"
+              className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 text-base shadow-sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -83,8 +83,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                     }}
                     className="w-full flex items-start gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-all text-left group active:scale-[0.98]"
                   >
-                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
-                      <MapPin className="w-6 h-6 text-green-500" />
+                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors">
+                      <MapPin className="w-6 h-6 text-indigo-600" />
                     </div>
                     <div className="flex-1 min-w-0 py-0.5">
                       <p className="font-bold text-gray-900 truncate text-base">{place.name}</p>

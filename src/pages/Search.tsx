@@ -39,7 +39,7 @@ const Search = () => {
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
               placeholder="아이디 또는 닉네임 검색" 
-              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-green-500"
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -52,7 +52,7 @@ const Search = () => {
           </p>
           {filteredUsers.map((user) => (
             <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
-              <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0">
+              <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
                 <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
                   <AvatarImage src={user.avatar} />
                   <AvatarFallback>{user.name[0]}</AvatarFallback>
@@ -71,7 +71,7 @@ const Search = () => {
                 onClick={(e) => toggleFollow(e, user.id)}
                 className={user.isFollowing 
                   ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200" 
-                  : "rounded-xl h-8 px-3 bg-green-500 hover:bg-green-600 text-white"
+                  : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white"
                 }
               >
                 {user.isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}

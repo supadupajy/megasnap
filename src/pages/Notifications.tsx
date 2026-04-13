@@ -81,7 +81,7 @@ const Notifications = () => {
                         onClick={() => toggleFollow(notif.id)}
                         className={notif.isFollowing 
                           ? "bg-gray-100 text-gray-900 font-bold h-8 px-4 rounded-lg hover:bg-gray-200" 
-                          : "bg-green-500 hover:bg-green-600 text-white font-bold h-8 px-4 rounded-lg"
+                          : "bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-8 px-4 rounded-lg"
                         }
                       >
                         {notif.isFollowing ? '팔로잉' : '팔로우'}

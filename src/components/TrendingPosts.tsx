@@ -69,7 +69,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           className="h-[44px] px-3 flex items-center gap-2 cursor-pointer"
           onClick={handleHeaderClick}
         >
-          <span className="text-green-600 font-black text-sm w-4 italic shrink-0">
+          <span className="text-indigo-600 font-black text-sm w-4 italic shrink-0">
             {isExpanded ? "HOT" : currentPost?.rank}
           </span>
           
@@ -155,7 +155,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     <span
                       className={cn(
                         "text-sm font-black italic w-4 shrink-0",
-                        post.rank <= 3 ? "text-green-500" : "text-gray-300",
+                        post.rank <= 3 ? "text-indigo-600" : "text-gray-300",
                       )}
                     >
                       {post.rank}
