@@ -10,21 +10,21 @@ import BottomNav from '@/components/BottomNav';
 const MESSAGES = [
   {
     id: 1,
-    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=1' },
+    user: { name: 'travel_maker' },
     lastMessage: '성수동 카페 정보 좀 알려주실 수 있나요?',
     time: '12분',
     unread: true
   },
   {
     id: 2,
-    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=2' },
+    user: { name: 'seoul_snap' },
     lastMessage: '사진 너무 잘 찍으시네요! 👍',
     time: '2시간',
     unread: false
   },
   {
     id: 3,
-    user: { name: 'explorer_kim', avatar: 'https://i.pravatar.cc/150?u=3' },
+    user: { name: 'explorer_kim' },
     lastMessage: '다음에 같이 출사 가요!',
     time: '1일',
     unread: false
@@ -83,7 +83,7 @@ const Messages = () => {
                   onClick={(e) => handleAvatarClick(e, msg.user.name)}
                 >
                   <img 
-                    src={msg.user.avatar} 
+                    src={`https://i.pravatar.cc/150?u=${msg.user.name}`} 
                     alt={msg.user.name} 
                     className="w-full h-full rounded-full object-cover border-2 border-white" 
                   />
