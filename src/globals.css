@@ -73,10 +73,10 @@
   }
 }
 
-/* HOT Red Gradient Border */
+/* HOT Red Gradient Border - Updated padding to 4px for consistency */
 .popular-border-container {
   position: relative;
-  padding: 3px;
+  padding: 4px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000);
   animation: rotate-border 1.5s linear infinite;
@@ -87,10 +87,10 @@
   background-image: conic-gradient(from var(--angle), #94a3b8, #cbd5e1, #94a3b8, #cbd5e1, #94a3b8);
 }
 
-/* Influencer Gold Gradient Border */
+/* Influencer Gold Gradient Border - Updated padding to 4px for consistency */
 .influencer-border-container {
   position: relative;
-  padding: 3px;
+  padding: 4px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
