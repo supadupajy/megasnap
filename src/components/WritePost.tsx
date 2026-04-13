@@ -1,73 +1,168 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Camera, MapPin, X } from 'lucide-react';
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Camera, MapPin, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess } from '@/utils/toast';
+import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
+import confetti from 'canvas-confetti';
 
 interface WritePostProps {
   isOpen: boolean;
   onClose: () => void;
+  onPostCreated?: (newPost: any) => void;
 }
 
-const WritePost = ({ isOpen, onClose }: WritePostProps) => {
+const WritePost = ({ isOpen, onClose, onPostCreated }: WritePostProps) => {
   const [content, setContent] = useState('');
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+
+  const takePhoto = async () => {
+    try {
+      setIsTakingPhoto(true);
+      const image = await CapCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl
+      });
+      
+      if (image.dataUrl) {
+        setCapturedImage(image.dataUrl);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+    } finally {
+      setIsTakingPhoto(false);
+    }
+  };
 
   const handlePost = () => {
-    showSuccess('게시물이 성공적으로 등록되었습니다!');
+    // 실제 카메라로 찍은 사진이 있더라도, 요청하신 대로 임의의 사진을 섞어서 새 포스팅 생성
+    const newPost = {
+      id: Math.random().toString(36).substr(2, 9),
+      isAd: false,
+      isGif: false,
+      isInfluencer: false,
+      user: {
+        id: 'me',
+        name: 'Dyad_Explorer',
+        avatar: 'https://i.pravatar.cc/150?u=me'
+      },
+      content: content,
+      location: '서울특별시 중구 세종대로 110',
+      lat: 37.5665 + (Math.random() - 0.5) * 0.01,
+      lng: 126.9780 + (Math.random() - 0.5) * 0.01,
+      likes: 0,
+      image: capturedImage || `https://picsum.photos/seed/${Date.now()}/800/800`,
+      isLiked: false,
+      createdAt: new Date(),
+      borderType: 'none'
+    };
+
+    // 특별한 이펙트: 컨페티(폭죽) 효과
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+    }, 250);
+
+    if (onPostCreated) {
+      onPostCreated(newPost);
+    }
+
+    showSuccess('새로운 추억이 지도에 등록되었습니다! ✨');
     onClose();
     setContent('');
+    setCapturedImage(null);
   };
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[85vh]">
+      <DrawerContent className="h-[85vh] outline-none">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
         <div className="px-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">새 게시물 작성</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              새 게시물 작성
+            </h2>
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
               <X className="w-5 h-5 text-gray-400" />
             </Button>
           </div>
 
-          <div className="flex-1 space-y-6 overflow-y-auto pb-20">
-            {/* Photo Upload Placeholder */}
-            <div className="aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-100 transition-colors">
-              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center">
-                <Camera className="w-6 h-6 text-indigo-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-500">사진 추가하기</p>
+          <div className="flex-1 space-y-6 overflow-y-auto pb-24 no-scrollbar">
+            {/* Photo Upload Area */}
+            <div 
+              onClick={takePhoto}
+              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden"
+            >
+              {capturedImage ? (
+                <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
+              ) : (
+                <>
+                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Camera className="w-7 h-7 text-indigo-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-gray-900">사진 촬영하기</p>
+                    <p className="text-xs text-gray-400 mt-1">지금 이 순간을 캡처하세요</p>
+                  </div>
+                </>
+              )}
+              {isTakingPhoto && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
 
             {/* Location Selector */}
-            <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-              <MapPin className="w-5 h-5 text-indigo-600" />
-              <div className="flex-1">
-                <p className="text-xs text-indigo-600 font-bold">현재 위치</p>
-                <p className="text-sm font-medium text-gray-800">서울특별시 중구 세종대로 110</p>
+            <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <MapPin className="w-5 h-5 text-indigo-600" />
               </div>
-              <Button variant="ghost" size="sm" className="text-indigo-600 font-bold">변경</Button>
+              <div className="flex-1">
+                <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">Current Location</p>
+                <p className="text-sm font-bold text-gray-800">서울특별시 중구 세종대로 110</p>
+              </div>
+              <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">CHANGE</Button>
             </div>
 
             {/* Content Input */}
-            <Textarea 
-              placeholder="이 장소에서의 추억을 기록해보세요..."
-              className="min-h-[150px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-indigo-600 resize-none text-base"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Caption</p>
+              <Textarea 
+                placeholder="이 장소에서의 추억을 기록해보세요..."
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="absolute bottom-8 left-0 right-0 px-6">
+          <div className="absolute bottom-8 left-0 right-0 px-6 bg-gradient-to-t from-white via-white to-transparent pt-4">
             <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-lg shadow-indigo-100"
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={!content}
+              disabled={!content || isTakingPhoto}
             >
-              게시하기
+              지도에 등록하기
             </Button>
           </div>
         </div>

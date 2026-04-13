@@ -26,7 +26,6 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
 
   useEffect(() => {
-    // 초기 데이터 생성 (최대 24시간 전까지의 포스트 생성으로 슬라이더 효과 극대화)
     const initialPosts = createMockPosts(37.5665, 126.9780, 60);
     
     if (location.state?.post) {
@@ -67,22 +66,17 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 시간 및 영역 필터링 로직 수정
     const inView = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      
-      // 영역 안에 있고 시간 조건도 만족해야 함 (단, 선택된 포스트는 예외)
       return (isWithinBounds && isWithinTime) || post.id === selectedPostId;
     });
 
-    // 중요도에 따른 정렬 및 표시 개수 제한
     const influencers = inView.filter(p => p.isInfluencer);
     const populars = inView.filter(p => p.borderType === 'popular' && !p.isInfluencer);
     const normals = inView.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
-    // 화면에 너무 많은 마커가 표시되지 않도록 적절히 조절
     let finalPosts = [...influencers, ...populars, ...normals.slice(0, 30)];
 
     if (selectedPostId) {
@@ -148,6 +142,12 @@ const Index = () => {
       next.add(id);
       return next;
     });
+  }, []);
+
+  const handlePostCreated = useCallback((newPost: Post) => {
+    setAllPosts(prev => [newPost, ...prev]);
+    setMapCenter({ lat: newPost.lat, lng: newPost.lng });
+    setTimeout(() => setSelectedPostId(newPost.id), 1000);
   }, []);
 
   const handleCurrentLocation = () => {
@@ -217,7 +217,11 @@ const Index = () => {
           onLikeToggle={handleLikeToggle}
         />
       )}
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+        onPostCreated={handlePostCreated}
+      />
     </div>
   );
 };
