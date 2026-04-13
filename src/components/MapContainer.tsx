@@ -13,7 +13,6 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
-// 발급받으신 네이버 Client ID를 적용했습니다.
 const NAVER_CLIENT_ID = "ipu2vry3sw"; 
 const NAVER_SDK_URL = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
 
@@ -22,100 +21,106 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const actionMarkerRef = useRef<any>(null);
+  const isScriptLoading = useRef(false);
   
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
+  const initMap = () => {
+    if (!window.naver || !window.naver.maps || !mapContainer.current) return;
+
+    const naver = window.naver;
+    const initialCenter = new naver.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780);
+    
+    const mapOptions = {
+      center: initialCenter,
+      zoom: 15,
+      minZoom: 10,
+      maxZoom: 21,
+      logoControl: false,
+      mapDataControl: false,
+      scaleControl: false,
+    };
+
+    const map = new naver.maps.Map(mapContainer.current, mapOptions);
+    mapInstance.current = map;
+    setStatus('ready');
+
+    const handleIdle = () => {
+      const bounds = map.getBounds();
+      const sw = bounds.getSW();
+      const ne = bounds.getNE();
+      onMapChange({
+        bounds: {
+          sw: { lat: sw.lat(), lng: sw.lng() },
+          ne: { lat: ne.lat(), lng: ne.lng() }
+        }
+      });
+    };
+
+    naver.maps.Event.addListener(map, 'idle', handleIdle);
+    naver.maps.Event.addListener(map, 'mousedown', (e: any) => {
+      const latlng = e.coord;
+      pressTimer.current = setTimeout(() => {
+        setActionPin({ lat: latlng.lat(), lng: latlng.lng() });
+        if (window.navigator.vibrate) window.navigator.vibrate(50);
+      }, 800);
+    });
+
+    const clearTimer = () => {
+      if (pressTimer.current) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    };
+
+    naver.maps.Event.addListener(map, 'mouseup', clearTimer);
+    naver.maps.Event.addListener(map, 'dragstart', clearTimer);
+    naver.maps.Event.addListener(map, 'click', () => setActionPin(null));
+
+    handleIdle();
+  };
+
   const loadNaverMap = () => {
-    if (NAVER_CLIENT_ID === "YOUR_NAVER_CLIENT_ID") {
-      setStatus('error');
+    if (window.naver && window.naver.maps) {
+      initMap();
       return;
     }
 
+    if (isScriptLoading.current) return;
+    isScriptLoading.current = true;
     setStatus('loading');
     
-    const existingScript = document.getElementById('naver-map-sdk');
-    if (existingScript) existingScript.remove();
-
     const script = document.createElement('script');
-    script.id = 'naver-map-sdk';
     script.src = NAVER_SDK_URL;
     script.async = true;
 
     script.onload = () => {
-      if (!window.naver || !window.naver.maps) {
+      isScriptLoading.current = false;
+      if (window.naver && window.naver.maps) {
+        initMap();
+      } else {
         setStatus('error');
-        return;
       }
-
-      const naver = window.naver;
-      if (!mapContainer.current) return;
-
-      const initialCenter = new naver.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780);
-      
-      const mapOptions = {
-        center: initialCenter,
-        zoom: 15,
-        minZoom: 10,
-        maxZoom: 21,
-        logoControl: false,
-        mapDataControl: false,
-        scaleControl: false,
-      };
-
-      const map = new naver.maps.Map(mapContainer.current, mapOptions);
-      mapInstance.current = map;
-      setStatus('ready');
-
-      // 지도 이벤트 설정
-      const handleIdle = () => {
-        const bounds = map.getBounds();
-        const sw = bounds.getSW();
-        const ne = bounds.getNE();
-        
-        onMapChange({
-          bounds: {
-            sw: { lat: sw.lat(), lng: sw.lng() },
-            ne: { lat: ne.lat(), lng: ne.lng() }
-          }
-        });
-      };
-
-      naver.maps.Event.addListener(map, 'idle', handleIdle);
-      
-      // 롱프레스(길게 누르기)로 글쓰기 핀 생성
-      naver.maps.Event.addListener(map, 'mousedown', (e: any) => {
-        const latlng = e.coord;
-        pressTimer.current = setTimeout(() => {
-          setActionPin({ lat: latlng.lat(), lng: latlng.lng() });
-          if (window.navigator.vibrate) window.navigator.vibrate(50);
-        }, 800);
-      });
-
-      const clearTimer = () => {
-        if (pressTimer.current) {
-          clearTimeout(pressTimer.current);
-          pressTimer.current = null;
-        }
-      };
-
-      naver.maps.Event.addListener(map, 'mouseup', clearTimer);
-      naver.maps.Event.addListener(map, 'dragstart', clearTimer);
-      naver.maps.Event.addListener(map, 'click', () => setActionPin(null));
-
-      handleIdle();
     };
 
-    script.onerror = () => setStatus('error');
+    script.onerror = () => {
+      isScriptLoading.current = false;
+      setStatus('error');
+    };
     document.head.appendChild(script);
   };
 
   useEffect(() => {
     loadNaverMap();
+    return () => {
+      if (mapInstance.current) {
+        // Cleanup if needed
+      }
+    };
   }, []);
 
-  // 센터 변경 시 이동
   useEffect(() => {
     if (mapInstance.current && center && window.naver) {
       const moveLatLon = new window.naver.maps.LatLng(center.lat, center.lng);
@@ -123,7 +128,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     }
   }, [center]);
 
-  // 글쓰기 액션 핀 업데이트
   useEffect(() => {
     if (!mapInstance.current || !window.naver || status !== 'ready') return;
     const naver = window.naver;
@@ -158,7 +162,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
     }
   }, [actionPin, status]);
 
-  // 포스트 마커 업데이트
   useEffect(() => {
     if (!mapInstance.current || !window.naver || status !== 'ready') return;
     const naver = window.naver;
@@ -227,15 +230,15 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">네이버 지도 설정 필요</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">네이버 지도 인증 실패</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            네이버 클라우드 플랫폼에서 발급받은 <b>Client ID</b>를 코드에 입력해야 지도가 나타납니다.
+            콘솔에 등록된 URL과 현재 접속 주소가 일치하지 않습니다. 상단 가이드를 따라 주소를 다시 등록해 주세요.
           </p>
           <Button 
-            onClick={loadNaverMap}
+            onClick={() => window.location.reload()}
             className="bg-green-500 hover:bg-green-600 text-white rounded-xl px-6 gap-2"
           >
-            <RefreshCw className="w-4 h-4" /> 다시 시도
+            <RefreshCw className="w-4 h-4" /> 페이지 새로고침
           </Button>
         </div>
       )}
