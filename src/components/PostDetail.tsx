@@ -27,7 +27,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   
   // 드래그 거리에 따른 실시간 투명도 조절을 위한 Motion Value
   const dragX = useMotionValue(0);
-  const opacity = useTransform(dragX, [-200, 0], [0.5, 1]);
+  const opacity = useTransform(dragX, [-200, 0], [0, 1]);
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -110,15 +110,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
-      // 왼쪽 스와이프로 닫힐 때는 왼쪽으로 빠지면서 페이드 아웃
+      // 왼쪽 스와이프로 닫힐 때: 화면 왼쪽 밖으로 완전히 밀려나며 페이드 아웃
       x: direction === 0 ? -screenWidth : 0,
       y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
-      scale: 0.9,
+      scale: 0.95,
       transition: {
-        x: { duration: 0.3 },
-        y: { type: "spring", damping: 30, stiffness: 300 },
-        opacity: { duration: 0.2 }
+        x: { type: "spring", damping: 25, stiffness: 200, restDelta: 0.5 },
+        opacity: { duration: 0.4, ease: "easeOut" },
+        y: { type: "spring", damping: 30, stiffness: 300 }
       }
     })
   };
