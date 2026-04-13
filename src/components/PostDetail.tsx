@@ -20,6 +20,13 @@ interface PostDetailProps {
   onLikeToggle?: (postId: string) => void;
 }
 
+const MOCK_COMMENTS = [
+  { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." },
+  { user: "photo_master", text: "날씨 좋을 때 가면 최고죠 ㅎㅎ" },
+  { user: "seoul_explorer", text: "주차 공간은 넉넉한가요?" },
+  { user: "daily_snap", text: "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!" }
+];
+
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle }: PostDetailProps) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -146,6 +153,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return "transparent";
   };
 
+  const lastComment = MOCK_COMMENTS[MOCK_COMMENTS.length - 1];
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
@@ -259,10 +268,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
-                      <div className="p-6 sm:p-8">
-                        <div className="flex items-center gap-4 mb-6">
+                      <div className="p-5 sm:p-6">
+                        <div className="flex items-center gap-3 mb-3">
                           <div 
-                            className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
                             onClick={handleUserClick}
                           >
                             <img 
@@ -274,7 +283,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <p 
-                                className="font-bold text-gray-900 text-base leading-none truncate cursor-pointer hover:text-green-600 transition-colors"
+                                className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer hover:text-green-600 transition-colors"
                                 onClick={handleUserClick}
                               >
                                 {post.user.name}
@@ -284,93 +293,105 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   href="https://s.baemin.com/t3000fBqlbHGL"
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[10px] bg-blue-500 text-white px-2.5 py-1 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
+                                  className="text-[9px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
                                 >
                                   앱에서 보기
                                 </a>
                               )}
                             </div>
-                            <div className="flex items-center text-green-500 gap-1 mt-1.5">
-                              <MapPin className="w-3.5 h-3.5" />
-                              <span className="text-xs font-bold truncate">{post.location}</span>
+                            <div className="flex items-center text-green-500 gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-[10px] font-bold truncate">{post.location}</span>
                             </div>
                           </div>
                         </div>
 
-                        <p className="text-gray-700 text-sm leading-relaxed mb-8 font-medium">
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium">
                           {post.content}
                         </p>
 
-                        <div className="flex items-center gap-6 mb-8">
+                        <div className="flex items-center gap-5 mb-4">
                           <button 
-                            className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors group"
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group"
                             onClick={(e) => {
                               e.stopPropagation();
                               onLikeToggle?.(post.id);
                             }}
                           >
-                            <Heart className={cn("w-6 h-6 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
-                            <span className="text-sm font-bold text-gray-500">{post.likes}</span>
+                            <Heart className={cn("w-5 h-5 transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                            <span className="text-xs font-bold text-gray-500">{post.likes}</span>
                           </button>
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowComments(!showComments);
                             }}
-                            className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors"
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors"
                           >
-                            <MessageCircle className="w-6 h-6" />
-                            <span className="text-sm font-bold text-gray-500">12</span>
+                            <MessageCircle className="w-5 h-5" />
+                            <span className="text-xs font-bold text-gray-500">12</span>
                           </button>
                           <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
-                            <Share2 className="w-6 h-6" />
+                            <Share2 className="w-5 h-5" />
                           </button>
                         </div>
 
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowComments(!showComments);
-                          }}
-                          className="w-full py-4 flex items-center justify-between border-t border-gray-100 group"
-                        >
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
-                            {showComments ? 'Hide Comments' : 'Recent Comments'}
-                          </p>
-                          {showComments ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
-                        </button>
-
-                        <AnimatePresence>
-                          {showComments && (
-                            <motion.div 
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="space-y-6 py-4 pb-10">
-                                {Array.from({ length: 8 }).map((_, i) => (
-                                  <div key={i} className="flex gap-3 items-start">
-                                    <span className="font-bold text-sm text-gray-900 whitespace-nowrap">User_{i + 1}</span>
-                                    <span className="text-sm text-gray-500 leading-snug">
-                                      {["와 여기 진짜 가보고 싶었는데! 정보 감사합니다.", "날씨 좋을 때 가면 최고죠 ㅎㅎ", "주차 공간은 넉넉한가요?", "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!"][i % 4]}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </motion.div>
+                        {/* Comment Preview or Full List */}
+                        <div className="border-t border-gray-100 pt-3">
+                          {!showComments && (
+                            <div className="flex gap-2 items-start mb-3 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                              <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{lastComment.user}</span>
+                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">
+                                {lastComment.text}
+                              </span>
+                            </div>
                           )}
-                        </AnimatePresence>
+
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowComments(!showComments);
+                            }}
+                            className="w-full py-2 flex items-center justify-between group"
+                          >
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
+                              {showComments ? 'Hide Comments' : 'View All Comments'}
+                            </p>
+                            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+                          </button>
+
+                          <AnimatePresence>
+                            {showComments && (
+                              <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="space-y-4 py-3 pb-6">
+                                  {MOCK_COMMENTS.map((comment, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                      <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{comment.user}</span>
+                                      <span className="text-[13px] text-gray-500 leading-snug">
+                                        {comment.text}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
                   <div 
                     onPointerDown={(e) => dragControls.start(e)}
-                    className="h-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10"
+                    className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10"
                   >
-                    <Move className="w-5 h-5 text-gray-300 mb-2 animate-pulse" />
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
+                    <Move className="w-4 h-4 text-gray-300 mb-1 animate-pulse" />
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
                   </div>
                 </div>
               </motion.div>
