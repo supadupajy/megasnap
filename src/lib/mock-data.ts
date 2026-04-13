@@ -7,12 +7,21 @@ const CONTENT_POOL = [
   "주말 여행지로 강력 추천합니다! 🚗",
   "야경이 정말 아름다운 곳이에요 🌙",
   "숨겨진 명소를 찾았습니다! 📍",
-  "인생샷 건지기 딱 좋은 곳 📸"
+  "인생샷 건지기 딱 좋은 곳 📸",
+  "바다 냄새가 너무 좋아요 🌊",
+  "도심 속 힐링 공간 발견! 🏙️",
+  "커피 한 잔의 여유 ☕"
 ];
 
 const GIF_POOL = [
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l2JIdnF6aJUMsgWzu/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxpf4T9V6N2/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif"
 ];
@@ -35,7 +44,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   const posts = Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isAd = Math.random() > 0.92;
-    const isGif = !isAd && Math.random() > 0.7; // 30% 확률로 GIF 설정
+    // 50% 확률로 GIF 설정
+    const isGif = !isAd && Math.random() > 0.5; 
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
     const randomHoursAgo = Math.random() * 12;
