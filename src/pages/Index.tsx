@@ -27,22 +27,17 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  // 이미 포스팅이 생성된 타일(격자)을 추적
   const populatedTiles = useRef<Set<string>>(new Set());
-  const TILE_SIZE = 0.02; // 약 2km 단위의 그리드
+  const TILE_SIZE = 0.02;
 
-  // 초기 데이터 설정 및 외부 페이지(인기 탭 등)에서 넘어온 위치 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
-      // 기존 포스트 목록에 추가 (중복 방지)
       setAllPosts(prev => {
         if (prev.some(p => p.id === incomingPost.id)) return prev;
         return [incomingPost, ...prev];
       });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
-      
-      // 하이라이트 효과 적용
       setHighlightedPostId(incomingPost.id);
       const timer = setTimeout(() => setHighlightedPostId(null), 3500);
       return () => clearTimeout(timer);
@@ -53,7 +48,6 @@ const Index = () => {
     }
   }, [location.state]);
 
-  // 지도 이동에 따른 그리드 기반 포스팅 생성
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
@@ -105,14 +99,46 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    return allPosts.filter(post => {
+    // 1. 먼저 범위와 시간 내에 있는 포스트들을 필터링
+    const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      // 하이라이트 중이거나 선택된 포스트는 필터와 상관없이 유지
-      return (isWithinBounds && isWithinTime) || post.id === selectedPostId || post.id === highlightedPostId;
+      return isWithinBounds && isWithinTime;
     });
-  }, [allPosts, mapData, timeValue, selectedPostId, highlightedPostId]);
+
+    // 2. 인플루언서 포스트 제한 (최대 1개)
+    const influencers = inBoundsPosts
+      .filter(p => p.isInfluencer)
+      .sort((a, b) => b.likes - a.likes);
+    const topInfluencerId = influencers[0]?.id;
+
+    // 3. 인기(HOT) 포스트 제한 (최대 3개)
+    const hotPosts = inBoundsPosts
+      .filter(p => p.borderType === 'popular' && p.id !== topInfluencerId)
+      .sort((a, b) => b.likes - a.likes);
+    const topHotIds = new Set(hotPosts.slice(0, 3).map(p => p.id));
+
+    // 4. 최종 변환: 제한을 초과하는 특수 포스트들은 일반 포스트로 스타일 변경
+    return inBoundsPosts.map(post => {
+      let isInfluencer = post.isInfluencer;
+      let borderType = post.borderType;
+
+      if (isInfluencer && post.id !== topInfluencerId) {
+        isInfluencer = false;
+      }
+
+      if (borderType === 'popular' && !topHotIds.has(post.id) && post.id !== topInfluencerId) {
+        borderType = 'none';
+      }
+
+      return {
+        ...post,
+        isInfluencer,
+        borderType
+      };
+    });
+  }, [allPosts, mapData, timeValue]);
 
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return filteredPosts;
@@ -159,10 +185,8 @@ const Index = () => {
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
-    
     setHighlightedPostId(post.id);
     setTimeout(() => setHighlightedPostId(null), 3500);
-    
     setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
 
@@ -249,14 +273,13 @@ const Index = () => {
 
       {selectedPostId && (
         <PostDetail 
-          posts={detailPosts}
+          posts={detailPosts} 
           initialIndex={0}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
-            // 현재 지도에 있는 포스트 중 해당 좌표를 가진 포스트 찾기
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
             if (post) {
               setHighlightedPostId(post.id);
