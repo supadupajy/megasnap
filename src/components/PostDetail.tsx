@@ -9,7 +9,7 @@ import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls, useMotionValue, useTransform } from 'framer-motion';
 
 interface PostDetailProps {
   posts: any[];
@@ -24,6 +24,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
   const [direction, setDirection] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+  
+  // 드래그 거리에 따른 실시간 투명도 조절을 위한 Motion Value
+  const dragX = useMotionValue(0);
+  const opacity = useTransform(dragX, [-200, 0], [0.5, 1]);
 
   const displayPosts = useMemo(() => {
     if (!isOpen || posts.length === 0 || initialIndex === -1) return [];
@@ -36,6 +40,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     if (isOpen) {
       setCurrentIndex(0);
       setDirection(0);
+      dragX.set(0); // 초기화
     }
   }, [isOpen]);
 
@@ -56,32 +61,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
+    const screenWidth = window.innerWidth;
     const swipeThreshold = 80;
     const velocityThreshold = 300;
 
-    // 1. 왼쪽 스와이프 (닫기)
-    if (offset.x < -100 || velocity.x < -500) {
+    // 1. 왼쪽 스와이프 (닫기) - 화면 절반 이상 밀었거나 빠른 속도로 밀었을 때
+    if (offset.x < -screenWidth / 2 || velocity.x < -500) {
       onClose();
       return;
     }
 
-    // 2. 상하 스와이프 (포스팅 전환)
-    // 수직 이동 거리가 수평 이동 거리보다 클 때만 작동
+    // 2. 상하 스와이프 (포스팅 전환) - 기존 로직 유지
     if (Math.abs(offset.y) > Math.abs(offset.x)) {
       if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
         // 위로 스와이프 -> 다음 포스트
         if (currentIndex < displayPosts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
+          dragX.set(0); // 전환 시 위치 초기화
         }
       } else if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
         // 아래로 스와이프 -> 이전 포스트
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
+          dragX.set(0); // 전환 시 위치 초기화
         }
       }
     }
+    
+    // 절반을 넘지 않았을 때는 dragConstraints={{ left: 0, right: 0 }} 에 의해 자동으로 원상복구됨
   };
 
   const variants = {
@@ -101,15 +110,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     },
     exit: (direction: number) => ({
+      // 왼쪽 스와이프로 닫힐 때는 왼쪽으로 빠지면서 페이드 아웃
+      x: direction === 0 ? -screenWidth : 0,
       y: direction > 0 ? -1000 : direction < 0 ? 1000 : 0,
       opacity: 0,
       scale: 0.9,
       transition: {
+        x: { duration: 0.3 },
         y: { type: "spring", damping: 30, stiffness: 300 },
         opacity: { duration: 0.2 }
       }
     })
   };
+
+  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -158,25 +172,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
               initial="enter"
               animate="center"
               exit="exit"
-              drag
+              drag="x" // 수평 드래그 활성화
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
-              dragElastic={{ top: 0.8, bottom: 0.8, left: 0.5, right: 0 }}
+              dragConstraints={{ left: 0, right: 0 }} // 원상복구를 위한 제약
+              dragElastic={{ left: 0.8, right: 0 }}
+              style={{ x: dragX, opacity }} // 실시간 위치 및 투명도 연동
               onDragEnd={handleDragEnd}
               className={cn(
                 "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
               )}
-              style={{
-                border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
-              }}
             >
-              <div className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col">
+              <div 
+                className="flex-1 h-full bg-white rounded-[36px] overflow-hidden flex flex-col"
+                style={{
+                  border: isInfluencer ? "4px solid #ff0000" : (isAd ? "4px solid #3b82f6" : (isPopular ? "4px solid #ccff00" : "none")),
+                }}
+              >
                 <ScrollArea 
                   ref={scrollAreaRef} 
                   className="flex-1 h-full no-scrollbar"
                   onPointerDown={(e) => {
-                    // 스크롤바 영역이 아닌 곳에서만 드래그 시작
                     const target = e.target as HTMLElement;
                     if (!target.closest('.radix-scroll-area-scrollbar')) {
                       dragControls.start(e);
@@ -271,7 +287,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
                   <ScrollBar className="hidden" />
                 </ScrollArea>
                 
-                {/* Bottom Handle */}
                 <div 
                   onPointerDown={(e) => dragControls.start(e)}
                   className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none"
