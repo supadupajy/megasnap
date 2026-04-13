@@ -59,7 +59,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
       lng,
-      likes: Math.floor(Math.random() * 2000),
+      likes: Math.floor(Math.random() * 1990) + 10, // 10 ~ 2000 사이의 랜덤 숫자
       image: isGif 
         ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)]
         : `https://picsum.photos/seed/${id}/800/800`,
@@ -69,7 +69,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isInfluencer: false
     };
 
-    if (post.borderType === 'popular') post.likes += 2000;
+    // 인기 게시물은 좋아요 수를 더 높게 설정
+    if (post.borderType === 'popular') post.likes = Math.floor(Math.random() * 500) + 1500;
     return post;
   });
 

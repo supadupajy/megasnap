@@ -237,15 +237,21 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
                 <img src="${this.post.image}" 
                      onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
                      style="width: 100%; height: 100%; object-fit: cover; ${(isPopular || isInfluencer) && this.isViewed ? 'filter: grayscale(0.5) brightness(0.8);' : ''}" />
+                
+                <!-- 인기도 숫자 배지 -->
+                <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
+                  ${this.post.likes}
+                </div>
+
                 ${isGif ? `
-                  <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center;">
+                  <div style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center; z-index: 5;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                   </div>
                 ` : ''}
               </div>
               ${isAd ? `
                 <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
-                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px;">
+                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
                   AD
                 </div>
               ` : ''}
@@ -296,7 +302,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif) {
+        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
           overlay.setMap(map);
