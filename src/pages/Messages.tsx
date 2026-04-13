@@ -35,6 +35,14 @@ const Messages = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
+  const handleBack = () => {
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   const handleAvatarClick = (e: React.MouseEvent, userName: string) => {
     e.stopPropagation(); // 채팅방 이동 이벤트 방지
     navigate(`/profile/${userName}`);
@@ -44,7 +52,7 @@ const Messages = () => {
     <div className="min-h-screen bg-white pb-24">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <h1 className="font-bold text-lg text-gray-900">Direct Message</h1>

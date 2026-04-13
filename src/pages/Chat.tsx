@@ -47,6 +47,14 @@ const Chat = () => {
     }
   }, [messages]);
 
+  const handleBack = () => {
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/messages');
+    }
+  };
+
   const handleSend = () => {
     if (!inputValue.trim()) return;
     
@@ -70,7 +78,7 @@ const Chat = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <div className="flex items-center gap-2">

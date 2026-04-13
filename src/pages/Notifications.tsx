@@ -46,6 +46,14 @@ const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
+  const handleBack = () => {
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   const toggleFollow = (id: number) => {
     setNotifications(prev => prev.map(notif => 
       notif.id === id ? { ...notif, isFollowing: !notif.isFollowing } : notif
@@ -55,7 +63,7 @@ const Notifications = () => {
   return (
     <div className="min-h-screen bg-white pb-24">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="mr-4 p-1 hover:bg-gray-50 rounded-full transition-colors">
+        <button onClick={handleBack} className="mr-4 p-1 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <h1 className="font-bold text-lg text-gray-900">알림</h1>
