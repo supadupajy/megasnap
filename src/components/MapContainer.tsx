@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
@@ -156,12 +155,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
               </div>
             </div>
-            <style>
-              @keyframes bounce {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-10px); }
-              }
-            </style>
           `;
           div.onclick = (e) => {
             e.stopPropagation();
@@ -219,7 +212,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         div.style.position = 'absolute';
         div.style.cursor = 'pointer';
         div.style.width = '56px';
-        div.style.height = '56px';
+        div.style.height = '72px'; // 삼각형 공간 확보를 위해 높이 증가
         div.style.transform = 'translate(-50%, -100%)';
         
         const isAd = this.post.isAd;
@@ -235,10 +228,12 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         if (this.isHighlighted) zIndex = 1000;
         div.style.zIndex = zIndex.toString();
 
-        const borderColor = isAd ? '#3b82f6' : '#ffffff';
-        let pinColor = borderColor;
+        // 삼각형 색상 결정 (특수 마커 우선)
+        let pinColor = '#ffffff';
         if (isInfluencer) pinColor = '#fbbf24';
         else if (isPopular) pinColor = '#ef4444';
+        else if (this.isHighlighted) pinColor = '#22d3ee';
+        else if (isAd) pinColor = '#3b82f6';
 
         let categoryIconHtml = '';
         if (category !== 'none') {
@@ -269,14 +264,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         const animationClass = isInfluencer ? 'animate-influencer-float' : (isPopular ? 'animate-hot-pulse' : '');
 
         div.innerHTML = `
-          <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; 
+          <div class="${animationClass}" style="position: relative; width: 56px; height: 72px; 
                transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
                ${this.isHighlighted ? 'transform: scale(1.35);' : 'transform: scale(1);'}">
             ${this.isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
             ${labelHtml}
             <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${this.isHighlighted ? '#22d3ee' : borderColor};`}
+                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${this.isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
               <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
@@ -302,9 +297,12 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                 </div>
               ` : ''}
             </div>
-            <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${this.isHighlighted ? '#22d3ee' : pinColor};
-                        box-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: 1;"></div>
+            <!-- SVG 기반 삼각형 핀 포인터 -->
+            <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>
+              </svg>
+            </div>
           </div>
         `;
 
