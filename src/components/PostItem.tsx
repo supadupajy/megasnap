@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PostItemProps {
@@ -16,15 +16,15 @@ interface PostItemProps {
   isLiked?: boolean;
   isAd?: boolean;
   isGif?: boolean;
+  isInfluencer?: boolean;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
 }
 
-const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, borderType = 'none' }: PostItemProps) => {
+const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif, isInfluencer, borderType = 'none' }: PostItemProps) => {
   const isPopular = !isAd && borderType === 'popular';
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
-    // GIF 로드 실패 시 해당 포스트의 고유 ID를 기반으로 한 정적 이미지로 교체
     target.src = `https://picsum.photos/seed/${content.length}/800/800`;
   };
 
@@ -55,10 +55,12 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
       <div className="px-4">
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-            isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
-              borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
-                borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
+          isInfluencer ? "p-[4px] bg-red-500 shadow-lg shadow-red-500/20 animate-influencer-glow" : (
+            isAd ? "p-[4px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
+              isPopular ? "p-[4px] bg-[#ccff00] shadow-lg shadow-[#ccff00]/20" : (
+                borderType === 'silver' ? "p-[4px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
+                  borderType === 'gold' ? "p-[4px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
+                )
               )
             )
           )
@@ -72,7 +74,12 @@ const PostItem = ({ user, content, location, likes, image, isLiked, isAd, isGif,
             />
           </div>
           
-          {isAd ? (
+          {isInfluencer ? (
+            <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
+              <Star className="w-3.5 h-3.5 fill-white" />
+              INFLUENCER
+            </div>
+          ) : isAd ? (
             <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-lg border border-white/10">
               AD
             </div>

@@ -40,6 +40,7 @@ const Popular = () => {
                 image={post.image}
                 isLiked={post.isLiked}
                 isGif={post.isGif}
+                isInfluencer={post.isInfluencer}
                 borderType={post.borderType}
               />
             </div>
