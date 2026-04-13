@@ -215,11 +215,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 style={{
                   border: (isInfluencer || isAd || isPopular) ? `4px solid ${getBorderColor()}` : "none",
                 }}
-                className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white",
-                  isPopular && "animate-popular-glow",
-                  isInfluencer && "animate-influencer-glow"
-                )}
+                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)] flex flex-col h-[82vh] will-change-transform bg-white"
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col">
                   <div 
