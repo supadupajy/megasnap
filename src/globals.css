@@ -73,7 +73,7 @@
   }
 }
 
-/* HOT Red Gradient Border - Thickness increased to 4px */
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
@@ -82,7 +82,7 @@
   animation: rotate-border 1.5s linear infinite;
 }
 
-/* Influencer Gold Gradient Border - Thickness increased to 4px */
+/* Influencer Gold Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
@@ -116,12 +116,37 @@
   100% { left: 100%; }
 }
 
+/* Marker Highlight Ping Animation */
+@keyframes marker-ping {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
 .animate-hot-pulse {
   animation: hot-pulse 2s ease-in-out infinite;
 }
 
 .animate-influencer-float {
   animation: influencer-float 3s ease-in-out infinite;
+}
+
+.marker-highlight-ping {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  background: rgba(79, 70, 229, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+  animation: marker-ping 1.5s ease-out infinite;
 }
 
 .shine-overlay::after {
@@ -140,10 +165,4 @@
   transform: skewX(-25deg);
   animation: shine-sweep 4s infinite;
   z-index: 20;
-}
-
-/* Viewed state - Keep the container effects colorful */
-.popular-border-container.viewed,
-.influencer-border-container.viewed {
-  box-shadow: none;
 }

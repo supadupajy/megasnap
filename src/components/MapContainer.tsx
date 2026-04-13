@@ -6,13 +6,14 @@ import { Play } from 'lucide-react';
 interface MapContainerProps {
   posts: any[];
   viewedPostIds: Set<any>;
+  highlightedPostId?: string | null;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
   onMapWriteClick: (location?: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
 }
 
-const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
+const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const overlaysRef = useRef<Map<any, any>>(new Map());
@@ -201,13 +202,15 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
       div: HTMLDivElement | null = null;
       post: any;
       isViewed: boolean;
+      isHighlighted: boolean;
       onClick: () => void;
 
-      constructor(post: any, isViewed: boolean, onClick: () => void) {
+      constructor(post: any, isViewed: boolean, isHighlighted: boolean, onClick: () => void) {
         super();
         this.latlng = new google.maps.LatLng(post.lat, post.lng);
         this.post = post;
         this.isViewed = isViewed;
+        this.isHighlighted = isHighlighted;
         this.onClick = onClick;
       }
 
@@ -229,6 +232,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         if (isAd) zIndex = 500;
         if (isPopular) zIndex = 400;
         if (isInfluencer) zIndex = 300;
+        if (this.isHighlighted) zIndex = 1000;
         div.style.zIndex = zIndex.toString();
 
         const borderColor = isAd ? '#3b82f6' : '#ffffff';
@@ -265,11 +269,12 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const animationClass = isInfluencer ? 'animate-influencer-float' : (isPopular ? 'animate-hot-pulse' : '');
 
         div.innerHTML = `
-          <div class="${animationClass}" style="position: relative; width: 56px; height: 56px;">
+          <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; ${this.isHighlighted ? 'transform: scale(1.2); transition: transform 0.3s;' : ''}">
+            ${this.isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
             ${labelHtml}
             <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}
+                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${this.isHighlighted ? '#4f46e5' : borderColor};`}
                         overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
               <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
@@ -296,7 +301,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
               ` : ''}
             </div>
             <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-                        width: 12px; height: 12px; background: ${pinColor};
+                        width: 12px; height: 12px; background: ${this.isHighlighted ? '#4f46e5' : pinColor};
                         box-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: 1;"></div>
           </div>
         `;
@@ -338,22 +343,23 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
 
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
+      const isHighlighted = highlightedPostId === post.id;
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category) {
+        if (overlay.isViewed !== isViewed || overlay.isHighlighted !== isHighlighted || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category) {
           overlay.setMap(null);
-          overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+          overlay = new HTMLMarker(post, isViewed, isHighlighted, () => onMarkerClick(post));
           overlay.setMap(map);
           overlaysRef.current.set(post.id, overlay);
         }
       } else {
-        overlay = new HTMLMarker(post, isViewed, () => onMarkerClick(post));
+        overlay = new HTMLMarker(post, isViewed, isHighlighted, () => onMarkerClick(post));
         overlay.setMap(map);
         overlaysRef.current.set(post.id, overlay);
       }
     });
-  }, [posts, viewedPostIds, onMarkerClick]);
+  }, [posts, viewedPostIds, highlightedPostId, onMarkerClick]);
 
   return <div ref={mapElement} className="w-full h-full bg-gray-100" />;
 };

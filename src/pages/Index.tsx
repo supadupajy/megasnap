@@ -20,6 +20,7 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [viewedPostIds, setViewedPostIds] = useState<Set<string>>(new Set());
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -36,6 +37,11 @@ const Index = () => {
       const incomingPost = location.state.post;
       setAllPosts(prev => [incomingPost, ...prev]);
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
+      
+      // 위치보기로 넘어온 경우 하이라이트 효과 적용
+      setHighlightedPostId(incomingPost.id);
+      const timer = setTimeout(() => setHighlightedPostId(null), 3000);
+      return () => clearTimeout(timer);
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     } else {
@@ -170,6 +176,11 @@ const Index = () => {
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
+    
+    // 트렌딩 클릭 시에도 하이라이트 효과 적용
+    setHighlightedPostId(post.id);
+    setTimeout(() => setHighlightedPostId(null), 3000);
+    
     setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
 
@@ -204,6 +215,7 @@ const Index = () => {
         <MapContainer 
           posts={filteredPosts}
           viewedPostIds={viewedPostIds}
+          highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
           onMapWriteClick={handleMapWriteClick}
