@@ -21,13 +21,14 @@ interface PostDetailProps {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDetailProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0); // 1: Next (Up swipe), -1: Prev (Down swipe), 0: Close (Left swipe)
+  const [direction, setDirection] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
+  // 초기 인덱스 설정
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
@@ -40,11 +41,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     }
   }, [isOpen, initialIndex, hasInitialized]);
 
+  // 포스트 조회 처리 (무한 루프 방지를 위해 ID 기반으로만 실행)
   useEffect(() => {
-    if (isOpen && posts[currentIndex] && onViewPost) {
-      onViewPost(posts[currentIndex].id);
+    const currentPost = posts[currentIndex];
+    if (isOpen && currentPost && onViewPost) {
+      onViewPost(currentPost.id);
     }
-  }, [currentIndex, isOpen, posts, onViewPost]);
+  }, [currentIndex, isOpen, onViewPost]); // posts 전체가 아닌 currentIndex와 onViewPost에만 의존
 
   if (!isOpen || posts.length === 0) return null;
   
@@ -60,7 +63,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 좌측 스와이프 (닫기)
     if (absX > absY && offset.x < -60) {
       if (offset.x < -120 || velocity.x < -400) {
         setDirection(0);
@@ -69,19 +71,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost }: PostDe
       }
     }
 
-    // 2. 상하 스와이프 (전환)
     const threshold = 70;
     const velThreshold = 400;
 
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
-        // 위로 밀기 (Finger Up) -> 다음 포스트 (Next)
         if (currentIndex < posts.length - 1) {
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
         }
       } else if (offset.y > threshold || velocity.y > velThreshold) {
-        // 아래로 밀기 (Finger Down) -> 이전 포스트 (Prev)
         if (currentIndex > 0) {
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);

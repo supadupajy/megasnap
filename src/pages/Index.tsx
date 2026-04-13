@@ -85,6 +85,16 @@ const Index = () => {
     setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
 
+  // 무한 루프 방지를 위해 useCallback 사용
+  const handleViewPost = useCallback((id: string) => {
+    setViewedPostIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
@@ -135,7 +145,7 @@ const Index = () => {
           initialIndex={selectedIndex}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
-          onViewPost={(id) => setViewedPostIds(prev => new Set(prev).add(id))}
+          onViewPost={handleViewPost}
         />
       )}
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
