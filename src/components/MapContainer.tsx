@@ -217,7 +217,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         div.style.cursor = 'pointer';
         div.style.width = '56px';
         div.style.height = '56px';
-        // 마커 컨테이너 자체를 좌표 중앙 상단으로 정렬하여 클릭 영역 일치
         div.style.transform = 'translate(-50%, -100%)';
         
         const isAd = this.post.isAd;
@@ -226,7 +225,6 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const isInfluencer = !isAd && this.post.isInfluencer;
         const category = this.post.category || 'none';
         
-        // 우선순위에 따른 z-index 설정
         let zIndex = 100;
         if (isAd) zIndex = 500;
         if (isPopular) zIndex = 400;
@@ -236,7 +234,7 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
         const borderColor = isAd ? '#3b82f6' : '#ffffff';
         let pinColor = borderColor;
         if (isInfluencer) pinColor = '#fbbf24';
-        else if (isPopular) pinColor = '#ff0000';
+        else if (isPopular) pinColor = '#ef4444';
 
         let categoryIconHtml = '';
         if (category !== 'none') {
@@ -260,8 +258,13 @@ const MapContainer = ({ posts, viewedPostIds, onMarkerClick, onMapChange, onMapW
           `;
         }
 
+        const labelHtml = isInfluencer ? 
+          `<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #fbbf24; color: black; font-size: 6px; font-weight: 900; padding: 1px 4px; border-radius: 4px 4px 0 0; white-space: nowrap; z-index: 30; border: 1px solid white; border-bottom: none;">INFLUENCER</div>` :
+          (isPopular ? `<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; font-size: 6px; font-weight: 900; padding: 1px 4px; border-radius: 4px 4px 0 0; white-space: nowrap; z-index: 30; border: 1px solid white; border-bottom: none;">HOT</div>` : '');
+
         div.innerHTML = `
           <div style="position: relative; width: 100%; height: 100%;">
+            ${labelHtml}
             <div class="${isInfluencer ? 'influencer-border-container animate-influencer-float' : (isPopular ? 'popular-border-container animate-hot-pulse' : '')} ${this.isViewed ? 'viewed' : ''}"
                  style="width: 56px; height: 56px; border-radius: 16px; position: relative;
                         ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${borderColor};`}

@@ -151,25 +151,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     })
   };
 
-  const renderCategoryIcon = () => {
+  const renderCategoryBadge = () => {
     if (category === 'none') return null;
     
-    const iconClass = "w-4 h-4 text-white";
     let Icon = null;
     let bgColor = "";
+    let label = "";
 
     switch (category) {
       case 'food':
         Icon = Utensils;
         bgColor = "bg-orange-500";
+        label = "맛집";
         break;
       case 'accident':
         Icon = Car;
         bgColor = "bg-red-600";
+        label = "사고";
         break;
       case 'place':
         Icon = TreePine;
         bgColor = "bg-green-600";
+        label = "명소";
         break;
     }
 
@@ -177,10 +180,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
     return (
       <div className={cn(
-        "absolute top-6 right-6 z-30 w-9 h-9 rounded-2xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10",
         bgColor
       )}>
-        <Icon className={iconClass} />
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-black">{label}</span>
       </div>
     );
   };
@@ -337,8 +341,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
 
                       <div className="px-4 py-4 sm:px-5 sm:py-5 relative">
-                        {renderCategoryIcon()}
-
                         {/* Action Bar - Moved directly under image */}
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
@@ -367,18 +369,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </button>
                           </div>
 
-                          {post.lat !== undefined && post.lng !== undefined && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onLocationClick?.(post.lat, post.lng);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
-                            >
-                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                              <span className="text-[10px] font-black">위치보기</span>
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {renderCategoryBadge()}
+                            {post.lat !== undefined && post.lng !== undefined && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onLocationClick?.(post.lat, post.lng);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+                              >
+                                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                                <span className="text-[10px] font-black">위치보기</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* User Info */}
