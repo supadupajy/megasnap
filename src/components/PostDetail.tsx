@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
@@ -244,11 +244,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragElastic={0.6}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu",
-                  isInfluencer && "influencer-border-container p-[2px]",
-                  isPopular && "popular-border-container p-[2px]",
-                  isAd && "bg-blue-500 p-[2px]",
-                  (!isInfluencer && !isPopular && !isAd) && "bg-white rounded-[40px]"
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu bg-white rounded-[40px] overflow-hidden",
+                  isAd && "border-2 border-blue-500"
                 )}
                 style={{ 
                   boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)',
@@ -258,8 +255,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   isolation: 'isolate'
                 }}
               >
-                {/* Content Layer - Nested inside border container for perfect 4-side coverage */}
-                <div className="flex-1 h-full overflow-hidden flex flex-col bg-white rounded-[38px] relative z-10">
+                {/* Status Bar for Influencer/Popular */}
+                {isInfluencer && (
+                  <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
+                    <Star className="w-4 h-4 fill-black" />
+                    <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
+                    <Star className="w-4 h-4 fill-black" />
+                  </div>
+                )}
+                {isPopular && (
+                  <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
+                    <Flame className="w-4 h-4 fill-white text-white" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
+                    <Flame className="w-4 h-4 fill-white text-white" />
+                  </div>
+                )}
+                {isAd && (
+                  <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
+                  </div>
+                )}
+
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
@@ -279,10 +298,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         }
                       }}
                     >
-                      <div className={cn(
-                        "aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0",
-                        isInfluencer && "shine-overlay"
-                      )}>
+                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
@@ -300,11 +316,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   target.src = FALLBACK_IMAGE;
                                 }}
                               />
-                              {idx === post.adImageIndex && (
-                                <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-                                  AD
-                                </div>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -320,22 +331,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 )}
                               />
                             ))}
-                          </div>
-                        )}
-
-                        {isAd ? (
-                          <div className="absolute top-6 left-6 z-20 bg-blue-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-                            AD
-                          </div>
-                        ) : isInfluencer ? (
-                          <div className="absolute top-6 left-6 z-20 bg-yellow-400 text-black px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-black/5">
-                            <Star className="w-3.5 h-3.5 fill-black" />
-                            INFLUENCER
-                          </div>
-                        ) : isPopular && (
-                          <div className="absolute top-6 left-6 z-20 bg-red-500 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-lg border border-white/10">
-                            <Flame className="w-3.5 h-3.5 fill-white" />
-                            HOT
                           </div>
                         )}
                       </div>
