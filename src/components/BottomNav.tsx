@@ -57,7 +57,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         )}
       >
         <Search className={cn("w-6 h-6", isActive('/search') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">검색</span>
+        <span className="text-[10px] font-bold tracking-tight">인물검색</span>
       </button>
 
       <button 
