@@ -41,6 +41,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
+  const TARGET_MARKER_COUNT = 30;
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -146,16 +147,18 @@ const Index = () => {
       return score;
     };
 
+    // 1단계: 그리드 기반 분산 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= 30) break;
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
           
           const cellCandidates = candidates.filter(p => 
             p.lat >= cellSw.lat && p.lat < cellNe.lat &&
-            p.lng >= cellSw.lng && p.lng < cellNe.lng
+            p.lng >= cellSw.lng && p.lng < cellNe.lng &&
+            !nextMarkers.some(m => m.id === p.id)
           );
 
           if (cellCandidates.length > 0) {
@@ -165,11 +168,20 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= 30) break;
+      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+    }
+
+    // 2단계: 확대 시 그리드 셀이 비어있을 경우 남은 후보들로 30개까지 채우기
+    if (nextMarkers.length < TARGET_MARKER_COUNT) {
+      const remainingCandidates = candidates
+        .filter(p => !nextMarkers.some(m => m.id === p.id))
+        .sort((a, b) => getScore(b) - getScore(a));
+      
+      const needed = TARGET_MARKER_COUNT - nextMarkers.length;
+      nextMarkers.push(...remainingCandidates.slice(0, needed));
     }
 
     setDisplayedMarkers(nextMarkers);
-    // allPosts를 의존성 배열에 추가하여 데이터 갱신 시 마커가 다시 계산되도록 함
   }, [mapData, timeValue, selectedCategory, allPosts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
@@ -186,23 +198,20 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    // 캐시된 타일 정보 초기화
     mapCache.populatedTiles.clear();
     
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       
-      // 시각적인 피드백을 위해 약간의 지연 후 갱신
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
         
-        // 현재 영역을 기준으로 새로운 데이터 생성
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 60);
+        // 현재 영역(확대된 영역 포함)을 기준으로 충분한 양의 데이터 생성
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
         
-        // 상태 업데이트 (allPosts가 변경되면 위의 useEffect가 실행됨)
         setAllPosts(refreshedPosts);
-        setDisplayedMarkers([]); // 기존 마커 비우기
+        setDisplayedMarkers([]); 
         setIsRefreshing(false);
       }, 600);
     } else {
