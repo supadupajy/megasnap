@@ -231,15 +231,17 @@ const Index = () => {
   };
 
   return (
-    <motion.div 
-      initial={{ x: "-100%", opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "-100%", opacity: 0 }}
-      transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
-      className="relative w-full h-screen overflow-hidden bg-gray-50"
-    >
+    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
-      <main className="absolute inset-0 z-0">
+      
+      {/* 가운데 콘텐츠만 애니메이션 적용 */}
+      <motion.div 
+        initial={{ x: "-100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "-100%", opacity: 0 }}
+        transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
+        className="absolute inset-0 z-0"
+      >
         <MapContainer 
           posts={filteredPosts}
           viewedPostIds={viewedIds}
@@ -249,67 +251,68 @@ const Index = () => {
           onMapWriteClick={handleMapWriteClick}
           center={mapCenter}
         />
-      </main>
 
-      <div className={cn(
-        "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
-        isTrendingExpanded ? "z-40" : "z-10"
-      )}>
-        <div className="w-64 shrink-0 pointer-events-auto">
-          <TrendingPosts 
-            posts={trendingPosts}
-            isExpanded={isTrendingExpanded}
-            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-            onPostClick={handleTrendingPostClick}
-          />
-        </div>
-        <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
-          <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-90 transition-all">
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>재검색</span>
-          </button>
-          <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
-            <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{filteredPosts.length}</span></p>
+        <div className={cn(
+          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+          isTrendingExpanded ? "z-40" : "z-10"
+        )}>
+          <div className="w-64 shrink-0 pointer-events-auto">
+            <TrendingPosts 
+              posts={trendingPosts}
+              isExpanded={isTrendingExpanded}
+              onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+              onPostClick={handleTrendingPostClick}
+            />
+          </div>
+          <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
+            <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-90 transition-all">
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>재검색</span>
+            </button>
+            <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
+              <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{filteredPosts.length}</span></p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
-        <button 
-          onClick={() => setIsCategoryOpen(true)}
-          className={cn(
-            "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
-            selectedCategory !== 'all' && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
-          )}
-        >
-          <Layers className="w-6 h-6" />
-        </button>
-        <button 
-          onClick={() => setIsSearchOpen(true)}
-          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-        >
-          <Search className="w-6 h-6" />
-        </button>
-        <button 
-          onClick={handleCurrentLocation}
-          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-        >
-          <Navigation className="w-6 h-6 fill-white" />
-        </button>
-      </div>
+        <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
+          <button 
+            onClick={() => setIsCategoryOpen(true)}
+            className={cn(
+              "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
+              selectedCategory !== 'all' && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
+            )}
+          >
+            <Layers className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+          >
+            <Search className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={handleCurrentLocation}
+            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+          >
+            <Navigation className="w-6 h-6 fill-white" />
+          </button>
+        </div>
 
-      <div className="absolute bottom-32 right-4 z-20">
-        <button 
-          onClick={handleViewAllClick} 
-          disabled={filteredPosts.length === 0} 
-          className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50"
-        >
-          <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
-          <span className="text-[9px] font-black mt-1">모두 보기</span>
-        </button>
-      </div>
+        <div className="absolute bottom-32 right-4 z-20">
+          <button 
+            onClick={handleViewAllClick} 
+            disabled={filteredPosts.length === 0} 
+            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50"
+          >
+            <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
+            <span className="text-[9px] font-black mt-1">모두 보기</span>
+          </button>
+        </div>
 
-      <TimeSlider value={timeValue} onChange={setTimeValue} />
+        <TimeSlider value={timeValue} onChange={setTimeValue} />
+      </motion.div>
+
       <BottomNav onWriteClick={() => {
         setPendingLocation(undefined);
         setIsWriteOpen(true);
@@ -355,7 +358,7 @@ const Index = () => {
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handlePlaceSelect} 
       />
-    </motion.div>
+    </div>
   );
 };
 

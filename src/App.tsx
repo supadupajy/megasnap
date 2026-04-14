@@ -24,7 +24,8 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
+    // initial={false}를 설정하여 첫 렌더링 시 애니메이션을 건너뜁니다.
+    <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Index />} />
         <Route path="/popular" element={<Popular />} />

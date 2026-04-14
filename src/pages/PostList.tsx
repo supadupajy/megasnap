@@ -110,16 +110,17 @@ const PostList = () => {
   }, [navigate, posts]);
 
   return (
-    <motion.div 
-      initial={{ x: "100%", opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0 }}
-      transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
-      className="min-h-screen bg-white pb-28"
-    >
+    <div className="min-h-screen bg-white">
       <Header />
       
-      <div className="pt-[88px]">
+      {/* 가운데 콘텐츠만 애니메이션 적용 */}
+      <motion.div 
+        initial={{ x: "100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "100%", opacity: 0 }}
+        transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
+        className="pt-[88px] pb-28"
+      >
         <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">
           <button 
             onClick={() => navigate('/')}
@@ -183,7 +184,7 @@ const PostList = () => {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       
@@ -203,7 +204,7 @@ const PostList = () => {
       )}
       
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-    </motion.div>
+    </div>
   );
 };
 
