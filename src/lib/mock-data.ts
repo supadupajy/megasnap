@@ -98,26 +98,22 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
-  // 인덱스를 무작위로 섞어서 특수 포스트 지정
   const indices = Array.from({ length: count }, (_, i) => i);
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
 
-  // 인플루언서 1개, 인기 포스팅 2~3개 지정
   const influencerIndex = indices[0];
-  const popularCount = Math.floor(Math.random() * 2) + 2; // 2 또는 3
+  const popularCount = Math.floor(Math.random() * 2) + 2;
   const popularIndices = new Set(indices.slice(1, 1 + popularCount));
 
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     
-    // 인플루언서와 인기 포스팅은 광고가 될 수 없음
     const isInfluencer = i === influencerIndex;
     const isPopular = popularIndices.has(i);
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    
     const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
@@ -126,14 +122,22 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let image = `https://picsum.photos/seed/${id}/800/800`;
+    let category: 'food' | 'accident' | 'place' | 'none' = 'none';
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       image = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+      category = 'food';
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
       image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+      category = 'accident';
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
       image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+      category = 'accident';
+    } else if (content.includes('점심') || content.includes('카페') || content.includes('맛집') || content.includes('커피')) {
+      category = 'food';
+    } else if (content.includes('명소') || content.includes('공원') || content.includes('바다') || content.includes('야경')) {
+      category = 'place';
     } else if (isGif) {
       image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
     }
@@ -148,6 +152,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isAd,
       isGif,
       isInfluencer,
+      category,
       user: getUserById(isAd ? "sponsored" : id),
       content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
