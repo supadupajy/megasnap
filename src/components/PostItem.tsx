@@ -281,12 +281,17 @@ const PostItem = ({
         <div className="space-y-1.5">
           <p className="text-sm font-bold text-gray-500">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
-            <span 
-              className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors"
-              onClick={handleUserClick}
-            >
-              {user.name}
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span 
+                className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors"
+                onClick={handleUserClick}
+              >
+                {user.name}
+              </span>
+              {isAd && (
+                <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>
+              )}
+            </div>
             <p className="text-sm text-gray-800 leading-snug line-clamp-2">
               {content}
             </p>
