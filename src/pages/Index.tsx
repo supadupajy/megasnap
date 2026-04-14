@@ -261,23 +261,23 @@ const Index = () => {
         <button 
           onClick={() => setIsCategoryOpen(true)}
           className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border",
-            selectedCategory !== 'all' ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-100"
+            "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
+            selectedCategory !== 'all' && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
           )}
         >
           <Layers className="w-6 h-6" />
         </button>
         <button 
           onClick={handleCurrentLocation}
-          className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
+          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
         >
-          <Navigation className="w-6 h-6 fill-gray-700" />
+          <Navigation className="w-6 h-6 fill-white" />
         </button>
         <button 
           onClick={() => setIsSearchOpen(true)}
-          className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
+          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
         >
-          <Search className="w-6 h-6 text-gray-700" />
+          <Search className="w-6 h-6" />
         </button>
       </div>
 
