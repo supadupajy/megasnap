@@ -100,18 +100,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
     if (shouldDismissX || shouldDismissY) {
       // 던져지는 방향을 화면 밖으로 아주 멀리 설정 (최소 1000px 이상)
-      const targetX = offset.x + velocity.x * 0.5;
-      const targetY = offset.y + velocity.y * 0.5;
+      // 현재 위치에서 속도를 더해 최종 목적지를 계산
+      const velocityFactor = 0.5;
+      const minDistance = 1200;
+      
+      let targetX = offset.x + velocity.x * velocityFactor;
+      let targetY = offset.y + velocity.y * velocityFactor;
       
       // 확실히 화면 밖으로 나가도록 보정
-      const finalX = Math.abs(targetX) > Math.abs(targetY) 
-        ? (targetX > 0 ? Math.max(targetX, 1200) : Math.min(targetX, -1200))
-        : targetX;
-      const finalY = Math.abs(targetY) > Math.abs(targetX)
-        ? (targetY > 0 ? Math.max(targetY, 1200) : Math.min(targetY, -1200))
-        : targetY;
+      if (Math.abs(targetX) > Math.abs(targetY)) {
+        targetX = targetX > 0 ? Math.max(targetX, minDistance) : Math.min(targetX, -minDistance);
+      } else {
+        targetY = targetY > 0 ? Math.max(targetY, minDistance) : Math.min(targetY, -minDistance);
+      }
 
-      setExitDirection({ x: finalX, y: finalY });
+      setExitDirection({ x: targetX, y: targetY });
       setIsDismissing(true);
     } else {
       // 기준 미달 시 중앙으로 복귀
