@@ -16,13 +16,12 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const listRef = useRef<HTMLDivElement>(null);
 
-  // 내 포스트 데이터 생성 (인플루언서 포스트 제외)
+  // 내 포스트 데이터 생성
   useEffect(() => {
     const myPosts = createMockPosts(37.5665, 126.9780, 20)
-      .filter(p => !p.isInfluencer && !p.isAd) // 인플루언서 및 광고 포스트 제외
-      .slice(0, 12) // 12개로 제한
+      .filter(p => !p.isInfluencer && !p.isAd)
+      .slice(0, 12)
       .map(p => ({
         ...p,
         user: {
@@ -50,7 +49,6 @@ const Profile = () => {
 
   const handleGridItemClick = (postId: string) => {
     setViewMode('list');
-    // 클릭한 포스트 위치로 스크롤하기 위해 약간의 지연 후 실행
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
       if (element) {
@@ -71,7 +69,6 @@ const Profile = () => {
       <div className="pt-[88px]">
         {viewMode === 'grid' ? (
           <>
-            {/* Title Section */}
             <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -90,7 +87,6 @@ const Profile = () => {
             </div>
 
             <div className="p-6">
-              {/* Profile Info */}
               <div className="flex items-center gap-6 mb-8">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
@@ -126,7 +122,6 @@ const Profile = () => {
                 프로필 편집
               </Button>
 
-              {/* Tabs */}
               <div className="flex border-b border-gray-100 mb-4">
                 <button className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600">
                   <Grid className="w-6 h-6 text-indigo-600" />
@@ -139,7 +134,6 @@ const Profile = () => {
                 </button>
               </div>
 
-              {/* Grid Posts */}
               <div className="grid grid-cols-3 gap-1">
                 {posts.map((post) => (
                   <div 
@@ -165,7 +159,6 @@ const Profile = () => {
           </>
         ) : (
           <div className="flex flex-col">
-            {/* List View Header */}
             <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white z-20">
               <button 
                 onClick={() => setViewMode('grid')}
@@ -176,7 +169,6 @@ const Profile = () => {
               <h2 className="font-bold text-gray-900">게시물</h2>
             </div>
 
-            {/* Post List */}
             <div className="flex flex-col pt-4">
               {posts.map((post) => (
                 <div 
@@ -190,6 +182,7 @@ const Profile = () => {
                     location={post.location}
                     likes={post.likes}
                     image={post.image}
+                    images={post.images}
                     isLiked={post.isLiked}
                     isGif={post.isGif}
                     isInfluencer={post.isInfluencer}
