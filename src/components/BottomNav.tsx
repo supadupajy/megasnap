@@ -17,26 +17,28 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 px-8 flex items-center justify-between z-50 pb-8">
+      {/* 첫 번째 메뉴: 지도 */}
       <button 
         onClick={() => navigate('/')}
         className={cn(
           "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
-          isActive('/') ? "text-orange-500" : "text-gray-400"
+          isActive('/') ? "text-indigo-600" : "text-gray-400"
         )}
       >
-        <Flame className={cn("w-6 h-6", isActive('/') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">HOT</span>
+        <Map className={cn("w-6 h-6", isActive('/') ? "stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">지도</span>
       </button>
 
+      {/* 두 번째 메뉴: HOT */}
       <button 
-        onClick={() => navigate('/map')}
+        onClick={() => navigate('/popular')}
         className={cn(
           "flex flex-col items-center gap-1.5 transition-all active:scale-90", 
-          isActive('/map') ? "text-indigo-600" : "text-gray-400"
+          isActive('/popular') ? "text-orange-500" : "text-gray-400"
         )}
       >
-        <Map className={cn("w-6 h-6", isActive('/map') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">지도</span>
+        <Flame className={cn("w-6 h-6", isActive('/popular') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">HOT</span>
       </button>
       
       <div className="relative -top-8">

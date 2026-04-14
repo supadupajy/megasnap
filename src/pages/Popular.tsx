@@ -38,7 +38,8 @@ const Popular = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);
-    navigate('/map', { state: { center: { lat, lng }, post } });
+    // 지도 경로를 / 로 변경
+    navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
 
   const detailPosts = useMemo(() => {
@@ -89,7 +90,7 @@ const Popular = () => {
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = posts.find(p => p.lat === lat && p.lng === lng);
-            navigate('/map', { state: { center: { lat, lng }, post } });
+            navigate('/', { state: { center: { lat, lng }, post } });
           }}
         />
       )}

@@ -56,7 +56,7 @@ const PostList = () => {
     if (location.state?.posts) {
       setPosts(location.state.posts);
     } else {
-      navigate('/map');
+      navigate('/');
     }
   }, [location.state, navigate]);
 
@@ -76,7 +76,7 @@ const PostList = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);
-    navigate('/map', { state: { center: { lat, lng }, post } });
+    navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
 
   return (
@@ -86,7 +86,7 @@ const PostList = () => {
       <div className="pt-[88px]">
         <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">
           <button 
-            onClick={() => navigate('/map')}
+            onClick={() => navigate('/')}
             className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6 text-gray-600" />
@@ -147,7 +147,7 @@ const PostList = () => {
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = posts.find(p => p.lat === lat && p.lng === lng);
-            navigate('/map', { state: { center: { lat, lng }, post } });
+            navigate('/', { state: { center: { lat, lng }, post } });
           }}
         />
       )}

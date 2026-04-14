@@ -41,8 +41,9 @@ const App = () => {
           ) : (
             <BrowserRouter key="app">
               <Routes>
-                <Route path="/" element={<Popular />} />
-                <Route path="/map" element={<Index />} />
+                {/* 기본 경로를 지도 화면으로 설정 */}
+                <Route path="/" element={<Index />} />
+                <Route path="/popular" element={<Popular />} />
                 <Route path="/post-list" element={<PostList />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<Notifications />} />
