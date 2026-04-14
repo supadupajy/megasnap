@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
+import SearchAdBanner from '@/components/SearchAdBanner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -45,6 +46,9 @@ const Search = () => {
             />
           </div>
         </div>
+
+        {/* 광고 배너 추가 */}
+        {!searchQuery && <SearchAdBanner />}
 
         <div className="space-y-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
