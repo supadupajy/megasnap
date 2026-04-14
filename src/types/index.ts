@@ -16,7 +16,7 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
+  category?: 'food' | 'accident' | 'place' | 'animal' | 'none'; // animal 카테고리 추가
   user: User;
   content: string;
   location: string;
@@ -25,7 +25,6 @@ export interface Post {
   likes: number;
   image: string;
   images?: string[];
-  videoUrl?: string; // 비디오 광고를 위한 필드 추가
   adImageIndex?: number;
   isLiked: boolean;
   createdAt: Date;
