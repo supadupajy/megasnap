@@ -80,25 +80,28 @@ const PostItem = ({
     }
   };
 
-  const renderCategoryIcon = () => {
+  const renderCategoryBadge = () => {
     if (category === 'none') return null;
     
-    const iconClass = "w-3.5 h-3.5 text-white";
     let Icon = null;
     let bgColor = "";
+    let label = "";
 
     switch (category) {
       case 'food':
         Icon = Utensils;
         bgColor = "bg-orange-500";
+        label = "맛집";
         break;
       case 'accident':
         Icon = Car;
         bgColor = "bg-red-600";
+        label = "사고";
         break;
       case 'place':
         Icon = TreePine;
         bgColor = "bg-green-600";
+        label = "명소";
         break;
     }
 
@@ -106,10 +109,11 @@ const PostItem = ({
 
     return (
       <div className={cn(
-        "absolute top-4 right-4 z-30 w-7 h-7 rounded-xl flex items-center justify-center shadow-lg border border-white/20 backdrop-blur-sm",
+        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10",
         bgColor
       )}>
-        <Icon className={iconClass} />
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-black">{label}</span>
       </div>
     );
   };
@@ -186,9 +190,6 @@ const PostItem = ({
               ))}
             </div>
 
-            {/* Category Icon Badge */}
-            {renderCategoryIcon()}
-
             {/* Pagination Dots */}
             {displayImages.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
@@ -249,15 +250,18 @@ const PostItem = ({
             </button>
           </div>
           
-          {lat !== undefined && lng !== undefined && (
-            <button 
-              onClick={handleLocationClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
-            >
-              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-              <span className="text-[10px] font-black">위치보기</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {renderCategoryBadge()}
+            {lat !== undefined && lng !== undefined && (
+              <button 
+                onClick={handleLocationClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+              >
+                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                <span className="text-[10px] font-black">위치보기</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5">
