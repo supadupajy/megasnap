@@ -10,6 +10,8 @@ import PostItem from '@/components/PostItem';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
 const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -57,6 +59,11 @@ const Profile = () => {
     }, 100);
   };
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = FALLBACK_IMAGE;
+  };
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -91,6 +98,7 @@ const Profile = () => {
                       src="https://i.pravatar.cc/150?u=me" 
                       alt="profile" 
                       className="w-full h-full rounded-full object-cover border-4 border-white"
+                      onError={handleImageError}
                     />
                   </div>
                 </div>
@@ -143,6 +151,7 @@ const Profile = () => {
                       src={post.image} 
                       alt="" 
                       className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
+                      onError={handleImageError}
                     />
                     {post.isGif && (
                       <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
@@ -185,7 +194,7 @@ const Profile = () => {
                     isGif={post.isGif}
                     isInfluencer={post.isInfluencer}
                     borderType={post.borderType}
-                    disablePulse={true} // 프로필 리스트 뷰에서는 펄스 애니메이션 비활성화
+                    disablePulse={true}
                     onLikeToggle={() => handleLikeToggle(post.id)}
                   />
                 </div>
