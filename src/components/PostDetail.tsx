@@ -42,8 +42,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  // 드래그 위치에 따른 실시간 변형 (좌우 드래그 시 시각 효과용)
+  // 드래그 위치에 따른 실시간 변형
   const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  
+  // 좌우 드래그 시에만 투명도와 회전 적용 (닫기 제스처 시각 효과)
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
   const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
   const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
@@ -63,6 +66,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setShowComments(false);
       setCurrentImageIndex(0);
       dragX.set(0);
+      dragY.set(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -95,27 +99,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    const threshold = 80;
+    const swipeThreshold = 50; // 더 민감하게 반응하도록 조정
     const velocityThreshold = 300;
 
     // 1. 좌우 드래그가 지배적일 때 -> 닫기
-    if (absX > absY) {
-      if (absX > 120 || Math.abs(velocity.x) > 500) {
-        setDirection(offset.x > 0 ? 100 : -100);
-        setIsDismissing(true);
-        return;
-      }
+    if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 500)) {
+      setDirection(offset.x > 0 ? 100 : -100);
+      setIsDismissing(true);
+      return;
     } 
+    
     // 2. 상하 드래그가 지배적일 때 -> 포스트 전환
-    else {
-      if (absY > threshold || Math.abs(velocity.y) > velocityThreshold) {
-        if (offset.y < 0 && currentIndex < posts.length - 1) {
-          setDirection(1);
-          setCurrentIndex(prev => prev + 1);
-        } else if (offset.y > 0 && currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(prev => prev - 1);
-        }
+    if (absY > swipeThreshold || Math.abs(velocity.y) > velocityThreshold) {
+      if (offset.y < 0 && currentIndex < posts.length - 1) {
+        // 위로 스와이프 (다음 포스트)
+        setDirection(1);
+        setCurrentIndex(prev => prev + 1);
+      } else if (offset.y > 0 && currentIndex > 0) {
+        // 아래로 스와이프 (이전 포스트)
+        setDirection(-1);
+        setCurrentIndex(prev => prev - 1);
       }
     }
   };
@@ -125,8 +128,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const variants = {
     enter: (direction: number) => {
       if (direction === 0) return { opacity: 0, scale: 0.9, y: 20 };
-      if (direction === 1) return { y: "100%", opacity: 0 };
-      if (direction === -1) return { y: "-100%", opacity: 0 };
+      if (direction === 1) return { y: "100%", opacity: 0 }; // 다음 포스트는 아래에서
+      if (direction === -1) return { y: "-100%", opacity: 0 }; // 이전 포스트는 위에서
       return { opacity: 0 };
     },
     center: {
@@ -137,6 +140,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       rotate: 0,
       transition: {
         y: smoothSpring,
+        x: smoothSpring,
         opacity: { duration: 0.2 },
         scale: { duration: 0.3 }
       }
@@ -153,8 +157,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         };
       }
       // 상하 스크롤로 전환될 때
-      if (direction === 1) return { y: "-100%", opacity: 0, transition: { y: smoothSpring } };
-      if (direction === -1) return { y: "100%", opacity: 0, transition: { y: smoothSpring } };
+      if (direction === 1) return { y: "-100%", opacity: 0, transition: { y: smoothSpring } }; // 현재 포스트 위로
+      if (direction === -1) return { y: "100%", opacity: 0, transition: { y: smoothSpring } }; // 현재 포스트 아래로
       return { opacity: 0 };
     }
   };
@@ -245,6 +249,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onDragEnd={handleDragEnd}
                 style={{ 
                   x: dragX,
+                  y: dragY, // 상하 드래그 시각적 연결 추가
                   opacity: dragOpacity,
                   scale: dragScale,
                   rotate: dragRotate,
