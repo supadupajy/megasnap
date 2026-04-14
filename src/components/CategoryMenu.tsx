@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Utensils, Car, TreePine, Sparkles, X } from 'lucide-react';
+import { Utensils, Car, TreePine, Sparkles, X, PawPrint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,6 +17,7 @@ const CATEGORIES = [
   { id: 'food', label: '맛집', icon: Utensils, color: 'bg-orange-500' },
   { id: 'accident', label: '사고', icon: Car, color: 'bg-red-600' },
   { id: 'place', label: '명소', icon: TreePine, color: 'bg-green-600' },
+  { id: 'animal', label: '동물', icon: PawPrint, color: 'bg-purple-600' },
 ];
 
 const CategoryMenu = ({ isOpen, selectedCategory, onSelect, onClose }: CategoryMenuProps) => {

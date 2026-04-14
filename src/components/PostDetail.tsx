@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -105,6 +105,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
       case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
       case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
+      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
     if (!Icon) return null;
     return (

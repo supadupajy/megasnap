@@ -16,7 +16,7 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'none'; // 카테고리 필드 추가
+  category?: 'food' | 'accident' | 'place' | 'animal' | 'none'; // animal 카테고리 추가
   user: User;
   content: string;
   location: string;

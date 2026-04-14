@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ interface PostItemProps {
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'none';
+  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
   disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
@@ -104,6 +104,11 @@ const PostItem = ({
         Icon = TreePine;
         bgColor = "bg-green-600";
         label = "명소";
+        break;
+      case 'animal':
+        Icon = PawPrint;
+        bgColor = "bg-purple-600";
+        label = "동물";
         break;
     }
 

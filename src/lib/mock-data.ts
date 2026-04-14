@@ -47,7 +47,11 @@ const CONTENT_POOL = [
   "🚧 도로 통제 중입니다. 이 구간 지나시는 분들 우회하세요!",
   "💨 연기가 많이 나고 있어요. 근처 계신 분들 마스크 착용하세요!",
   "🚑 구급차가 지나가고 있습니다. 길 터주기 부탁드려요!",
-  "📍 실시간 사고 제보: 사거리에서 접촉 사고 발생했습니다."
+  "📍 실시간 사고 제보: 사거리에서 접촉 사고 발생했습니다.",
+  "우리 집 강아지랑 공원 산책 중! 너무 귀엽죠? 🐶",
+  "길 가다 만난 고양이... 심쿵사 할 뻔 했어요 🐱",
+  "반려동물 동반 가능한 카페 발견! 분위기 너무 좋아요 🐾",
+  "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
 const GIF_POOL = [
@@ -121,12 +125,10 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let category: 'food' | 'accident' | 'place' | 'none' = 'none';
+    let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
 
-    // 코카콜라 광고 이미지
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
-    // 기본적으로 3장의 이미지를 생성 (두 번째는 코카콜라 광고)
     let images = [
       `https://picsum.photos/seed/${id}-1/800/800`,
       cokeAdImg,
@@ -147,6 +149,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       const fireImg = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
       images = [fireImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'accident';
+    } else if (content.includes('강아지') || content.includes('고양이') || content.includes('반려동물') || content.includes('🐾')) {
+      category = 'animal';
     } else if (content.includes('점심') || content.includes('카페') || content.includes('맛집') || content.includes('커피')) {
       category = 'food';
     } else if (content.includes('명소') || content.includes('공원') || content.includes('바다') || content.includes('야경')) {
