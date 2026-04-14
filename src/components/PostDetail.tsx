@@ -43,8 +43,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 드래그 위치에 따른 실시간 투명도 및 변형 (좌우 드래그 전용)
+  // 드래그 위치에 따른 실시간 변형
   const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  
+  // 좌우 드래그 시에만 투명도와 회전 적용 (닫기 제스처)
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
   const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
   const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
@@ -64,6 +67,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setShowComments(false);
       setCurrentImageIndex(0);
       dragX.set(0); 
+      dragY.set(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -96,24 +100,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 1. 좌우 드래그가 더 크고 임계값을 넘으면 닫기
-    if (absX > absY && (absX > 120 || Math.abs(velocity.x) > 500)) {
-      setDirection(offset.x > 0 ? 100 : -100);
-      setIsDismissing(true);
-      return;
-    }
+    const swipeThreshold = 80;
+    const velocityThreshold = 400;
 
-    // 2. 상하 드래그가 더 크고 임계값을 넘으면 포스트 전환
-    const threshold = 60;
-    const velThreshold = 300;
-    if (absY > absX) {
-      if (offset.y < -threshold || velocity.y < -velThreshold) {
-        if (currentIndex < posts.length - 1) {
+    // 1. 좌우 드래그가 지배적일 때 -> 닫기 (Dismiss)
+    if (absX > absY) {
+      if (absX > 120 || Math.abs(velocity.x) > velocityThreshold) {
+        setDirection(offset.x > 0 ? 100 : -100);
+        setIsDismissing(true);
+        return;
+      }
+    } 
+    // 2. 상하 드래그가 지배적일 때 -> 포스트 전환 (Switch)
+    else {
+      if (absY > swipeThreshold || Math.abs(velocity.y) > velocityThreshold) {
+        if (offset.y < 0 && currentIndex < posts.length - 1) {
+          // 위로 스와이프 -> 다음 포스트
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
-        }
-      } else if (offset.y > threshold || velocity.y > velThreshold) {
-        if (currentIndex > 0) {
+        } else if (offset.y > 0 && currentIndex > 0) {
+          // 아래로 스와이프 -> 이전 포스트
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
         }
@@ -126,11 +132,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const variants = {
     enter: (direction: number) => {
       if (direction === 0) return { opacity: 0, scale: 0.9, y: 20 };
-      return {
-        y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
-        opacity: 0,
-        scale: 1,
-      };
+      // 상하 전환 시 진입 위치
+      if (direction === 1) return { y: "100%", opacity: 0 };
+      if (direction === -1) return { y: "-100%", opacity: 0 };
+      return { opacity: 0 };
     },
     center: {
       y: 0,
@@ -140,6 +145,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       rotate: 0,
       transition: {
         y: smoothSpring,
+        x: smoothSpring,
         opacity: { duration: 0.2 },
         scale: { duration: 0.3 }
       }
@@ -155,15 +161,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
         };
       }
-      // 상하 스크롤로 전환될 때
-      return {
-        y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
-        opacity: 0,
-        transition: {
-          y: smoothSpring,
-          opacity: { duration: 0.2 }
-        }
-      };
+      // 상하 스크롤로 전환될 때 나가는 애니메이션
+      if (direction === 1) return { y: "-100%", opacity: 0, transition: { y: smoothSpring } };
+      if (direction === -1) return { y: "100%", opacity: 0, transition: { y: smoothSpring } };
+      return { opacity: 0 };
     }
   };
 
@@ -250,11 +251,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 drag={true} // 상하좌우 모든 방향 드래그 허용
                 dragControls={dragControls}
                 dragListener={false}
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }} // 모든 방향 스냅백
+                dragConstraints={{ left: 0, right: 0 }} // 상하 제약을 풀어 전환이 자유롭게 함
                 dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 style={{ 
                   x: dragX,
+                  y: dragY,
                   opacity: dragOpacity,
                   scale: dragScale,
                   rotate: dragRotate,
@@ -300,7 +302,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       className="flex flex-col"
                       onPointerDown={(e) => {
                         const target = e.target as HTMLElement;
-                        if (!target.closest('.image-slider') && !target.closest('button')) {
+                        // 이미지 슬라이더 내부에서도 상하 드래그는 허용하도록 처리
+                        if (!target.closest('button')) {
                           dragControls.start(e);
                         }
                       }}
@@ -310,7 +313,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
-                          onPointerDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => {
+                            // 이미지 슬라이더 내부에서 좌우 스크롤 시에는 드래그 컨트롤을 막아 이미지 전환이 우선되게 함
+                            e.stopPropagation();
+                          }}
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
