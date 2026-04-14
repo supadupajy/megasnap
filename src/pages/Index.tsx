@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -105,7 +106,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 기본 필터링 (영역, 시간, 카테고리)
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -115,8 +115,6 @@ const Index = () => {
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    // 2. 우선순위 정렬 및 개수 제한 (최대 30개)
-    // 우선순위: 인플루언서(4) > 인기(3) > 광고(2) > 일반(1)
     const prioritized = [...inBoundsPosts].sort((a, b) => {
       const getPriority = (p: Post) => {
         if (p.isInfluencer) return 4;
@@ -129,13 +127,11 @@ const Index = () => {
       const priorityB = getPriority(b);
 
       if (priorityA !== priorityB) return priorityB - priorityA;
-      return b.likes - a.likes; // 동일 우선순위 내에서는 좋아요 순
+      return b.likes - a.likes;
     });
 
-    // 상위 30개만 선택
     const limitedPosts = prioritized.slice(0, 30);
 
-    // 3. 최종 시각적 처리 (Top 3 인기 포스트 등)
     const influencers = limitedPosts
       .filter(p => p.isInfluencer)
       .sort((a, b) => b.likes - a.likes);
@@ -165,20 +161,6 @@ const Index = () => {
       };
     });
   }, [allPosts, mapData, timeValue, selectedCategory]);
-
-  const detailPosts = useMemo(() => {
-    if (!selectedPostId) return filteredPosts;
-    const selected = filteredPosts.find(p => p.id === selectedPostId);
-    const others = filteredPosts.filter(p => p.id !== selectedPostId);
-    return selected ? [selected, ...others] : filteredPosts;
-  }, [filteredPosts, selectedPostId]);
-
-  const trendingPosts = useMemo(() => {
-    return [...allPosts]
-      .sort((a, b) => b.likes - a.likes)
-      .slice(0, 20)
-      .map((post, index) => ({ ...post, rank: index + 1 }));
-  }, [allPosts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -241,6 +223,12 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => {
     setMapCenter({ lat: place.lat, lng: place.lng });
+  };
+
+  const handleViewAllClick = () => {
+    if (filteredPosts.length > 0) {
+      navigate('/post-list', { state: { posts: filteredPosts } });
+    }
   };
 
   return (
@@ -306,7 +294,11 @@ const Index = () => {
       </div>
 
       <div className="absolute bottom-32 right-4 z-20">
-        <button onClick={() => filteredPosts.length > 0 && setSelectedPostId(filteredPosts[0].id)} disabled={filteredPosts.length === 0} className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50">
+        <button 
+          onClick={handleViewAllClick} 
+          disabled={filteredPosts.length === 0} 
+          className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50"
+        >
           <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
           <span className="text-[9px] font-black mt-1">모두 보기</span>
         </button>
@@ -327,8 +319,8 @@ const Index = () => {
 
       {selectedPostId && (
         <PostDetail 
-          posts={detailPosts} 
-          initialIndex={0}
+          posts={filteredPosts} 
+          initialIndex={filteredPosts.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={handleViewPost}

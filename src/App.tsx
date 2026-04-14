@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Popular from "./pages/Popular";
+import PostList from "./pages/PostList";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
@@ -42,6 +43,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Popular />} />
                 <Route path="/map" element={<Index />} />
+                <Route path="/post-list" element={<PostList />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/messages" element={<Messages />} />
