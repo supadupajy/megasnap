@@ -60,20 +60,35 @@
   display: none !important;
 }
 
-/* HOT Red Solid Border */
+/* Moving Gradient Border Animation */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to {
+    --angle: 360deg;
+  }
+}
+
+/* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
-  background-color: #ef4444; /* Red 500 */
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000);
+  animation: rotate-border 1.5s linear infinite;
 }
 
-/* Influencer Gold Solid Border */
+/* Influencer Gold Gradient Border */
 .influencer-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
-  background-color: #fbbf24; /* Yellow 400 */
+  background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
+  animation: rotate-border 2s linear infinite;
 }
 
 /* Pulse Animation for HOT Posts */
@@ -101,7 +116,7 @@
   100% { left: 100%; }
 }
 
-/* Marker Highlight Ping Animation */
+/* Marker Highlight Ping Animation - Brighter & Smoother */
 @keyframes marker-ping {
   0% {
     transform: translate(-50%, -50%) scale(0.2);
@@ -130,7 +145,7 @@
   left: 50%;
   width: 80px;
   height: 80px;
-  background: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.6); /* Bright Cyan */
   box-shadow: 0 0 25px 5px rgba(34, 211, 238, 0.4);
   border-radius: 50%;
   pointer-events: none;
