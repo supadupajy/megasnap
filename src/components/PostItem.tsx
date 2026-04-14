@@ -195,10 +195,7 @@ const PostItem = ({
                   <img
                     src={img}
                     alt={`post-${idx}`}
-                    className={cn(
-                      "w-full h-full object-cover transition-all duration-700",
-                      isViewed && "grayscale brightness-75"
-                    )}
+                    className="w-full h-full object-cover transition-all duration-700"
                     onError={handleImageError}
                   />
                   {idx === adImageIndex && (
