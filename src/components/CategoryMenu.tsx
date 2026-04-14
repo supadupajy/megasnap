@@ -35,10 +35,15 @@ const CategoryMenu = ({ isOpen, selectedCategory, onSelect, onClose }: CategoryM
           
           {/* Menu */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.2, x: -40, y: 40 }}
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, scale: 0.2, x: -40, y: 40 }}
-            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            initial={{ opacity: 0, scale: 0.1, y: 80, x: 0 }}
+            animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, scale: 0.1, y: 80, x: 0 }}
+            transition={{ 
+              type: "spring", 
+              damping: 25, 
+              stiffness: 350,
+              opacity: { duration: 0.2 }
+            }}
             style={{ transformOrigin: 'bottom left' }}
             className="absolute bottom-[210px] left-4 z-[70] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-3 w-52"
           >
