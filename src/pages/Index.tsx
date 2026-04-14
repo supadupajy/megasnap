@@ -16,14 +16,18 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { mapCache } from '@/utils/map-cache';
 
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  
+  // 캐시된 데이터로 초기 상태 설정
+  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [mapData, setMapData] = useState<any>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
-  const { viewedIds, markAsViewed } = useViewedPosts(); // 전역 훅 사용
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  
+  const { viewedIds, markAsViewed } = useViewedPosts();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -35,8 +39,18 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
-  const populatedTiles = useRef<Set<string>>(new Set());
   const TILE_SIZE = 0.02;
+
+  // 실시간으로 캐시 업데이트
+  useEffect(() => {
+    mapCache.posts = allPosts;
+  }, [allPosts]);
+
+  useEffect(() => {
+    if (mapCenter) {
+      mapCache.lastCenter = mapCenter;
+    }
+  }, [mapCenter]);
 
   const trendingPosts = useMemo(() => {
     return allPosts
@@ -47,6 +61,7 @@ const Index = () => {
   }, [allPosts]);
 
   useEffect(() => {
+    // 외부에서 특정 포스트나 좌표를 가지고 들어온 경우 처리
     if (location.state?.post) {
       const incomingPost = location.state.post;
       setAllPosts(prev => {
@@ -59,8 +74,6 @@ const Index = () => {
       return () => clearTimeout(timer);
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
-    } else {
-      setMapCenter({ lat: 37.5665, lng: 126.9780 });
     }
   }, [location.state]);
 
@@ -81,8 +94,9 @@ const Index = () => {
       for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
         for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
           const tileKey = `${latIdx},${lngIdx}`;
-          if (!populatedTiles.current.has(tileKey)) {
-            populatedTiles.current.add(tileKey);
+          // 캐시된 타일 정보 확인
+          if (!mapCache.populatedTiles.has(tileKey)) {
+            mapCache.populatedTiles.add(tileKey);
             tilesAdded = true;
             
             const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
@@ -93,14 +107,15 @@ const Index = () => {
         }
       }
 
-      if (tilesAdded || allPosts.length > 600) {
+      if (tilesAdded) {
         setAllPosts(prev => {
           const combined = [...prev, ...newPosts];
-          if (combined.length > 600) {
+          // 너무 많은 데이터가 쌓이지 않도록 관리
+          if (combined.length > 800) {
             return combined.filter(post => {
               const distLat = Math.abs(post.lat - centerLat);
               const distLng = Math.abs(post.lng - centerLng);
-              return distLat < 0.1 && distLng < 0.1;
+              return distLat < 0.2 && distLng < 0.2;
             });
           }
           return combined;
@@ -139,36 +154,7 @@ const Index = () => {
       return b.likes - a.likes;
     });
 
-    const limitedPosts = prioritized.slice(0, 30);
-
-    const influencers = limitedPosts
-      .filter(p => p.isInfluencer)
-      .sort((a, b) => b.likes - a.likes);
-    const topInfluencerId = influencers[0]?.id;
-
-    const hotPosts = limitedPosts
-      .filter(p => p.borderType === 'popular' && p.id !== topInfluencerId)
-      .sort((a, b) => b.likes - a.likes);
-    const topHotIds = new Set(hotPosts.slice(0, 3).map(p => p.id));
-
-    return limitedPosts.map(post => {
-      let isInfluencer = post.isInfluencer;
-      let borderType = post.borderType;
-
-      if (isInfluencer && post.id !== topInfluencerId) {
-        isInfluencer = false;
-      }
-
-      if (borderType === 'popular' && !topHotIds.has(post.id) && post.id !== topInfluencerId) {
-        borderType = 'none';
-      }
-
-      return {
-        ...post,
-        isInfluencer,
-        borderType
-      };
-    });
+    return prioritized.slice(0, 35);
   }, [allPosts, mapData, timeValue, selectedCategory]);
 
   const handleLikeToggle = useCallback((postId: string) => {
@@ -187,13 +173,14 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    populatedTiles.current.clear();
+    mapCache.populatedTiles.clear();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        setAllPosts(createMockPosts(centerLat, centerLng, 50));
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 50);
+        setAllPosts(refreshedPosts);
         setIsRefreshing(false);
       }, 600);
     }
@@ -237,7 +224,7 @@ const Index = () => {
       <main className="absolute inset-0 z-0">
         <MapContainer 
           posts={filteredPosts}
-          viewedPostIds={viewedIds} // 전역 상태 전달
+          viewedPostIds={viewedIds}
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
@@ -323,7 +310,7 @@ const Index = () => {
           initialIndex={filteredPosts.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed} // 전역 마킹 함수 전달
+          onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
