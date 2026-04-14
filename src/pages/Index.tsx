@@ -110,12 +110,12 @@ const Index = () => {
       if (tilesAdded) {
         setAllPosts(prev => {
           const combined = [...prev, ...newPosts];
-          // 너무 많은 데이터가 쌓이지 않도록 관리
-          if (combined.length > 800) {
+          // 너무 많은 데이터가 쌓이지 않도록 관리 (임계값 상향)
+          if (combined.length > 1200) {
             return combined.filter(post => {
               const distLat = Math.abs(post.lat - centerLat);
               const distLng = Math.abs(post.lng - centerLng);
-              return distLat < 0.2 && distLng < 0.2;
+              return distLat < 0.3 && distLng < 0.3;
             });
           }
           return combined;
@@ -127,12 +127,17 @@ const Index = () => {
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
+    
+    // 가시 영역에 버퍼 추가 (상하좌우 20% 더 넓게 유지)
+    const latBuffer = (ne.lat - sw.lat) * 0.2;
+    const lngBuffer = (ne.lng - sw.lng) * 0.2;
+    
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
     const inBoundsPosts = allPosts.filter(post => {
-      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
-                             post.lng >= sw.lng && post.lng <= ne.lng;
+      const isWithinBounds = post.lat >= (sw.lat - latBuffer) && post.lat <= (ne.lat + latBuffer) &&
+                             post.lng >= (sw.lng - lngBuffer) && post.lng <= (ne.lng + lngBuffer);
       
       // 광고(isAd)는 시간 필터링을 무시하고 항상 표시
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -156,9 +161,10 @@ const Index = () => {
       return b.likes - a.likes;
     });
 
-    const limitedPosts = prioritized.slice(0, 35);
+    // 노출 제한을 35개에서 150개로 대폭 상향
+    const limitedPosts = prioritized.slice(0, 150);
 
-    // HOT 및 인플루언서 노출 개수 제한 (HOT: 3개, 인플루언서: 1개)
+    // HOT 및 인플루언서 노출 개수 제한 (HOT: 5개, 인플루언서: 2개로 상향)
     let influencerCount = 0;
     let hotCount = 0;
 
@@ -167,7 +173,7 @@ const Index = () => {
       let borderType = post.borderType;
 
       if (isInfluencer) {
-        if (influencerCount < 1) {
+        if (influencerCount < 2) {
           influencerCount++;
         } else {
           isInfluencer = false;
@@ -175,7 +181,7 @@ const Index = () => {
       }
 
       if (borderType === 'popular') {
-        if (hotCount < 3) {
+        if (hotCount < 5) {
           hotCount++;
         } else {
           borderType = 'none';
