@@ -42,6 +42,7 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const TARGET_MARKER_COUNT = 30;
+  const MAX_POPULAR_COUNT = 3; // 인기 포스팅 최대 노출 개수
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -129,10 +130,13 @@ const Index = () => {
     const lngStep = (ne.lng - sw.lng) / COLS;
 
     const occupiedCells = new Set();
+    let currentPopularCount = 0;
+
     stillVisible.forEach(p => {
       const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
       const c = Math.min(Math.floor((p.lng - sw.lng) / lngStep), COLS - 1);
       occupiedCells.add(`${r}-${c}`);
+      if (p.borderType === 'popular') currentPopularCount++;
     });
 
     const nextMarkers = [...stillVisible];
@@ -155,30 +159,45 @@ const Index = () => {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
           
-          const cellCandidates = candidates.filter(p => 
+          let cellCandidates = candidates.filter(p => 
             p.lat >= cellSw.lat && p.lat < cellNe.lat &&
             p.lng >= cellSw.lng && p.lng < cellNe.lng &&
             !nextMarkers.some(m => m.id === p.id)
           );
 
+          // 인기 포스팅 개수 제한 적용
+          if (currentPopularCount >= MAX_POPULAR_COUNT) {
+            cellCandidates = cellCandidates.filter(p => p.borderType !== 'popular');
+          }
+
           if (cellCandidates.length > 0) {
             const best = cellCandidates.sort((a, b) => getScore(b) - getScore(a))[0];
             nextMarkers.push(best);
             occupiedCells.add(`${r}-${c}`);
+            if (best.borderType === 'popular') currentPopularCount++;
           }
         }
       }
       if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
     }
 
-    // 2단계: 확대 시 그리드 셀이 비어있을 경우 남은 후보들로 30개까지 채우기
+    // 2단계: 부족한 마커 채우기 (인기 포스팅 제한 유지)
     if (nextMarkers.length < TARGET_MARKER_COUNT) {
-      const remainingCandidates = candidates
-        .filter(p => !nextMarkers.some(m => m.id === p.id))
-        .sort((a, b) => getScore(b) - getScore(a));
+      let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       
-      const needed = TARGET_MARKER_COUNT - nextMarkers.length;
-      nextMarkers.push(...remainingCandidates.slice(0, needed));
+      if (currentPopularCount >= MAX_POPULAR_COUNT) {
+        remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
+      }
+
+      const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
+      
+      for (const p of sortedRemaining) {
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
+        
+        nextMarkers.push(p);
+        if (p.borderType === 'popular') currentPopularCount++;
+      }
     }
 
     setDisplayedMarkers(nextMarkers);
@@ -207,7 +226,6 @@ const Index = () => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
         
-        // 현재 영역(확대된 영역 포함)을 기준으로 충분한 양의 데이터 생성
         const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
         
         setAllPosts(refreshedPosts);

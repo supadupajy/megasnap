@@ -118,17 +118,16 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
 
-  const influencerIndex = indices[0];
-  const popularCount = Math.floor(Math.random() * 2) + 2;
-  const popularIndices = new Set(indices.slice(1, 1 + popularCount));
+  // 인기 포스팅 생성 확률 대폭 하향 (타일당 0~1개)
+  const popularIndex = Math.random() > 0.7 ? indices[0] : -1;
+  const influencerIndex = Math.random() > 0.8 ? indices[1] : -1;
 
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     
     const isInfluencer = i === influencerIndex;
-    const isPopular = popularIndices.has(i);
+    const isPopular = i === popularIndex;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    // GIF 생성 확률을 높임 (약 20%)
     const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
