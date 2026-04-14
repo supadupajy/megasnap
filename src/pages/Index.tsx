@@ -14,6 +14,7 @@ import CategoryMenu from '@/components/CategoryMenu';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const location = useLocation();
