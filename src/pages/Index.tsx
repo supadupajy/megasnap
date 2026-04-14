@@ -17,7 +17,6 @@ import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { mapCache } from '@/utils/map-cache';
-import { motion } from 'framer-motion';
 
 const Index = () => {
   const location = useLocation();
@@ -150,8 +149,7 @@ const Index = () => {
     });
 
     const limitedPosts = prioritized.slice(0, 150);
-    let influencerCount = 0;
-    let hotCount = 0;
+    let influencerCount = 0;    let hotCount = 0;
 
     return limitedPosts.map(post => {
       let isInfluencer = post.isInfluencer;
@@ -234,14 +232,7 @@ const Index = () => {
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
       
-      {/* 가운데 콘텐츠만 애니메이션 적용 */}
-      <motion.div 
-        initial={{ x: "-100%", opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: "-100%", opacity: 0 }}
-        transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
-        className="absolute inset-0 z-0"
-      >
+      <div className="absolute inset-0 z-0">
         <MapContainer 
           posts={filteredPosts}
           viewedPostIds={viewedIds}
@@ -311,7 +302,7 @@ const Index = () => {
         </div>
 
         <TimeSlider value={timeValue} onChange={setTimeValue} />
-      </motion.div>
+      </div>
 
       <BottomNav onWriteClick={() => {
         setPendingLocation(undefined);
