@@ -141,7 +141,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     alt="Ad Background"
                     onError={handleImageError}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center px-4">
+                  <div className="absolute inset-0 bg-black/40 flex flex-col justify-center px-4">
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-sm">AD</span>
                       <Sparkles className="w-3 h-3 text-yellow-400 fill-yellow-400" />

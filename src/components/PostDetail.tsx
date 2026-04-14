@@ -277,14 +277,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 )}>
                   {/* Status Bar */}
                   {isInfluencer && (
-                    <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
+                    <div className="h-10 bg-yellow-400 flex items-center justify-center gap-2 shrink-0">
                       <Star className="w-4 h-4 fill-black" />
                       <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
                       <Star className="w-4 h-4 fill-black" />
                     </div>
                   )}
                   {isPopular && (
-                    <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
+                    <div className="h-10 bg-red-600 flex items-center justify-center gap-2 shrink-0">
                       <Flame className="w-4 h-4 fill-white text-white" />
                       <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
                       <Flame className="w-4 h-4 fill-white text-white" />
