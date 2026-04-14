@@ -34,6 +34,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [exitDirection, setExitDirection] = useState({ x: 0, y: 0 });
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -41,10 +42,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  const dragX = useMotionValue(0);
-  const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
-  const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
-  const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
+  // 드래그 위치 추적을 위한 Motion Values
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // 중앙에서 멀어질수록 투명도와 회전 적용
+  const rotate = useTransform(x, [-200, 200], [-15, 15]);
+  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 0.5, 1, 0.5, 0]);
+  const scale = useTransform(y, [-300, 0, 300], [0.8, 1, 0.8]);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -59,7 +64,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setIsDismissing(false);
       setShowComments(false);
       setCurrentImageIndex(0);
-      dragX.set(0);
+      x.set(0);
+      y.set(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -89,11 +95,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
-    const absX = Math.abs(offset.x);
     
-    // 좌우 드래그로 닫기만 유지
-    if (absX > 100 || Math.abs(velocity.x) > 500) {
+    // 닫기 판정 기준: 드래그 거리 150px 이상 또는 속도 500 이상
+    const shouldDismissX = Math.abs(offset.x) > 150 || Math.abs(velocity.x) > 500;
+    const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
+
+    if (shouldDismissX || shouldDismissY) {
+      // 던져진 방향 계산
+      setExitDirection({
+        x: offset.x + velocity.x * 0.2,
+        y: offset.y + velocity.y * 0.2
+      });
       setIsDismissing(true);
+      onClose();
+    } else {
+      // 기준 미달 시 중앙으로 복귀 (framer-motion dragConstraints가 처리)
     }
   };
 
@@ -140,6 +156,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onOpenAutoFocus={(e) => e.preventDefault()}
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
       >
+        {/* Close Button */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -152,28 +169,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-          <AnimatePresence initial={false} onExitComplete={() => isDismissing && onClose()}>
+          <AnimatePresence>
             {!isDismissing && (
               <motion.div
                 key={post.id}
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, x: dragX.get() > 0 ? 600 : -600 }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.8}
+                style={{ x, y, rotate, opacity, scale }}
+                drag
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={1}
                 onDragEnd={handleDragEnd}
-                style={{ 
-                  x: dragX,
-                  opacity: dragOpacity,
-                  scale: dragScale,
-                  rotate: dragRotate,
-                  position: 'absolute',
-                  willChange: 'transform, opacity',
-                  isolation: 'isolate'
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ 
+                  x: exitDirection.x, 
+                  y: exitDirection.y, 
+                  opacity: 0, 
+                  scale: 0.5,
+                  transition: { duration: 0.4, ease: "easeOut" }
                 }}
                 className={cn(
-                  "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]",
+                  "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing",
                   isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
