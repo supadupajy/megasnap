@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'export default Index;';
 import { useLocation } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -268,16 +268,16 @@ const Index = () => {
           <Layers className="w-6 h-6" />
         </button>
         <button 
-          onClick={handleCurrentLocation}
-          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-        >
-          <Navigation className="w-6 h-6 fill-white" />
-        </button>
-        <button 
           onClick={() => setIsSearchOpen(true)}
           className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
         >
           <Search className="w-6 h-6" />
+        </button>
+        <button 
+          onClick={handleCurrentLocation}
+          className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+        >
+          <Navigation className="w-6 h-6 fill-white" />
         </button>
       </div>
 
