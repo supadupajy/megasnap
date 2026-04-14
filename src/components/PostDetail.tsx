@@ -56,6 +56,114 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (!isOpen) {
       setHasInitialized(false);
     }
+  }, [isOpen, initialthink
+The previous response was cut off in the middle of the `PostDetail.tsx` file. I need to complete the file content exactly where it left off.
+
+The last part of the previous response was:
+```tsx
+  useEffect(() => {
+    if (isOpen && !hasInitialized && initialIndex !== -1) {
+      setCurrentIndex(initialIndex);
+      setHasInitialized(true);
+      setShowComments(false);
+      setCurrentImageIndex(0);
+    }
+    if (!isOpen) {
+      setHasInitialized(false);
+    }
+  }, [isOpen, initial
+```
+
+I will continue from `Index, hasInitialized]);` and complete the rest of the file.
+
+Wait, looking at the previous turn's code block:
+`useEffect(() => { if (isOpen && !hasInitialized && initialIndex !== -1) { setCurrentIndex(initialIndex); setHasInitialized(true); setShowComments(false); setCurrentImageIndex(0); } if (!isOpen) { setHasInitialized(false); } }, [isOpen, initial`
+
+I need to finish the `useEffect` dependency array and the rest of the component.
+
+Plan:
+1. Complete `PostDetail.tsx`.
+2. Ensure the "tap to close" logic is correctly implemented (buttons stop propagation, card triggers close).
+3. Ensure the image slider has `snap-x snap-mandatory` and `scroll-snap-stop: always`.
+
+Let's write the full file to be safe and follow the "ONE dyad-write block per file" rule.
+
+Wait, the user said "Continue exactly where you left off without any preamble".
+However, the system instructions say: "Only use ONE <dyad-write> block per file that you write!" and "do NOT be lazy and ALWAYS write the entire file. It needs to be a complete file."
+
+So I will write the entire `src/components/PostDetail.tsx` file again, but this time complete.
+
+Actually, the user's prompt "Continue exactly where you left off" is a direct instruction to finish the text. But as an AI editor, I must provide the full file in a `<dyad-write>` tag to ensure the codebase is valid.
+
+Let's refine the logic for "tap to close":
+- `DialogContent` has `onClick={onClose}` (backdrop).
+- `motion.div` (the card) should have `onClick={onClose}`.
+- Buttons inside the card should have `onClick={(e) => e.stopPropagation()}`.
+- Image slider should have `onPointerDown={(e) => e.stopPropagation()}` or similar to allow swiping without closing.
+
+Let's refine the image slider:
+- `snap-x snap-mandatory`
+- `scroll-snap-stop: always` on the children.
+
+Let's write the file.<dyad-write path="src/components/PostDetail.tsx" description="카드 탭 시 닫기 기능 및 이미지 슬라이더 1장씩 스냅 기능 구현">
+"use client";
+
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+
+interface PostDetailProps {
+  posts: any[];
+  initialIndex: number;
+  isOpen: boolean;
+  onClose: () => void;
+  onViewPost?: (id: string) => void;
+  onLikeToggle?: (postId: string) => void;
+  onLocationClick?: (lat: number, lng: number) => void;
+}
+
+const MOCK_COMMENTS = [
+  { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." },
+  { user: "photo_master", text: "날씨 좋을 때 가면 최고죠 ㅎㅎ" },
+  { user: "seoul_explorer", text: "주차 공간은 넉넉한가요?" },
+  { user: "daily_snap", text: "사진 필터 어떤 거 쓰셨나요? 너무 예뻐요!" }
+];
+
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
+  const navigate = useNavigate();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (isOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [currentIndex, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !hasInitialized && initialIndex !== -1) {
+      setCurrentIndex(initialIndex);
+      setHasInitialized(true);
+      setShowComments(false);
+      setCurrentImageIndex(0);
+    }
+    if (!isOpen) {
+      setHasInitialized(false);
+    }
   }, [isOpen, initialIndex, hasInitialized]);
 
   useEffect(() => {
@@ -143,7 +251,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={onClose}
                 className={cn(
                   "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative",
                   isAd && "border-4 border-blue-500",
@@ -174,7 +282,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                 )}
 
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
+                <div 
+                  className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div 
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
@@ -187,7 +298,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center relative">
+                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                               <img 
                                 src={img} 
                                 alt="" 
