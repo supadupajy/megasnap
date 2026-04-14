@@ -237,7 +237,10 @@ const Index = () => {
         />
       </main>
 
-      <div className="absolute top-24 left-0 right-0 px-4 z-10 flex items-start justify-between pointer-events-none">
+      <div className={cn(
+        "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+        isTrendingExpanded ? "z-40" : "z-10"
+      )}>
         <div className="w-64 shrink-0 pointer-events-auto">
           <TrendingPosts 
             posts={trendingPosts}
