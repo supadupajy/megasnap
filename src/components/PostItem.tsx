@@ -16,6 +16,7 @@ interface PostItemProps {
   likes: number;
   image: string;
   images?: string[];
+  videoUrl?: string;
   adImageIndex?: number;
   lat?: number;
   lng?: number;
@@ -38,6 +39,7 @@ const PostItem = ({
   likes, 
   image, 
   images = [],
+  videoUrl,
   adImageIndex,
   lat,
   lng,
@@ -183,29 +185,40 @@ const PostItem = ({
             "w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10",
             isInfluencer && "shine-overlay"
           )}>
-            <div 
-              ref={scrollRef}
-              onScroll={handleImageScroll}
-              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-            >
-              {displayImages.map((img, idx) => (
-                <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                  <img
-                    src={img}
-                    alt={`post-${idx}`}
-                    className="w-full h-full object-cover"
-                    onError={handleImageError}
-                  />
-                  {idx === adImageIndex && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
-                      AD
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {videoUrl ? (
+              <video 
+                src={videoUrl}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            ) : (
+              <div 
+                ref={scrollRef}
+                onScroll={handleImageScroll}
+                className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+              >
+                {displayImages.map((img, idx) => (
+                  <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                    <img
+                      src={img}
+                      alt={`post-${idx}`}
+                      className="w-full h-full object-cover"
+                      onError={handleImageError}
+                    />
+                    {idx === adImageIndex && (
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                        AD
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {displayImages.length > 1 && (
+            {!videoUrl && displayImages.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                 {displayImages.map((_, idx) => (
                   <div 
@@ -236,7 +249,7 @@ const PostItem = ({
             </div>
           )}
 
-          {isGif && (
+          {(isGif || videoUrl) && (
             <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20">
               <Play className="w-3 h-3 fill-white" />
             </div>

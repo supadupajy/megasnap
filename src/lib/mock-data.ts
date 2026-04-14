@@ -20,7 +20,7 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5855?auto=format&fit=crop&w=800&q=80"
 ];
 
 const ANIMAL_IMAGES = [
@@ -31,6 +31,14 @@ const ANIMAL_IMAGES = [
   "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80"
+];
+
+const VIDEO_POOL = [
+  "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-pointing-at-something-40051-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-leaves-low-angle-shot-4736-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-ocean-near-the-shore-4151-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-man-under-multicolored-lights-1237-large.mp4",
+  "https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-over-a-mountain-range-4504-large.mp4"
 ];
 
 const AD_FOOD_CONTENT = [
@@ -128,7 +136,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isInfluencer = i === influencerIndex;
     const isPopular = popularIndices.has(i);
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
+    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8 && Math.random() <= 0.9;
+    const isVideo = !isAd && !isInfluencer && !isPopular && !isGif && Math.random() > 0.85;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
@@ -136,6 +145,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
+    let videoUrl: string | undefined = undefined;
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
@@ -170,6 +180,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     } else if (isGif) {
       const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
       images = [gifImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
+    } else if (isVideo) {
+      videoUrl = VIDEO_POOL[Math.floor(Math.random() * VIDEO_POOL.length)];
+      content = "생생한 현장 분위기를 동영상으로 확인해보세요! 🎥";
     }
 
     const borderType = isPopular ? 'popular' : 'none';
@@ -181,6 +194,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       id,
       isAd,
       isGif,
+      isVideo,
+      videoUrl,
       isInfluencer,
       category,
       user: getUserById(isAd ? "sponsored" : id),

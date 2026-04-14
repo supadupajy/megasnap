@@ -85,6 +85,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   if (!post) return null;
 
   const images = post.images || [post.image];
+  const videoUrl = post.videoUrl;
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
@@ -182,28 +183,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   >
                     <div className="flex flex-col">
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
-                        <div 
-                          ref={imageScrollRef}
-                          onScroll={handleImageScroll}
-                          className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                        >
-                          {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                              <img 
-                                src={img} 
-                                alt="" 
-                                className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
-                              />
-                              {idx === post.adImageIndex && (
-                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
-                                  AD
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        {images.length > 1 && (
+                        {videoUrl ? (
+                          <video 
+                            src={videoUrl}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                          />
+                        ) : (
+                          <div 
+                            ref={imageScrollRef}
+                            onScroll={handleImageScroll}
+                            className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                          >
+                            {images.map((img: string, idx: number) => (
+                              <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                                <img 
+                                  src={img} 
+                                  alt="" 
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                                />
+                                {idx === post.adImageIndex && (
+                                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                                    AD
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!videoUrl && images.length > 1 && (
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                             {images.map((_: any, idx: number) => (
                               <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
