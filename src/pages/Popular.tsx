@@ -69,6 +69,7 @@ const Popular = () => {
                 isLiked={post.isLiked}
                 isGif={post.isGif}
                 isInfluencer={post.isInfluencer}
+                category={post.category}
                 borderType={post.borderType}
                 disablePulse={true}
                 onLikeToggle={() => handleLikeToggle(post.id)}
