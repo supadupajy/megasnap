@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
@@ -10,6 +10,8 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { createMockPosts } from '@/lib/mock-data';
+import { mapCache } from '@/utils/map-cache';
 
 // 개별 포스트의 가시성을 감시하는 컴포넌트
 const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible: (id: string) => void, [key: string]: any }) => {
@@ -18,7 +20,6 @@ const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // 포스트가 화면의 60% 이상 노출되었을 때만 읽음 처리 (더 확실한 시청 경험)
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
           onVisible(post.id);
           observer.unobserve(entry.target);
@@ -26,7 +27,7 @@ const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible
       },
       { 
         threshold: [0, 0.6, 1.0],
-        rootMargin: '-10% 0px -10% 0px' // 화면 상하단 10% 영역을 제외한 중앙 영역에서만 감지
+        rootMargin: '-10% 0px -10% 0px'
       }
     );
 
@@ -50,7 +51,11 @@ const PostList = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { markAsViewed } = useViewedPosts();
+  
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const mapCenter = location.state?.center || { lat: 37.5665, lng: 126.9780 };
 
   useEffect(() => {
     if (location.state?.posts) {
@@ -59,6 +64,44 @@ const PostList = () => {
       navigate('/');
     }
   }, [location.state, navigate]);
+
+  // 무한 스크롤 로직
+  const loadMorePosts = useCallback(() => {
+    if (isLoadingMore) return;
+    
+    setIsLoadingMore(true);
+    
+    // 실제 API 호출을 흉내내기 위한 딜레이
+    setTimeout(() => {
+      const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
+      
+      setPosts(prev => {
+        const combined = [...prev, ...newPosts];
+        // 새로 불러온 포스트들을 mapCache에도 추가하여 지도와 동기화
+        mapCache.posts = [...mapCache.posts, ...newPosts];
+        return combined;
+      });
+      
+      setIsLoadingMore(false);
+    }, 800);
+  }, [isLoadingMore, mapCenter]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && posts.length > 0) {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [loadMorePosts, posts.length]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
@@ -99,34 +142,48 @@ const PostList = () => {
 
         <div className="flex flex-col pt-4">
           {posts.length > 0 ? (
-            posts.map((post) => (
-              <ObservedPostItem
-                key={post.id}
-                post={post}
-                onVisible={markAsViewed}
-                user={post.user}
-                content={post.content}
-                location={post.location}
-                likes={post.likes}
-                image={post.image}
-                images={post.images}
-                adImageIndex={post.adImageIndex}
-                lat={post.lat}
-                lng={post.lng}
-                isLiked={post.isLiked}
-                isGif={post.isGif}
-                isInfluencer={post.isInfluencer}
-                category={post.category}
-                borderType={post.borderType}
-                disablePulse={true}
-                onLikeToggle={() => handleLikeToggle(post.id)}
-                onLocationClick={handleLocationClick}
-                onClick={() => {
-                  setSelectedPostId(post.id);
-                  markAsViewed(post.id); // 클릭 시에도 즉시 읽음 처리
-                }}
-              />
-            ))
+            <>
+              {posts.map((post) => (
+                <ObservedPostItem
+                  key={post.id}
+                  post={post}
+                  onVisible={markAsViewed}
+                  user={post.user}
+                  content={post.content}
+                  location={post.location}
+                  likes={post.likes}
+                  image={post.image}
+                  images={post.images}
+                  adImageIndex={post.adImageIndex}
+                  lat={post.lat}
+                  lng={post.lng}
+                  isLiked={post.isLiked}
+                  isGif={post.isGif}
+                  isInfluencer={post.isInfluencer}
+                  category={post.category}
+                  borderType={post.borderType}
+                  disablePulse={true}
+                  onLikeToggle={() => handleLikeToggle(post.id)}
+                  onLocationClick={handleLocationClick}
+                  onClick={() => {
+                    setSelectedPostId(post.id);
+                    markAsViewed(post.id);
+                  }}
+                />
+              ))}
+              
+              {/* 무한 스크롤 트리거 요소 */}
+              <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
+                  </>
+                ) : (
+                  <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                )}
+              </div>
+            </>
           ) : (
             <div className="py-20 text-center text-gray-400 font-medium">
               표시할 포스트가 없습니다.

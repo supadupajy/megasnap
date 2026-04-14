@@ -247,7 +247,13 @@ const Index = () => {
 
   const handleViewAllClick = () => {
     if (filteredPosts.length > 0) {
-      navigate('/post-list', { state: { posts: filteredPosts } });
+      // 현재 지도의 중심 좌표를 함께 전달
+      navigate('/post-list', { 
+        state: { 
+          posts: filteredPosts,
+          center: mapCenter || { lat: 37.5665, lng: 126.9780 }
+        } 
+      });
     }
   };
 
@@ -279,7 +285,7 @@ const Index = () => {
           />
         </div>
         <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
-          <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-95 transition-all">
+          <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-90 transition-all">
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>재검색</span>
           </button>
