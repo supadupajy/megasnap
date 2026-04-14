@@ -9,6 +9,7 @@ import PostItem from '@/components/PostItem';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import { Post } from '@/types';
+import { useViewedPosts } from '@/hooks/use-viewed-posts';
 
 const PostList = () => {
   const location = useLocation();
@@ -16,12 +17,12 @@ const PostList = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const { markAsViewed } = useViewedPosts(); // 전역 마킹 함수 가져오기
 
   useEffect(() => {
     if (location.state?.posts) {
       setPosts(location.state.posts);
     } else {
-      // 데이터가 없으면 지도로 리다이렉트
       navigate('/map');
     }
   }, [location.state, navigate]);
@@ -50,7 +51,6 @@ const PostList = () => {
       <Header />
       
       <div className="pt-[88px]">
-        {/* List Header with Back Button */}
         <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-20">
           <button 
             onClick={() => navigate('/map')}
@@ -105,6 +105,7 @@ const PostList = () => {
           initialIndex={posts.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
+          onViewPost={markAsViewed} // 리스트에서도 전역 마킹 함수 전달
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = posts.find(p => p.lat === lat && p.lng === lng);

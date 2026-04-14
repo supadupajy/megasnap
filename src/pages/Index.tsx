@@ -15,6 +15,7 @@ import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react'
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
+import { useViewedPosts } from '@/hooks/use-viewed-posts';
 
 const Index = () => {
   const location = useLocation();
@@ -22,7 +23,7 @@ const Index = () => {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(undefined);
-  const [viewedPostIds, setViewedPostIds] = useState<Set<string>>(new Set());
+  const { viewedIds, markAsViewed } = useViewedPosts(); // 전역 훅 사용
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -37,7 +38,6 @@ const Index = () => {
   const populatedTiles = useRef<Set<string>>(new Set());
   const TILE_SIZE = 0.02;
 
-  // 실시간 인기 포스트 데이터 추출
   const trendingPosts = useMemo(() => {
     return allPosts
       .filter(p => !p.isAd)
@@ -206,15 +206,6 @@ const Index = () => {
     setTimeout(() => setHighlightedPostId(null), 3500);
   }, []);
 
-  const handleViewPost = useCallback((id: string) => {
-    setViewedPostIds(prev => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
   const handlePostCreated = useCallback((newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });
@@ -246,7 +237,7 @@ const Index = () => {
       <main className="absolute inset-0 z-0">
         <MapContainer 
           posts={filteredPosts}
-          viewedPostIds={viewedPostIds}
+          viewedPostIds={viewedIds} // 전역 상태 전달
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
@@ -332,7 +323,7 @@ const Index = () => {
           initialIndex={filteredPosts.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
-          onViewPost={handleViewPost}
+          onViewPost={markAsViewed} // 전역 마킹 함수 전달
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
