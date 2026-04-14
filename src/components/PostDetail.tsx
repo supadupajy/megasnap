@@ -94,16 +94,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     
+    // 닫기 판정 기준: 드래그 거리 150px 이상 또는 속도 500 이상
     const shouldDismissX = Math.abs(offset.x) > 150 || Math.abs(velocity.x) > 500;
     const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
 
     if (shouldDismissX || shouldDismissY) {
-      // 던져지는 방향을 더 멀리 설정하여 확실히 사라지게 함
+      // 던져지는 방향을 화면 밖으로 멀리 설정 (가속도 반영)
       setExitDirection({
-        x: offset.x + velocity.x * 0.5,
-        y: offset.y + velocity.y * 0.5
+        x: offset.x + velocity.x * 1.5,
+        y: offset.y + velocity.y * 1.5
       });
       setIsDismissing(true);
+    } else {
+      // 기준 미달 시 x, y를 0으로 돌려보냄 (dragConstraints가 자동으로 처리하지만 명시적으로도 가능)
+      x.set(0);
+      y.set(0);
     }
   };
 
@@ -184,7 +189,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   y: exitDirection.y, 
                   opacity: 0, 
                   scale: 0.3,
-                  transition: { duration: 0.3, ease: "easeIn" }
+                  transition: { duration: 0.4, ease: "easeIn" }
                 }}
                 className={cn(
                   "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing",
