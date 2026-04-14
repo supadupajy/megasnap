@@ -37,6 +37,15 @@ const Index = () => {
   const populatedTiles = useRef<Set<string>>(new Set());
   const TILE_SIZE = 0.02;
 
+  // 실시간 인기 포스트 데이터 추출
+  const trendingPosts = useMemo(() => {
+    return allPosts
+      .filter(p => !p.isAd)
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, 20)
+      .map((p, index) => ({ ...p, rank: index + 1 }));
+  }, [allPosts]);
+
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
