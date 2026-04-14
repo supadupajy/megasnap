@@ -181,6 +181,7 @@ const PostItem = ({
                     className="w-full h-full object-cover"
                     onError={handleImageError}
                   />
+                  {/* 광고 이미지일 경우 Ad 라벨 표시 */}
                   {idx === adImageIndex && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                       AD

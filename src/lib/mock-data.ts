@@ -123,25 +123,29 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'none' = 'none';
 
-    // 기본적으로 3장의 이미지를 생성
+    // 코카콜라 광고 이미지
+    const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+
+    // 기본적으로 3장의 이미지를 생성 (두 번째는 코카콜라 광고)
     let images = [
       `https://picsum.photos/seed/${id}-1/800/800`,
-      `https://picsum.photos/seed/${id}-2/800/800`,
+      cokeAdImg,
       `https://picsum.photos/seed/${id}-3/800/800`
     ];
+    const adImageIndex = 1;
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       const adImg = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
-      images = [adImg, ...images.slice(1)];
+      images = [adImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'food';
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
       const accImg = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
-      images = [accImg, ...images.slice(1)];
+      images = [accImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'accident';
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
       const fireImg = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
-      images = [fireImg, ...images.slice(1)];
+      images = [fireImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'accident';
     } else if (content.includes('점심') || content.includes('카페') || content.includes('맛집') || content.includes('커피')) {
       category = 'food';
@@ -149,7 +153,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       category = 'place';
     } else if (isGif) {
       const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
-      images = [gifImg, ...images.slice(1)];
+      images = [gifImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
     }
 
     const borderType = isPopular ? 'popular' : 'none';
@@ -171,6 +175,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       likes,
       image: images[0],
       images,
+      adImageIndex,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType
