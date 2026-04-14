@@ -8,7 +8,7 @@ import {
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface PostDetailProps {
@@ -33,21 +33,12 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDismissing, setIsDismissing] = useState(false);
-  const [exitDirection, setExitDirection] = useState({ x: 0, y: 0 });
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const rotate = useTransform(x, [-200, 200], [-15, 15]);
-  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 0.5, 1, 0.5, 0]);
-  const scale = useTransform(y, [-300, 0, 300], [0.8, 1, 0.8]);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -59,11 +50,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
-      setIsDismissing(false);
       setShowComments(false);
       setCurrentImageIndex(0);
-      x.set(0);
-      y.set(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -91,38 +79,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    const { offset, velocity } = info;
-    
-    // 닫기 판정 기준: 드래그 거리 150px 이상 또는 속도 500 이상
-    const shouldDismissX = Math.abs(offset.x) > 150 || Math.abs(velocity.x) > 500;
-    const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
-
-    if (shouldDismissX || shouldDismissY) {
-      // 던져지는 방향을 화면 밖으로 아주 멀리 설정 (최소 1000px 이상)
-      // 현재 위치에서 속도를 더해 최종 목적지를 계산
-      const velocityFactor = 0.5;
-      const minDistance = 1200;
-      
-      let targetX = offset.x + velocity.x * velocityFactor;
-      let targetY = offset.y + velocity.y * velocityFactor;
-      
-      // 확실히 화면 밖으로 나가도록 보정
-      if (Math.abs(targetX) > Math.abs(targetY)) {
-        targetX = targetX > 0 ? Math.max(targetX, minDistance) : Math.min(targetX, -minDistance);
-      } else {
-        targetY = targetY > 0 ? Math.max(targetY, minDistance) : Math.min(targetY, -minDistance);
-      }
-
-      setExitDirection({ x: targetX, y: targetY });
-      setIsDismissing(true);
-    } else {
-      // 기준 미달 시 중앙으로 복귀
-      x.set(0);
-      y.set(0);
-    }
-  };
-
   if (!isOpen || posts.length === 0) return null;
   
   const post = posts[currentIndex];
@@ -134,7 +90,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
 
-  const handleUserClick = () => {
+  const handleUserClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onClose();
     navigate(`/profile/${post.user.id}`);
   };
@@ -164,46 +121,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/40 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
+        onClick={onClose}
       >
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={onClose}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all"
           >
             <X className="w-6 h-6 stroke-[2.5px]" />
           </Button>
         </div>
 
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-          <AnimatePresence initial={false} onExitComplete={() => isDismissing && onClose()}>
-            {!isDismissing && (
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-4">
+          <AnimatePresence mode="wait">
+            {isOpen && (
               <motion.div
                 key={post.id}
-                style={{ 
-                  x, y, rotate, opacity, scale,
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden',
-                  transformStyle: 'preserve-3d',
-                  willChange: 'transform, opacity'
-                }}
-                drag
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={1}
-                onDragEnd={handleDragEnd}
-                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ 
-                  x: exitDirection.x, 
-                  y: exitDirection.y, 
-                  opacity: 0, 
-                  scale: 0.5,
-                  transition: { duration: 0.3, ease: "easeIn" }
-                }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing",
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative",
                   isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
@@ -242,7 +184,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
-                          onPointerDown={(e) => e.stopPropagation()}
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
@@ -281,7 +222,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               <MessageCircle className="w-[18px] h-[18px] text-gray-400" />
                               <span className="text-[11px] font-bold text-gray-500">12</span>
                             </button>
-                            <button className="text-gray-400"><Share2 className="w-[18px] h-[18px]" /></button>
+                            <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><Share2 className="w-[18px] h-[18px]" /></button>
                           </div>
                           <div className="flex items-center gap-2">
                             {renderCategoryBadge()}
