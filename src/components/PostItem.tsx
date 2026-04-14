@@ -129,7 +129,7 @@ const PostItem = ({
     <div 
       onClick={onClick}
       className={cn(
-        "bg-white mb-5 last:mb-20 transition-all duration-500 cursor-pointer",
+        "bg-white mb-8 last:mb-20 transition-all duration-500 cursor-pointer",
         isInfluencer && "animate-influencer-float",
         isPopular && !disablePulse && "animate-hot-pulse"
       )}
