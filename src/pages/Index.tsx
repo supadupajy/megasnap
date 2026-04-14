@@ -17,12 +17,12 @@ import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { mapCache } from '@/utils/map-cache';
+import { motion } from 'framer-motion';
 
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 캐시된 데이터로 초기 상태 설정
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
@@ -41,7 +41,6 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
 
-  // 실시간으로 캐시 업데이트
   useEffect(() => {
     mapCache.posts = allPosts;
   }, [allPosts]);
@@ -61,7 +60,6 @@ const Index = () => {
   }, [allPosts]);
 
   useEffect(() => {
-    // 외부에서 특정 포스트나 좌표를 가지고 들어온 경우 처리
     if (location.state?.post) {
       const incomingPost = location.state.post;
       setAllPosts(prev => {
@@ -94,7 +92,6 @@ const Index = () => {
       for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
         for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
           const tileKey = `${latIdx},${lngIdx}`;
-          // 캐시된 타일 정보 확인
           if (!mapCache.populatedTiles.has(tileKey)) {
             mapCache.populatedTiles.add(tileKey);
             tilesAdded = true;
@@ -110,7 +107,6 @@ const Index = () => {
       if (tilesAdded) {
         setAllPosts(prev => {
           const combined = [...prev, ...newPosts];
-          // 너무 많은 데이터가 쌓이지 않도록 관리 (임계값 상향)
           if (combined.length > 1200) {
             return combined.filter(post => {
               const distLat = Math.abs(post.lat - centerLat);
@@ -127,22 +123,16 @@ const Index = () => {
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
-    
-    // 가시 영역에 버퍼 추가 (상하좌우 20% 더 넓게 유지)
     const latBuffer = (ne.lat - sw.lat) * 0.2;
     const lngBuffer = (ne.lng - sw.lng) * 0.2;
-    
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= (sw.lat - latBuffer) && post.lat <= (ne.lat + latBuffer) &&
                              post.lng >= (sw.lng - lngBuffer) && post.lng <= (ne.lng + lngBuffer);
-      
-      // 광고(isAd)는 시간 필터링을 무시하고 항상 표시
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
-      
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
@@ -153,46 +143,28 @@ const Index = () => {
         if (p.isAd) return 2;
         return 1;
       };
-
       const priorityA = getPriority(a);
       const priorityB = getPriority(b);
-
       if (priorityA !== priorityB) return priorityB - priorityA;
       return b.likes - a.likes;
     });
 
-    // 노출 제한을 35개에서 150개로 대폭 상향
     const limitedPosts = prioritized.slice(0, 150);
-
-    // HOT 및 인플루언서 노출 개수 제한 (HOT: 5개, 인플루언서: 2개로 상향)
     let influencerCount = 0;
     let hotCount = 0;
 
     return limitedPosts.map(post => {
       let isInfluencer = post.isInfluencer;
       let borderType = post.borderType;
-
       if (isInfluencer) {
-        if (influencerCount < 2) {
-          influencerCount++;
-        } else {
-          isInfluencer = false;
-        }
+        if (influencerCount < 2) influencerCount++;
+        else isInfluencer = false;
       }
-
       if (borderType === 'popular') {
-        if (hotCount < 5) {
-          hotCount++;
-        } else {
-          borderType = 'none';
-        }
+        if (hotCount < 5) hotCount++;
+        else borderType = 'none';
       }
-
-      return {
-        ...post,
-        isInfluencer,
-        borderType
-      };
+      return { ...post, isInfluencer, borderType };
     });
   }, [allPosts, mapData, timeValue, selectedCategory]);
 
@@ -200,11 +172,7 @@ const Index = () => {
     setAllPosts(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likes: isLiked ? post.likes + 1 : post.likes - 1
-        };
+        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
     }));
@@ -253,7 +221,6 @@ const Index = () => {
 
   const handleViewAllClick = () => {
     if (filteredPosts.length > 0) {
-      // 현재 지도의 중심 좌표를 함께 전달
       navigate('/post-list', { 
         state: { 
           posts: filteredPosts,
@@ -264,7 +231,13 @@ const Index = () => {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
+    <motion.div 
+      initial={{ x: "-100%", opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: "-100%", opacity: 0 }}
+      transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
+      className="relative w-full h-screen overflow-hidden bg-gray-50"
+    >
       <Header />
       <main className="absolute inset-0 z-0">
         <MapContainer 
@@ -382,7 +355,7 @@ const Index = () => {
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handlePlaceSelect} 
       />
-    </div>
+    </motion.div>
   );
 };
 

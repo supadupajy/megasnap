@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -18,6 +18,28 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 
 const queryClient = new QueryClient();
+
+// 애니메이션 처리를 위한 별도 컴포넌트
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Index />} />
+        <Route path="/popular" element={<Popular />} />
+        <Route path="/post-list" element={<PostList />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/chat/:chatId" element={<Chat />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:userId" element={<UserProfile />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -35,27 +57,15 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <AnimatePresence mode="wait">
-          {showSplash ? (
-            <SplashScreen key="splash" />
-          ) : (
-            <BrowserRouter key="app">
-              <Routes>
-                {/* 기본 경로를 지도 화면으로 설정 */}
-                <Route path="/" element={<Index />} />
-                <Route path="/popular" element={<Popular />} />
-                <Route path="/post-list" element={<PostList />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/messages" element={<Messages />} />
-                <Route path="/chat/:chatId" element={<Chat />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profile/:userId" element={<UserProfile />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          )}
-        </AnimatePresence>
+        <BrowserRouter>
+          <AnimatePresence mode="wait">
+            {showSplash ? (
+              <SplashScreen key="splash" />
+            ) : (
+              <AnimatedRoutes key="routes" />
+            )}
+          </AnimatePresence>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

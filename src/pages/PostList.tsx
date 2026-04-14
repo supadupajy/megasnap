@@ -12,8 +12,8 @@ import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
+import { motion } from 'framer-motion';
 
-// 개별 포스트의 가시성을 감시하는 컴포넌트
 const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible: (id: string) => void, [key: string]: any }) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
@@ -65,23 +65,16 @@ const PostList = () => {
     }
   }, [location.state, navigate]);
 
-  // 무한 스크롤 로직
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore) return;
-    
     setIsLoadingMore(true);
-    
-    // 실제 API 호출을 흉내내기 위한 딜레이
     setTimeout(() => {
       const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
-      
       setPosts(prev => {
         const combined = [...prev, ...newPosts];
-        // 새로 불러온 포스트들을 mapCache에도 추가하여 지도와 동기화
         mapCache.posts = [...mapCache.posts, ...newPosts];
         return combined;
       });
-      
       setIsLoadingMore(false);
     }, 800);
   }, [isLoadingMore, mapCenter]);
@@ -95,11 +88,9 @@ const PostList = () => {
       },
       { threshold: 0.1 }
     );
-
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
-
     return () => observer.disconnect();
   }, [loadMorePosts, posts.length]);
 
@@ -107,11 +98,7 @@ const PostList = () => {
     setPosts(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likes: isLiked ? post.likes + 1 : post.likes - 1
-        };
+        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
     }));
@@ -123,7 +110,13 @@ const PostList = () => {
   }, [navigate, posts]);
 
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <motion.div 
+      initial={{ x: "100%", opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: "100%", opacity: 0 }}
+      transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
+      className="min-h-screen bg-white pb-28"
+    >
       <Header />
       
       <div className="pt-[88px]">
@@ -173,7 +166,6 @@ const PostList = () => {
                 />
               ))}
               
-              {/* 무한 스크롤 트리거 요소 */}
               <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
                 {isLoadingMore ? (
                   <>
@@ -211,7 +203,7 @@ const PostList = () => {
       )}
       
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-    </div>
+    </motion.div>
   );
 };
 
