@@ -99,14 +99,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
 
     if (shouldDismissX || shouldDismissY) {
-      // 던져지는 방향을 화면 밖으로 멀리 설정 (가속도 반영)
-      setExitDirection({
-        x: offset.x + velocity.x * 1.5,
-        y: offset.y + velocity.y * 1.5
-      });
+      // 던져지는 방향을 화면 밖으로 아주 멀리 설정 (최소 1000px 이상)
+      const targetX = offset.x + velocity.x * 0.5;
+      const targetY = offset.y + velocity.y * 0.5;
+      
+      // 확실히 화면 밖으로 나가도록 보정
+      const finalX = Math.abs(targetX) > Math.abs(targetY) 
+        ? (targetX > 0 ? Math.max(targetX, 1200) : Math.min(targetX, -1200))
+        : targetX;
+      const finalY = Math.abs(targetY) > Math.abs(targetX)
+        ? (targetY > 0 ? Math.max(targetY, 1200) : Math.min(targetY, -1200))
+        : targetY;
+
+      setExitDirection({ x: finalX, y: finalY });
       setIsDismissing(true);
     } else {
-      // 기준 미달 시 x, y를 0으로 돌려보냄 (dragConstraints가 자동으로 처리하지만 명시적으로도 가능)
+      // 기준 미달 시 중앙으로 복귀
       x.set(0);
       y.set(0);
     }
@@ -188,8 +196,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   x: exitDirection.x, 
                   y: exitDirection.y, 
                   opacity: 0, 
-                  scale: 0.3,
-                  transition: { duration: 0.4, ease: "easeIn" }
+                  scale: 0.5,
+                  transition: { duration: 0.3, ease: "easeIn" }
                 }}
                 className={cn(
                   "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing",
@@ -263,7 +271,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
                             <button className="flex items-center gap-1 group" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
-                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                               <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="flex items-center gap-1">
