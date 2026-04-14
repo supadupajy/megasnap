@@ -107,10 +107,15 @@ const PostList = () => {
 
   return (
     <motion.div 
-      initial={{ x: "100%", opacity: 0 }}
+      initial={{ x: "100%", opacity: 0.5 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0 }}
-      transition={{ type: "tween", ease: "easeInOut", duration: 0.4 }}
+      exit={{ x: "100%", opacity: 0.5 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 200, 
+        damping: 25,
+        mass: 1
+      }}
       className="min-h-screen bg-white pt-[88px] pb-28"
     >
       <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">

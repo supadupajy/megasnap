@@ -216,9 +216,10 @@ const Index = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 1, x: 0 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -40 }}
+      transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
       className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
       <div className="absolute inset-0 z-0">
@@ -228,7 +229,7 @@ const Index = () => {
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
-          onMapWriteClick={() => {}} // App.tsx에서 처리됨
+          onMapWriteClick={() => {}} 
           center={mapCenter}
         />
 
