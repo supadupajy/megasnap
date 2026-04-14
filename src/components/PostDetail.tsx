@@ -43,11 +43,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 드래그 위치에 따른 실시간 투명도 변화를 위한 Motion Value
+  // 드래그 위치에 따른 실시간 투명도 및 변형을 위한 Motion Value
   const dragX = useMotionValue(0);
-  const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
-  const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
-  const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
+  // 투명도가 0%까지 더 자연스럽게 도달하도록 범위 조정
+  const dragOpacity = useTransform(dragX, [-250, 0, 250], [0, 1, 0]);
+  const dragScale = useTransform(dragX, [-250, 0, 250], [0.85, 1, 0.85]);
+  const dragRotate = useTransform(dragX, [-250, 0, 250], [-15, 0, 15]);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -62,7 +63,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setDirection(0);
       setShowComments(false);
       setCurrentImageIndex(0);
-      dragX.set(0); // 초기화
+      dragX.set(0); 
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -112,16 +113,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 드래그로 닫기 판정 (임계값 140px 또는 빠른 속도)
-    if (absX > absY && (absX > 140 || Math.abs(velocity.x) > 600)) {
+    // 좌우 드래그로 닫기 판정 (임계값 120px 또는 빠른 속도)
+    if (absX > absY && (absX > 120 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
-      setTimeout(onClose, 300); 
+      // 애니메이션이 끝까지 진행될 수 있도록 지연 시간 확보
+      setTimeout(onClose, 350); 
       return;
     }
-
-    // 임계값을 넘지 못하면 framer-motion의 dragConstraints에 의해 자동으로 0으로 돌아감
-    // 이때 dragOpacity, dragScale 등도 MotionValue이므로 자동으로 1로 복구됨
 
     const threshold = 50;
     const velThreshold = 200;
@@ -168,15 +167,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
+      // 좌우 스와이프로 닫힐 때: 화면 밖으로 멀리 날아가며 투명도 0% 도달
       if (direction === 100 || direction === -100 || isClosing) {
         return {
-          x: direction === 100 ? 400 : -400,
-          opacity: 0,
-          scale: 0.8,
-          rotate: direction === 100 ? 20 : -20,
-          transition: { duration: 0.4, ease: "easeOut" }
+          x: direction === 100 ? 600 : -600, // 화면 밖으로 완전히 이동
+          opacity: 0, // 투명도 0% 보장
+          scale: 0.7, // 더 작아지며 멀어지는 느낌
+          rotate: direction === 100 ? 25 : -25, // 더 큰 회전각으로 던져지는 느낌
+          transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } // 부드러운 가속/감속
         };
       }
+      // 상하 스크롤로 전환될 때
       return {
         y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
         opacity: 0,
@@ -251,10 +252,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               initial="enter"
               animate="center"
               exit="exit"
-              drag="x" // 좌우 드래그 활성화
+              drag="x" 
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: 0, right: 0 }} // 원위치 복귀를 위한 제약
+              dragConstraints={{ left: 0, right: 0 }} 
               dragElastic={0.7}
               onDragEnd={handleDragEnd}
               style={{ 
