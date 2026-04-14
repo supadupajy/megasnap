@@ -145,7 +145,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                 onClick={onClose}
                 className={cn(
-                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative",
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative cursor-pointer",
                   isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
@@ -174,10 +174,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                 )}
 
-                <div 
-                  className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
                   <div 
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
@@ -228,7 +225,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><Share2 className="w-[18px] h-[18px]" /></button>
                           </div>
                           <div className="flex items-center gap-2">
-                            {renderCategoryBadge()}
+                            <div onClick={(e) => e.stopPropagation()}>{renderCategoryBadge()}</div>
                             {post.lat !== undefined && post.lng !== undefined && (
                               <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                                 <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
@@ -242,7 +239,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer" onClick={handleUserClick}>
                             <img src={post.user.avatar} alt="" className="w-full h-full rounded-full object-cover border-2 border-white" />
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
                             <p className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer" onClick={handleUserClick}>{post.user.name}</p>
                             <div className="flex items-center text-indigo-600 gap-1 mt-1">
                               <MapPin className="w-3 h-3" />
@@ -251,9 +248,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </div>
                         </div>
 
-                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium">{post.content}</p>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium" onClick={(e) => e.stopPropagation()}>{post.content}</p>
 
-                        <div className="border-t border-gray-100 pt-2">
+                        <div className="border-t border-gray-100 pt-2" onClick={(e) => e.stopPropagation()}>
                           <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-2 flex items-center justify-between group">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{showComments ? 'Hide Comments' : 'View All Comments'}</p>
                             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
