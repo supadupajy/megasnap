@@ -1,18 +1,18 @@
 import { Post, User } from '@/types';
 
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e?auto=format&fit=crop&w=800&q=80", // 파손된 차량
-  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80", // 사고 현장
-  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1?auto=format&fit=crop&w=800&q=80", // 도로 사고
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"  // 경찰차와 사고 차량
+  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
 ];
 
 const FIRE_IMAGES = [
-  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80", // 화재 현장 연기
-  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80", // 소방차 출동
-  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80", // 건물 화재
-  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80", // 소방관 작업
-  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"  // 화재 진압
+  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_IMAGES = [
@@ -121,25 +121,35 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomHoursAgo = Math.random() * 12;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let image = `https://picsum.photos/seed/${id}/800/800`;
     let category: 'food' | 'accident' | 'place' | 'none' = 'none';
+
+    // 기본적으로 3장의 이미지를 생성
+    let images = [
+      `https://picsum.photos/seed/${id}-1/800/800`,
+      `https://picsum.photos/seed/${id}-2/800/800`,
+      `https://picsum.photos/seed/${id}-3/800/800`
+    ];
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
-      image = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+      const adImg = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
+      images = [adImg, ...images.slice(1)];
       category = 'food';
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
-      image = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+      const accImg = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
+      images = [accImg, ...images.slice(1)];
       category = 'accident';
     } else if (content.includes('화재') || content.includes('연기') || content.includes('소방차')) {
-      image = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+      const fireImg = FIRE_IMAGES[Math.floor(Math.random() * FIRE_IMAGES.length)];
+      images = [fireImg, ...images.slice(1)];
       category = 'accident';
     } else if (content.includes('점심') || content.includes('카페') || content.includes('맛집') || content.includes('커피')) {
       category = 'food';
     } else if (content.includes('명소') || content.includes('공원') || content.includes('바다') || content.includes('야경')) {
       category = 'place';
     } else if (isGif) {
-      image = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      images = [gifImg, ...images.slice(1)];
     }
 
     const borderType = isPopular ? 'popular' : 'none';
@@ -159,7 +169,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lat,
       lng,
       likes,
-      image,
+      image: images[0],
+      images,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - randomHoursAgo * 60 * 60 * 1000),
       borderType

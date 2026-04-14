@@ -53,7 +53,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
-      setDirection(0); // 초기 오픈 시 방향을 0으로 설정
+      setDirection(0);
       setShowComments(false);
       setCurrentImageIndex(0);
     }
@@ -70,12 +70,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
     setShowComments(false);
     setCurrentImageIndex(0);
+    
+    // 인덱스 변경 시 이미지 스크롤 초기화
+    if (imageScrollRef.current) {
+      imageScrollRef.current.scrollLeft = 0;
+    }
   }, [currentIndex, isOpen, onViewPost]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / container.clientWidth);
-    setCurrentImageIndex(index);
+    if (index !== currentImageIndex) {
+      setCurrentImageIndex(index);
+    }
   };
 
   if (!isOpen || posts.length === 0) return null;
@@ -99,6 +106,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
+    // 가로 드래그가 크면 닫기
     if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 600)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
@@ -108,6 +116,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 60;
     const velThreshold = 300;
 
+    // 세로 드래그로 포스트 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -127,16 +136,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const variants = {
     enter: (direction: number) => {
-      // 마커 클릭으로 처음 나타날 때 (direction === 0)
       if (direction === 0) {
-        return {
-          opacity: 0,
-          scale: 0.92,
-          y: 0,
-          x: 0,
-        };
+        return { opacity: 0, scale: 0.92, y: 0, x: 0 };
       }
-      // 스와이프로 전환될 때
       return {
         y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
         x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
@@ -157,15 +159,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
-      // 닫힐 때
       if (isClosing) {
-        return {
-          opacity: 0,
-          scale: 0.92,
-          transition: { duration: 0.2, ease: "easeIn" }
-        };
+        return { opacity: 0, scale: 0.92, transition: { duration: 0.2, ease: "easeIn" } };
       }
-      // 스와이프로 전환될 때
       return {
         y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
         x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
@@ -187,30 +183,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     let label = "";
 
     switch (category) {
-      case 'food':
-        Icon = Utensils;
-        bgColor = "bg-orange-500";
-        label = "맛집";
-        break;
-      case 'accident':
-        Icon = Car;
-        bgColor = "bg-red-600";
-        label = "사고";
-        break;
-      case 'place':
-        Icon = TreePine;
-        bgColor = "bg-green-600";
-        label = "명소";
-        break;
+      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
+      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
+      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
     }
 
     if (!Icon) return null;
 
     return (
-      <div className={cn(
-        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10",
-        bgColor
-      )}>
+      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
         <Icon className="w-3.5 h-3.5" />
         <span className="text-[10px] font-black">{label}</span>
       </div>
@@ -226,13 +207,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-visible translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none focus:ring-0"
       >
-        <style>{`
-          [data-radix-portal] div[data-state] {
-            background-color: transparent !important;
-            backdrop-filter: none !important;
-          }
-        `}</style>
-        
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -290,7 +264,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   isolation: 'isolate'
                 }}
               >
-                {/* Status Bar for Influencer/Popular */}
+                {/* Status Bar */}
                 {isInfluencer && (
                   <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
                     <Star className="w-4 h-4 fill-black" />
@@ -318,23 +292,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain scroll-smooth"
-                    style={{ WebkitOverflowScrolling: 'touch' }}
                   >
                     <div 
                       className="flex flex-col"
                       onPointerDown={(e) => {
                         const target = e.target as HTMLElement;
+                        // 이미지 슬라이더나 버튼이 아닌 곳을 잡았을 때만 드래그 시작
                         if (!target.closest('.image-slider') && !target.closest('button')) {
                           dragControls.start(e);
                         }
                       }}
                     >
+                      {/* Image Slider Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
-                          onPointerDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()} // 이미지 영역 터치 시 부모 드래그 방지
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                          style={{ WebkitOverflowScrolling: 'touch' }}
                         >
                           {images.map((img: string, idx: number) => (
                             <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
@@ -342,20 +318,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 src={img} 
                                 alt="" 
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = FALLBACK_IMAGE;
-                                }}
+                                onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                               />
-                              {idx === post.adImageIndex && (
-                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
-                                  AD
-                                </div>
-                              )}
                             </div>
                           ))}
                         </div>
 
+                        {/* Pagination Dots (Page Marker) */}
                         {images.length > 1 && (
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                             {images.map((_: any, idx: number) => (
@@ -377,19 +346,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <div className="flex items-center gap-3.5">
                             <button 
                               className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors group"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onLikeToggle?.(post.id);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}
                             >
                               <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
                               <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
                             </button>
                             <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowComments(!showComments);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
                               className="flex items-center gap-1 text-gray-500 hover:text-blue-500 transition-colors"
                             >
                               <MessageCircle className="w-[18px] h-[18px]" />
@@ -404,10 +367,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             {renderCategoryBadge()}
                             {post.lat !== undefined && post.lng !== undefined && (
                               <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onLocationClick?.(post.lat, post.lng);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
                               >
                                 <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
@@ -423,34 +383,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
                             onClick={handleUserClick}
                           >
-                            <img 
-                              src={post.user.avatar} 
-                              alt="" 
-                              className="w-full h-full rounded-full object-cover border-2 border-white" 
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-                              }}
-                            />
+                            <img src={post.user.avatar} alt="" className="w-full h-full rounded-full object-cover border-2 border-white" />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <p 
-                                className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer hover:text-indigo-600 transition-colors"
-                                onClick={handleUserClick}
-                              >
+                              <p className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>
                                 {post.user.name}
                               </p>
-                              {isAd && (
-                                <a
-                                  href="https://s.baemin.com/t3000fBqlbHGL"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[9px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold hover:bg-blue-600 transition-colors shrink-0"
-                                >
-                                  앱에서 보기
-                                </a>
-                              )}
                             </div>
                             <div className="flex items-center text-indigo-600 gap-1 mt-1">
                               <MapPin className="w-3 h-3" />
@@ -465,10 +404,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                         <div className="border-t border-gray-100 pt-2">
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowComments(!showComments);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
                             className="w-full py-2 flex items-center justify-between group"
                           >
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] group-hover:text-gray-600 transition-colors">
@@ -480,27 +416,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {!showComments && (
                             <div className="flex gap-2 items-start mt-1 mb-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
                               <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{lastComment.user}</span>
-                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">
-                                {lastComment.text}
-                              </span>
+                              <span className="text-[13px] text-gray-500 leading-snug line-clamp-1 flex-1">{lastComment.text}</span>
                             </div>
                           )}
 
                           <AnimatePresence>
                             {showComments && (
-                              <motion.div 
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                              >
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="space-y-4 py-3 pb-6">
                                   {MOCK_COMMENTS.map((comment, i) => (
                                     <div key={i} className="flex gap-2 items-start">
                                       <span className="font-bold text-[13px] text-gray-900 whitespace-nowrap">{comment.user}</span>
-                                      <span className="text-[13px] text-gray-500 leading-snug">
-                                        {comment.text}
-                                      </span>
+                                      <span className="text-[13px] text-gray-500 leading-snug">{comment.text}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -512,10 +439,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
-                  <div 
-                    onPointerDown={(e) => dragControls.start(e)}
-                    className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10"
-                  >
+                  <div onPointerDown={(e) => dragControls.start(e)} className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10">
                     <Move className="w-4 h-4 text-gray-300 mb-1 animate-pulse" />
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
                   </div>
