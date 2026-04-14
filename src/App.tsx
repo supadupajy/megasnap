@@ -16,29 +16,55 @@ import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
+import Header from "./components/Header";
+import BottomNav from "./components/BottomNav";
+import WritePost from "./components/WritePost";
 
 const queryClient = new QueryClient();
 
-// 애니메이션 처리를 위한 별도 컴포넌트
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
+  
+  // 헤더와 네비게이션을 숨길 경로 설정
+  const hideLayout = ["/chat", "/splash"].some(path => location.pathname.startsWith(path));
+  
+  return (
+    <div className="relative min-h-screen bg-white">
+      {!hideLayout && <Header />}
+      
+      <main className="relative">
+        <AnimatePresence mode="wait" initial={false}>
+          {children}
+        </AnimatePresence>
+      </main>
+
+      {!hideLayout && (
+        <>
+          <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+          <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+        </>
+      )}
+    </div>
+  );
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   
   return (
-    // initial={false}를 설정하여 첫 렌더링 시 애니메이션을 건너뜁니다.
-    <AnimatePresence mode="wait" initial={false}>
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Index />} />
-        <Route path="/popular" element={<Popular />} />
-        <Route path="/post-list" element={<PostList />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/chat/:chatId" element={<Chat />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/profile/:userId" element={<UserProfile />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AnimatePresence>
+    <Routes location={location} key={location.pathname}>
+      <Route path="/" element={<Index />} />
+      <Route path="/popular" element={<Popular />} />
+      <Route path="/post-list" element={<PostList />} />
+      <Route path="/search" element={<Search />} />
+      <Route path="/notifications" element={<Notifications />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/chat/:chatId" element={<Chat />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/:userId" element={<UserProfile />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 
@@ -63,7 +89,9 @@ const App = () => {
             {showSplash ? (
               <SplashScreen key="splash" />
             ) : (
-              <AnimatedRoutes key="routes" />
+              <Layout key="main-layout">
+                <AnimatedRoutes />
+              </Layout>
             )}
           </AnimatePresence>
         </BrowserRouter>

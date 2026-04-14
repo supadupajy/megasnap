@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
-import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
@@ -17,6 +14,7 @@ import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { mapCache } from '@/utils/map-cache';
+import { motion } from 'framer-motion';
 
 const Index = () => {
   const location = useLocation();
@@ -30,11 +28,9 @@ const Index = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
 
@@ -149,7 +145,8 @@ const Index = () => {
     });
 
     const limitedPosts = prioritized.slice(0, 150);
-    let influencerCount = 0;    let hotCount = 0;
+    let influencerCount = 0;
+    let hotCount = 0;
 
     return limitedPosts.map(post => {
       let isInfluencer = post.isInfluencer;
@@ -198,19 +195,8 @@ const Index = () => {
     setTimeout(() => setHighlightedPostId(null), 3500);
   }, []);
 
-  const handlePostCreated = useCallback((newPost: Post) => {
-    setAllPosts(prev => [newPost, ...prev]);
-    setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-    setTimeout(() => setSelectedPostId(newPost.id), 1000);
-  }, []);
-
   const handleCurrentLocation = () => {
     setMapCenter({ lat: 37.5665, lng: 126.9780 });
-  };
-
-  const handleMapWriteClick = (location?: { lat: number; lng: number }) => {
-    setPendingLocation(location);
-    setIsWriteOpen(true);
   };
 
   const handlePlaceSelect = (place: any) => {
@@ -229,9 +215,12 @@ const Index = () => {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
-      <Header />
-      
+    <motion.div 
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="relative w-full h-screen overflow-hidden bg-gray-50"
+    >
       <div className="absolute inset-0 z-0">
         <MapContainer 
           posts={filteredPosts}
@@ -239,7 +228,7 @@ const Index = () => {
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
-          onMapWriteClick={handleMapWriteClick}
+          onMapWriteClick={() => {}} // App.tsx에서 처리됨
           center={mapCenter}
         />
 
@@ -304,11 +293,6 @@ const Index = () => {
         <TimeSlider value={timeValue} onChange={setTimeValue} />
       </div>
 
-      <BottomNav onWriteClick={() => {
-        setPendingLocation(undefined);
-        setIsWriteOpen(true);
-      }} />
-
       <CategoryMenu 
         isOpen={isCategoryOpen}
         selectedCategory={selectedCategory}
@@ -335,21 +319,12 @@ const Index = () => {
           }}
         />
       )}
-      <WritePost 
-        isOpen={isWriteOpen} 
-        onClose={() => {
-          setIsWriteOpen(false);
-          setPendingLocation(undefined);
-        }} 
-        onPostCreated={handlePostCreated}
-        initialLocation={pendingLocation}
-      />
       <PlaceSearch 
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handlePlaceSelect} 
       />
-    </div>
+    </motion.div>
   );
 };
 
