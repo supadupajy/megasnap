@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, LayoutGrid } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
@@ -11,13 +11,43 @@ import WritePost from '@/components/WritePost';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 
+// 개별 포스트의 가시성을 감시하는 컴포넌트
+const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible: (id: string) => void, [key: string]: any }) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          onVisible(post.id);
+          // 한 번 감지되면 감시 종료 (성능 최적화)
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.5 } // 포스트가 50% 이상 보일 때 감지
+    );
+
+    if (itemRef.current) {
+      observer.observe(itemRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [post.id, onVisible]);
+
+  return (
+    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
+      <PostItem {...props} />
+    </div>
+  );
+};
+
 const PostList = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const { markAsViewed } = useViewedPosts(); // 전역 마킹 함수 가져오기
+  const { markAsViewed } = useViewedPosts();
 
   useEffect(() => {
     if (location.state?.posts) {
@@ -67,27 +97,29 @@ const PostList = () => {
         <div className="flex flex-col pt-4">
           {posts.length > 0 ? (
             posts.map((post) => (
-              <div key={post.id} onClick={() => setSelectedPostId(post.id)}>
-                <PostItem
-                  user={post.user}
-                  content={post.content}
-                  location={post.location}
-                  likes={post.likes}
-                  image={post.image}
-                  images={post.images}
-                  adImageIndex={post.adImageIndex}
-                  lat={post.lat}
-                  lng={post.lng}
-                  isLiked={post.isLiked}
-                  isGif={post.isGif}
-                  isInfluencer={post.isInfluencer}
-                  category={post.category}
-                  borderType={post.borderType}
-                  disablePulse={true}
-                  onLikeToggle={() => handleLikeToggle(post.id)}
-                  onLocationClick={handleLocationClick}
-                />
-              </div>
+              <ObservedPostItem
+                key={post.id}
+                post={post}
+                onVisible={markAsViewed} // 화면에 보이면 읽음 처리
+                user={post.user}
+                content={post.content}
+                location={post.location}
+                likes={post.likes}
+                image={post.image}
+                images={post.images}
+                adImageIndex={post.adImageIndex}
+                lat={post.lat}
+                lng={post.lng}
+                isLiked={post.isLiked}
+                isGif={post.isGif}
+                isInfluencer={post.isInfluencer}
+                category={post.category}
+                borderType={post.borderType}
+                disablePulse={true}
+                onLikeToggle={() => handleLikeToggle(post.id)}
+                onLocationClick={handleLocationClick}
+                onClick={() => setSelectedPostId(post.id)}
+              />
             ))
           ) : (
             <div className="py-20 text-center text-gray-400 font-medium">
@@ -105,7 +137,7 @@ const PostList = () => {
           initialIndex={posts.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed} // 리스트에서도 전역 마킹 함수 전달
+          onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
             const post = posts.find(p => p.lat === lat && p.lng === lng);
