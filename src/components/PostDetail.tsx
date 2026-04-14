@@ -42,11 +42,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  // 드래그 위치 추적을 위한 Motion Values
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  // 중앙에서 멀어질수록 투명도와 회전 적용
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 0.5, 1, 0.5, 0]);
   const scale = useTransform(y, [-300, 0, 300], [0.8, 1, 0.8]);
@@ -96,20 +94,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const handleDragEnd = (event: any, info: PanInfo) => {
     const { offset, velocity } = info;
     
-    // 닫기 판정 기준: 드래그 거리 150px 이상 또는 속도 500 이상
     const shouldDismissX = Math.abs(offset.x) > 150 || Math.abs(velocity.x) > 500;
     const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
 
     if (shouldDismissX || shouldDismissY) {
-      // 던져진 방향 계산
       setExitDirection({
         x: offset.x + velocity.x * 0.2,
         y: offset.y + velocity.y * 0.2
       });
       setIsDismissing(true);
-      onClose();
-    } else {
-      // 기준 미달 시 중앙으로 복귀 (framer-motion dragConstraints가 처리)
+      // 여기서 바로 onClose를 호출하지 않고 AnimatePresence의 onExitComplete에서 처리합니다.
     }
   };
 
@@ -156,7 +150,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onOpenAutoFocus={(e) => e.preventDefault()}
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
       >
-        {/* Close Button */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -169,11 +162,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-          <AnimatePresence>
+          <AnimatePresence initial={false} onExitComplete={() => isDismissing && onClose()}>
             {!isDismissing && (
               <motion.div
                 key={post.id}
-                style={{ x, y, rotate, opacity, scale }}
+                style={{ 
+                  x, y, rotate, opacity, scale,
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transformStyle: 'preserve-3d',
+                  willChange: 'transform, opacity'
+                }}
                 drag
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={1}
