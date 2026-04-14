@@ -16,7 +16,6 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
-  videoUrl?: string; // 동영상 URL 필드 추가
   category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   user: User;
   content: string;

@@ -33,14 +33,6 @@ const ANIMAL_IMAGES = [
   "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80"
 ];
 
-const VIDEO_POOL = [
-  "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-pointing-at-something-40051-large.mp4",
-  "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-leaves-low-angle-shot-4736-large.mp4",
-  "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-ocean-near-the-shore-4151-large.mp4",
-  "https://assets.mixkit.co/videos/preview/mixkit-man-under-multicolored-lights-1237-large.mp4",
-  "https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-over-a-mountain-range-4504-large.mp4"
-];
-
 const AD_FOOD_CONTENT = [
   "배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔",
   "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩",
@@ -136,8 +128,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isInfluencer = i === influencerIndex;
     const isPopular = popularIndices.has(i);
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8 && Math.random() <= 0.9;
-    const isVideo = !isAd && !isInfluencer && !isPopular && !isGif && Math.random() > 0.85;
+    // GIF 생성 확률을 높임 (약 20%)
+    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
@@ -145,7 +137,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
-    let videoUrl: string | undefined = undefined;
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
@@ -180,9 +171,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     } else if (isGif) {
       const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
       images = [gifImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
-    } else if (isVideo) {
-      videoUrl = VIDEO_POOL[Math.floor(Math.random() * VIDEO_POOL.length)];
-      content = "생생한 현장 분위기를 동영상으로 확인해보세요! 🎥";
+      content = "생생한 현장 분위기를 GIF로 확인해보세요! ✨";
     }
 
     const borderType = isPopular ? 'popular' : 'none';
@@ -194,8 +183,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       id,
       isAd,
       isGif,
-      isVideo,
-      videoUrl,
       isInfluencer,
       category,
       user: getUserById(isAd ? "sponsored" : id),
