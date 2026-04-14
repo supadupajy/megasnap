@@ -81,7 +81,8 @@ const PostList = () => {
       <Header />
       
       <div className="pt-[88px]">
-        <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-20">
+        {/* z-index를 30으로 높여 HOT 배지(z-20)보다 위에 오도록 수정 */}
+        <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">
           <button 
             onClick={() => navigate('/map')}
             className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"

@@ -154,7 +154,38 @@ const Index = () => {
       return b.likes - a.likes;
     });
 
-    return prioritized.slice(0, 35);
+    const limitedPosts = prioritized.slice(0, 35);
+
+    // HOT 및 인플루언서 노출 개수 제한 (HOT: 3개, 인플루언서: 1개)
+    let influencerCount = 0;
+    let hotCount = 0;
+
+    return limitedPosts.map(post => {
+      let isInfluencer = post.isInfluencer;
+      let borderType = post.borderType;
+
+      if (isInfluencer) {
+        if (influencerCount < 1) {
+          influencerCount++;
+        } else {
+          isInfluencer = false;
+        }
+      }
+
+      if (borderType === 'popular') {
+        if (hotCount < 3) {
+          hotCount++;
+        } else {
+          borderType = 'none';
+        }
+      }
+
+      return {
+        ...post,
+        isInfluencer,
+        borderType
+      };
+    });
   }, [allPosts, mapData, timeValue, selectedCategory]);
 
   const handleLikeToggle = useCallback((postId: string) => {
