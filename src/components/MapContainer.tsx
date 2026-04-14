@@ -228,7 +228,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         if (this.isHighlighted) zIndex = 1000;
         div.style.zIndex = zIndex.toString();
 
-        // 삼각형 색상 결정 (특수 마커 전용)
         let pinColor = '';
         if (isInfluencer) pinColor = '#fbbf24';
         else if (isPopular) pinColor = '#ef4444';
@@ -263,7 +262,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
         div.innerHTML = `
           <div class="${animationClass}" style="position: relative; width: 56px; height: 72px; 
-               transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+               transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
                ${this.isHighlighted ? 'transform: scale(1.35);' : 'transform: scale(1);'}">
             ${this.isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
             ${labelHtml}
@@ -296,7 +295,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               ` : ''}
             </div>
             ${pinColor ? `
-              <!-- 특수 마커 전용 SVG 삼각형 핀 포인터 -->
               <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
                 <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>

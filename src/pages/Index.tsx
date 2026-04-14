@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-center';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -190,8 +190,8 @@ const Index = () => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     setHighlightedPostId(post.id);
+    // 강조 효과가 끝난 후 자동으로 열리지 않도록 setSelectedPostId 호출 제거
     setTimeout(() => setHighlightedPostId(null), 3500);
-    setTimeout(() => setSelectedPostId(post.id), 800);
   }, []);
 
   const handleViewPost = useCallback((id: string) => {
