@@ -76,6 +76,7 @@ const Index = () => {
     }
   }, [location.state]);
 
+  // 마커 계산 및 표시 로직
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -168,7 +169,8 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory]);
+    // allPosts를 의존성 배열에 추가하여 데이터 갱신 시 마커가 다시 계산되도록 함
+  }, [mapData, timeValue, selectedCategory, allPosts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -184,17 +186,27 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    // 캐시된 타일 정보 초기화
     mapCache.populatedTiles.clear();
+    
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
+      
+      // 시각적인 피드백을 위해 약간의 지연 후 갱신
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
+        
+        // 현재 영역을 기준으로 새로운 데이터 생성
         const refreshedPosts = createMockPosts(centerLat, centerLng, 60);
+        
+        // 상태 업데이트 (allPosts가 변경되면 위의 useEffect가 실행됨)
         setAllPosts(refreshedPosts);
-        setDisplayedMarkers([]);
+        setDisplayedMarkers([]); // 기존 마커 비우기
         setIsRefreshing(false);
       }, 600);
+    } else {
+      setIsRefreshing(false);
     }
   }, [mapData]);
 
