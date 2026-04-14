@@ -147,7 +147,12 @@ const PostItem = ({
             />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>
+              {isAd && (
+                <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>
+              )}
+            </div>
             <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
               <MapPin className="w-3 h-3" />
               <span className="text-[10px] font-medium">{location}</span>

@@ -241,7 +241,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <img src={post.user.avatar} alt="" className="w-full h-full rounded-full object-cover border-2 border-white" />
                           </div>
                           <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                            <p className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer" onClick={handleUserClick}>{post.user.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer" onClick={handleUserClick}>{post.user.name}</p>
+                              {isAd && (
+                                <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>
+                              )}
+                            </div>
                             <div className="flex items-center text-indigo-600 gap-1 mt-1">
                               <MapPin className="w-3 h-3" />
                               <span className="text-[10px] font-bold truncate">{post.location}</span>
