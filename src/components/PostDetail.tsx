@@ -15,7 +15,7 @@ interface PostDetailProps {
   posts: any[];
   initialIndex: number;
   isOpen: boolean;
-  onClose: void;
+  onClose: () => void;
   onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
   onLocationClick?: (lat: number, lng: number) => void;
@@ -99,16 +99,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    if (absX > absY && (absX > 50 || Math.abs(velocity.x) > 300)) {
+    // 좌우 드래그로 닫기 (임계값 상향 조정으로 오작동 방지)
+    if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 600)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    const threshold = 20;
-    const velThreshold = 100;
+    // 상하 드래그로 포스트 전환
+    const threshold = 60;
+    const velThreshold = 300;
 
     if (absY > absX) {
+      // 스크롤이 맨 위일 때만 위로 드래그해서 이전 포스트로 이동 가능하게 하거나,
+      // 드래그 속도가 빠를 때 전환
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
           setDirection(1);
@@ -123,14 +127,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  const springConfig = { type: "spring", damping: 25, stiffness: 400, mass: 0.8 };
+  // 더 부드러운 스프링 설정
+  const smoothSpring = { type: "spring", damping: 30, stiffness: 300, mass: 0.8 };
 
   const variants = {
     enter: (direction: number) => ({
       y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
       x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
     }),
     center: {
       y: 0,
@@ -138,20 +143,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       opacity: 1,
       scale: 1,
       transition: {
-        y: springConfig,
-        x: springConfig,
-        opacity: { duration: 0.15 }
+        y: smoothSpring,
+        x: smoothSpring,
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.3 }
       }
     },
     exit: (direction: number) => ({
       y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
       x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
       opacity: 0,
-      scale: 0.95,
+      scale: 0.98,
       transition: {
-        y: springConfig,
-        x: { duration: 0.2, ease: "easeOut" },
-        opacity: { duration: 0.15 }
+        y: smoothSpring,
+        x: { duration: 0.3, ease: "easeInOut" },
+        opacity: { duration: 0.2 }
       }
     })
   };
@@ -251,69 +257,59 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 dragControls={dragControls}
                 dragListener={false}
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.8}
+                dragElastic={0.5}
                 onDragEnd={handleDragEnd}
-                className="absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col rounded-[40px] overflow-hidden"
+                className={cn(
+                  "absolute pointer-events-auto w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col transform-gpu bg-white rounded-[40px] overflow-hidden",
+                  isAd && "border-4 border-blue-500",
+                  isPopular && "popular-border-container",
+                  isInfluencer && "influencer-border-container"
+                )}
                 style={{ 
                   boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)',
                   willChange: 'transform, opacity',
                   backfaceVisibility: 'hidden',
                   transformStyle: 'preserve-3d',
-                  isolation: 'isolate',
-                  width: '90vw',
-                  height: '82vh'
+                  isolation: 'isolate'
                 }}
               >
-                {/* Background Border Layer - Only for Ads */}
-                <div className={cn(
-                  "absolute inset-0 z-0 rounded-[40px]",
-                  isAd && "border-4 border-blue-500"
-                )} />
+                {/* Status Bar for Influencer/Popular */}
+                {isInfluencer && (
+                  <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
+                    <Star className="w-4 h-4 fill-black" />
+                    <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
+                    <Star className="w-4 h-4 fill-black" />
+                  </div>
+                )}
+                {isPopular && (
+                  <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
+                    <Flame className="w-4 h-4 fill-white text-white" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
+                    <Flame className="w-4 h-4 fill-white text-white" />
+                  </div>
+                )}
+                {isAd && (
+                  <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
+                  </div>
+                )}
 
-                {/* Main Content Container */}
-                <div className={cn(
-                  "flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] z-10",
-                  isAd ? "m-[4px]" : "m-0"
-                )}>
-                  {/* Status Bar */}
-                  {isInfluencer && (
-                    <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
-                      <Star className="w-4 h-4 fill-black" />
-                      <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
-                      <Star className="w-4 h-4 fill-black" />
-                    </div>
-                  )}
-                  {isPopular && (
-                    <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
-                      <Flame className="w-4 h-4 fill-white text-white" />
-                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
-                      <Flame className="w-4 h-4 fill-white text-white" />
-                    </div>
-                  )}
-                  {isAd && (
-                    <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
-                      <Sparkles className="w-4 h-4 fill-white text-white" />
-                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
-                      <Sparkles className="w-4 h-4 fill-white text-white" />
-                    </div>
-                  )}
-
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
-                    className={cn(
-                      "flex-1 h-full overflow-y-auto no-scrollbar",
-                      !showComments && "touch-none"
-                    )}
+                    className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain scroll-smooth"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
                   >
                     <div 
                       className="flex flex-col"
                       onPointerDown={(e) => {
-                        if (!showComments) {
-                          const target = e.target as HTMLElement;
-                          if (!target.closest('.image-slider')) {
-                            dragControls.start(e);
-                          }
+                        const target = e.target as HTMLElement;
+                        // 이미지 슬라이더나 버튼이 아닌 곳을 잡았을 때만 카드 드래그 시작
+                        if (!target.closest('.image-slider') && !target.closest('button')) {
+                          dragControls.start(e);
                         }
                       }}
                     >
@@ -364,26 +360,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
                             <button 
-                              className="flex items-center gap-1 text-gray-700 hover:text-red-500 transition-colors group"
+                              className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors group"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onLikeToggle?.(post.id);
                               }}
                             >
-                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-                              <span className="text-[11px] font-bold text-gray-700">{post.likes}</span>
+                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+                              <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setShowComments(!showComments);
                               }}
-                              className="flex items-center gap-1 text-gray-700 hover:text-blue-500 transition-colors"
+                              className="flex items-center gap-1 text-gray-500 hover:text-blue-500 transition-colors"
                             >
                               <MessageCircle className="w-[18px] h-[18px]" />
-                              <span className="text-[11px] font-bold text-gray-700">12</span>
+                              <span className="text-[11px] font-bold text-gray-500">12</span>
                             </button>
-                            <button className="text-gray-700 hover:text-gray-600 transition-colors">
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
                               <Share2 className="w-[18px] h-[18px]" />
                             </button>
                           </div>
