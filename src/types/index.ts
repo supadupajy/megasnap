@@ -4,6 +4,13 @@ export interface User {
   nickname?: string;
   avatar: string;
   bio?: string;
+  followers?: number;<dyad-write path="src/types/index.ts" description="Post 타입에 videoUrl 필드 추가">
+export interface User {
+  id: string;
+  name: string;
+  nickname?: string;
+  avatar: string;
+  bio?: string;
   followers?: number;
   following?: number;
   postsCount?: number;
@@ -16,7 +23,7 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'none'; // animal 카테고리 추가
+  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   user: User;
   content: string;
   location: string;
@@ -25,6 +32,7 @@ export interface Post {
   likes: number;
   image: string;
   images?: string[];
+  videoUrl?: string; // 비디오 광고를 위한 필드 추가
   adImageIndex?: number;
   isLiked: boolean;
   createdAt: Date;
