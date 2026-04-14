@@ -98,12 +98,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const shouldDismissY = Math.abs(offset.y) > 150 || Math.abs(velocity.y) > 500;
 
     if (shouldDismissX || shouldDismissY) {
+      // 던져지는 방향을 더 멀리 설정하여 확실히 사라지게 함
       setExitDirection({
-        x: offset.x + velocity.x * 0.2,
-        y: offset.y + velocity.y * 0.2
+        x: offset.x + velocity.x * 0.5,
+        y: offset.y + velocity.y * 0.5
       });
       setIsDismissing(true);
-      // 여기서 바로 onClose를 호출하지 않고 AnimatePresence의 onExitComplete에서 처리합니다.
     }
   };
 
@@ -183,8 +183,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   x: exitDirection.x, 
                   y: exitDirection.y, 
                   opacity: 0, 
-                  scale: 0.5,
-                  transition: { duration: 0.4, ease: "easeOut" }
+                  scale: 0.3,
+                  transition: { duration: 0.3, ease: "easeIn" }
                 }}
                 className={cn(
                   "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing",
