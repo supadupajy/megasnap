@@ -42,7 +42,6 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
 
-  // 캐시 동기화
   useEffect(() => {
     mapCache.posts = allPosts;
   }, [allPosts]);
@@ -61,7 +60,6 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [allPosts]);
 
-  // 외부(인기 페이지 등)에서 넘어온 포스트 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
@@ -78,16 +76,14 @@ const Index = () => {
     }
   }, [location.state]);
 
-  // 지도 데이터 및 마커 관리 로직
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    // 1. 새로운 영역 포스트 생성 (타일 기반)
-    const startLat = Math.floor(sw.lat / TILE_SIZE);
-    const endLat = Math.ceil(ne.lat / TILE_SIZE);
-    const startLng = Math.floor(sw.lng / TILE_SIZE);
-    const endLng = Math.ceil(ne.lng / TILE_SIZE);
+    const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
+    const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
+    const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
+    const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
     const newPosts: Post[] = [];
     let tilesAdded = false;
@@ -100,79 +96,79 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          // 타일당 포스트 생성 수 조절
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 10));
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
         }
       }
     }
 
-    let currentAllPosts = allPosts;
-    if (tilesAdded) {
-      currentAllPosts = [...allPosts, ...newPosts];
-      setAllPosts(currentAllPosts);
-    }
+    const updatedAllPosts = tilesAdded ? [...allPosts, ...newPosts] : allPosts;
+    if (tilesAdded) setAllPosts(updatedAllPosts);
 
-    // 2. 현재 화면에 표시할 마커 필터링 및 샘플링
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 현재 화면 범위 + 시간 + 카테고리 필터링
-    const inBoundsPool = currentAllPosts.filter(post => {
+    const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
-      const isWithinTime = post.isAd || (now - new Date(post.createdAt).getTime()) <= timeLimitMs;
+      const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    // 마커 점수 계산 (우선순위 결정)
-    const getScore = (p: Post) => {
-      let score = Math.random() * 50; // 기본 랜덤성
-      if (p.isInfluencer) score += 30; 
-      if (p.borderType === 'popular') score += 20;
-      if (p.isAd) score += 15;
-      score += Math.log10(p.likes + 1) * 5;
-      return score;
-    };
+    const stillVisible = displayedMarkers.filter(p => 
+      p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
+      (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
+      (selectedCategory === 'all' || p.category === selectedCategory)
+    );
 
-    // 격자 기반 샘플링 (화면을 6x5 격자로 나누어 각 칸에서 가장 좋은 포스트 하나씩 선택)
     const ROWS = 6;
     const COLS = 5;
     const latStep = (ne.lat - sw.lat) / ROWS;
     const lngStep = (ne.lng - sw.lng) / COLS;
-    const nextMarkers: Post[] = [];
-    const usedIds = new Set<string>();
+
+    const occupiedCells = new Set();
+    stillVisible.forEach(p => {
+      const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
+      const c = Math.min(Math.floor((p.lng - sw.lng) / lngStep), COLS - 1);
+      occupiedCells.add(`${r}-${c}`);
+    });
+
+    const nextMarkers = [...stillVisible];
+    const candidates = inBoundsPool.filter(p => !nextMarkers.some(m => m.id === p.id));
+
+    const getScore = (p: Post) => {
+      let score = Math.random() * 100;
+      if (p.isInfluencer) score += 15; 
+      if (p.borderType === 'popular') score += 10;
+      if (p.isAd) score += 5;
+      score += Math.log10(p.likes + 1) * 2;
+      return score;
+    };
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
-        const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
-        
-        const cellCandidates = inBoundsPool.filter(p => 
-          !usedIds.has(p.id) &&
-          p.lat >= cellSw.lat && p.lat < cellNe.lat &&
-          p.lng >= cellSw.lng && p.lng < cellNe.lng
-        );
+        if (nextMarkers.length >= 30) break;
+        if (!occupiedCells.has(`${r}-${c}`)) {
+          const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
+          const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
+          
+          const cellCandidates = candidates.filter(p => 
+            p.lat >= cellSw.lat && p.lat < cellNe.lat &&
+            p.lng >= cellSw.lng && p.lng < cellNe.lng
+          );
 
-        if (cellCandidates.length > 0) {
-          const best = cellCandidates.sort((a, b) => getScore(b) - getScore(a))[0];
-          nextMarkers.push(best);
-          usedIds.add(best.id);
+          if (cellCandidates.length > 0) {
+            const best = cellCandidates.sort((a, b) => getScore(b) - getScore(a))[0];
+            nextMarkers.push(best);
+            occupiedCells.add(`${r}-${c}`);
+          }
         }
       }
-    }
-
-    // 마커가 너무 적으면 추가로 채움 (최대 35개)
-    if (nextMarkers.length < 20) {
-      const remaining = inBoundsPool
-        .filter(p => !usedIds.has(p.id))
-        .sort((a, b) => getScore(b) - getScore(a))
-        .slice(0, 35 - nextMarkers.length);
-      nextMarkers.push(...remaining);
+      if (nextMarkers.length >= 30) break;
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts.length]);
+  }, [mapData, timeValue, selectedCategory]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -186,27 +182,20 @@ const Index = () => {
     setDisplayedMarkers(update);
   }, []);
 
-  // 재검색 버튼 핸들러: 모든 상태 초기화 후 현재 위치에서 다시 로드
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    
-    // 캐시 및 상태 완전 초기화
     mapCache.populatedTiles.clear();
-    mapCache.posts = [];
-    setAllPosts([]);
-    setDisplayedMarkers([]);
-    
-    // 약간의 지연 후 현재 화면 기준으로 데이터 재생성 유도
-    setTimeout(() => {
-      if (mapData?.bounds) {
-        const { sw, ne } = mapData.bounds;
+    if (mapData?.bounds) {
+      const { sw, ne } = mapData.bounds;
+      setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 40);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 60);
         setAllPosts(refreshedPosts);
-      }
-      setIsRefreshing(false);
-    }, 800);
+        setDisplayedMarkers([]);
+        setIsRefreshing(false);
+      }, 600);
+    }
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
