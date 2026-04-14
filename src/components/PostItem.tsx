@@ -23,6 +23,7 @@ interface PostItemProps {
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
+  isViewed?: boolean;
   category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
   disablePulse?: boolean;
@@ -44,7 +45,8 @@ const PostItem = ({
   isLiked, 
   isAd, 
   isGif, 
-  isInfluencer, 
+  isInfluencer,
+  isViewed,
   category = 'none',
   borderType = 'none',
   disablePulse = false,
@@ -193,7 +195,10 @@ const PostItem = ({
                   <img
                     src={img}
                     alt={`post-${idx}`}
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover transition-all duration-700",
+                      isViewed && "grayscale brightness-75"
+                    )}
                     onError={handleImageError}
                   />
                   {idx === adImageIndex && (

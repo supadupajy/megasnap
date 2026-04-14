@@ -11,7 +11,7 @@ import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion } from 'framer-motion';
 
-const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible: (id: string) => void, [key: string]: any }) => {
+const ObservedPostItem = ({ post, onVisible, isViewed, ...props }: { post: Post, onVisible: (id: string) => void, isViewed: boolean, [key: string]: any }) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
-      <PostItem {...props} />
+      <PostItem {...props} isViewed={isViewed} />
     </div>
   );
 };
@@ -48,7 +48,7 @@ const PostList = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const { markAsViewed } = useViewedPosts();
+  const { viewedIds, markAsViewed } = useViewedPosts();
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const mapCenter = location.state?.center || { lat: 37.5665, lng: 126.9780 };
@@ -139,6 +139,7 @@ const PostList = () => {
                 key={post.id}
                 post={post}
                 onVisible={markAsViewed}
+                isViewed={viewedIds.has(post.id)}
                 user={post.user}
                 content={post.content}
                 location={post.location}
