@@ -43,7 +43,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 드래그 위치에 따른 실시간 투명도 및 변형
+  // 드래그 위치에 따른 실시간 투명도 및 변형 (좌우 드래그 전용)
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
   const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
@@ -96,16 +96,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 드래그로 닫기 판정 (임계값 120px 또는 빠른 속도)
+    // 1. 좌우 드래그가 더 크고 임계값을 넘으면 닫기
     if (absX > absY && (absX > 120 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsDismissing(true);
       return;
     }
 
-    // 상하 드래그로 포스트 전환
-    const threshold = 50;
-    const velThreshold = 200;
+    // 2. 상하 드래그가 더 크고 임계값을 넘으면 포스트 전환
+    const threshold = 60;
+    const velThreshold = 300;
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -145,7 +145,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
-      // 좌우 스와이프로 닫힐 때 (슬랙 스타일)
+      // 좌우 스와이프로 닫힐 때
       if (direction === 100 || direction === -100 || isDismissing) {
         return {
           x: direction === 100 ? 600 : -600,
@@ -247,10 +247,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial="enter"
                 animate="center"
                 exit="exit"
-                drag="x"
+                drag={true} // 상하좌우 모든 방향 드래그 허용
                 dragControls={dragControls}
                 dragListener={false}
-                dragConstraints={{ left: 0, right: 0 }}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }} // 모든 방향 스냅백
                 dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 style={{ 
