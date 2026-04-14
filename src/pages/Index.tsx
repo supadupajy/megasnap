@@ -10,7 +10,8 @@ import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
-import { RefreshCw, LayoutGrid, Navigation, Search } from 'lucide-react';
+import CategoryMenu from '@/components/CategoryMenu';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
@@ -25,6 +26,8 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
@@ -105,7 +108,9 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
-      return isWithinBounds && isWithinTime;
+      const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
+      
+      return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
     const influencers = inBoundsPosts
@@ -136,7 +141,7 @@ const Index = () => {
         borderType
       };
     });
-  }, [allPosts, mapData, timeValue]);
+  }, [allPosts, mapData, timeValue, selectedCategory]);
 
   const detailPosts = useMemo(() => {
     if (!selectedPostId) return filteredPosts;
@@ -214,8 +219,6 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => {
     setMapCenter({ lat: place.lat, lng: place.lng });
-    // 선택한 장소에 글쓰기 핀이 나타나도록 설정 (선택 사항)
-    // setPendingLocation({ lat: place.lat, lng: place.lng });
   };
 
   return (
@@ -253,7 +256,16 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-32 left-4 z-20 flex gap-2">
+      <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
+        <button 
+          onClick={() => setIsCategoryOpen(true)}
+          className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border",
+            selectedCategory !== 'all' ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-gray-700 border-gray-100"
+          )}
+        >
+          <Layers className="w-6 h-6" />
+        </button>
         <button 
           onClick={handleCurrentLocation}
           className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
@@ -280,6 +292,13 @@ const Index = () => {
         setPendingLocation(undefined);
         setIsWriteOpen(true);
       }} />
+
+      <CategoryMenu 
+        isOpen={isCategoryOpen}
+        selectedCategory={selectedCategory}
+        onSelect={setSelectedCategory}
+        onClose={() => setIsCategoryOpen(false)}
+      />
 
       {selectedPostId && (
         <PostDetail 
