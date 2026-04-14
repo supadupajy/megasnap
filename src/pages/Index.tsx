@@ -9,7 +9,8 @@ import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
-import { RefreshCw, LayoutGrid, Navigation } from 'lucide-react';
+import PlaceSearch from '@/components/PlaceSearch';
+import { RefreshCw, LayoutGrid, Navigation, Search } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 
@@ -23,6 +24,7 @@ const Index = () => {
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
@@ -99,7 +101,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 먼저 범위와 시간 내에 있는 포스트들을 필터링
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -107,19 +108,16 @@ const Index = () => {
       return isWithinBounds && isWithinTime;
     });
 
-    // 2. 인플루언서 포스트 제한 (최대 1개)
     const influencers = inBoundsPosts
       .filter(p => p.isInfluencer)
       .sort((a, b) => b.likes - a.likes);
     const topInfluencerId = influencers[0]?.id;
 
-    // 3. 인기(HOT) 포스트 제한 (최대 3개)
     const hotPosts = inBoundsPosts
       .filter(p => p.borderType === 'popular' && p.id !== topInfluencerId)
       .sort((a, b) => b.likes - a.likes);
     const topHotIds = new Set(hotPosts.slice(0, 3).map(p => p.id));
 
-    // 4. 최종 변환: 제한을 초과하는 특수 포스트들은 일반 포스트로 스타일 변경
     return inBoundsPosts.map(post => {
       let isInfluencer = post.isInfluencer;
       let borderType = post.borderType;
@@ -214,6 +212,12 @@ const Index = () => {
     setIsWriteOpen(true);
   };
 
+  const handlePlaceSelect = (place: any) => {
+    setMapCenter({ lat: place.lat, lng: place.lng });
+    // 선택한 장소에 글쓰기 핀이 나타나도록 설정 (선택 사항)
+    // setPendingLocation({ lat: place.lat, lng: place.lng });
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gray-50">
       <Header />
@@ -249,12 +253,18 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-32 left-4 z-20">
+      <div className="absolute bottom-32 left-4 z-20 flex gap-2">
         <button 
           onClick={handleCurrentLocation}
           className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
         >
           <Navigation className="w-6 h-6 fill-gray-700" />
+        </button>
+        <button 
+          onClick={() => setIsSearchOpen(true)}
+          className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 shadow-lg active:scale-90 transition-all border border-gray-100"
+        >
+          <Search className="w-6 h-6 text-gray-700" />
         </button>
       </div>
 
@@ -298,6 +308,11 @@ const Index = () => {
         }} 
         onPostCreated={handlePostCreated}
         initialLocation={pendingLocation}
+      />
+      <PlaceSearch 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={handlePlaceSelect} 
       />
     </div>
   );
