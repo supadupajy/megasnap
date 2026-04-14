@@ -28,6 +28,7 @@ interface PostItemProps {
   disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onClick?: () => void;
 }
 
 const PostItem = ({ 
@@ -48,7 +49,8 @@ const PostItem = ({
   borderType = 'none',
   disablePulse = false,
   onLikeToggle,
-  onLocationClick
+  onLocationClick,
+  onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -119,11 +121,14 @@ const PostItem = ({
   };
 
   return (
-    <div className={cn(
-      "bg-white mb-8 last:mb-20 transition-all duration-500",
-      isInfluencer && "animate-influencer-float",
-      isPopular && !disablePulse && "animate-hot-pulse"
-    )}>
+    <div 
+      onClick={onClick}
+      className={cn(
+        "bg-white mb-8 last:mb-20 transition-all duration-500 cursor-pointer",
+        isInfluencer && "animate-influencer-float",
+        isPopular && !disablePulse && "animate-hot-pulse"
+      )}
+    >
       <div className="flex items-center justify-between px-4 py-3">
         <div 
           className="flex items-center gap-3 cursor-pointer group"
@@ -181,7 +186,6 @@ const PostItem = ({
                     className="w-full h-full object-cover"
                     onError={handleImageError}
                   />
-                  {/* 광고 이미지일 경우 Ad 라벨 표시 */}
                   {idx === adImageIndex && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                       AD
@@ -191,7 +195,6 @@ const PostItem = ({
               ))}
             </div>
 
-            {/* Pagination Dots */}
             {displayImages.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                 {displayImages.map((_, idx) => (

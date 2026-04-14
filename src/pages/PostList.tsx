@@ -18,13 +18,16 @@ const ObservedPostItem = ({ post, onVisible, ...props }: { post: Post, onVisible
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        // 포스트가 화면의 60% 이상 노출되었을 때만 읽음 처리 (더 확실한 시청 경험)
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
           onVisible(post.id);
-          // 한 번 감지되면 감시 종료 (성능 최적화)
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.5 } // 포스트가 50% 이상 보일 때 감지
+      { 
+        threshold: [0, 0.6, 1.0],
+        rootMargin: '-10% 0px -10% 0px' // 화면 상하단 10% 영역을 제외한 중앙 영역에서만 감지
+      }
     );
 
     if (itemRef.current) {
@@ -81,7 +84,6 @@ const PostList = () => {
       <Header />
       
       <div className="pt-[88px]">
-        {/* z-index를 30으로 높여 HOT 배지(z-20)보다 위에 오도록 수정 */}
         <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">
           <button 
             onClick={() => navigate('/map')}
@@ -101,7 +103,7 @@ const PostList = () => {
               <ObservedPostItem
                 key={post.id}
                 post={post}
-                onVisible={markAsViewed} // 화면에 보이면 읽음 처리
+                onVisible={markAsViewed}
                 user={post.user}
                 content={post.content}
                 location={post.location}
@@ -119,7 +121,10 @@ const PostList = () => {
                 disablePulse={true}
                 onLikeToggle={() => handleLikeToggle(post.id)}
                 onLocationClick={handleLocationClick}
-                onClick={() => setSelectedPostId(post.id)}
+                onClick={() => {
+                  setSelectedPostId(post.id);
+                  markAsViewed(post.id); // 클릭 시에도 즉시 읽음 처리
+                }}
               />
             ))
           ) : (
