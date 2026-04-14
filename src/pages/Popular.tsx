@@ -68,6 +68,7 @@ const Popular = () => {
                 lat={post.lat}
                 lng={post.lng}
                 isLiked={post.isLiked}
+                isAd={post.isAd}
                 isGif={post.isGif}
                 isInfluencer={post.isInfluencer}
                 category={post.category}

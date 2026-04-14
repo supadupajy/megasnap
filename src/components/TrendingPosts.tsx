@@ -16,6 +16,7 @@ type Post = {
   isLiked: boolean;
   lat: number;
   lng: number;
+  isAd?: boolean;
   isInfluencer?: boolean;
   borderType?: string;
 };
@@ -204,9 +205,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-800 truncate">
-                          {post.content}
-                        </p>
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs font-bold text-gray-800 truncate">
+                            {post.content}
+                          </p>
+                          {post.isAd && (
+                            <span className="bg-blue-500 text-white text-[7px] font-black px-1 py-0.5 rounded-sm shrink-0">Ad</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
                           <div className="flex items-center gap-0.5">

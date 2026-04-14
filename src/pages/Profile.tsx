@@ -184,6 +184,7 @@ const Profile = () => {
                     image={post.image}
                     images={post.images}
                     isLiked={post.isLiked}
+                    isAd={post.isAd}
                     isGif={post.isGif}
                     isInfluencer={post.isInfluencer}
                     borderType={post.borderType}
