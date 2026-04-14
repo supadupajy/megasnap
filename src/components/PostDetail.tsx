@@ -99,20 +99,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 드래그로 닫기 (임계값 상향 조정으로 오작동 방지)
     if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 600)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    // 상하 드래그로 포스트 전환
     const threshold = 60;
     const velThreshold = 300;
 
     if (absY > absX) {
-      // 스크롤이 맨 위일 때만 위로 드래그해서 이전 포스트로 이동 가능하게 하거나,
-      // 드래그 속도가 빠를 때 전환
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
           setDirection(1);
@@ -127,7 +123,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  // 더 부드러운 스프링 설정
   const smoothSpring = { type: "spring", damping: 30, stiffness: 300, mass: 0.8 };
 
   const variants = {
@@ -296,7 +291,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                 )}
 
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
+                <div className={cn(
+                  "flex-1 h-full overflow-hidden flex flex-col relative rounded-[36px]",
+                  isAd ? "bg-blue-500" : "bg-white"
+                )}>
                   <div 
                     key={`scroll-container-${post.id}`}
                     ref={scrollContainerRef} 
@@ -307,13 +305,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       className="flex flex-col"
                       onPointerDown={(e) => {
                         const target = e.target as HTMLElement;
-                        // 이미지 슬라이더나 버튼이 아닌 곳을 잡았을 때만 카드 드래그 시작
                         if (!target.closest('.image-slider') && !target.closest('button')) {
                           dragControls.start(e);
                         }
                       }}
                     >
-                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
+                      <div className="aspect-square w-full bg-transparent relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
@@ -355,7 +352,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
-                      <div className="px-4 py-4 sm:px-5 sm:py-5 relative">
+                      <div className={cn(
+                        "px-4 py-4 sm:px-5 sm:py-5 relative",
+                        isAd ? "bg-white" : ""
+                      )}>
                         {/* Action Bar */}
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
