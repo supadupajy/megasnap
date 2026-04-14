@@ -106,17 +106,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 가로 드래그로 닫기
-    if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 600)) {
+    // 좌우 드래그로 닫기 (임계값 100px 또는 빠른 속도)
+    if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
+      setTimeout(onClose, 50); // 애니메이션 시작 후 닫기 호출
       return;
     }
 
     const threshold = 50;
     const velThreshold = 200;
 
-    // 세로 드래그로 포스트 전환
+    // 상하 드래그로 포스트 전환
     if (absY > absX) {
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
@@ -157,14 +158,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
-      if (isClosing) return { opacity: 0, scale: 0.95, transition: { duration: 0.2 } };
+      // 좌우 스와이프로 닫힐 때의 애니메이션 (서서히 사라짐)
+      if (direction === 100 || direction === -100 || isClosing) {
+        return {
+          x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
+          opacity: 0,
+          scale: 0.9,
+          transition: { duration: 0.3, ease: "easeOut" }
+        };
+      }
+      // 상하 스크롤로 전환될 때의 애니메이션
       return {
         y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
-        x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
         opacity: 0,
         transition: {
           y: smoothSpring,
-          x: { duration: 0.3 },
           opacity: { duration: 0.2 }
         }
       };
@@ -238,7 +246,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.4}
+              dragElastic={0.6}
               onDragEnd={handleDragEnd}
               className={cn(
                 "relative w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]",
