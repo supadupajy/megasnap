@@ -129,7 +129,7 @@ const PostItem = ({
     <div 
       onClick={onClick}
       className={cn(
-        "bg-white mb-8 last:mb-20 transition-all duration-500 cursor-pointer",
+        "bg-white mb-2 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
         isInfluencer && "animate-influencer-float",
         isPopular && !disablePulse && "animate-hot-pulse"
       )}
@@ -244,8 +244,8 @@ const PostItem = ({
         </div>
       </div>
 
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between mb-3">
+      <div className="px-4 pt-3 pb-4">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
             <button 
               className="transition-transform active:scale-125" 
@@ -278,7 +278,7 @@ const PostItem = ({
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <p className="text-sm font-bold text-gray-500">좋아요 {likes.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
             <div className="flex items-center gap-1.5 shrink-0">
