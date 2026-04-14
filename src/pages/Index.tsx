@@ -133,7 +133,9 @@ const Index = () => {
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
-      const isWithinTime = (now - post.createdAt.getTime()) <= timeLimitMs;
+      
+      // 광고(isAd)는 시간 필터링을 무시하고 항상 표시
+      const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
       
       return isWithinBounds && isWithinTime && isWithinCategory;
