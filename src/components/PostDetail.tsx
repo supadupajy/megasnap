@@ -110,7 +110,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 500)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
-      setTimeout(onClose, 50); // 애니메이션 시작 후 닫기 호출
+      // 애니메이션이 충분히 보여질 수 있도록 지연 시간을 늘림
+      setTimeout(onClose, 400); 
       return;
     }
 
@@ -150,6 +151,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       x: 0,
       opacity: 1,
       scale: 1,
+      rotate: 0,
       transition: {
         y: smoothSpring,
         x: smoothSpring,
@@ -158,13 +160,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
-      // 좌우 스와이프로 닫힐 때의 애니메이션 (서서히 사라짐)
+      // 좌우 스와이프로 닫힐 때의 애니메이션 (서서히 사라짐 강조)
       if (direction === 100 || direction === -100 || isClosing) {
         return {
-          x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
-          opacity: 0,
-          scale: 0.9,
-          transition: { duration: 0.3, ease: "easeOut" }
+          x: direction === 100 ? 300 : -300, // 더 멀리 밀려남
+          opacity: 0, // 투명도 0으로 서서히 사라짐
+          scale: 0.8, // 크기가 작아짐
+          rotate: direction === 100 ? 15 : -15, // 살짝 기울어짐
+          transition: { duration: 0.4, ease: "easeOut" }
         };
       }
       // 상하 스크롤로 전환될 때의 애니메이션
