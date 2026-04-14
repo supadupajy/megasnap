@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.megasnap',
-  appName: 'megasnap',
+  appId: 'com.example.chorasnap',
+  appName: 'Chorasnap',
   webDir: 'dist'
 };
 

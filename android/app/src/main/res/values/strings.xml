@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">megasnap</string>
-    <string name="title_activity_main">megasnap</string>
-    <string name="package_name">com.example.megasnap</string>
-    <string name="custom_url_scheme">com.example.megasnap</string>
+    <string name="app_name">Chorasnap</string>
+    <string name="title_activity_main">Chorasnap</string>
+    <string name="package_name">com.example.chorasnap</string>
+    <string name="custom_url_scheme">com.example.chorasnap</string>
 </resources>

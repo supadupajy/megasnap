@@ -15,7 +15,7 @@ const Header = () => {
         className="text-xl font-bold text-indigo-600 tracking-tight cursor-pointer"
         onClick={() => navigate('/')}
       >
-        MegaSnap
+        ChoraSnap
       </h1>
       <div className="flex items-center gap-4">
         <button 
