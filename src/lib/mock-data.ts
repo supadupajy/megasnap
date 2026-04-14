@@ -1,18 +1,18 @@
 import { Post, User } from '@/types';
 
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1599412227383-b7d4751c8765?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1617113931036-f3039093094b?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1578491252704-0696f696e981?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e?auto=format&fit=crop&w=800&q=80", // 파손된 차량
+  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80", // 사고 현장
+  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1?auto=format&fit=crop&w=800&q=80", // 도로 사고
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"  // 경찰차와 사고 차량
 ];
 
 const FIRE_IMAGES = [
-  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80", // 화재 현장 연기
+  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80", // 소방차 출동
+  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80", // 건물 화재
+  "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80", // 소방관 작업
+  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"  // 화재 진압
 ];
 
 const AD_FOOD_IMAGES = [
