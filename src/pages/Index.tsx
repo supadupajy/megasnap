@@ -24,6 +24,7 @@ const Index = () => {
   const navigate = useNavigate();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   
@@ -59,6 +60,7 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [allPosts]);
 
+  // 초기 위치 및 전달받은 포스트 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
@@ -75,46 +77,42 @@ const Index = () => {
     }
   }, [location.state]);
 
+  // 지도 이동 시 새로운 데이터 생성 및 마커 업데이트
   useEffect(() => {
-    if (mapData?.bounds) {
-      const { sw, ne } = mapData.bounds;
-      
-      const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
-      const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
-      const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
-      const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
+    if (!mapData?.bounds) return;
+    const { sw, ne } = mapData.bounds;
+    
+    // 1. 새로운 타일 데이터 생성
+    const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
+    const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
+    const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
+    const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
-      const newPosts: Post[] = [];
-      let tilesAdded = false;
+    const newPosts: Post[] = [];
+    let tilesAdded = false;
 
-      for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
-        for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
-          const tileKey = `${latIdx},${lngIdx}`;
-          if (!mapCache.populatedTiles.has(tileKey)) {
-            mapCache.populatedTiles.add(tileKey);
-            tilesAdded = true;
-            
-            const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
-            const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-            const tilePosts = createMockPosts(tileCenterLat, tileCenterLng, 8);
-            newPosts.push(...tilePosts);
-          }
+    for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
+      for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
+        const tileKey = `${latIdx},${lngIdx}`;
+        if (!mapCache.populatedTiles.has(tileKey)) {
+          mapCache.populatedTiles.add(tileKey);
+          tilesAdded = true;
+          const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
+          const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
         }
       }
-
-      if (tilesAdded) {
-        setAllPosts(prev => [...prev, ...newPosts]);
-      }
     }
-  }, [mapData]);
 
-  const filteredPosts = useMemo(() => {
-    if (!mapData?.bounds) return [];
-    const { sw, ne } = mapData.bounds;
+    const updatedAllPosts = tilesAdded ? [...allPosts, ...newPosts] : allPosts;
+    if (tilesAdded) setAllPosts(updatedAllPosts);
+
+    // 2. 마커 업데이트 로직 (30개 제한 및 연속성 유지)
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-    
-    const inBoundsPosts = allPosts.filter(post => {
+
+    // 현재 화면에 있고 필터에 맞는 포스트들
+    const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -122,49 +120,75 @@ const Index = () => {
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    if (inBoundsPosts.length === 0) return [];
+    // 기존 마커 중 여전히 화면 안에 있는 것들 유지
+    const stillVisible = displayedMarkers.filter(p => 
+      p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
+      (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
+      (selectedCategory === 'all' || p.category === selectedCategory)
+    );
 
+    // 그리드 기반으로 부족한 마커 채우기
     const ROWS = 6;
     const COLS = 5;
     const latStep = (ne.lat - sw.lat) / ROWS;
     const lngStep = (ne.lng - sw.lng) / COLS;
 
-    const grid = new Map<string, Post>();
-
-    inBoundsPosts.forEach(post => {
-      const row = Math.min(Math.floor((post.lat - sw.lat) / latStep), ROWS - 1);
-      const col = Math.min(Math.floor((post.lng - sw.lng) / lngStep), COLS - 1);
-      const key = `${row}-${col}`;
-
-      const existing = grid.get(key);
-      if (!existing) {
-        grid.set(key, post);
-      } else {
-        const getScore = (p: Post) => {
-          let score = p.likes;
-          if (p.isInfluencer) score += 1000000;
-          if (p.borderType === 'popular') score += 500000;
-          if (p.isAd) score += 100000;
-          return score;
-        };
-
-        if (getScore(post) > getScore(existing)) {
-          grid.set(key, post);
-        }
-      }
+    const occupiedCells = new Set();
+    stillVisible.forEach(p => {
+      const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
+      const c = Math.min(Math.floor((p.lng - sw.lng) / lngStep), COLS - 1);
+      occupiedCells.add(`${r}-${c}`);
     });
 
-    return Array.from(grid.values());
-  }, [allPosts, mapData, timeValue, selectedCategory]);
+    const nextMarkers = [...stillVisible];
+    
+    // 빈 그리드 칸을 채울 후보들 (이미 표시 중인 것 제외)
+    const candidates = inBoundsPool.filter(p => !nextMarkers.some(m => m.id === p.id));
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (nextMarkers.length >= 30) break;
+        if (!occupiedCells.has(`${r}-${c}`)) {
+          const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
+          const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
+          
+          const cellCandidates = candidates.filter(p => 
+            p.lat >= cellSw.lat && p.lat < cellNe.lat &&
+            p.lng >= cellSw.lng && p.lng < cellNe.lng
+          );
+
+          if (cellCandidates.length > 0) {
+            const best = cellCandidates.sort((a, b) => {
+              const getScore = (p: Post) => {
+                let score = p.likes;
+                if (p.isInfluencer) score += 1000000;
+                if (p.borderType === 'popular') score += 500000;
+                if (p.isAd) score += 100000;
+                return score;
+              };
+              return getScore(b) - getScore(a);
+            })[0];
+            nextMarkers.push(best);
+            occupiedCells.add(`${r}-${c}`);
+          }
+        }
+      }
+      if (nextMarkers.length >= 30) break;
+    }
+
+    setDisplayedMarkers(nextMarkers);
+  }, [mapData, timeValue, selectedCategory]);
 
   const handleLikeToggle = useCallback((postId: string) => {
-    setAllPosts(prev => prev.map(post => {
+    const update = (prev: Post[]) => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
         return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
-    }));
+    });
+    setAllPosts(update);
+    setDisplayedMarkers(update);
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -177,6 +201,7 @@ const Index = () => {
         const centerLng = (ne.lng + sw.lng) / 2;
         const refreshedPosts = createMockPosts(centerLat, centerLng, 60);
         setAllPosts(refreshedPosts);
+        setDisplayedMarkers([]); // 새로고침 시 마커 재배치 유도
         setIsRefreshing(false);
       }, 600);
     }
@@ -198,10 +223,10 @@ const Index = () => {
   };
 
   const handleViewAllClick = () => {
-    if (filteredPosts.length > 0) {
+    if (displayedMarkers.length > 0) {
       navigate('/post-list', { 
         state: { 
-          posts: filteredPosts,
+          posts: displayedMarkers,
           center: mapCenter || { lat: 37.5665, lng: 126.9780 }
         } 
       });
@@ -216,7 +241,7 @@ const Index = () => {
     >
       <div className="absolute inset-0 z-0">
         <MapContainer 
-          posts={filteredPosts}
+          posts={displayedMarkers}
           viewedPostIds={viewedIds}
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
@@ -246,7 +271,7 @@ const Index = () => {
               <span>재검색</span>
             </button>
             <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
-              <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{filteredPosts.length}</span></p>
+              <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{displayedMarkers.length}</span></p>
             </div>
           </div>
         </div>
@@ -278,7 +303,7 @@ const Index = () => {
         <div className="absolute bottom-32 right-4 z-20">
           <button 
             onClick={handleViewAllClick} 
-            disabled={filteredPosts.length === 0} 
+            disabled={displayedMarkers.length === 0} 
             className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50"
           >
             <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
@@ -298,8 +323,8 @@ const Index = () => {
 
       {selectedPostId && (
         <PostDetail 
-          posts={filteredPosts} 
-          initialIndex={filteredPosts.findIndex(p => p.id === selectedPostId)}
+          posts={displayedMarkers} 
+          initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
           isOpen={true} 
           onClose={() => setSelectedPostId(null)} 
           onViewPost={markAsViewed}
