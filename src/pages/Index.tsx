@@ -114,7 +114,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 1. 현재 화면 및 필터 조건에 맞는 모든 포스트 추출
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -125,7 +124,6 @@ const Index = () => {
 
     if (inBoundsPosts.length === 0) return [];
 
-    // 2. 화면을 6x5 그리드(총 30칸)로 나누어 각 칸에서 가장 좋은 포스트 하나씩 선택
     const ROWS = 6;
     const COLS = 5;
     const latStep = (ne.lat - sw.lat) / ROWS;
@@ -142,7 +140,6 @@ const Index = () => {
       if (!existing) {
         grid.set(key, post);
       } else {
-        // 우선순위: 인플루언서 > 인기글 > 광고 > 좋아요 순
         const getScore = (p: Post) => {
           let score = p.likes;
           if (p.isInfluencer) score += 1000000;
@@ -213,10 +210,8 @@ const Index = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 1, x: 0 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
       className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
       <div className="absolute inset-0 z-0">
@@ -247,7 +242,7 @@ const Index = () => {
           </div>
           <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
             <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-90 transition-all">
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")} />
               <span>재검색</span>
             </button>
             <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
@@ -331,7 +326,7 @@ const Index = () => {
         initialLocation={pendingLocation}
         onPostCreated={(newPost) => setAllPosts(prev => [newPost, ...prev])}
       />
-    </div>
+    </motion.div>
   );
 };
 
