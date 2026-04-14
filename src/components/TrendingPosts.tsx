@@ -16,6 +16,8 @@ type Post = {
   isLiked: boolean;
   lat: number;
   lng: number;
+  isInfluencer?: boolean;
+  borderType?: string;
 };
 
 interface TrendingPostsProps {
@@ -67,9 +69,18 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   if (displayPosts.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto w-full" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className={cn(
+        "pointer-events-auto w-full transition-all duration-300",
+        isExpanded ? "z-[100] relative" : "z-10"
+      )} 
+      onClick={(e) => e.stopPropagation()}
+    >
       <div 
-        className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-100 overflow-hidden rounded-[22px]"
+        className={cn(
+          "bg-white/90 backdrop-blur-md shadow-2xl border border-gray-100 overflow-hidden rounded-[22px] transition-all duration-300",
+          isExpanded ? "ring-1 ring-black/5" : ""
+        )}
       >
         {/* Header: Always visible */}
         <div 
@@ -132,7 +143,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="overflow-hidden border-t border-gray-50"
             >
-              <div className="max-h-[400px] overflow-y-auto no-scrollbar overscroll-contain p-2 space-y-1">
+              <div className="max-h-[450px] overflow-y-auto no-scrollbar overscroll-contain p-2 space-y-1">
                 {/* AD Banner */}
                 <div className="relative h-[112px] w-full rounded-xl overflow-hidden mb-2 group cursor-pointer">
                   <img 
@@ -155,33 +166,57 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   </div>
                 </div>
 
-                {displayPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-                    onClick={(e) => handleItemClick(e, post)}
-                  >
-                    <span
-                      className={cn(
-                        "text-sm font-black italic w-4 shrink-0",
-                        post.rank <= 3 ? "text-indigo-600" : "text-gray-300",
-                      )}
+                {displayPosts.map((post) => {
+                  const isInfluencer = post.isInfluencer;
+                  const isPopular = post.rank <= 3 || post.borderType === 'popular';
+                  
+                  return (
+                    <div
+                      key={post.id}
+                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group"
+                      onClick={(e) => handleItemClick(e, post)}
                     >
-                      {post.rank}
-                    </span>
-                    <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                      <img
-                        src={post.image}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={handleImageError}
-                      />
+                      <span
+                        className={cn(
+                          "text-sm font-black italic w-4 shrink-0 transition-colors",
+                          post.rank <= 3 ? "text-indigo-600" : "text-gray-300 group-hover:text-gray-400",
+                        )}
+                      >
+                        {post.rank}
+                      </span>
+                      
+                      <div className={cn(
+                        "w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 relative",
+                        isInfluencer ? "influencer-border-container p-[2px]" : (isPopular ? "popular-border-container p-[2px]" : "bg-gray-100")
+                      )}>
+                        <div className={cn(
+                          "w-full h-full rounded-[9px] overflow-hidden relative bg-white",
+                          isInfluencer && "shine-overlay"
+                        )}>
+                          <img
+                            src={post.image}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={handleImageError}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 truncate">
+                          {post.content}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
+                          <div className="flex items-center gap-0.5">
+                            <Flame className={cn("w-2.5 h-2.5", isPopular ? "text-red-500 fill-red-500" : "text-gray-300")} />
+                            <span className="text-[9px] font-bold text-gray-400">{post.likes}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs font-bold text-gray-800 truncate flex-1">
-                      {post.content}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           )}
