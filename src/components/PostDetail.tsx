@@ -8,7 +8,7 @@ import {
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface PostDetailProps {
@@ -41,13 +41,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const dragControls = useDragControls();
 
-  // 드래그 위치에 따른 실시간 변형
+  // 드래그 위치에 따른 실시간 변형 (좌우 드래그 시 시각 효과용)
   const dragX = useMotionValue(0);
-  const dragY = useMotionValue(0);
-  
-  // 좌우 드래그 시에만 투명도와 회전 적용 (닫기 제스처)
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
   const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
   const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
@@ -66,8 +62,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setIsDismissing(false);
       setShowComments(false);
       setCurrentImageIndex(0);
-      dragX.set(0); 
-      dragY.set(0);
+      dragX.set(0);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -100,26 +95,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    const swipeThreshold = 80;
-    const velocityThreshold = 400;
+    const threshold = 80;
+    const velocityThreshold = 300;
 
-    // 1. 좌우 드래그가 지배적일 때 -> 닫기 (Dismiss)
+    // 1. 좌우 드래그가 지배적일 때 -> 닫기
     if (absX > absY) {
-      if (absX > 120 || Math.abs(velocity.x) > velocityThreshold) {
+      if (absX > 120 || Math.abs(velocity.x) > 500) {
         setDirection(offset.x > 0 ? 100 : -100);
         setIsDismissing(true);
         return;
       }
     } 
-    // 2. 상하 드래그가 지배적일 때 -> 포스트 전환 (Switch)
+    // 2. 상하 드래그가 지배적일 때 -> 포스트 전환
     else {
-      if (absY > swipeThreshold || Math.abs(velocity.y) > velocityThreshold) {
+      if (absY > threshold || Math.abs(velocity.y) > velocityThreshold) {
         if (offset.y < 0 && currentIndex < posts.length - 1) {
-          // 위로 스와이프 -> 다음 포스트
           setDirection(1);
           setCurrentIndex(prev => prev + 1);
         } else if (offset.y > 0 && currentIndex > 0) {
-          // 아래로 스와이프 -> 이전 포스트
           setDirection(-1);
           setCurrentIndex(prev => prev - 1);
         }
@@ -132,7 +125,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const variants = {
     enter: (direction: number) => {
       if (direction === 0) return { opacity: 0, scale: 0.9, y: 20 };
-      // 상하 전환 시 진입 위치
       if (direction === 1) return { y: "100%", opacity: 0 };
       if (direction === -1) return { y: "-100%", opacity: 0 };
       return { opacity: 0 };
@@ -145,7 +137,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       rotate: 0,
       transition: {
         y: smoothSpring,
-        x: smoothSpring,
         opacity: { duration: 0.2 },
         scale: { duration: 0.3 }
       }
@@ -161,7 +152,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
         };
       }
-      // 상하 스크롤로 전환될 때 나가는 애니메이션
+      // 상하 스크롤로 전환될 때
       if (direction === 1) return { y: "-100%", opacity: 0, transition: { y: smoothSpring } };
       if (direction === -1) return { y: "100%", opacity: 0, transition: { y: smoothSpring } };
       return { opacity: 0 };
@@ -248,15 +239,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial="enter"
                 animate="center"
                 exit="exit"
-                drag={true} // 상하좌우 모든 방향 드래그 허용
-                dragControls={dragControls}
-                dragListener={false}
-                dragConstraints={{ left: 0, right: 0 }} // 상하 제약을 풀어 전환이 자유롭게 함
+                drag={true}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 style={{ 
                   x: dragX,
-                  y: dragY,
                   opacity: dragOpacity,
                   scale: dragScale,
                   rotate: dragRotate,
@@ -298,25 +286,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
                   >
-                    <div 
-                      className="flex flex-col"
-                      onPointerDown={(e) => {
-                        const target = e.target as HTMLElement;
-                        // 이미지 슬라이더 내부에서도 상하 드래그는 허용하도록 처리
-                        if (!target.closest('button')) {
-                          dragControls.start(e);
-                        }
-                      }}
-                    >
+                    <div className="flex flex-col">
                       {/* Image Slider */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
                           onScroll={handleImageScroll}
-                          onPointerDown={(e) => {
-                            // 이미지 슬라이더 내부에서 좌우 스크롤 시에는 드래그 컨트롤을 막아 이미지 전환이 우선되게 함
-                            e.stopPropagation();
-                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
                           className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                         >
                           {images.map((img: string, idx: number) => (
@@ -415,9 +391,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
-                  <div onPointerDown={(e) => dragControls.start(e)} className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 cursor-grab active:cursor-grabbing touch-none z-10">
+                  <div className="h-16 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md border-t border-gray-100 shrink-0 touch-none z-10">
                     <Move className="w-4 h-4 text-gray-300 mb-1 animate-pulse" />
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">MOVE TO SWIPE</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">SWIPE TO NAVIGATE</p>
                   </div>
                 </div>
               </motion.div>
