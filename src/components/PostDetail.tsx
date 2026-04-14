@@ -53,7 +53,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
-      setDirection(0); // 초기 오픈 시 방향을 0으로 고정
+      setDirection(0); // 초기 진입 시 방향을 0으로 강제 고정
       setShowComments(false);
       setCurrentImageIndex(0);
     }
@@ -127,16 +127,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const variants = {
     enter: (direction: number) => {
-      // 마커 클릭 시 (direction === 0): 위치 이동 없이 제자리에서 페이드&스케일
+      // 마커 클릭 시 (direction === 0): 위치 이동(x, y)을 아예 배제
       if (direction === 0) {
         return {
           opacity: 0,
           scale: 0.95,
-          y: 0,
           x: 0,
+          y: 0
         };
       }
-      // 상하 스와이프 시: 방향에 따라 위/아래에서 등장
+      // 상하 스와이프 시에만 위치 이동 적용
       return {
         y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
         x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
@@ -152,27 +152,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       transition: {
         y: smoothSpring,
         x: smoothSpring,
-        opacity: { duration: 0.35 },
-        scale: { duration: 0.4, ease: [0.23, 1, 0.32, 1] } // 부드러운 가속도
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.4, ease: [0.23, 1, 0.32, 1] }
       }
     },
     exit: (direction: number) => {
-      // 닫힐 때: 제자리에서 작아지며 사라짐
       if (isClosing) {
         return {
           opacity: 0,
           scale: 0.95,
-          transition: { duration: 0.25, ease: "easeIn" }
+          transition: { duration: 0.2 }
         };
       }
-      // 스와이프 전환 시: 반대 방향으로 퇴장
       return {
         y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
         x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
         opacity: 0,
         transition: {
           y: smoothSpring,
-          x: { duration: 0.3, ease: "easeInOut" },
+          x: { duration: 0.3 },
           opacity: { duration: 0.2 }
         }
       };
@@ -226,12 +224,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-visible translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none focus:ring-0"
       >
-        {/* Radix UI의 기본 애니메이션을 완전히 무력화하는 스타일 태그 */}
         <style>{`
           [data-radix-portal] div[data-state] {
             animation: none !important;
             background-color: transparent !important;
             backdrop-filter: none !important;
+          }
+          [data-radix-portal] div[data-state="open"] {
+            animation: none !important;
           }
         `}</style>
         
@@ -261,7 +261,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+          <AnimatePresence initial={true} custom={direction} onExitComplete={() => {
             if (isClosing) onClose();
           }}>
             {!isClosing && (
