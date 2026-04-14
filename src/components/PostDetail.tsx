@@ -15,7 +15,7 @@ interface PostDetailProps {
   posts: any[];
   initialIndex: number;
   isOpen: boolean;
-  onClose: () => void;
+  onClose: void;
   onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
   onLocationClick?: (lat: number, lng: number) => void;
@@ -364,26 +364,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div className="flex items-center justify-between mb-5">
                           <div className="flex items-center gap-3.5">
                             <button 
-                              className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors group"
+                              className="flex items-center gap-1 text-gray-700 hover:text-red-500 transition-colors group"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onLikeToggle?.(post.id);
                               }}
                             >
-                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
-                              <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
+                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+                              <span className="text-[11px] font-bold text-gray-700">{post.likes}</span>
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setShowComments(!showComments);
                               }}
-                              className="flex items-center gap-1 text-gray-500 hover:text-blue-500 transition-colors"
+                              className="flex items-center gap-1 text-gray-700 hover:text-blue-500 transition-colors"
                             >
                               <MessageCircle className="w-[18px] h-[18px]" />
-                              <span className="text-[11px] font-bold text-gray-500">12</span>
+                              <span className="text-[11px] font-bold text-gray-700">12</span>
                             </button>
-                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                            <button className="text-gray-700 hover:text-gray-600 transition-colors">
                               <Share2 className="w-[18px] h-[18px]" />
                             </button>
                           </div>

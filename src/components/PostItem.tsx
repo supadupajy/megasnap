@@ -239,7 +239,7 @@ const PostItem = ({
                 onLikeToggle?.(e);
               }}
             >
-              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400')} />
+              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
             <button onClick={(e) => e.stopPropagation()}>
               <MessageCircle className="w-6 h-6 text-gray-700" />
