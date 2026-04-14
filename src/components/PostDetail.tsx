@@ -53,7 +53,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
-      setDirection(0);
+      setDirection(0); // 초기 오픈 시 방향을 0으로 설정
       setShowComments(false);
       setCurrentImageIndex(0);
     }
@@ -99,20 +99,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 드래그로 닫기 (임계값 상향 조정으로 오작동 방지)
     if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 600)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
       return;
     }
 
-    // 상하 드래그로 포스트 전환
     const threshold = 60;
     const velThreshold = 300;
 
     if (absY > absX) {
-      // 스크롤이 맨 위일 때만 위로 드래그해서 이전 포스트로 이동 가능하게 하거나,
-      // 드래그 속도가 빠를 때 전환
       if (offset.y < -threshold || velocity.y < -velThreshold) {
         if (currentIndex < posts.length - 1) {
           setDirection(1);
@@ -127,16 +123,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
   };
 
-  // 더 부드러운 스프링 설정
   const smoothSpring = { type: "spring", damping: 30, stiffness: 300, mass: 0.8 };
 
   const variants = {
-    enter: (direction: number) => ({
-      y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
-      x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
-      opacity: 0,
-      scale: 0.98,
-    }),
+    enter: (direction: number) => {
+      // 마커 클릭으로 처음 나타날 때 (direction === 0)
+      if (direction === 0) {
+        return {
+          opacity: 0,
+          scale: 0.92,
+          y: 0,
+          x: 0,
+        };
+      }
+      // 스와이프로 전환될 때
+      return {
+        y: (direction === 1 || direction === -1) ? (direction > 0 ? "100%" : "-100%") : 0,
+        x: (direction === 100 || direction === -100) ? (direction > 0 ? "100%" : "-100%") : 0,
+        opacity: 0,
+        scale: 1,
+      };
+    },
     center: {
       y: 0,
       x: 0,
@@ -145,21 +152,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       transition: {
         y: smoothSpring,
         x: smoothSpring,
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.3 }
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.4, ease: "easeOut" }
       }
     },
-    exit: (direction: number) => ({
-      y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
-      x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
-      opacity: 0,
-      scale: 0.98,
-      transition: {
-        y: smoothSpring,
-        x: { duration: 0.3, ease: "easeInOut" },
-        opacity: { duration: 0.2 }
+    exit: (direction: number) => {
+      // 닫힐 때
+      if (isClosing) {
+        return {
+          opacity: 0,
+          scale: 0.92,
+          transition: { duration: 0.2, ease: "easeIn" }
+        };
       }
-    })
+      // 스와이프로 전환될 때
+      return {
+        y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
+        x: direction === 100 ? "100%" : direction === -100 ? "-100%" : 0,
+        opacity: 0,
+        transition: {
+          y: smoothSpring,
+          x: { duration: 0.3, ease: "easeInOut" },
+          opacity: { duration: 0.2 }
+        }
+      };
+    }
   };
 
   const renderCategoryBadge = () => {
@@ -242,7 +259,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
 
         <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-          <AnimatePresence initial={false} custom={direction} onExitComplete={() => {
+          <AnimatePresence initial={true} custom={direction} onExitComplete={() => {
             if (isClosing) onClose();
           }}>
             {!isClosing && (
@@ -307,7 +324,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       className="flex flex-col"
                       onPointerDown={(e) => {
                         const target = e.target as HTMLElement;
-                        // 이미지 슬라이더나 버튼이 아닌 곳을 잡았을 때만 카드 드래그 시작
                         if (!target.closest('.image-slider') && !target.closest('button')) {
                           dragControls.start(e);
                         }
