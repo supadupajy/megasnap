@@ -35,6 +35,47 @@ const Index = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isRefreshing, setIsRefreshing] = useState(false
+줌아웃 시 인플루언서 게시물만 도배되지 않도록 마커 선택 알고리즘을 개선한 `src/pages/Index.tsx` 전체 코드입니다.
+
+<dyad-write path="src/pages/Index.tsx" description="줌아웃 시 게시물 유형별 균형 잡힌 노출을 위한 알고리즘 고도화">
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
+import TrendingPosts from '@/components/TrendingPosts';
+import PostDetail from '@/components/PostDetail';
+import WritePost from '@/components/WritePost';
+import TimeSlider from '@/components/TimeSlider';
+import PlaceSearch from '@/components/PlaceSearch';
+import CategoryMenu from '@/components/CategoryMenu';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { createMockPosts } from '@/lib/mock-data';
+import { Post } from '@/types';
+import { cn } from '@/lib/utils';
+import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { mapCache } from '@/utils/map-cache';
+import { motion } from 'framer-motion';
+
+const Index = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
+  const [mapData, setMapData] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  
+  const { viewedIds, markAsViewed } = useViewedPosts();
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -138,16 +179,16 @@ const Index = () => {
 
     // 게시물 선택 점수 계산 로직 개선 (다양성 확보)
     const getScore = (p: Post) => {
-      // 기본 점수는 좋아요 수 (로그 스케일로 극단적 차이 완화)
-      let score = Math.log10(p.likes + 1) * 20;
+      // 무작위성을 가장 큰 요인으로 설정 (0-100)
+      let score = Math.random() * 100;
       
-      // 가중치를 대폭 하향 조정하여 일반 게시물도 노출될 수 있게 함
-      if (p.isInfluencer) score += 40; 
-      if (p.borderType === 'popular') score += 30;
-      if (p.isAd) score += 25;
+      // 특수 유형에 대한 가중치를 대폭 축소하여 일반 게시물과 경쟁 가능하게 함
+      if (p.isInfluencer) score += 15; 
+      if (p.borderType === 'popular') score += 10;
+      if (p.isAd) score += 5;
       
-      // 무작위성을 추가하여 줌아웃 시 매번 다른 게시물이 섞여 나오도록 유도
-      score += Math.random() * 30;
+      // 좋아요 수에 따른 가중치도 최소화
+      score += Math.log10(p.likes + 1) * 2;
       
       return score;
     };
@@ -165,6 +206,7 @@ const Index = () => {
           );
 
           if (cellCandidates.length > 0) {
+            // 해당 셀 내에서 가장 높은 점수를 가진 게시물 선택
             const best = cellCandidates.sort((a, b) => getScore(b) - getScore(a))[0];
             nextMarkers.push(best);
             occupiedCells.add(`${r}-${c}`);
