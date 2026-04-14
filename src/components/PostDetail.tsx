@@ -46,7 +46,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
   
-  // 좌우 드래그 시에만 투명도와 회전 적용 (닫기 제스처 시각 효과)
+  // 좌우 드래그 시 시각 효과
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
   const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
   const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
@@ -99,7 +99,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    const swipeThreshold = 50; // 더 민감하게 반응하도록 조정
+    const swipeThreshold = 50;
     const velocityThreshold = 300;
 
     // 1. 좌우 드래그가 지배적일 때 -> 닫기
@@ -112,25 +112,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     // 2. 상하 드래그가 지배적일 때 -> 포스트 전환
     if (absY > swipeThreshold || Math.abs(velocity.y) > velocityThreshold) {
       if (offset.y < 0 && currentIndex < posts.length - 1) {
-        // 위로 스와이프 (다음 포스트)
-        setDirection(1);
+        setDirection(1); // 위로 밀기 -> 다음 포스트
         setCurrentIndex(prev => prev + 1);
       } else if (offset.y > 0 && currentIndex > 0) {
-        // 아래로 스와이프 (이전 포스트)
-        setDirection(-1);
+        setDirection(-1); // 아래로 밀기 -> 이전 포스트
         setCurrentIndex(prev => prev - 1);
       }
     }
   };
 
-  const smoothSpring = { type: "spring", damping: 30, stiffness: 300, mass: 1 };
+  const smoothSpring = { type: "spring", damping: 35, stiffness: 300, mass: 1 };
 
   const variants = {
     enter: (direction: number) => {
       if (direction === 0) return { opacity: 0, scale: 0.9, y: 20 };
-      if (direction === 1) return { y: "100%", opacity: 0 }; // 다음 포스트는 아래에서
-      if (direction === -1) return { y: "-100%", opacity: 0 }; // 이전 포스트는 위에서
-      return { opacity: 0 };
+      return {
+        y: direction > 0 ? "100%" : "-100%",
+        opacity: 0,
+        scale: 1
+      };
     },
     center: {
       y: 0,
@@ -157,9 +157,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         };
       }
       // 상하 스크롤로 전환될 때
-      if (direction === 1) return { y: "-100%", opacity: 0, transition: { y: smoothSpring } }; // 현재 포스트 위로
-      if (direction === -1) return { y: "100%", opacity: 0, transition: { y: smoothSpring } }; // 현재 포스트 아래로
-      return { opacity: 0 };
+      return {
+        y: direction > 0 ? "-100%" : "100%",
+        opacity: 0,
+        transition: { y: smoothSpring }
+      };
     }
   };
 
@@ -233,7 +235,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           </div>
         </div>
 
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
           <AnimatePresence initial={false} custom={direction} onExitComplete={() => isDismissing && onClose()}>
             {!isDismissing && (
               <motion.div
@@ -244,20 +246,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 animate="center"
                 exit="exit"
                 drag={true}
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragConstraints={{ left: 0, right: 0 }} // 상하 제약을 풀어 전환이 자유롭게 함
                 dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 style={{ 
                   x: dragX,
-                  y: dragY, // 상하 드래그 시각적 연결 추가
+                  y: dragY,
                   opacity: dragOpacity,
                   scale: dragScale,
                   rotate: dragRotate,
+                  position: 'absolute', // 겹침 방지를 위해 절대 좌표 사용
                   willChange: 'transform, opacity',
                   isolation: 'isolate'
                 }}
                 className={cn(
-                  "relative w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]",
+                  "w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]",
                   isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
