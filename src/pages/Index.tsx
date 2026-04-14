@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
+import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
@@ -33,6 +36,8 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
+  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
 
@@ -73,8 +78,6 @@ const Index = () => {
   useEffect(() => {
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
-      const centerLat = (ne.lat + sw.lat) / 2;
-      const centerLng = (ne.lng + sw.lng) / 2;
       
       const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
       const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
@@ -93,24 +96,14 @@ const Index = () => {
             
             const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
             const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-            const tilePosts = createMockPosts(tileCenterLat, tileCenterLng, 6);
+            const tilePosts = createMockPosts(tileCenterLat, tileCenterLng, 8);
             newPosts.push(...tilePosts);
           }
         }
       }
 
       if (tilesAdded) {
-        setAllPosts(prev => {
-          const combined = [...prev, ...newPosts];
-          if (combined.length > 1200) {
-            return combined.filter(post => {
-              const distLat = Math.abs(post.lat - centerLat);
-              const distLng = Math.abs(post.lng - centerLng);
-              return distLat < 0.3 && distLng < 0.3;
-            });
-          }
-          return combined;
-        });
+        setAllPosts(prev => [...prev, ...newPosts]);
       }
     }
   }, [mapData]);
@@ -118,49 +111,53 @@ const Index = () => {
   const filteredPosts = useMemo(() => {
     if (!mapData?.bounds) return [];
     const { sw, ne } = mapData.bounds;
-    const latBuffer = (ne.lat - sw.lat) * 0.2;
-    const lngBuffer = (ne.lng - sw.lng) * 0.2;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // 1. 현재 화면 및 필터 조건에 맞는 모든 포스트 추출
     const inBoundsPosts = allPosts.filter(post => {
-      const isWithinBounds = post.lat >= (sw.lat - latBuffer) && post.lat <= (ne.lat + latBuffer) &&
-                             post.lng >= (sw.lng - lngBuffer) && post.lng <= (ne.lng + lngBuffer);
+      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
+                             post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    const prioritized = [...inBoundsPosts].sort((a, b) => {
-      const getPriority = (p: Post) => {
-        if (p.isInfluencer) return 4;
-        if (p.borderType === 'popular') return 3;
-        if (p.isAd) return 2;
-        return 1;
-      };
-      const priorityA = getPriority(a);
-      const priorityB = getPriority(b);
-      if (priorityA !== priorityB) return priorityB - priorityA;
-      return b.likes - a.likes;
+    if (inBoundsPosts.length === 0) return [];
+
+    // 2. 화면을 6x5 그리드(총 30칸)로 나누어 각 칸에서 가장 좋은 포스트 하나씩 선택
+    const ROWS = 6;
+    const COLS = 5;
+    const latStep = (ne.lat - sw.lat) / ROWS;
+    const lngStep = (ne.lng - sw.lng) / COLS;
+
+    const grid = new Map<string, Post>();
+
+    inBoundsPosts.forEach(post => {
+      const row = Math.min(Math.floor((post.lat - sw.lat) / latStep), ROWS - 1);
+      const col = Math.min(Math.floor((post.lng - sw.lng) / lngStep), COLS - 1);
+      const key = `${row}-${col}`;
+
+      const existing = grid.get(key);
+      if (!existing) {
+        grid.set(key, post);
+      } else {
+        // 우선순위: 인플루언서 > 인기글 > 광고 > 좋아요 순
+        const getScore = (p: Post) => {
+          let score = p.likes;
+          if (p.isInfluencer) score += 1000000;
+          if (p.borderType === 'popular') score += 500000;
+          if (p.isAd) score += 100000;
+          return score;
+        };
+
+        if (getScore(post) > getScore(existing)) {
+          grid.set(key, post);
+        }
+      }
     });
 
-    const limitedPosts = prioritized.slice(0, 150);
-    let influencerCount = 0;
-    let hotCount = 0;
-
-    return limitedPosts.map(post => {
-      let isInfluencer = post.isInfluencer;
-      let borderType = post.borderType;
-      if (isInfluencer) {
-        if (influencerCount < 2) influencerCount++;
-        else isInfluencer = false;
-      }
-      if (borderType === 'popular') {
-        if (hotCount < 5) hotCount++;
-        else borderType = 'none';
-      }
-      return { ...post, isInfluencer, borderType };
-    });
+    return Array.from(grid.values());
   }, [allPosts, mapData, timeValue, selectedCategory]);
 
   const handleLikeToggle = useCallback((postId: string) => {
@@ -181,7 +178,7 @@ const Index = () => {
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 50);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 60);
         setAllPosts(refreshedPosts);
         setIsRefreshing(false);
       }, 600);
@@ -229,7 +226,10 @@ const Index = () => {
           highlightedPostId={highlightedPostId}
           onMarkerClick={(p) => setSelectedPostId(p.id)}
           onMapChange={setMapData}
-          onMapWriteClick={() => {}} 
+          onMapWriteClick={(loc) => {
+            setPendingLocation(loc);
+            setIsWriteOpen(true);
+          }} 
           center={mapCenter}
         />
 
@@ -325,7 +325,13 @@ const Index = () => {
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handlePlaceSelect} 
       />
-    </motion.div>
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+        initialLocation={pendingLocation}
+        onPostCreated={(newPost) => setAllPosts(prev => [newPost, ...prev])}
+      />
+    </div>
   );
 };
 
