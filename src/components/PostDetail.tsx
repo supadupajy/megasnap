@@ -8,7 +8,7 @@ import {
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Move, Utensils, Car, TreePine, Sparkles, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useDragControls, useMotionValue, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface PostDetailProps {
@@ -43,7 +43,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // 포스트 변경 시 스크롤 상단 이동
+  // 드래그 위치에 따른 실시간 투명도 변화를 위한 Motion Value
+  const dragX = useMotionValue(0);
+  const dragOpacity = useTransform(dragX, [-200, 0, 200], [0, 1, 0]);
+  const dragScale = useTransform(dragX, [-200, 0, 200], [0.9, 1, 0.9]);
+  const dragRotate = useTransform(dragX, [-200, 0, 200], [-10, 0, 10]);
+
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
@@ -57,6 +62,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setDirection(0);
       setShowComments(false);
       setCurrentImageIndex(0);
+      dragX.set(0); // 초기화
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -106,14 +112,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const absX = Math.abs(offset.x);
     const absY = Math.abs(offset.y);
     
-    // 좌우 드래그로 닫기 (임계값 100px 또는 빠른 속도)
-    if (absX > absY && (absX > 100 || Math.abs(velocity.x) > 500)) {
+    // 좌우 드래그로 닫기 판정 (임계값 140px 또는 빠른 속도)
+    if (absX > absY && (absX > 140 || Math.abs(velocity.x) > 600)) {
       setDirection(offset.x > 0 ? 100 : -100);
       setIsClosing(true);
-      // 애니메이션이 충분히 보여질 수 있도록 지연 시간을 늘림
-      setTimeout(onClose, 400); 
+      setTimeout(onClose, 300); 
       return;
     }
+
+    // 임계값을 넘지 못하면 framer-motion의 dragConstraints에 의해 자동으로 0으로 돌아감
+    // 이때 dragOpacity, dragScale 등도 MotionValue이므로 자동으로 1로 복구됨
 
     const threshold = 50;
     const velThreshold = 200;
@@ -160,17 +168,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     },
     exit: (direction: number) => {
-      // 좌우 스와이프로 닫힐 때의 애니메이션 (서서히 사라짐 강조)
       if (direction === 100 || direction === -100 || isClosing) {
         return {
-          x: direction === 100 ? 300 : -300, // 더 멀리 밀려남
-          opacity: 0, // 투명도 0으로 서서히 사라짐
-          scale: 0.8, // 크기가 작아짐
-          rotate: direction === 100 ? 15 : -15, // 살짝 기울어짐
+          x: direction === 100 ? 400 : -400,
+          opacity: 0,
+          scale: 0.8,
+          rotate: direction === 100 ? 20 : -20,
           transition: { duration: 0.4, ease: "easeOut" }
         };
       }
-      // 상하 스크롤로 전환될 때의 애니메이션
       return {
         y: direction === 1 ? "-100%" : direction === -1 ? "100%" : 0,
         opacity: 0,
@@ -245,22 +251,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               initial="enter"
               animate="center"
               exit="exit"
-              drag={true}
+              drag="x" // 좌우 드래그 활성화
               dragControls={dragControls}
               dragListener={false}
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.6}
+              dragConstraints={{ left: 0, right: 0 }} // 원위치 복귀를 위한 제약
+              dragElastic={0.7}
               onDragEnd={handleDragEnd}
+              style={{ 
+                x: dragX,
+                opacity: dragOpacity,
+                scale: dragScale,
+                rotate: dragRotate,
+                willChange: 'transform, opacity',
+                isolation: 'isolate'
+              }}
               className={cn(
                 "relative w-[90vw] sm:max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]",
                 isAd && "border-4 border-blue-500",
                 isPopular && "popular-border-container",
                 isInfluencer && "influencer-border-container"
               )}
-              style={{ 
-                willChange: 'transform, opacity',
-                isolation: 'isolate'
-              }}
             >
               {/* Status Bar */}
               {isInfluencer && (
