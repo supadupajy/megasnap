@@ -23,6 +23,16 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=800&q=80"
 ];
 
+const ANIMAL_IMAGES = [
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80"
+];
+
 const AD_FOOD_CONTENT = [
   "배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔",
   "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩",
@@ -39,7 +49,7 @@ const CONTENT_POOL = [
   "야경이 정말 아름다운 곳이에요 🌙",
   "숨겨진 명소를 찾았습니다! 📍",
   "인생샷 건지기 딱 좋은 곳 📸",
-  "바다 냄새가 너무 좋아요 🌊",
+  "바다 냄채가 너무 좋아요 🌊",
   "도심 속 힐링 공간 발견! 🏙️",
   "커피 한 잔의 여유 ☕",
   "⚠️ 근처에서 큰 교통사고가 났네요. 다들 조심하세요! 🚗💥",
@@ -150,6 +160,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       images = [fireImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'accident';
     } else if (content.includes('강아지') || content.includes('고양이') || content.includes('반려동물') || content.includes('🐾')) {
+      const animalImg = ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)];
+      images = [animalImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'animal';
     } else if (content.includes('점심') || content.includes('카페') || content.includes('맛집') || content.includes('커피')) {
       category = 'food';
