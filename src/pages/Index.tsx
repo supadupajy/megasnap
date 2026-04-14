@@ -105,6 +105,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // 1. 기본 필터링 (영역, 시간, 카테고리)
     const inBoundsPosts = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -114,17 +115,38 @@ const Index = () => {
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    const influencers = inBoundsPosts
+    // 2. 우선순위 정렬 및 개수 제한 (최대 30개)
+    // 우선순위: 인플루언서(4) > 인기(3) > 광고(2) > 일반(1)
+    const prioritized = [...inBoundsPosts].sort((a, b) => {
+      const getPriority = (p: Post) => {
+        if (p.isInfluencer) return 4;
+        if (p.borderType === 'popular') return 3;
+        if (p.isAd) return 2;
+        return 1;
+      };
+
+      const priorityA = getPriority(a);
+      const priorityB = getPriority(b);
+
+      if (priorityA !== priorityB) return priorityB - priorityA;
+      return b.likes - a.likes; // 동일 우선순위 내에서는 좋아요 순
+    });
+
+    // 상위 30개만 선택
+    const limitedPosts = prioritized.slice(0, 30);
+
+    // 3. 최종 시각적 처리 (Top 3 인기 포스트 등)
+    const influencers = limitedPosts
       .filter(p => p.isInfluencer)
       .sort((a, b) => b.likes - a.likes);
     const topInfluencerId = influencers[0]?.id;
 
-    const hotPosts = inBoundsPosts
+    const hotPosts = limitedPosts
       .filter(p => p.borderType === 'popular' && p.id !== topInfluencerId)
       .sort((a, b) => b.likes - a.likes);
     const topHotIds = new Set(hotPosts.slice(0, 3).map(p => p.id));
 
-    return inBoundsPosts.map(post => {
+    return limitedPosts.map(post => {
       let isInfluencer = post.isInfluencer;
       let borderType = post.borderType;
 
@@ -190,7 +212,6 @@ const Index = () => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     setHighlightedPostId(post.id);
-    // 강조 효과가 끝난 후 자동으로 열리지 않도록 setSelectedPostId 호출 제거
     setTimeout(() => setHighlightedPostId(null), 3500);
   }, []);
 
