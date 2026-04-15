@@ -181,7 +181,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
