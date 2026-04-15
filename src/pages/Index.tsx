@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Copy } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,6 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { showSuccess } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
@@ -43,10 +42,7 @@ const Index = () => {
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  const currentDomain = window.location.origin;
-
   const TILE_SIZE = 0.02;
-  const TARGET_MARKER_COUNT = 30;
   const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
@@ -96,6 +92,9 @@ const Index = () => {
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
+    
+    // 마커 개수 랜덤화 (25~35개)
+    const targetMarkerCount = Math.floor(Math.random() * (35 - 25 + 1)) + 25;
     
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
@@ -186,7 +185,7 @@ const Index = () => {
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -209,17 +208,17 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+      if (nextMarkers.length >= targetMarkerCount) break;
     }
 
-    if (nextMarkers.length < TARGET_MARKER_COUNT) {
+    if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       if (currentPopularCount >= MAX_POPULAR_COUNT) {
         remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
       }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -298,31 +297,12 @@ const Index = () => {
     }, 1000);
   };
 
-  const copyDomain = () => {
-    navigator.clipboard.writeText(currentDomain);
-    showSuccess('도메인이 복사되었습니다!');
-  };
-
   return (
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
-      {/* 도메인 확인용 배너 (카카오 설정 완료 후 삭제 가능) */}
-      <div className="absolute top-[92px] left-4 right-4 z-[60] bg-black/80 backdrop-blur-md text-white p-3 rounded-2xl flex items-center justify-between shadow-xl border border-white/10">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Kakao Domain Check</span>
-          <span className="text-xs font-bold truncate max-w-[200px]">{currentDomain}</span>
-        </div>
-        <button 
-          onClick={copyDomain}
-          className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-xl transition-colors"
-        >
-          <Copy className="w-4 h-4" />
-        </button>
-      </div>
-
       <div className="absolute inset-0 z-0">
         <MapContainer 
           posts={displayedMarkers}
