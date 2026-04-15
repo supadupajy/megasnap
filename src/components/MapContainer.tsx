@@ -15,47 +15,39 @@ interface MapContainerProps {
 
 const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<naver.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const mapInstance = useRef<any>(null);
+  const overlaysRef = useRef<Map<string, any>>(new Map());
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
-  const actionMarkerRef = useRef<naver.maps.Marker | null>(null);
+  const actionOverlayRef = useRef<any>(null);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const lastLongPressTime = useRef(0);
 
   useEffect(() => {
-    if (!mapElement.current || !window.naver) return;
+    if (!mapElement.current || !window.kakao) return;
 
-    const initialCenter = center ? new naver.maps.LatLng(center.lat, center.lng) : new naver.maps.LatLng(37.5665, 126.9780);
+    const initialCenter = new kakao.maps.LatLng(
+      center?.lat || 37.5665, 
+      center?.lng || 126.9780
+    );
     
-    const mapOptions: naver.maps.MapOptions = {
+    const mapOptions = {
       center: initialCenter,
-      zoom: 14,
-      minZoom: 7,
-      scaleControl: false,
-      logoControl: false,
-      mapDataControl: false,
-      zoomControl: false,
-      mapTypeControl: false,
+      level: 4, // Kakao zoom level (smaller is closer)
     };
 
-    const map = new naver.maps.Map(mapElement.current, mapOptions);
+    const map = new kakao.maps.Map(mapElement.current, mapOptions);
     mapInstance.current = map;
 
-    // 롱프레스 구현 (네이버 지도는 mousedown/mouseup 사용)
-    const el = map.getElement();
-    el.addEventListener('mousedown', (e: any) => {
+    // 롱프레스 구현
+    kakao.maps.event.addListener(map, 'mousedown', (e: any) => {
       if (pressTimer.current) clearTimeout(pressTimer.current);
       
       pressTimer.current = setTimeout(() => {
-        const proj = map.getProjection();
-        const offset = el.getBoundingClientRect();
-        const point = new naver.maps.Point(e.clientX - offset.left, e.clientY - offset.top);
-        const latlng = proj.fromOffsetToCoord(point);
-        
+        const latlng = e.latLng;
         if (latlng) {
           lastLongPressTime.current = Date.now();
-          setActionPin({ lat: latlng.lat(), lng: latlng.lng() });
+          setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
           if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
       }, 1000);
@@ -68,10 +60,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       }
     };
 
-    el.addEventListener('mouseup', clearTimer);
-    el.addEventListener('mouseleave', clearTimer);
+    kakao.maps.event.addListener(map, 'dragstart', clearTimer);
+    kakao.maps.event.addListener(map, 'mousemove', clearTimer);
 
-    naver.maps.Event.addListener(map, 'click', () => {
+    kakao.maps.event.addListener(map, 'click', () => {
       const now = Date.now();
       if (now - lastLongPressTime.current < 500) return;
       setActionPin(null);
@@ -80,87 +72,86 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const updateBounds = () => {
       const bounds = map.getBounds();
       if (bounds) {
-        const sw = bounds.getSW();
-        const ne = bounds.getNE();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
         onMapChange({
           bounds: {
-            sw: { lat: sw.lat(), lng: sw.lng() },
-            ne: { lat: ne.lat(), lng: ne.lng() }
+            sw: { lat: sw.getLat(), lng: sw.getLng() },
+            ne: { lat: ne.getLat(), lng: ne.getLng() }
           }
         });
       }
     };
 
-    naver.maps.Event.addListener(map, 'bounds_changed', updateBounds);
+    kakao.maps.event.addListener(map, 'bounds_changed', updateBounds);
     updateBounds();
 
     return () => {
-      naver.maps.Event.clearInstanceListeners(map);
+      // Cleanup
     };
   }, []);
 
   // 센터 변경 시 이동
   useEffect(() => {
     if (mapInstance.current && center) {
-      mapInstance.current.panTo(new naver.maps.LatLng(center.lat, center.lng));
+      const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+      mapInstance.current.panTo(moveLatLng);
     }
   }, [center]);
 
   // 액션 핀 (글쓰기 버튼) 관리
   useEffect(() => {
-    if (!mapInstance.current || !window.naver) return;
+    if (!mapInstance.current || !window.kakao) return;
     
-    if (actionMarkerRef.current) {
-      actionMarkerRef.current.setMap(null);
-      actionMarkerRef.current = null;
+    if (actionOverlayRef.current) {
+      actionOverlayRef.current.setMap(null);
+      actionOverlayRef.current = null;
     }
 
     if (actionPin) {
-      const content = `
-        <div style="position: absolute; transform: translate(-50%, -100%); cursor: pointer; z-index: 2000;">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              글쓰기
-            </div>
-            <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-            </div>
+      const content = document.createElement('div');
+      content.style.cssText = 'position: absolute; transform: translate(-50%, -100%); cursor: pointer; z-index: 2000;';
+      content.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; animation: bounce 0.5s ease-out;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            글쓰기
+          </div>
+          <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
         </div>
       `;
 
-      const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(actionPin.lat, actionPin.lng),
-        map: mapInstance.current,
-        icon: {
-          content: content,
-          anchor: new naver.maps.Point(0, 0),
-        }
-      });
-
-      naver.maps.Event.addListener(marker, 'click', (e: any) => {
-        e.domEvent.stopPropagation();
+      content.onclick = (e) => {
+        e.stopPropagation();
         onMapWriteClick({ lat: actionPin.lat, lng: actionPin.lng });
         setActionPin(null);
+      };
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(actionPin.lat, actionPin.lng),
+        content: content,
+        yAnchor: 1
       });
 
-      actionMarkerRef.current = marker;
+      overlay.setMap(mapInstance.current);
+      actionOverlayRef.current = overlay;
     }
   }, [actionPin]);
 
   // 포스트 마커 관리
   useEffect(() => {
-    if (!mapInstance.current || !window.naver) return;
+    if (!mapInstance.current || !window.kakao) return;
     const map = mapInstance.current;
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
     // 제거된 포스트 마커 삭제
-    markersRef.current.forEach((marker, id) => {
+    overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
-        marker.setMap(null);
-        markersRef.current.delete(id);
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
       }
     });
 
@@ -209,75 +200,69 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
       const animationClass = (isInfluencer || isPopular) ? 'animate-influencer-float' : '';
 
-      const markerContent = `
-        <div style="position: absolute; transform: translate(-50%, -100%); width: 56px; height: 72px;">
-          <div class="${animationClass}" style="position: relative; width: 56px; height: 72px; transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1); ${isHighlighted ? 'transform: scale(1.35);' : 'transform: scale(1);'}">
-            ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-            ${labelHtml}
-            <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${isViewed ? 'viewed' : ''}"
-                 style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                        ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
-                        overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-                        background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
-              <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
-                <img src="${post.image}" 
-                     onerror="this.src='https://picsum.photos/seed/${post.id}/300/300'"
-                     style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-                
-                <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
-                  ${post.likes}
-                </div>
-
-                ${isGif ? `
-                  <div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; border: 0.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                  </div>
-                ` : ''}
-                ${categoryIconHtml}
+      const markerContent = document.createElement('div');
+      markerContent.style.cssText = 'position: absolute; transform: translate(-50%, -100%); width: 56px; height: 72px;';
+      markerContent.innerHTML = `
+        <div class="${animationClass}" style="position: relative; width: 56px; height: 72px; transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1); ${isHighlighted ? 'transform: scale(1.35);' : 'transform: scale(1);'}">
+          ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
+          ${labelHtml}
+          <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')} ${isViewed ? 'viewed' : ''}"
+               style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
+                      ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
+                      overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                      background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
+            <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
+              <img src="${post.image}" 
+                   onerror="this.src='https://picsum.photos/seed/${post.id}/300/300'"
+                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+              
+              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
+                ${post.likes}
               </div>
-              ${isAd ? `
-                <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
-                            font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
-                  AD
+
+              ${isGif ? `
+                <div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; border: 0.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 </div>
               ` : ''}
+              ${categoryIconHtml}
             </div>
-            ${pinColor ? `
-              <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
-                <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>
-                </svg>
+            ${isAd ? `
+              <div style="position: absolute; top: 0; left: 0; background: #3b82f6; color: white;
+                          font-size: 8px; font-weight: 900; padding: 2px 4px; border-bottom-right-radius: 8px; z-index: 10;">
+                AD
               </div>
             ` : ''}
           </div>
+          ${pinColor ? `
+            <div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/>
+              </svg>
+            </div>
+          ` : ''}
         </div>
       `;
 
-      let marker = markersRef.current.get(post.id);
-      if (marker) {
-        marker.setIcon({
-          content: markerContent,
-          anchor: new naver.maps.Point(0, 0),
-        });
-        marker.setZIndex(isHighlighted ? 1000 : (isAd ? 500 : (isPopular ? 400 : 300)));
-      } else {
-        marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(post.lat, post.lng),
-          map: map,
-          icon: {
-            content: markerContent,
-            anchor: new naver.maps.Point(0, 0),
-          },
-          zIndex: isHighlighted ? 1000 : (isAd ? 500 : (isPopular ? 400 : 300))
-        });
+      markerContent.onclick = (e) => {
+        e.stopPropagation();
+        onMarkerClick(post);
+      };
 
-        naver.maps.Event.addListener(marker, 'click', (e: any) => {
-          e.domEvent.stopPropagation();
-          onMarkerClick(post);
-        });
-
-        markersRef.current.set(post.id, marker);
+      let overlay = overlaysRef.current.get(post.id);
+      if (overlay) {
+        overlay.setMap(null);
       }
+
+      overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(post.lat, post.lng),
+        content: markerContent,
+        yAnchor: 1,
+        zIndex: isHighlighted ? 1000 : (isAd ? 500 : (isPopular ? 400 : 300))
+      });
+
+      overlay.setMap(map);
+      overlaysRef.current.set(post.id, overlay);
     });
   }, [posts, viewedPostIds, highlightedPostId]);
 

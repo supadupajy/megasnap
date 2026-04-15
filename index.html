@@ -6,10 +6,10 @@
     <title>Chora</title>
     <style>
       /* 지도 관련 UI 최적화 */
-      .naver-map-container { width: 100%; height: 100%; }
+      #root { width: 100%; height: 100%; }
     </style>
-    <!-- Naver Maps API -->
-    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=ipu2vry3sw&submodules=geocoder"></script>
+    <!-- Kakao Maps API - libraries=services 포함 (주소 검색용) -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_APP_KEY&libraries=services"></script>
   </head>
 
   <body>

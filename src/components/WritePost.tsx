@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-center';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess } from '@/utils/toast';
@@ -27,28 +27,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   useEffect(() => {
     if (isOpen) {
-      if (initialLocation && window.naver) {
+      if (initialLocation && window.kakao) {
         setIsLoadingAddress(true);
         
-        // 네이버 지도 Geocoder 사용
-        naver.maps.Service.reverseGeocode({
-          coords: new naver.maps.LatLng(initialLocation.lat, initialLocation.lng),
-          orders: [
-            naver.maps.Service.OrderType.ADDR,
-            naver.maps.Service.OrderType.ROAD_ADDR
-          ].join(',')
-        }, (status, response) => {
-          if (status === naver.maps.Service.Status.OK) {
-            const item = response.v2.results[0];
-            if (item) {
-              const addr = item.region.area1.name + ' ' + 
-                           item.region.area2.name + ' ' + 
-                           item.region.area3.name + ' ' + 
-                           (item.land?.number1 || '');
-              setAddress(addr);
-            } else {
-              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-            }
+        // 카카오 지도 Geocoder 사용
+        const geocoder = new kakao.maps.services.Geocoder();
+        geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const addr = result[0].address.address_name;
+            setAddress(addr);
           } else {
             setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
