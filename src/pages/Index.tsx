@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Sparkles } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -356,24 +356,42 @@ const Index = () => {
           </button>
         </div>
 
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
+        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
           <button 
             onClick={handleRefresh} 
             disabled={isRefreshing} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
           >
             <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
             <span className="text-[9px] font-black mt-1">재검색</span>
           </button>
 
-          <button 
-            onClick={handleViewAllClick} 
-            disabled={displayedMarkers.length === 0} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
-          >
-            <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
-            <span className="text-[9px] font-black mt-1">모두 보기</span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={handleViewAllClick} 
+              disabled={displayedMarkers.length === 0} 
+              className={cn(
+                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden",
+                displayedMarkers.length > 0 && "animate-bounce-subtle"
+              )}
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
+              <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+            </button>
+            
+            {/* 숫자 배지 */}
+            {displayedMarkers.length > 0 && (
+              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
+                {displayedMarkers.length}
+              </div>
+            )}
+            
+            {/* 펄스 효과 */}
+            {displayedMarkers.length > 0 && (
+              <div className="absolute inset-0 -z-10 bg-indigo-400/30 rounded-[24px] animate-ping" />
+            )}
+          </div>
         </div>
 
         <AnimatePresence>
