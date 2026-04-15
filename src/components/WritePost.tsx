@@ -9,6 +9,7 @@ import { showSuccess } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { cn } from '@/lib/utils';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const { keyboardHeight } = useKeyboard();
+  const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
     if (isOpen) {
@@ -48,6 +49,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     } else {
       setAddress('');
       setIsLoadingAddress(false);
+      setContent('');
+      setCapturedImage(null);
     }
   }, [isOpen, initialLocation]);
 
@@ -115,16 +118,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
     showSuccess('새로운 추억이 지도에 등록되었습니다! ✨');
     onClose();
-    setContent('');
-    setCapturedImage(null);
   };
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[92vh] outline-none">
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
-        <div className="px-6 flex flex-col h-full relative">
-          <div className="flex items-center justify-between mb-6">
+      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden">
+        {/* Handle Bar */}
+        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        
+        <div className="px-6 flex flex-col flex-1 min-h-0">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               새 게시물 작성
@@ -134,10 +138,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </Button>
           </div>
 
-          <div className="flex-1 space-y-6 overflow-y-auto pb-32 no-scrollbar">
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
+            {/* Photo Area */}
             <div 
               onClick={takePhoto}
-              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden"
+              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
             >
               {capturedImage ? (
                 <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
@@ -159,7 +165,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               )}
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+            {/* Location Info */}
+            <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                 <MapPin className="w-5 h-5 text-indigo-600" />
               </div>
@@ -176,6 +183,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               </div>
             </div>
 
+            {/* Content Input */}
             <div className="space-y-2">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
@@ -187,9 +195,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
           </div>
 
+          {/* Bottom Button Area */}
           <div 
-            className="absolute bottom-0 left-0 right-0 px-6 bg-white pt-4 pb-10 transition-all duration-300 z-50"
-            style={{ transform: `translateY(-${keyboardHeight}px)` }}
+            className={cn(
+              "py-4 bg-white shrink-0 transition-all duration-300",
+              isKeyboardOpen ? "pb-2" : "pb-8"
+            )}
           >
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
