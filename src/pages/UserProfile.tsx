@@ -8,7 +8,7 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
-import { getUserById, createMockPosts } from '@/lib/mock-data';
+import { getUserById, createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -34,15 +34,24 @@ const UserProfile = () => {
     const rawPosts = createMockPosts(37.5665, 126.9780, 30);
     
     // 10개는 확실히 GIF로 설정하고 나머지는 일반 포스트로 설정하여 섞기
-    const userPosts = rawPosts.map((p, idx) => ({
-      ...p,
-      isGif: idx < 10, // 처음 10개는 GIF로 강제 설정
-      user: {
-        id: user.id,
-        name: user.nickname || user.name,
-        avatar: user.avatar
-      }
-    })).sort(() => Math.random() - 0.5); // 랜덤하게 섞기
+    const userPosts = rawPosts.map((p, idx) => {
+      const isGif = idx < 10;
+      const image = isGif 
+        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] 
+        : p.image;
+        
+      return {
+        ...p,
+        isGif,
+        image,
+        images: isGif ? [image, ...p.images.slice(1)] : p.images,
+        user: {
+          id: user.id,
+          name: user.nickname || user.name,
+          avatar: user.avatar
+        }
+      };
+    }).sort(() => Math.random() - 0.5); // 랜덤하게 섞기
 
     setPosts(userPosts);
 

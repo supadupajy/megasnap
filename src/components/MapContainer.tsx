@@ -216,7 +216,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         div.style.transform = 'translate(-50%, -100%)';
         
         const isAd = this.post.isAd;
-        const isGif = this.post.isGif;
+        const imageUrl = this.post.image || '';
+        const isGif = this.post.isGif && (imageUrl.toLowerCase().includes('.gif') || imageUrl.includes('GIF'));
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
         const category = this.post.category || 'none';
@@ -348,7 +349,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.isHighlighted !== isHighlighted || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category) {
+        if (overlay.isViewed !== isViewed || overlay.isHighlighted !== isHighlighted || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category || overlay.post.image !== post.image) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, isHighlighted, () => onMarkerClick(post));
           overlay.setMap(map);
