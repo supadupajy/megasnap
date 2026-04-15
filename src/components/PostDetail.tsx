@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -200,6 +200,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
                   >
                     <div className="flex flex-col">
+                      {/* Header: User Info (Moved to top to match PostItem) */}
+                      <div className="flex items-center justify-between px-4 py-3 shrink-0">
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer group"
+                          onClick={handleUserClick}
+                        >
+                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                            <img 
+                              src={post.user.avatar} 
+                              alt={post.user.name} 
+                              className="w-full h-full rounded-full object-cover border-2 border-white" 
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>
+                              {isAd && (
+                                <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>
+                              )}
+                            </div>
+                            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-[10px] font-medium">{post.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="text-gray-400" onClick={(e) => e.stopPropagation()}>
+                            <MoreHorizontal className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Image Section */}
                       <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
                         <div 
                           ref={imageScrollRef}
@@ -231,8 +265,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         )}
                       </div>
 
+                      {/* Content Section */}
                       <div className="px-4 py-4 sm:px-5 sm:py-5">
-                        <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-4">
                             <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
                               <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
@@ -259,27 +294,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer" onClick={handleUserClick}>
-                            <img src={post.user.avatar} alt="" className="w-full h-full rounded-full object-cover border-2 border-white" />
-                          </div>
-                          <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
-                              <p className="font-bold text-gray-900 text-sm leading-none truncate cursor-pointer" onClick={handleUserClick}>{post.user.name}</p>
-                              {isAd && (
-                                <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>
-                              )}
-                            </div>
-                            <div className="flex items-center text-indigo-600 gap-1 mt-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="text-[10px] font-bold truncate">{post.location}</span>
-                            </div>
-                          </div>
-                        </div>
-
                         <div className="space-y-1 mb-4" onClick={(e) => e.stopPropagation()}>
                           <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
-                          <p className="text-gray-700 text-sm leading-relaxed font-medium">{post.content}</p>
+                          <div className="flex gap-2 items-start">
+                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer" onClick={handleUserClick}>
+                              {post.user.name}
+                            </span>
+                            <p className="text-gray-700 text-sm leading-relaxed font-medium">{post.content}</p>
+                          </div>
                         </div>
 
                         <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
