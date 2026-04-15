@@ -200,7 +200,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
                   >
                     <div className="flex flex-col">
-                      {/* Header: User Info (Moved to top to match PostItem) */}
+                      {/* Header: User Info */}
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div 
                           className="flex items-center gap-3 cursor-pointer group"
@@ -305,40 +305,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </div>
 
                         <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
-                          {/* 댓글 입력창 */}
-                          <form 
-                            onSubmit={handleAddComment}
-                            className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
-                          >
-                            <Input 
-                              placeholder="댓글 달기..." 
-                              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
-                              value={commentInput}
-                              onChange={(e) => setCommentInput(e.target.value)}
-                            />
-                            <button 
-                              type="submit"
-                              disabled={!commentInput.trim()}
-                              className="text-indigo-600 disabled:text-gray-300 transition-colors"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                          </form>
-
                           {/* 최신 댓글 (항상 상단 고정) */}
-                          {lastComment && (
+                          {lastComment && !showComments && (
                             <div className="flex gap-2 items-start mt-1 mb-2">
                               <span className="font-bold text-[13px] text-gray-900">{lastComment.user}</span>
                               <span className="text-[13px] text-gray-500 line-clamp-1">{lastComment.text}</span>
                             </div>
                           )}
                           
-                          {/* 펼쳐지는 댓글 목록 */}
+                          {/* 펼쳐지는 댓글 목록 및 입력창 */}
                           <AnimatePresence>
                             {showComments && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="space-y-4 py-3">
-                                  {comments.slice(0, -1).map((comment, i) => (
+                                  {/* 댓글 입력창 (펼쳐졌을 때만 노출) */}
+                                  <form 
+                                    onSubmit={handleAddComment}
+                                    className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100 mb-4"
+                                  >
+                                    <Input 
+                                      placeholder="댓글 달기..." 
+                                      className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+                                      value={commentInput}
+                                      onChange={(e) => setCommentInput(e.target.value)}
+                                    />
+                                    <button 
+                                      type="submit"
+                                      disabled={!commentInput.trim()}
+                                      className="text-indigo-600 disabled:text-gray-300 transition-colors"
+                                    >
+                                      <Send className="w-4 h-4" />
+                                    </button>
+                                  </form>
+
+                                  {comments.map((comment, i) => (
                                     <div key={i} className="flex gap-2 items-start">
                                       <span className="font-bold text-[13px] text-gray-900">{comment.user}</span>
                                       <span className="text-[13px] text-gray-500">{comment.text}</span>
