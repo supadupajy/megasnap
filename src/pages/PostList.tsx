@@ -111,13 +111,13 @@ const PostList = () => {
 
   return (
     <motion.div 
-      initial={{ x: "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: "100%" }}
+      initial={{ x: "100%", y: "100%", opacity: 0 }}
+      animate={{ x: 0, y: 0, opacity: 1 }}
+      exit={{ x: "100%", y: "100%", opacity: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 300, 
-        damping: 30,
+        stiffness: 260, 
+        damping: 28,
         mass: 0.8
       }}
       className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
