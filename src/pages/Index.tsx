@@ -84,6 +84,7 @@ const Index = () => {
     }
   }, [location.state]);
 
+  // 마커 필터링 및 표시 로직 (실시간 반영을 위해 의존성 배열 최적화)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -123,6 +124,7 @@ const Index = () => {
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
+    // 현재 화면에 이미 있는 마커 중 유효한 것들 유지
     const stillVisible = displayedMarkers.filter(p => 
       p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
       (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
@@ -223,7 +225,6 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    // 재검색 시 마커 개수 목표치를 다시 랜덤하게 설정
     setTargetMarkerCount(Math.floor(Math.random() * 11) + 25);
     mapCache.populatedTiles.clear();
     if (mapData?.bounds) {
@@ -329,10 +330,10 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
-          {/* 마커 개수 표시 버튼 */}
-          <div className="w-14 h-14 bg-white rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg border border-indigo-100">
-            <MapPin className="w-5 h-5 fill-indigo-600" />
-            <span className="text-xs font-black mt-0.5">{displayedMarkers.length}</span>
+          {/* 마커 개수 표시 버튼 (높이 축소 및 실시간 반영) */}
+          <div className="w-14 h-7 bg-white/90 backdrop-blur-md rounded-xl flex items-center justify-center gap-1.5 text-indigo-600 shadow-lg border border-indigo-100 mb-1">
+            <MapPin className="w-3.5 h-3.5 fill-indigo-600" />
+            <span className="text-xs font-black">{displayedMarkers.length}</span>
           </div>
 
           {/* 재검색 버튼 */}
