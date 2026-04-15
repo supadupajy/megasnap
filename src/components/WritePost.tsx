@@ -5,7 +5,7 @@ import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
@@ -74,6 +74,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   };
 
   const handlePost = () => {
+    if (!capturedImage) {
+      showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
+      return;
+    }
+
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
@@ -94,7 +99,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       likes: 0,
       commentsCount: 0,
       comments: [],
-      image: capturedImage || `https://picsum.photos/seed/${Date.now()}/800/800`,
+      image: capturedImage,
       isLiked: false,
       createdAt: new Date(),
       borderType: 'none'
