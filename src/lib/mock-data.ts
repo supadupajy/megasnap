@@ -194,27 +194,15 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
-  const hotspots = [
-    { lat: 37.5445, lng: 127.0560 }, // 성수
-    { lat: 37.5575, lng: 126.9245 }, // 홍대
-    { lat: 37.4979, lng: 127.0276 }  // 강남
-  ];
-
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isInfluencer = Math.random() > 0.9;
     const isPopular = Math.random() > 0.85;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     
-    let lat, lng;
-    if (Math.random() > 0.6) {
-      const spot = hotspots[Math.floor(Math.random() * hotspots.length)];
-      lat = spot.lat + (Math.random() - 0.5) * 0.006; 
-      lng = spot.lng + (Math.random() - 0.5) * 0.006;
-    } else {
-      lat = centerLat + (Math.random() - 0.5) * 0.05;
-      lng = centerLng + (Math.random() - 0.5) * 0.05;
-    }
+    // 핫스팟 로직 제거: 중심점 기준 완전 랜덤 분포
+    const lat = centerLat + (Math.random() - 0.5) * 0.04;
+    const lng = centerLng + (Math.random() - 0.5) * 0.04;
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
@@ -222,7 +210,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
-    // 카테고리 할당 로직 강화 (약 85% 확률로 카테고리 부여)
     const categoryRoll = Math.random();
 
     if (isAd) {
@@ -242,7 +229,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
       category = 'place';
     } else {
-      // 나머지 15%는 카테고리 없음 (일반 포스트)
       images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
       category = 'none';
     }
