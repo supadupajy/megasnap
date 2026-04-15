@@ -25,6 +25,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const actionOverlayRef = useRef<google.maps.OverlayView | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastShowTime = useRef<number>(0);
+  const isLongPressActive = useRef<boolean>(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +130,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
           }
+          isLongPressActive.current = false;
         });
 
         const handleStart = (e: any) => {
@@ -136,11 +138,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           if (!point) return;
           
           startPos.current = { x: point.x, y: point.y };
+          isLongPressActive.current = false;
+          
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
             const latLng = e.latLng;
             if (latLng) {
+              isLongPressActive.current = true;
               showActionPin(latLng.lat(), latLng.lng());
               if (window.navigator.vibrate) window.navigator.vibrate(40);
             }
@@ -172,8 +177,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         map.addListener('dragstart', clearTimer);
         map.addListener('zoom_changed', clearTimer);
         
-        // 클릭 시 핀 숨기기 (단, 방금 생성된 핀은 제외)
+        // 클릭 시 핀 숨기기
         map.addListener('click', () => {
+          // 롱프레스 직후의 클릭(손을 떼는 동작)은 무시
+          if (isLongPressActive.current) {
+            isLongPressActive.current = false;
+            return;
+          }
+          
           const now = Date.now();
           if (now - lastShowTime.current > 300) {
             hideActionPin();
