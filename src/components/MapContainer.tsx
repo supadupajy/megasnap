@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { isGifUrl } from '@/lib/mock-data';
 import { AlertCircle } from 'lucide-react';
 
@@ -27,6 +27,31 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const lastLongPressTime = useRef(0);
+
+  // 각 포스트별 주변 밀집도 계산 (메모이제이션)
+  const densityData = useMemo(() => {
+    if (!showDensity) return new Map<string, number>();
+    
+    const scores = new Map<string, number>();
+    const THRESHOLD = 0.008; // 주변으로 간주할 거리 임계값
+
+    posts.forEach(p1 => {
+      let count = 0;
+      posts.forEach(p2 => {
+        const dist = Math.sqrt(Math.pow(p1.lat - p2.lat, 2) + Math.pow(p1.lng - p2.lng, 2));
+        if (dist < THRESHOLD) count++;
+      });
+      scores.set(p1.id, count);
+    });
+    return scores;
+  }, [posts, showDensity]);
+
+  // 밀집도에 따른 색상 반환 함수
+  const getDensityStyle = (count: number) => {
+    if (count <= 2) return { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)' }; // 파랑 (저밀도)
+    if (count <= 5) return { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.3)' }; // 보라 (중밀도)
+    return { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)' }; // 빨강 (고밀도)
+  };
 
   // 구글 맵 초기화
   useEffect(() => {
@@ -189,22 +214,24 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const isGif = isGifUrl(post.image);
       const category = post.category || 'none';
 
-      // 1. 밀집도 오버레이 (마커 주변 단색 원형)
+      // 1. 밀집도 오버레이 (밀집도에 따른 색상 변화)
       if (showDensity && !densityRef.current.has(post.id)) {
+        const count = densityData.get(post.id) || 1;
+        const style = getDensityStyle(count);
+        
         const densityOverlay = new google.maps.OverlayView();
         densityOverlay.onAdd = function() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
           div.style.width = '300px';
           div.style.height = '300px';
-          // 그라데이션 대신 단색 반투명 배경 사용
-          div.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
-          div.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+          div.style.backgroundColor = style.bg;
+          div.style.border = `1px solid ${style.border}`;
           div.style.borderRadius = '50%';
           div.style.pointerEvents = 'none';
-          // 마커 중앙 정렬
           div.style.transform = 'translate(-50%, calc(-50% - 36px))';
           div.style.zIndex = '1';
+          div.style.transition = 'background-color 0.5s ease, border-color 0.5s ease';
           this.getPanes()!.overlayLayer.appendChild(div);
           (this as any).div = div;
         };
@@ -292,7 +319,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       markerOverlay.setMap(mapInstance.current);
       markersRef.current.set(post.id, markerOverlay);
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, showDensity]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady, showDensity, densityData]);
 
   return (
     <div className="w-full h-full relative bg-gray-100">
