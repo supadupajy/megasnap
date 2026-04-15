@@ -21,14 +21,16 @@ const UserProfile = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list'>('grid');
   const [posts, setPosts] = useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
   // 통합된 사용자 데이터 가져오기
   const user = useMemo(() => {
     return getUserById(userId || 'traveler');
   }, [userId]);
 
-  // 해당 사용자의 포스트 데이터 생성
+  // 해당 사용자의 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
+    // 사용자의 게시물 (그리드 뷰용)
     const userPosts = createMockPosts(37.5665, 126.9780, 15)
       .filter(p => !p.isAd)
       .slice(0, 12)
@@ -41,10 +43,17 @@ const UserProfile = () => {
         }
       }));
     setPosts(userPosts);
+
+    // 사용자가 저장한 게시물 (북마크 탭용 - 다른 사람들의 게시물)
+    const saved = createMockPosts(37.5665, 126.9780, 8)
+      .filter(p => p.user.id !== user.id)
+      .map(p => ({ ...p, isLiked: true }));
+    setSavedPosts(saved);
   }, [user]);
 
-  const handleLikeToggle = useCallback((postId: string) => {
-    setPosts(prev => prev.map(post => {
+  const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
+    const setter = isSaved ? setSavedPosts : setPosts;
+    setter(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
         return {
@@ -75,14 +84,6 @@ const UserProfile = () => {
   const handleMessageClick = () => {
     navigate(`/chat/${user.id}`);
   };
-
-  // 현재 뷰 모드에 따라 표시할 포스트 필터링
-  const displayedPosts = useMemo(() => {
-    if (viewMode === 'gifs') {
-      return posts.filter(p => p.isGif);
-    }
-    return posts;
-  }, [posts, viewMode]);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -205,7 +206,14 @@ const UserProfile = () => {
           {/* Content Area */}
           {viewMode === 'list' ? (
             <div className="flex flex-col -mx-6">
-              {displayedPosts.map((post) => (
+              <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
+                <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
+                  <Bookmark className="w-4 h-4 fill-indigo-600" />
+                  저장된 포스팅
+                </h3>
+                <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
+              </div>
+              {savedPosts.map((post) => (
                 <div 
                   key={post.id} 
                   id={`post-${post.id}`}
@@ -224,19 +232,44 @@ const UserProfile = () => {
                     isInfluencer={post.isInfluencer}
                     borderType={post.borderType}
                     disablePulse={true}
-                    onLikeToggle={() => handleLikeToggle(post.id)}
+                    onLikeToggle={() => handleLikeToggle(post.id, true)}
                   />
                 </div>
               ))}
-              {displayedPosts.length === 0 && (
+              {savedPosts.length === 0 && (
                 <div className="py-20 text-center text-gray-400 font-medium">
-                  게시물이 없습니다.
+                  저장된 게시물이 없습니다.
+                </div>
+              )}
+            </div>
+          ) : viewMode === 'gifs' ? (
+            <div className="grid grid-cols-3 gap-1">
+              {posts.filter(p => p.isGif).map((post) => (
+                <div 
+                  key={post.id} 
+                  className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
+                  onClick={() => handleGridItemClick(post.id)}
+                >
+                  <img 
+                    src={post.image} 
+                    alt="" 
+                    className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
+                    onError={handleImageError}
+                  />
+                  <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
+                    <Play className="w-2.5 h-2.5 text-white fill-white" />
+                  </div>
+                </div>
+              ))}
+              {posts.filter(p => p.isGif).length === 0 && (
+                <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
+                  등록된 GIF가 없습니다.
                 </div>
               )}
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-1">
-              {displayedPosts.map((post) => (
+              {posts.map((post) => (
                 <div 
                   key={post.id} 
                   className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
@@ -255,9 +288,9 @@ const UserProfile = () => {
                   )}
                 </div>
               ))}
-              {displayedPosts.length === 0 && (
+              {posts.length === 0 && (
                 <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
-                  {viewMode === 'gifs' ? '등록된 GIF가 없습니다.' : '게시물이 없습니다.'}
+                  게시물이 없습니다.
                 </div>
               )}
             </div>
