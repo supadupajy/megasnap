@@ -284,8 +284,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                 </div>
 
                 ${isGif ? `
-                  <div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: white; font-size: 8px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5; border: 0.5px solid rgba(255,255,255,0.3);">
-                    GIF
+                  <div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; border: 0.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                   </div>
                 ` : ''}
                 ${categoryIconHtml}
