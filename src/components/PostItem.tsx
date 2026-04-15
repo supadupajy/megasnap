@@ -141,8 +141,7 @@ const PostItem = ({
       onClick={onClick}
       className={cn(
         "bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
-        isInfluencer && "animate-influencer-float",
-        isPopular && !disablePulse && "animate-hot-pulse"
+        (isInfluencer || (isPopular && !disablePulse)) && "animate-influencer-float"
       )}
     >
       <div className="flex items-center justify-between px-4 py-3">

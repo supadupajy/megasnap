@@ -167,8 +167,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
                   "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative",
-                  isInfluencer && "animate-influencer-float",
-                  isPopular && "animate-hot-pulse"
+                  (isInfluencer || isPopular) && "animate-influencer-float"
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white z-10">
