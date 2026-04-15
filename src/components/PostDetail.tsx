@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play, AlertCircle, Ban } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play, AlertCircle, Ban, Coffee, Mountain, Ticket, CircleP } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { isGifUrl } from '@/lib/mock-data';
-import { Comment } from '@/types';
+import { Comment, Post } from '@/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,6 +130,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
       case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
+      case 'cafe': Icon = Coffee; bgColor = "bg-amber-700"; label = "카페"; break;
+      case 'shopping': Icon = ShoppingBag; bgColor = "bg-pink-500"; label = "쇼핑"; break;
+      case 'nature': Icon = Mountain; bgColor = "bg-emerald-600"; label = "자연"; break;
+      case 'event': Icon = Ticket; bgColor = "bg-indigo-500"; label = "행사"; break;
+      case 'parking': Icon = CircleP; bgColor = "bg-blue-600"; label = "주차"; break;
     }
     if (!Icon) return null;
     return (

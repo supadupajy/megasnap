@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Coffee, Mountain, Ticket, CircleP } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isGifUrl } from '@/lib/mock-data';
-import { Comment } from '@/types';
+import { Comment, Post } from '@/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,7 @@ interface PostItemProps {
   isGif?: boolean;
   isInfluencer?: boolean;
   isViewed?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
+  category?: Post['category'];
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
   disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
@@ -144,6 +144,11 @@ const PostItem = ({
       case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
       case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
+      case 'cafe': Icon = Coffee; bgColor = "bg-amber-700"; label = "카페"; break;
+      case 'shopping': Icon = ShoppingBag; bgColor = "bg-pink-500"; label = "쇼핑"; break;
+      case 'nature': Icon = Mountain; bgColor = "bg-emerald-600"; label = "자연"; break;
+      case 'event': Icon = Ticket; bgColor = "bg-indigo-500"; label = "행사"; break;
+      case 'parking': Icon = CircleP; bgColor = "bg-blue-600"; label = "주차"; break;
     }
     if (!Icon) return null;
 
