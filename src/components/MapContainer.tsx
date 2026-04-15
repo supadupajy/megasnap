@@ -23,6 +23,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const markersRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
   const densityRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
   const actionOverlayRef = useRef<google.maps.OverlayView | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +51,45 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     if (count <= 2) return { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.2)' };
     if (count <= 5) return { bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.2)' };
     return { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.2)' };
+  };
+
+  // 가속도가 붙는 부드러운 이동 함수
+  const smoothMoveTo = (target: { lat: number, lng: number }) => {
+    if (!mapInstance.current) return;
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    const map = mapInstance.current;
+    const start = map.getCenter()!;
+    const startLat = start.lat();
+    const startLng = start.lng();
+    const duration = 1200; // 1.2초 동안 이동
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease In Out Cubic (가속 후 감속)
+      const ease = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentLat = startLat + (target.lat - startLat) * ease;
+      const currentLng = startLng + (target.lng - startLng) * ease;
+
+      map.setCenter({ lat: currentLat, lng: currentLng });
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
   };
 
   useEffect(() => {
@@ -82,6 +122,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
             onMapChange({
               bounds: { sw: { lat: sw.lat(), lng: sw.lng() }, ne: { lat: ne.lat(), lng: ne.lng() } }
             });
+          }
+        });
+
+        // 사용자가 지도를 조작하면 애니메이션 중단
+        map.addListener('dragstart', () => {
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
           }
         });
 
@@ -143,8 +191,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      // panTo를 사용하여 부드럽고 속도감 있게 이동
-      mapInstance.current.panTo(center);
+      // 커스텀 부드러운 이동 엔진 사용
+      smoothMoveTo(center);
     }
   }, [center, isMapReady]);
 

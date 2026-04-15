@@ -117,14 +117,14 @@
 /* Marker Highlight Ping Animation - 2 Times */
 @keyframes marker-ping {
   0% {
-    transform: translate(-50%, -50%) scale(0.5);
+    transform: translate(-50%, -50%) scale(0.3);
     opacity: 0;
   }
-  30% {
-    opacity: 1;
+  40% {
+    opacity: 0.8;
   }
   100% {
-    transform: translate(-50%, -50%) scale(4.5);
+    transform: translate(-50%, -50%) scale(3.5);
     opacity: 0;
   }
 }
@@ -139,7 +139,7 @@
 
 .marker-highlight-ping {
   position: absolute;
-  /* 56x56 이미지의 정중앙 좌표 (56/2 = 28) */
+  /* 56x56 이미지의 정중앙 좌표 */
   top: 28px; 
   left: 28px;
   width: 40px;
