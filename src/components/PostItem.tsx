@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isGifUrl } from '@/lib/mock-data';
 import { Comment } from '@/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { showSuccess, showError } from '@/utils/toast';
 
 interface PostItemProps {
   user: {
@@ -107,6 +114,16 @@ const PostItem = ({
     setCommentInput('');
   };
 
+  const handleReport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+  };
+
+  const handleBlock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    showError(`${user.name} 님을 차단했습니다.`);
+  };
+
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
     let Icon = null;
@@ -153,7 +170,30 @@ const PostItem = ({
             </div>
           </div>
         </div>
-        <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}>
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
+            <DropdownMenuItem 
+              onClick={handleReport}
+              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
+            >
+              <AlertCircle className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-bold text-gray-700">신고</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={handleBlock}
+              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+            >
+              <Ban className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-bold text-red-600">차단</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="px-4">
