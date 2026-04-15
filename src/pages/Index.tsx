@@ -70,9 +70,14 @@ const Index = () => {
         return [incomingPost, ...prev];
       });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
-      setHighlightedPostId(incomingPost.id);
-      const timer = setTimeout(() => setHighlightedPostId(null), 3500);
-      return () => clearTimeout(timer);
+      
+      // 지도 이동 완료(1000ms) 후 핑 효과 시작
+      const pingTimer = setTimeout(() => {
+        setHighlightedPostId(incomingPost.id);
+        setTimeout(() => setHighlightedPostId(null), 3500);
+      }, 1000);
+      
+      return () => clearTimeout(pingTimer);
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
@@ -140,7 +145,6 @@ const Index = () => {
 
     const nextMarkers = [...stillVisible];
 
-    // 하이라이트된 포스트가 있다면 강제로 추가 (지도가 이동 중이라도 보이게 함)
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
       if (hPost && !nextMarkers.some(m => m.id === hPost.id)) {
@@ -235,13 +239,16 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
-    // 하이라이트 ID를 먼저 설정하여 마커가 즉시 생성되도록 함
-    setHighlightedPostId(post.id);
+    // 1. 지도 이동 시작
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 3.5초 후 하이라이트 제거
-    setTimeout(() => setHighlightedPostId(null), 3500);
+    // 2. 지도 이동 완료(1000ms) 후 핑 효과 시작
+    setTimeout(() => {
+      setHighlightedPostId(post.id);
+      // 3. 일정 시간 후 핑 효과 제거
+      setTimeout(() => setHighlightedPostId(null), 3500);
+    }, 1000);
   }, []);
 
   const handleCurrentLocation = () => {
