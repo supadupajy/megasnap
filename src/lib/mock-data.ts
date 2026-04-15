@@ -86,8 +86,8 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-// 사용자 제공 GIF 리스트 (총 15개)
-const GIF_POOL = [
+// 사용자 제공 GIF 리스트 (총 15개) - export 추가
+export const GIF_POOL = [
   "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
   "https://i.namu.wiki/i/3qjMoSXb8qZqYZsH-vdZNRkdOaz4ypVfoRZHAj7QT9JDv1fpP7mi9Sike6ij1d6Vd42Lu-__INRCmsJJaiDx0w.gif",
   "https://coinpick.com/files/attach/images/69383/503/069/2e8cefa582dc5e9d8188aa192cf387ce.gif",
