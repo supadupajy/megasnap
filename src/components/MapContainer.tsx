@@ -116,11 +116,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
         map.addListener('bounds_changed', () => {
           const bounds = map.getBounds();
-          if (bounds) {
+          const currentCenter = map.getCenter();
+          if (bounds && currentCenter) {
             const sw = bounds.getSouthWest();
             const ne = bounds.getNorthEast();
             onMapChange({
-              bounds: { sw: { lat: sw.lat(), lng: sw.lng() }, ne: { lat: ne.lat(), lng: ne.lng() } }
+              bounds: { sw: { lat: sw.lat(), lng: sw.lng() }, ne: { lat: ne.lat(), lng: ne.lng() } },
+              center: { lat: currentCenter.lat(), lng: currentCenter.lng() }
             });
           }
         });
@@ -177,9 +179,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         map.addListener('dragstart', clearTimer);
         map.addListener('zoom_changed', clearTimer);
         
-        // 클릭 시 핀 숨기기
         map.addListener('click', () => {
-          // 롱프레스 직후의 클릭(손을 떼는 동작)은 무시
           if (isLongPressActive.current) {
             isLongPressActive.current = false;
             return;
@@ -207,7 +207,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      smoothMoveTo(center);
+      const current = mapInstance.current.getCenter();
+      if (current && (Math.abs(current.lat() - center.lat) > 0.0001 || Math.abs(current.lng() - center.lng) > 0.0001)) {
+        smoothMoveTo(center);
+      }
     }
   }, [center, isMapReady]);
 

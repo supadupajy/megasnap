@@ -50,13 +50,13 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
+  // 지도 이동 시 캐시 업데이트
   useEffect(() => {
-    if (mapCenter) {
-      mapCache.lastCenter = mapCenter;
+    if (mapData?.center) {
+      mapCache.lastCenter = mapData.center;
     }
-  }, [mapCenter]);
+  }, [mapData]);
 
-  // 차단된 사용자를 제외한 전체 포스트
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
   }, [allPosts, blockedIds]);
@@ -69,25 +69,20 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
 
-  // 외부(인기 포스팅, 위치보기 등)에서 넘어온 위치 및 포스트 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
-      // 포스트가 목록에 없으면 추가
       setAllPosts(prev => {
         if (prev.some(p => p.id === incomingPost.id)) return prev;
         return [incomingPost, ...prev];
       });
 
-      // 지도를 해당 위치로 이동
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 이동 후 핑 효과 트리거 (지도가 이동을 마칠 때쯤 실행되도록 1초 지연)
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
-        // 핑 효과 종료 후 상태 초기화
         setTimeout(() => setHighlightedPostId(null), 3000);
       }, 1000);
       
@@ -127,17 +122,13 @@ const Index = () => {
 
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-
-    // 마커 개수 랜덤화 (25~35개)
     const targetMarkerCount = Math.floor(Math.random() * 11) + 25;
 
-    // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      // 멀티 카테고리 로직
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
@@ -177,7 +168,6 @@ const Index = () => {
 
     const nextMarkers = [...stillVisible];
 
-    // 하이라이트된 포스트는 무조건 표시 목록에 포함
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
       if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
@@ -272,11 +262,9 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
-    // 지도를 해당 위치로 부드럽게 이동
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 이동 후 핑 효과 트리거 (1초 지연)
     setTimeout(() => {
       setHighlightedPostId(post.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
@@ -296,7 +284,7 @@ const Index = () => {
       navigate('/post-list', { 
         state: { 
           posts: displayedMarkers,
-          center: mapCenter || { lat: 37.5665, lng: 126.9780 }
+          center: mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 }
         } 
       });
     }
@@ -407,14 +395,12 @@ const Index = () => {
               <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
             </button>
             
-            {/* 숫자 배지 */}
             {displayedMarkers.length > 0 && (
               <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
                 {displayedMarkers.length}
               </div>
             )}
             
-            {/* 펄스 효과 */}
             {displayedMarkers.length > 0 && (
               <div className="absolute inset-0 -z-10 bg-indigo-400/30 rounded-[24px] animate-ping" />
             )}
