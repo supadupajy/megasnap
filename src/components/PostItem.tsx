@@ -267,7 +267,7 @@ const PostItem = ({
             >
               <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+            <button onClick={(e) => e.stopPropagation()}>
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </button>
             <button onClick={(e) => e.stopPropagation()}>
@@ -314,15 +314,36 @@ const PostItem = ({
             </p>
           </div>
 
+          {/* 댓글 입력창 */}
+          <form 
+            onSubmit={handleAddComment}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+          >
+            <Input 
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+            />
+            <button 
+              type="submit"
+              disabled={!commentInput.trim()}
+              className="text-indigo-600 disabled:text-gray-300 transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+
           {/* 최신 댓글 (항상 상단 고정) */}
-          {lastComment && !showComments && (
+          {lastComment && (
             <div className="flex gap-2 items-start mt-1">
               <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
               <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
             </div>
           )}
 
-          {/* 펼쳐지는 댓글 목록 및 입력창 */}
+          {/* 펼쳐지는 댓글 목록 */}
           <AnimatePresence>
             {showComments && (
               <motion.div 
@@ -332,28 +353,8 @@ const PostItem = ({
                 className="overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="space-y-3 py-3">
-                  {/* 댓글 입력창 (펼쳐졌을 때만 노출) */}
-                  <form 
-                    onSubmit={handleAddComment}
-                    className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100 mb-2"
-                  >
-                    <Input 
-                      placeholder="댓글 달기..." 
-                      className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
-                      value={commentInput}
-                      onChange={(e) => setCommentInput(e.target.value)}
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!commentInput.trim()}
-                      className="text-indigo-600 disabled:text-gray-300 transition-colors"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </form>
-
-                  {comments.map((comment, i) => (
+                <div className="space-y-3 py-2">
+                  {comments.slice(0, -1).map((comment, i) => (
                     <div key={i} className="flex gap-2 items-start">
                       <span className="font-bold text-sm text-gray-900">{comment.user}</span>
                       <span className="text-sm text-gray-500">{comment.text}</span>
