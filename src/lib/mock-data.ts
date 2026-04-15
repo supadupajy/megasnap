@@ -1,6 +1,6 @@
 import { Post, User, Comment } from '@/types';
 
-// 카테고리별 고화질 이미지 풀 (총 40개 이상)
+// 카테고리별 고화질 이미지 풀
 const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
@@ -18,7 +18,7 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
   "https://images.unsplash.com/photo-1482049016688-2d3e1b311543",
   "https://images.unsplash.com/photo-1484723088339-0b2833a2595d",
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5856",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5855",
   "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
   "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
   "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
@@ -36,7 +36,7 @@ const ANIMAL_IMAGES = [
   "https://images.unsplash.com/photo-1548191265-cc70d3d45ba1"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-const GENERAL_POOL = [
+const PLACE_IMAGES = [
   "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
   "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
@@ -44,10 +44,12 @@ const GENERAL_POOL = [
   "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
   "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
   "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e"
+].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+
+const GENERAL_POOL = [
   "https://images.unsplash.com/photo-1433086966358-54859d0ed716",
   "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
   "https://images.unsplash.com/photo-1505144808419-1957a94ca61e",
   "https://images.unsplash.com/photo-1475924156734-496f6acc671e",
   "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07",
@@ -203,7 +205,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isInfluencer = Math.random() > 0.9;
     const isPopular = Math.random() > 0.85;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.85;
     
     let lat, lng;
     if (Math.random() > 0.6) {
@@ -231,6 +232,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     } else if (content.includes('강아지') || content.includes('고양이')) {
       images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
       category = 'animal';
+    } else if (Math.random() > 0.7) {
+      images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
+      category = 'place';
     } else {
       images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
     }
@@ -241,7 +245,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     return {
       id,
       isAd,
-      isGif,
+      isGif: Math.random() > 0.85,
       isInfluencer,
       category,
       user: createMockUser(isAd ? "sponsored" : id),
