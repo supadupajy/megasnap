@@ -272,7 +272,7 @@ const Index = () => {
         />
 
         <div className={cn(
-          "absolute top-24 left-0 right-0 flex items-start justify-between pointer-events-none transition-all duration-300",
+          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
         )}>
           <div className="w-full shrink-0 pointer-events-auto">
