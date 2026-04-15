@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PostItemProps {
@@ -61,9 +62,10 @@ const PostItem = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
-  const [comments] = useState([
+  const [comments, setComments] = useState([
     { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." }
   ]);
+  const [commentInput, setCommentInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const isPopular = !isAd && borderType === 'popular';
@@ -95,6 +97,14 @@ const PostItem = ({
   const handleSaveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSaved(!isSaved);
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!commentInput.trim()) return;
+    setComments([...comments, { user: "Dyad_Explorer", text: commentInput }]);
+    setCommentInput('');
   };
 
   const renderCategoryBadge = () => {
@@ -257,10 +267,7 @@ const PostItem = ({
             >
               <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
-            <button onClick={(e) => {
-              e.stopPropagation();
-              setShowComments(!showComments);
-            }}>
+            <button onClick={(e) => e.stopPropagation()}>
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </button>
             <button onClick={(e) => e.stopPropagation()}>
@@ -307,9 +314,30 @@ const PostItem = ({
             </p>
           </div>
 
+          {/* 댓글 입력창 */}
+          <form 
+            onSubmit={handleAddComment}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+          >
+            <Input 
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+            />
+            <button 
+              type="submit"
+              disabled={!commentInput.trim()}
+              className="text-indigo-600 disabled:text-gray-300 transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+
           {/* 최신 댓글 (항상 상단 고정) */}
           {lastComment && (
-            <div className="flex gap-2 items-start mt-2">
+            <div className="flex gap-2 items-start mt-1">
               <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
               <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
             </div>

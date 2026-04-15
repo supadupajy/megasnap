@@ -5,8 +5,9 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Bookmark, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +37,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [comments] = useState(INITIAL_COMMENTS);
+  const [comments, setComments] = useState(INITIAL_COMMENTS);
+  const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -54,6 +56,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
+      setComments(INITIAL_COMMENTS);
       setIsSaved(posts[initialIndex]?.isSaved || false);
     }
     if (!isOpen) {
@@ -81,6 +84,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (index !== currentImageIndex) {
       setCurrentImageIndex(index);
     }
+  };
+
+  const handleAddComment = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!commentInput.trim()) return;
+    setComments([...comments, { user: "Dyad_Explorer", text: commentInput }]);
+    setCommentInput('');
   };
 
   const handleSaveToggle = (e: React.MouseEvent) => {
@@ -190,7 +200,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
                   >
                     <div className="flex flex-col">
-                      {/* Header: User Info */}
+                      {/* Header: User Info (Moved to top to match PostItem) */}
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div 
                           className="flex items-center gap-3 cursor-pointer group"
@@ -295,6 +305,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </div>
 
                         <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+                          {/* 댓글 입력창 */}
+                          <form 
+                            onSubmit={handleAddComment}
+                            className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+                          >
+                            <Input 
+                              placeholder="댓글 달기..." 
+                              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+                              value={commentInput}
+                              onChange={(e) => setCommentInput(e.target.value)}
+                            />
+                            <button 
+                              type="submit"
+                              disabled={!commentInput.trim()}
+                              className="text-indigo-600 disabled:text-gray-300 transition-colors"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </form>
+
                           {/* 최신 댓글 (항상 상단 고정) */}
                           {lastComment && (
                             <div className="flex gap-2 items-start mt-1 mb-2">
