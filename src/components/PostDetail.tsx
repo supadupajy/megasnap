@@ -220,7 +220,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   <div className="px-4">
                     <div className={cn(
                       "relative aspect-square w-full rounded-2xl transition-all duration-500", 
-                      isInfluencer ? "influencer-border-container" : (isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (isPopular ? "popular-border-container" : ""))
+                      isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
                     )}>
                       <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", isInfluencer && "shine-overlay")}>
                         <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
@@ -241,8 +241,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
                       {isInfluencer ? (
                         <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />INFLUENCER</div>
-                      ) : isPopular && (
+                      ) : isPopular ? (
                         <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
+                      ) : isAd && (
+                        <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>
                       )}
                       {isGif && !isAd && <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
                     </div>
