@@ -27,20 +27,33 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   useEffect(() => {
     if (isOpen) {
-      if (initialLocation && window.google) {
+      if (initialLocation && window.naver) {
         setIsLoadingAddress(true);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results, status) => {
-            if (status === "OK" && results && results[0]) {
-              setAddress(results[0].formatted_address);
+        
+        // 네이버 지도 Geocoder 사용
+        naver.maps.Service.reverseGeocode({
+          coords: new naver.maps.LatLng(initialLocation.lat, initialLocation.lng),
+          orders: [
+            naver.maps.Service.OrderType.ADDR,
+            naver.maps.Service.OrderType.ROAD_ADDR
+          ].join(',')
+        }, (status, response) => {
+          if (status === naver.maps.Service.Status.OK) {
+            const item = response.v2.results[0];
+            if (item) {
+              const addr = item.region.area1.name + ' ' + 
+                           item.region.area2.name + ' ' + 
+                           item.region.area3.name + ' ' + 
+                           (item.land?.number1 || '');
+              setAddress(addr);
             } else {
               setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
-            setIsLoadingAddress(false);
+          } else {
+            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
-        );
+          setIsLoadingAddress(false);
+        });
       } else if (!initialLocation) {
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
