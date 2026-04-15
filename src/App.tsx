@@ -24,6 +24,15 @@ import ExitDialog from "./components/ExitDialog";
 
 const queryClient = new QueryClient();
 
+// 페이지 이동 시 항상 최상단으로 스크롤하는 컴포넌트
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -70,6 +79,7 @@ const AnimatedRoutes = () => {
   
   return (
     <div className="relative min-h-screen bg-white">
+      <ScrollToTop />
       {!hideLayout && <Header />}
       
       <main className="relative">

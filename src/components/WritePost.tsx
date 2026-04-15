@@ -121,7 +121,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[82vh] outline-none">
+      <DrawerContent className="h-[92vh] outline-none">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
         <div className="px-6 flex flex-col h-full relative">
           <div className="flex items-center justify-between mb-6">
