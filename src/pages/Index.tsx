@@ -139,6 +139,15 @@ const Index = () => {
     });
 
     const nextMarkers = [...stillVisible];
+
+    // 하이라이트된 포스트가 있다면 강제로 추가 (지도가 이동 중이라도 보이게 함)
+    if (highlightedPostId) {
+      const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
+      if (hPost && !nextMarkers.some(m => m.id === hPost.id)) {
+        nextMarkers.push(hPost);
+      }
+    }
+
     const candidates = inBoundsPool.filter(p => !nextMarkers.some(m => m.id === p.id));
 
     const getScore = (p: Post) => {
@@ -193,7 +202,7 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts]);
+  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -226,9 +235,12 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
+    // 하이라이트 ID를 먼저 설정하여 마커가 즉시 생성되도록 함
+    setHighlightedPostId(post.id);
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
-    setHighlightedPostId(post.id);
+    
+    // 3.5초 후 하이라이트 제거
     setTimeout(() => setHighlightedPostId(null), 3500);
   }, []);
 
