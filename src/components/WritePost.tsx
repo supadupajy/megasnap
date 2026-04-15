@@ -1,8 +1,9 @@
+lucide-react)">
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-center';
+import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess } from '@/utils/toast';
