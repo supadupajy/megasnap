@@ -110,13 +110,7 @@
   }
 }
 
-/* Floating Animation - Removed from map markers but kept for other UI if needed */
-@keyframes influencer-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-/* Map Marker Floating Animation */
+/* Floating Animation */
 @keyframes marker-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
@@ -126,6 +120,22 @@
   animation: marker-float 3s ease-in-out infinite;
 }
 
+/* Marker Appear Animation */
+@keyframes marker-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-marker-appear {
+  animation: marker-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 /* Shine Sweep Animation */
 @keyframes shine-sweep {
   0% { left: -100%; }
@@ -133,7 +143,7 @@
   100% { left: 100%; }
 }
 
-/* Marker Highlight Ping Animation - 2 Times */
+/* Marker Highlight Ping Animation */
 @keyframes marker-ping {
   0% {
     transform: translate(-50%, -50%) scale(0.3);
@@ -148,28 +158,18 @@
   }
 }
 
-.animate-hot-pulse {
-  animation: hot-pulse 2s ease-in-out infinite;
-}
-
-.animate-influencer-float {
-  animation: influencer-float 3s ease-in-out infinite;
-}
-
 .marker-highlight-ping {
   position: absolute;
-  /* 56x56 이미지의 정중앙 좌표 */
   top: 28px; 
   left: 28px;
   width: 40px;
   height: 40px;
-  background: rgba(34, 211, 238, 0.6); /* Cyan 400 */
+  background: rgba(34, 211, 238, 0.6);
   box-shadow: 0 0 20px 5px rgba(34, 211, 238, 0.4);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
   transform: translate(-50%, -50%);
-  /* 2회 반복 후 투명하게 유지 */
   animation: marker-ping 1s cubic-bezier(0, 0, 0.2, 1) 2 forwards;
 }
 

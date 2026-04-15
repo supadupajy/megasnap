@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Sparkles, Activity } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Activity } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -44,13 +44,11 @@ const Index = () => {
   const [showDensity, setShowDensity] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 지도 이동 시 캐시 업데이트
   useEffect(() => {
     if (mapData?.center) {
       mapCache.lastCenter = mapData.center;
@@ -122,9 +120,9 @@ const Index = () => {
 
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-    const targetMarkerCount = Math.floor(Math.random() * 11) + 25;
 
-    const inBoundsPool = updatedAllPosts.filter(post => {
+    // 화면 영역 내에 있고 필터 조건에 맞는 모든 마커를 추출
+    const inBoundsMarkers = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -139,97 +137,18 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const stillVisible = displayedMarkers.filter(p => {
-      const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
-      const isWithinTime = p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs;
-      const matchesCategory = selectedCategories.includes('all') || 
-                              selectedCategories.includes(p.category || 'none') ||
-                              (selectedCategories.includes('hot') && p.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && p.isInfluencer) ||
-                              (selectedCategories.includes('mine') && p.user.id === 'me');
-      const isNotBlocked = !blockedIds.has(p.user.id);
-      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
-    });
+    // 너무 많은 마커가 표시되는 것을 방지하기 위해 중요도 순으로 최대 100개까지만 표시
+    // 이 기준은 고정되어 있으므로 지도를 이동해도 마커가 깜빡이지 않음
+    const limitedMarkers = inBoundsMarkers
+      .sort((a, b) => {
+        const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
+        const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
+        return scoreB - scoreA;
+      })
+      .slice(0, 100);
 
-    const ROWS = 6;
-    const COLS = 5;
-    const latStep = (ne.lat - sw.lat) / ROWS;
-    const lngStep = (ne.lng - sw.lng) / COLS;
-
-    const occupiedCells = new Set();
-    let currentPopularCount = 0;
-
-    stillVisible.forEach(p => {
-      const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
-      const c = Math.min(Math.floor((p.lng - sw.lng) / lngStep), COLS - 1);
-      occupiedCells.add(`${r}-${c}`);
-      if (p.borderType === 'popular') currentPopularCount++;
-    });
-
-    const nextMarkers = [...stillVisible];
-
-    if (highlightedPostId) {
-      const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
-      if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
-        nextMarkers.push(hPost);
-      }
-    }
-
-    const candidates = inBoundsPool.filter(p => !nextMarkers.some(m => m.id === p.id));
-
-    const getScore = (p: Post) => {
-      let score = Math.random() * 100;
-      if (p.isInfluencer) score += 15; 
-      if (p.borderType === 'popular') score += 10;
-      if (p.isAd) score += 5;
-      score += Math.log10(p.likes + 1) * 2;
-      return score;
-    };
-
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= targetMarkerCount) break;
-        if (!occupiedCells.has(`${r}-${c}`)) {
-          const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
-          const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
-          
-          let cellCandidates = candidates.filter(p => 
-            p.lat >= cellSw.lat && p.lat < cellNe.lat &&
-            p.lng >= cellSw.lng && p.lng < cellNe.lng &&
-            !nextMarkers.some(m => m.id === p.id)
-          );
-
-          if (currentPopularCount >= MAX_POPULAR_COUNT) {
-            cellCandidates = cellCandidates.filter(p => p.borderType !== 'popular');
-          }
-
-          if (cellCandidates.length > 0) {
-            const best = cellCandidates.sort((a, b) => getScore(b) - getScore(a))[0];
-            nextMarkers.push(best);
-            occupiedCells.add(`${r}-${c}`);
-            if (best.borderType === 'popular') currentPopularCount++;
-          }
-        }
-      }
-      if (nextMarkers.length >= targetMarkerCount) break;
-    }
-
-    if (nextMarkers.length < targetMarkerCount) {
-      let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
-      if (currentPopularCount >= MAX_POPULAR_COUNT) {
-        remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
-      }
-      const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
-      for (const p of sortedRemaining) {
-        if (nextMarkers.length >= targetMarkerCount) break;
-        if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
-        nextMarkers.push(p);
-        if (p.borderType === 'popular') currentPopularCount++;
-      }
-    }
-
-    setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategories, allPosts, highlightedPostId, blockedIds]);
+    setDisplayedMarkers(limitedMarkers);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -386,8 +305,7 @@ const Index = () => {
               onClick={handleViewAllClick} 
               disabled={displayedMarkers.length === 0} 
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden",
-                displayedMarkers.length > 0 && "animate-bounce-subtle"
+                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden"
               )}
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -399,10 +317,6 @@ const Index = () => {
               <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
                 {displayedMarkers.length}
               </div>
-            )}
-            
-            {displayedMarkers.length > 0 && (
-              <div className="absolute inset-0 -z-10 bg-indigo-400/30 rounded-[24px] animate-ping" />
             )}
           </div>
         </div>

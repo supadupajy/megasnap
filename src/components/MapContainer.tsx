@@ -293,7 +293,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const borderContainerClass = isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''));
 
     return `
-      <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
+      <div class="animate-marker-appear" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${(isInfluencer || isPopular) ? 'animate-marker-float' : ''}">
           ${labelHtml}
