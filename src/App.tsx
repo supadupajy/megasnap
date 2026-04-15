@@ -22,7 +22,7 @@ import WritePost from "./components/WritePost";
 
 const queryClient = new QueryClient();
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const AnimatedRoutes = () => {
   const location = useLocation();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   
@@ -34,9 +34,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {!hideLayout && <Header />}
       
       <main className="relative">
-        {/* mode="wait"를 제거하여 이전 페이지가 사라지기 전에 새 페이지가 나타날 수 있게 함 (오버랩 가능) */}
-        <AnimatePresence initial={false}>
-          {children}
+        {/* popLayout 모드를 사용하여 페이지가 겹치며 전환되도록 설정 */}
+        <AnimatePresence mode="popLayout">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<Index />} />
+            <Route path="/popular" element={<Popular />} />
+            <Route path="/post-list" element={<PostList />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/chat/:chatId" element={<Chat />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<UserProfile />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </AnimatePresence>
       </main>
 
@@ -47,25 +58,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </>
       )}
     </div>
-  );
-};
-
-const AnimatedRoutes = () => {
-  const location = useLocation();
-  
-  return (
-    <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<Index />} />
-      <Route path="/popular" element={<Popular />} />
-      <Route path="/post-list" element={<PostList />} />
-      <Route path="/search" element={<Search />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/messages" element={<Messages />} />
-      <Route path="/chat/:chatId" element={<Chat />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/:userId" element={<UserProfile />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
   );
 };
 
@@ -90,9 +82,7 @@ const App = () => {
             {showSplash ? (
               <SplashScreen key="splash" />
             ) : (
-              <Layout key="main-layout">
-                <AnimatedRoutes />
-              </Layout>
+              <AnimatedRoutes key="main-app" />
             )}
           </AnimatePresence>
         </BrowserRouter>
