@@ -222,21 +222,29 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
+    // 카테고리 할당 로직 강화 (약 85% 확률로 카테고리 부여)
+    const categoryRoll = Math.random();
+
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
-    } else if (content.includes('사고') || content.includes('화재')) {
+    } else if (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15) {
       images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
       category = 'accident';
-    } else if (content.includes('강아지') || content.includes('고양이')) {
+    } else if (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35)) {
       images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
       category = 'animal';
-    } else if (Math.random() > 0.7) {
+    } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
+      images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
+      category = 'food';
+    } else if (categoryRoll >= 0.6 && categoryRoll < 0.85) {
       images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
       category = 'place';
     } else {
+      // 나머지 15%는 카테고리 없음 (일반 포스트)
       images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
+      category = 'none';
     }
 
     const randomCount = Math.floor(Math.random() * 16) + 10;
