@@ -276,7 +276,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           >
                             <Input 
                               placeholder="댓글 달기..." 
-                              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+                              className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-xs h-8"
                               value={commentInput}
                               onChange={(e) => setCommentInput(e.target.value)}
                             />
