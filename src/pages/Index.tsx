@@ -17,7 +17,7 @@ import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { mapCache } from '@/utils/map-cache';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Index = () => {
   const location = useLocation();
@@ -331,7 +331,18 @@ const Index = () => {
           </button>
         </div>
 
-        <TimeSlider value={timeValue} onChange={setTimeValue} />
+        <AnimatePresence>
+          {!isTrendingExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <TimeSlider value={timeValue} onChange={setTimeValue} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <CategoryMenu 
