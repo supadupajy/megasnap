@@ -1,4 +1,4 @@
-package com.example.chorasnap;
+package com.example.chora;
 
 import com.getcapacitor.BridgeActivity;
 
