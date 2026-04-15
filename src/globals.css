@@ -117,14 +117,14 @@
 /* Marker Highlight Ping Animation - 2 Times */
 @keyframes marker-ping {
   0% {
-    transform: translate(-50%, -50%) scale(0.2);
+    transform: translate(-50%, -50%) scale(0.4);
     opacity: 0;
   }
-  30% {
-    opacity: 0.8;
+  40% {
+    opacity: 0.9;
   }
   100% {
-    transform: translate(-50%, -50%) scale(3.5);
+    transform: translate(-50%, -50%) scale(3.2);
     opacity: 0;
   }
 }
@@ -139,17 +139,17 @@
 
 .marker-highlight-ping {
   position: absolute;
-  top: 28px; /* 56px 이미지의 중앙 */
-  left: 28px; /* 56px 이미지의 중앙 */
-  width: 60px;
-  height: 60px;
-  background: rgba(6, 182, 212, 0.6); /* Cyan 500 */
-  box-shadow: 0 0 25px 10px rgba(6, 182, 212, 0.4);
+  top: 28px; /* 56px 이미지의 수직 중앙 */
+  left: 28px; /* 56px 이미지의 수평 중앙 */
+  width: 50px;
+  height: 50px;
+  background: rgba(6, 182, 212, 0.5); /* Cyan 500 */
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
-  /* 2회 반복 후 정지 */
-  animation: marker-ping 1.2s cubic-bezier(0, 0, 0.2, 1) 2;
+  transform: translate(-50%, -50%);
+  /* 2회 반복 후 투명하게 유지 */
+  animation: marker-ping 1s cubic-bezier(0, 0, 0.2, 1) 2 forwards;
 }
 
 .shine-overlay::after {

@@ -229,7 +229,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         ${labelHtml}
         <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')}"
              style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                    ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#06b6d4' : (isAd ? '#3b82f6' : '#ffffff')};`}
+                    ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
                     overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                     background-color: white;">
           <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
@@ -342,12 +342,17 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         markerOverlay.setMap(mapInstance.current);
         markersRef.current.set(post.id, markerOverlay);
       } else {
-        // 기존 마커의 상태(하이라이트, 읽음 여부)가 변경된 경우 HTML 업데이트
-        // innerHTML을 새로 설정하면 내부 DOM이 재생성되어 CSS 애니메이션이 다시 트리거됩니다.
+        // 기존 마커의 상태(하이라이트, 읽음 여부)가 변경된 경우에만 HTML 업데이트
         const div = (existingOverlay as any).div;
         if (div) {
-          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
-          div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+          const currentHtml = div.innerHTML;
+          const nextHtml = getMarkerHtml(post, isViewed, isHighlighted);
+          
+          // 하이라이트 상태가 변했거나 읽음 상태가 변했을 때만 innerHTML 교체 (애니메이션 재트리거)
+          if (currentHtml.includes('marker-highlight-ping') !== isHighlighted || currentHtml.includes('grayscale') !== isViewed) {
+            div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+            div.innerHTML = nextHtml;
+          }
         }
       }
     });
