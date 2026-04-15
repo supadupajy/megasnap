@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion } from 'framer-motion';
@@ -44,12 +45,17 @@ const ObservedPostItem = ({ post, onVisible, isViewed, ...props }: { post: Post,
 const PostList = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { viewedIds, markAsViewed } = useViewedPosts();
+  const { blockedIds } = useBlockedUsers();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const { viewedIds, markAsViewed } = useViewedPosts();
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const mapCenter = location.state?.center || { lat: 37.5665, lng: 126.9780 };
+
+  const filteredPosts = useMemo(() => {
+    return posts.filter(p => !blockedIds.has(p.user.id));
+  }, [posts, blockedIds]);
 
   useEffect(() => {
     if (location.state?.posts) {
@@ -125,14 +131,14 @@ const PostList = () => {
         </button>
         <div>
           <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {posts.length} Posts</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
         </div>
       </div>
 
       <div className="flex flex-col pt-4">
-        {posts.length > 0 ? (
+        {filteredPosts.length > 0 ? (
           <>
-            {posts.map((post) => (
+            {filteredPosts.map((post) => (
               <ObservedPostItem
                 key={post.id}
                 post={post}

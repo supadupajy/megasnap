@@ -10,14 +10,21 @@ import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 
 const Popular = () => {
   const navigate = useNavigate();
+  const { blockedIds } = useBlockedUsers();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // 차단된 사용자를 제외한 포스트 목록
+  const filteredPosts = useMemo(() => {
+    return posts.filter(p => !blockedIds.has(p.user.id));
+  }, [posts, blockedIds]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -31,12 +38,11 @@ const Popular = () => {
     if (isLoadingMore) return;
     setIsLoadingMore(true);
     
-    // 실제 API 호출을 시뮬레이션하기 위한 지연 시간
     setTimeout(() => {
       const newPosts = createMockPosts(37.5665, 126.9780, 20)
         .map(p => ({
           ...p,
-          likes: Math.floor(Math.random() * 1000) + 500 // 인기 탭이므로 높은 좋아요 수 유지
+          likes: Math.floor(Math.random() * 1000) + 500 
         }))
         .sort((a, b) => b.likes - a.likes);
         
@@ -88,7 +94,7 @@ const Popular = () => {
       <div className="pt-[88px]">
         <StoryBar />
         <div className="flex flex-col">
-          {posts.map((post) => (
+          {filteredPosts.map((post) => (
             <PostItem
               key={post.id}
               user={post.user}
@@ -115,7 +121,6 @@ const Popular = () => {
           ))}
         </div>
 
-        {/* 로딩 인디케이터 및 관찰 대상 */}
         <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
           {isLoadingMore ? (
             <>

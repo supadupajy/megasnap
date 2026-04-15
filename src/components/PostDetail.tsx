@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 
 interface PostDetailProps {
   posts: any[];
@@ -32,6 +33,7 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
+  const { blockUser } = useBlockedUsers();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -113,7 +115,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const handleBlock = (e: React.MouseEvent) => {
     e.stopPropagation();
+    blockUser(post.user.id);
     showError(`${post.user.name} 님을 차단했습니다.`);
+    onClose();
   };
 
   const renderCategoryBadge = () => {

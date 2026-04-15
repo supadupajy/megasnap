@@ -16,6 +16,7 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,6 +30,7 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
+  const { blockedIds } = useBlockedUsers();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -54,17 +56,24 @@ const Index = () => {
     }
   }, [mapCenter]);
 
+  // 차단된 사용자를 제외한 전체 포스트
+  const filteredAllPosts = useMemo(() => {
+    return allPosts.filter(p => !blockedIds.has(p.user.id));
+  }, [allPosts, blockedIds]);
+
   const trendingPosts = useMemo(() => {
-    return allPosts
+    return filteredAllPosts
       .filter(p => !p.isAd)
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 20)
       .map((p, index) => ({ ...p, rank: index + 1 }));
-  }, [allPosts]);
+  }, [filteredAllPosts]);
 
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
+      if (blockedIds.has(incomingPost.user.id)) return;
+
       setAllPosts(prev => {
         if (prev.some(p => p.id === incomingPost.id)) return prev;
         return [incomingPost, ...prev];
@@ -80,7 +89,7 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
-  }, [location.state]);
+  }, [location.state, blockedIds]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -113,18 +122,21 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 차단된 사용자 필터링 포함
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
-      return isWithinBounds && isWithinTime && isWithinCategory;
+      const isNotBlocked = !blockedIds.has(post.user.id);
+      return isWithinBounds && isWithinTime && isWithinCategory && isNotBlocked;
     });
 
     const stillVisible = displayedMarkers.filter(p => 
       p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
       (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
-      (selectedCategory === 'all' || p.category === selectedCategory)
+      (selectedCategory === 'all' || p.category === selectedCategory) &&
+      !blockedIds.has(p.user.id)
     );
 
     const ROWS = 6;
@@ -146,7 +158,7 @@ const Index = () => {
 
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
-      if (hPost && !nextMarkers.some(m => m.id === hPost.id)) {
+      if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
         nextMarkers.push(hPost);
       }
     }
@@ -205,7 +217,7 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId]);
+  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {

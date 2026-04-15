@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 
 interface PostItemProps {
   user: {
@@ -72,6 +73,7 @@ const PostItem = ({
   onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
+  const { blockUser } = useBlockedUsers();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
@@ -121,6 +123,7 @@ const PostItem = ({
 
   const handleBlock = (e: React.MouseEvent) => {
     e.stopPropagation();
+    blockUser(user.id);
     showError(`${user.name} 님을 차단했습니다.`);
   };
 
