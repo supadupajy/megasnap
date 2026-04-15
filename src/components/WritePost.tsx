@@ -9,6 +9,57 @@ import { showSuccess } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { cn } from '@/lib/utils';
+
+interface WritePostProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onPostCreated?: (newPost: any) => void;
+  initialLocation?: { lat: number; lng: number };
+}
+
+const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePostProps) => {
+  const [content, setContent] = useState('');
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [address, setAddress] = useState<string>('');
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const { isKeyboardOpen } = useKeyboard();
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialLocation && window.google) {
+        setIsLoadingAddress(true);
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode(
+          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
+          (results, status) => {
+            if (status === "OK" && results && results[0]) {
+              setAddress(results[0].formatted_address);
+            } else {
+              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+            }
+            setIsLoadingAddress(false);
+          }
+        );
+      } else if (!initialLocation) {
+        setAddress('서울특별시 중구 세종대로 110');
+        setIsLoadingAddress(false);
+      }
+    } else {
+      setAddress('');<dyad-write path="src/components/WritePost.tsx" description="cn 유틸리티 임포트 추가 및 레이아웃 안정화">
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { showSuccess } from '@/utils/toast';
+import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
+import confetti from 'canvas-confetti';
+import { useKeyboard } from '@/hooks/use-keyboard';
+import { cn } from '@/lib/utils';
 
 interface WritePostProps {
   isOpen: boolean;
