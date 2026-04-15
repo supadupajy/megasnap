@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, MapPin } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,6 @@ const Index = () => {
       });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 지도 이동 완료(1000ms) 후 핑 효과 시작
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
         setTimeout(() => setHighlightedPostId(null), 3500);
@@ -239,14 +238,11 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
-    // 1. 지도 이동 시작
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 2. 지도 이동 완료(1000ms) 후 핑 효과 시작
     setTimeout(() => {
       setHighlightedPostId(post.id);
-      // 3. 일정 시간 후 핑 효과 제거
       setTimeout(() => setHighlightedPostId(null), 3500);
     }, 1000);
   }, []);
@@ -329,6 +325,12 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
+          {/* 마커 개수 표시 버튼 */}
+          <div className="w-14 h-14 bg-white rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg border border-indigo-100">
+            <MapPin className="w-5 h-5 fill-indigo-600" />
+            <span className="text-xs font-black mt-0.5">{displayedMarkers.length}</span>
+          </div>
+
           {/* 재검색 버튼 */}
           <button 
             onClick={handleRefresh} 
