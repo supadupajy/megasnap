@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Activity } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -41,10 +41,9 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [showDensity, setShowDensity] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 150; // 표시 한도 상향
+  const MAX_MARKERS = 150;
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -122,7 +121,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 1. 현재 화면 영역 내에 있는 모든 후보 마커 추출
     const inBoundsCandidates = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -138,11 +136,9 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 2. 스티키 로직: 이미 표시 중인 마커가 화면 내에 있다면 최우선적으로 유지
     const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
     const stickyMarkers = inBoundsCandidates.filter(m => currentlyDisplayedIds.has(m.id));
     
-    // 3. 새로운 마커들 중 우선순위가 높은 것들 추가
     const newCandidates = inBoundsCandidates.filter(m => !currentlyDisplayedIds.has(m.id));
     const sortedNewCandidates = newCandidates.sort((a, b) => {
       const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
@@ -150,10 +146,8 @@ const Index = () => {
       return scoreB - scoreA;
     });
 
-    // 4. 최종 리스트 구성 (기존 마커 유지 + 새 마커 추가)
     const combined = [...stickyMarkers, ...sortedNewCandidates].slice(0, MAX_MARKERS);
     
-    // ID 셋이 달라진 경우에만 상태 업데이트 (불필요한 리렌더링 방지)
     const nextIds = combined.map(m => m.id).sort().join(',');
     const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
     
@@ -249,7 +243,6 @@ const Index = () => {
             setIsWriteOpen(true);
           }} 
           center={mapCenter}
-          showDensity={showDensity}
         />
 
         <div className={cn(
@@ -267,18 +260,6 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
-          <button 
-            onClick={() => setShowDensity(!showDensity)}
-            className={cn(
-              "w-12 h-12 rounded-2xl flex flex-col items-center justify-center shadow-lg active:scale-90 transition-all border",
-              showDensity 
-                ? "bg-red-500 text-white border-red-400" 
-                : "bg-white text-gray-600 border-gray-100"
-            )}
-          >
-            <Activity className={cn("w-5 h-5", showDensity && "animate-pulse")} />
-            <span className="text-[8px] font-black mt-0.5">밀집도</span>
-          </button>
           <button 
             onClick={() => setIsCategoryOpen(true)}
             className={cn(

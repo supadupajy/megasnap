@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isGifUrl } from '@/lib/mock-data';
 import { AlertCircle } from 'lucide-react';
 
@@ -12,21 +12,18 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapWriteClick: (location?: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
-  showDensity?: boolean;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center, showDensity }: MapContainerProps) => {
+const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
-  const densityRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
   const actionOverlayRef = useRef<google.maps.OverlayView | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastShowTime = useRef<number>(0);
   const isLongPressActive = useRef<boolean>(false);
-  const [isMoving, setIsMoving] = useState(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,38 +31,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const startPos = useRef<{ x: number, y: number } | null>(null);
   const MOVE_THRESHOLD = 10;
-
-  // 밀집도 계산 최적화: 그리드 기반 접근 (O(N))
-  const densityData = useMemo(() => {
-    if (!showDensity || posts.length === 0) return new Map<string, number>();
-    
-    const scores = new Map<string, number>();
-    const GRID_SIZE = 0.005; // 약 500m 그리드
-    const grid = new Map<string, number>();
-
-    // 1단계: 그리드별 카운트
-    posts.forEach(p => {
-      const gridX = Math.floor(p.lat / GRID_SIZE);
-      const gridY = Math.floor(p.lng / GRID_SIZE);
-      const key = `${gridX},${gridY}`;
-      grid.set(key, (grid.get(key) || 0) + 1);
-    });
-
-    // 2단계: 각 포스트에 그리드 점수 할당
-    posts.forEach(p => {
-      const gridX = Math.floor(p.lat / GRID_SIZE);
-      const gridY = Math.floor(p.lng / GRID_SIZE);
-      scores.set(p.id, grid.get(`${gridX},${gridY}`) || 1);
-    });
-
-    return scores;
-  }, [posts, showDensity]);
-
-  const getDensityStyle = (count: number) => {
-    if (count <= 3) return { bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.15)' };
-    if (count <= 8) return { bg: 'rgba(168, 85, 247, 0.08)', border: 'rgba(168, 85, 247, 0.15)' };
-    return { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.15)' };
-  };
 
   const smoothMoveTo = (target: { lat: number, lng: number }) => {
     if (!mapInstance.current) return;
@@ -78,7 +43,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const start = map.getCenter()!;
     const startLat = start.lat();
     const startLng = start.lng();
-    const duration = 800; // 이동 시간 단축
+    const duration = 800;
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
@@ -126,9 +91,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         mapInstance.current = map;
         setIsMapReady(true);
 
-        // 성능 최적화: bounds_changed 대신 idle 사용 (이동이 멈췄을 때만 업데이트)
         map.addListener('idle', () => {
-          setIsMoving(false);
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
           if (bounds && currentCenter) {
@@ -142,7 +105,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         });
 
         map.addListener('dragstart', () => {
-          setIsMoving(true);
           if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
@@ -152,7 +114,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         });
 
         map.addListener('zoom_changed', () => {
-          setIsMoving(true);
           hideActionPin();
         });
 
@@ -338,64 +299,16 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 1. 제거된 마커 정리
     markersRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
         markersRef.current.delete(id);
       }
     });
-    densityRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id) || !showDensity || isMoving) {
-        overlay.setMap(null);
-        densityRef.current.delete(id);
-      }
-    });
 
-    // 2. 마커 업데이트 및 생성
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-
-      // 밀집도 오버레이 (이동 중에는 생성하지 않음)
-      if (showDensity && !isMoving && !densityRef.current.has(post.id)) {
-        const count = densityData.get(post.id) || 1;
-        if (count > 1) { // 1개 이상일 때만 표시
-          const style = getDensityStyle(count);
-          const densityOverlay = new google.maps.OverlayView();
-          densityOverlay.onAdd = function() {
-            const div = document.createElement('div');
-            div.style.position = 'absolute';
-            div.style.width = '180px';
-            div.style.height = '180px';
-            div.style.backgroundColor = style.bg;
-            div.style.border = `1px solid ${style.border}`;
-            div.style.borderRadius = '50%';
-            div.style.pointerEvents = 'none';
-            div.style.transform = 'translate(-50%, calc(-50% - 36px))';
-            div.style.zIndex = '1';
-            this.getPanes()!.overlayLayer.appendChild(div);
-            (this as any).div = div;
-          };
-          densityOverlay.draw = function() {
-            const projection = this.getProjection();
-            const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(post.lat, post.lng))!;
-            const div = (this as any).div;
-            if (div) {
-              div.style.left = position.x + 'px';
-              div.style.top = position.y + 'px';
-            }
-          };
-          densityOverlay.onRemove = function() {
-            if ((this as any).div) {
-              (this as any).div.parentNode.removeChild((this as any).div);
-              (this as any).div = null;
-            }
-          };
-          densityOverlay.setMap(mapInstance.current);
-          densityRef.current.set(post.id, densityOverlay);
-        }
-      }
 
       const existingOverlay = markersRef.current.get(post.id);
       
@@ -443,7 +356,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, showDensity, densityData, isMoving]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
   return (
     <div className="w-full h-full relative bg-gray-100">
