@@ -28,105 +28,104 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   useEffect(() => {
     const initMap = () => {
-      if (!window.kakao) {
-        setError("카카오 SDK를 불러오지 못했습니다. index.html의 스크립트 태그를 확인해 주세요.");
-        return false;
-      }
-      
-      if (!window.kakao.maps) {
-        setError("카카오 지도 객체가 존재하지 않습니다. API 키나 도메인 설정을 확인해 주세요.");
+      // kakao 객체가 있는지 확인
+      if (typeof window.kakao === 'undefined' || !window.kakao.maps) {
         return false;
       }
 
-      window.kakao.maps.load(() => {
-        if (!mapElement.current || mapInstance.current) return;
+      if (!mapElement.current || mapInstance.current) return true;
 
-        try {
-          const initialCenter = new window.kakao.maps.LatLng(
-            center?.lat || 37.5665, 
-            center?.lng || 126.9780
-          );
+      try {
+        const initialCenter = new window.kakao.maps.LatLng(
+          center?.lat || 37.5665, 
+          center?.lng || 126.9780
+        );
+        
+        const mapOptions = {
+          center: initialCenter,
+          level: 4,
+        };
+
+        const map = new window.kakao.maps.Map(mapElement.current, mapOptions);
+        mapInstance.current = map;
+        setIsMapReady(true);
+        setError(null);
+
+        // 롱프레스 구현
+        window.kakao.maps.event.addListener(map, 'mousedown', (e: any) => {
+          if (pressTimer.current) clearTimeout(pressTimer.current);
           
-          const mapOptions = {
-            center: initialCenter,
-            level: 4,
-          };
+          pressTimer.current = setTimeout(() => {
+            const latlng = e.latLng;
+            if (latlng) {
+              lastLongPressTime.current = Date.now();
+              setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
+              if (window.navigator.vibrate) window.navigator.vibrate(50);
+            }
+          }, 1000);
+        });
 
-          const map = new window.kakao.maps.Map(mapElement.current, mapOptions);
-          mapInstance.current = map;
-          setIsMapReady(true);
-          setError(null);
+        const clearTimer = () => {
+          if (pressTimer.current) {
+            clearTimeout(pressTimer.current);
+            pressTimer.current = null;
+          }
+        };
 
-          // 롱프레스 구현
-          window.kakao.maps.event.addListener(map, 'mousedown', (e: any) => {
-            if (pressTimer.current) clearTimeout(pressTimer.current);
-            
-            pressTimer.current = setTimeout(() => {
-              const latlng = e.latLng;
-              if (latlng) {
-                lastLongPressTime.current = Date.now();
-                setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
-                if (window.navigator.vibrate) window.navigator.vibrate(50);
+        window.kakao.maps.event.addListener(map, 'dragstart', clearTimer);
+        window.kakao.maps.event.addListener(map, 'mousemove', clearTimer);
+
+        window.kakao.maps.event.addListener(map, 'click', () => {
+          const now = Date.now();
+          if (now - lastLongPressTime.current < 500) return;
+          setActionPin(null);
+        });
+
+        const updateBounds = () => {
+          const bounds = map.getBounds();
+          if (bounds) {
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            onMapChange({
+              bounds: {
+                sw: { lat: sw.getLat(), lng: sw.getLng() },
+                ne: { lat: ne.getLat(), lng: ne.getLng() }
               }
-            }, 1000);
-          });
+            });
+          }
+        };
 
-          const clearTimer = () => {
-            if (pressTimer.current) {
-              clearTimeout(pressTimer.current);
-              pressTimer.current = null;
-            }
-          };
-
-          window.kakao.maps.event.addListener(map, 'dragstart', clearTimer);
-          window.kakao.maps.event.addListener(map, 'mousemove', clearTimer);
-
-          window.kakao.maps.event.addListener(map, 'click', () => {
-            const now = Date.now();
-            if (now - lastLongPressTime.current < 500) return;
-            setActionPin(null);
-          });
-
-          const updateBounds = () => {
-            const bounds = map.getBounds();
-            if (bounds) {
-              const sw = bounds.getSouthWest();
-              const ne = bounds.getNorthEast();
-              onMapChange({
-                bounds: {
-                  sw: { lat: sw.getLat(), lng: sw.getLng() },
-                  ne: { lat: ne.getLat(), lng: ne.getLng() }
-                }
-              });
-            }
-          };
-
-          window.kakao.maps.event.addListener(map, 'bounds_changed', updateBounds);
-          updateBounds();
-        } catch (e) {
-          console.error("Map Init Error:", e);
-          setError("지도를 초기화하는 중 오류가 발생했습니다. 도메인 등록 여부를 확인해 주세요.");
-        }
-      });
-      return true;
+        window.kakao.maps.event.addListener(map, 'bounds_changed', updateBounds);
+        updateBounds();
+        return true;
+      } catch (e) {
+        console.error("Map Init Error:", e);
+        setError("지도를 초기화하는 중 오류가 발생했습니다. 도메인 등록 여부를 확인해 주세요.");
+        return false;
+      }
     };
 
+    // SDK 로드 대기 및 초기화 시도
     let retryCount = 0;
-    const maxRetries = 20;
-    
+    const maxRetries = 30;
     const timer = setInterval(() => {
-      if (initMap() || retryCount >= maxRetries) {
+      if (initMap()) {
         clearInterval(timer);
+      } else {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          clearInterval(timer);
+          setError("카카오 SDK를 불러오지 못했습니다. 도메인 설정이나 API 키를 확인해 주세요.");
+        }
       }
-      retryCount++;
-    }, 500);
+    }, 300);
 
     return () => clearInterval(timer);
   }, []);
 
   // 센터 변경 시 이동
   useEffect(() => {
-    if (isMapReady && mapInstance.current && center && window.kakao) {
+    if (isMapReady && mapInstance.current && center && window.kakao?.maps) {
       const moveLatLng = new window.kakao.maps.LatLng(center.lat, center.lng);
       mapInstance.current.panTo(moveLatLng);
     }
@@ -134,7 +133,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   // 액션 핀 (글쓰기 버튼) 관리
   useEffect(() => {
-    if (!isMapReady || !mapInstance.current || !window.kakao) return;
+    if (!isMapReady || !mapInstance.current || !window.kakao?.maps) return;
     
     if (actionOverlayRef.current) {
       actionOverlayRef.current.setMap(null);
@@ -175,7 +174,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   // 포스트 마커 관리
   useEffect(() => {
-    if (!isMapReady || !mapInstance.current || !window.kakao) return;
+    if (!isMapReady || !mapInstance.current || !window.kakao?.maps) return;
     const map = mapInstance.current;
 
     const currentPostIds = new Set(posts.map(p => p.id));
