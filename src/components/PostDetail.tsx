@@ -169,13 +169,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             {isOpen && (
               <motion.div 
                 key={post.id} 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-                animate={{ opacity: 1, scale: 1, y: 0 }} 
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} 
+                initial={{ opacity: 1 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
                 onClick={onClose}
                 className={cn(
-                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer", 
-                  (isInfluencer || isPopular) && "animate-influencer-float"
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
