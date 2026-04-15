@@ -121,7 +121,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[85vh] outline-none">
+      <DrawerContent className="h-[82vh] outline-none">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
         <div className="px-6 flex flex-col h-full relative">
           <div className="flex items-center justify-between mb-6">
@@ -129,7 +129,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               <Sparkles className="w-5 h-5 text-indigo-600" />
               새 게시물 작성
             </h2>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full close-popup-btn">
               <X className="w-5 h-5 text-gray-400" />
             </Button>
           </div>
@@ -188,7 +188,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           </div>
 
           <div 
-            className="absolute bottom-0 left-0 right-0 px-6 bg-white pt-4 pb-8 transition-all duration-300 z-50"
+            className="absolute bottom-0 left-0 right-0 px-6 bg-white pt-4 pb-10 transition-all duration-300 z-50"
             style={{ transform: `translateY(-${keyboardHeight}px)` }}
           >
             <Button 
