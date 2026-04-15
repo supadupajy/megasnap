@@ -127,13 +127,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onOpenAutoFocus={(e) => e.preventDefault()} 
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none"
       >
-        {/* 1. 클릭 가능한 배경 레이어 (가장 아래) */}
+        {/* 1. 클릭 가능한 배경 레이어 */}
         <div 
           className="absolute inset-0 z-0 cursor-pointer" 
           onClick={onClose}
         />
 
-        {/* 2. 닫기 버튼 (최상단 레이어) */}
+        {/* 2. 닫기 버튼 */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -145,7 +145,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           </Button>
         </div>
         
-        {/* 3. 콘텐츠 레이어 (중간) */}
+        {/* 3. 콘텐츠 레이어 */}
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <AnimatePresence mode="wait">
             {isOpen && (
@@ -154,15 +154,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial={{ opacity: 0, scale: 0.9, y: 20 }} 
                 animate={{ opacity: 1, scale: 1, y: 0 }} 
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} 
-                onClick={(e) => e.stopPropagation()} 
+                onClick={onClose} // 카드 자체를 클릭해도 닫히도록 설정
                 className={cn(
-                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto", 
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer", 
                   (isInfluencer || isPopular) && "animate-influencer-float"
                 )}
               >
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
+                      {/* 헤더 영역: 상호작용 요소 보호 */}
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
@@ -179,9 +180,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </div>
                           </div>
                         </div>
-                        <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button>
+                        <button className="text-gray-400 p-1" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button>
                       </div>
                       
+                      {/* 이미지 영역: 클릭 시 닫힘 (stopPropagation 없음) */}
                       <div className="px-4">
                         <div className={cn(
                           "relative aspect-square w-full rounded-2xl transition-all duration-500", 
@@ -213,7 +215,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </div>
                       </div>
                       
-                      <div className="px-4 pt-3 pb-4">
+                      {/* 하단 정보 영역: 상호작용 요소 보호 */}
+                      <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-4 pt-1.5">
                             <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button>
@@ -233,11 +236,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             )}
                           </div>
                         </div>
-                        <div className="space-y-1 mb-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="space-y-1 mb-4">
                           <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
                           <div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div>
                         </div>
-                        <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="border-t border-gray-100 pt-4">
                           <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} /><button type="submit" disabled={!commentInput.trim()} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>
                           {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
                           <AnimatePresence>{showComments && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="space-y-3 py-2">{localComments.slice(0, -1).map((comment, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{comment.user}</span><span className="text-sm text-gray-500">{comment.text}</span></div>))}</div></motion.div>}</AnimatePresence>
