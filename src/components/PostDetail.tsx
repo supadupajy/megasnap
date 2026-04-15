@@ -288,23 +288,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </button>
                           </form>
 
-                          <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-2 flex items-center justify-between group">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{showComments ? 'Hide Comments' : 'View All Comments'}</p>
-                            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-                          </button>
-                          
-                          {!showComments && lastComment && (
+                          {/* 최신 댓글 (항상 상단 고정) */}
+                          {lastComment && (
                             <div className="flex gap-2 items-start mt-1 mb-2">
                               <span className="font-bold text-[13px] text-gray-900">{lastComment.user}</span>
                               <span className="text-[13px] text-gray-500 line-clamp-1">{lastComment.text}</span>
                             </div>
                           )}
                           
+                          {/* 펼쳐지는 댓글 목록 */}
                           <AnimatePresence>
                             {showComments && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="space-y-4 py-3 pb-6">
-                                  {comments.map((comment, i) => (
+                                <div className="space-y-4 py-3">
+                                  {comments.slice(0, -1).map((comment, i) => (
                                     <div key={i} className="flex gap-2 items-start">
                                       <span className="font-bold text-[13px] text-gray-900">{comment.user}</span>
                                       <span className="text-[13px] text-gray-500">{comment.text}</span>
@@ -314,6 +311,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               </motion.div>
                             )}
                           </AnimatePresence>
+
+                          {/* 토글 버튼 (최하단 위치) */}
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
+                            className="w-full py-2 flex items-center justify-between group"
+                          >
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                              {showComments ? 'Close Comments' : 'View All Comments'}
+                            </p>
+                            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+                          </button>
                         </div>
                       </div>
                     </div>

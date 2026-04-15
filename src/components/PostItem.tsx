@@ -126,11 +126,13 @@ const PostItem = ({
     );
   };
 
+  const lastComment = comments[comments.length - 1];
+
   return (
     <div 
       onClick={onClick}
       className={cn(
-        "bg-white mb-2 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
+        "bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
         isInfluencer && "animate-influencer-float",
         isPopular && !disablePulse && "animate-hot-pulse"
       )}
@@ -319,27 +321,15 @@ const PostItem = ({
             </button>
           </form>
 
-          {/* 최근 댓글 표시 (입력창 아래) */}
-          {comments.length > 0 && !showComments && (
+          {/* 최신 댓글 (항상 상단 고정) */}
+          {lastComment && (
             <div className="flex gap-2 items-start mt-1">
-              <span className="font-bold text-sm text-gray-900">{comments[comments.length - 1].user}</span>
-              <span className="text-sm text-gray-500 line-clamp-1">{comments[comments.length - 1].text}</span>
+              <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+              <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
             </div>
           )}
 
-          <button 
-            className="w-full py-1 flex items-center justify-between group"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowComments(!showComments);
-            }}
-          >
-            <span className="text-xs text-gray-400 font-medium">
-              댓글 {comments.length + 11}개 {showComments ? '숨기기' : '모두 보기'}
-            </span>
-            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-          </button>
-
+          {/* 펼쳐지는 댓글 목록 */}
           <AnimatePresence>
             {showComments && (
               <motion.div 
@@ -349,8 +339,8 @@ const PostItem = ({
                 className="overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="space-y-3 py-2 pb-4">
-                  {comments.map((comment, i) => (
+                <div className="space-y-3 py-2">
+                  {comments.slice(0, -1).map((comment, i) => (
                     <div key={i} className="flex gap-2 items-start">
                       <span className="font-bold text-sm text-gray-900">{comment.user}</span>
                       <span className="text-sm text-gray-500">{comment.text}</span>
@@ -364,6 +354,20 @@ const PostItem = ({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* 토글 버튼 (최하단 위치) */}
+          <button 
+            className="w-full py-1 flex items-center justify-between group"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowComments(!showComments);
+            }}
+          >
+            <span className="text-xs text-gray-400 font-medium">
+              {showComments ? '댓글 닫기' : `댓글 ${comments.length + 11}개 모두 보기`}
+            </span>
+            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+          </button>
         </div>
       </div>
     </div>
