@@ -123,29 +123,67 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none" onClick={onClose}>
+      <DialogContent 
+        onOpenAutoFocus={(e) => e.preventDefault()} 
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none"
+        onClick={onClose}
+      >
         <div className="absolute top-4 right-6 z-[110]">
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all"><X className="w-6 h-6 stroke-[2.5px]" /></Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); onClose(); }} 
+            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all"
+          >
+            <X className="w-6 h-6 stroke-[2.5px]" />
+          </Button>
         </div>
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-4">
+        
+        {/* 배경 영역 클릭 시 닫기 위해 onClick 추가 */}
+        <div 
+          className="relative w-full h-full flex items-center justify-center overflow-hidden p-4"
+          onClick={onClose}
+        >
           <AnimatePresence mode="wait">
             {isOpen && (
-              <motion.div key={post.id} initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} onClick={(e) => e.stopPropagation()} className={cn("w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative", (isInfluencer || isPopular) && "animate-influencer-float")}>
+              <motion.div 
+                key={post.id} 
+                initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} 
+                onClick={(e) => e.stopPropagation()} 
+                className={cn(
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative", 
+                  (isInfluencer || isPopular) && "animate-influencer-float"
+                )}
+              >
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white z-10">
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" /></div>
+                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                            <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                          </div>
                           <div>
-                            <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
-                            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>
+                              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+                            </div>
+                            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-[10px] font-medium">{post.location}</span>
+                            </div>
                           </div>
                         </div>
                         <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button>
                       </div>
+                      
                       <div className="px-4">
-                        <div className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", isInfluencer ? "influencer-border-container" : (isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (isPopular ? "popular-border-container" : "")))}>
+                        <div className={cn(
+                          "relative aspect-square w-full rounded-2xl transition-all duration-500", 
+                          isInfluencer ? "influencer-border-container" : (isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (isPopular ? "popular-border-container" : ""))
+                        )}>
                           <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", isInfluencer && "shine-overlay")}>
                             <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
                               {images.map((img: string, idx: number) => (
@@ -171,6 +209,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {isGif && !isAd && <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
                         </div>
                       </div>
+                      
                       <div className="px-4 pt-3 pb-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-4 pt-1.5">
