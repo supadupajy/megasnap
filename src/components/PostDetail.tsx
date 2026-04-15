@@ -287,7 +287,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               </button>
                               <div onClick={(e) => e.stopPropagation()}>{renderCategoryBadge()}</div>
                               {post.lat !== undefined && post.lng !== undefined && (
-                                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                                   <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
                                   <span className="text-[10px] font-black">위치보기</span>
                                 </button>
@@ -299,7 +299,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+                                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
                               >
                                 <ShoppingBag className="w-3.5 h-3.5 fill-white" />
                                 <span className="text-[10px] font-black">주문하기</span>
