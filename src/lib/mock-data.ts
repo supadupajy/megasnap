@@ -4,7 +4,12 @@ const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1574631285912-75700a948324?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80"
 ];
 
 const FIRE_IMAGES = [
@@ -12,7 +17,12 @@ const FIRE_IMAGES = [
   "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1518107616385-734d2761335c?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1542353436-312f0ee95ae4?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1517231939932-d32d2095f8c1?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1529391409740-59f2dee08ec6?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_IMAGES = [
@@ -20,7 +30,12 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1484723088339-0b2833a2595d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5855?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5855?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=800&q=80"
 ];
 
 const ANIMAL_IMAGES = [
@@ -30,7 +45,14 @@ const ANIMAL_IMAGES = [
   "https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80"
+  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1548191265-cc70d3d45ba1?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1591160674255-fc8b9f79d447?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?auto=format&fit=crop&w=800&q=80"
 ];
 
 const AD_FOOD_CONTENT = [
@@ -76,7 +98,19 @@ const GIF_POOL = [
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxpf4T9V6N2/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlO3BJ8LALPW4sE/giphy.gif",
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2JIdnF6aJUMsgWzu/giphy.gif"
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKU8rvQuK6iE9Uc/giphy.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
