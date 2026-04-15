@@ -1,30 +1,70 @@
 import { Post, User, Comment } from '@/types';
 
+// 카테고리별 고화질 이미지 풀 (총 40개 이상)
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?auto=format&fit=crop&w=800&q=80"
-];
-
-const FIRE_IMAGES = [
-  "https://images.unsplash.com/photo-1516533075015-a3838414c3cb?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1544097691-43906956f33a?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1580130281216-33b442453299?auto=format&fit=crop&w=800&q=80"
-];
+  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
+  "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
+  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1",
+  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8",
+  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8",
+  "https://images.unsplash.com/photo-1506015391300-4802dc74de2e",
+  "https://images.unsplash.com/photo-1515524738708-327f6b0037a7",
+  "https://images.unsplash.com/photo-1574672033710-069999999999"
+].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 const AD_FOOD_IMAGES = [
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80"
-];
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445",
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
+  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543",
+  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5856",
+  "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+  "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
+  "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd"
+].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 const ANIMAL_IMAGES = [
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80"
-];
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9",
+  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
+  "https://images.unsplash.com/photo-1543466835-00a7907e9de1",
+  "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8",
+  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e",
+  "https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a",
+  "https://images.unsplash.com/photo-1518717758536-85ae29035b6d",
+  "https://images.unsplash.com/photo-1548191265-cc70d3d45ba1"
+].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+
+const GENERAL_POOL = [
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+  "https://images.unsplash.com/photo-1500673922987-e212871fec22",
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
+  "https://images.unsplash.com/photo-1433086966358-54859d0ed716",
+  "https://images.unsplash.com/photo-1501854140801-50d01698950b",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+  "https://images.unsplash.com/photo-1505144808419-1957a94ca61e",
+  "https://images.unsplash.com/photo-1475924156734-496f6acc671e",
+  "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07",
+  "https://images.unsplash.com/photo-1470770841072-f978cf4d019e",
+  "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f",
+  "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
+  "https://images.unsplash.com/photo-1439853949127-fa647821eba0",
+  "https://images.unsplash.com/photo-1508739773434-c26b3d09e071",
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0"
+].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+
+export const GIF_POOL = GENERAL_POOL.slice(0, 10);
+
+export const isGifUrl = (url: string) => {
+  if (!url) return false;
+  return url.toLowerCase().includes('.gif');
+};
 
 const COMMENT_TEXTS = [
   "와 여기 진짜 가보고 싶었는데! 정보 감사합니다.",
@@ -128,24 +168,6 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-export const GIF_POOL = [
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=800&q=80"
-];
-
-export const isGifUrl = (url: string) => {
-  if (!url) return false;
-  return url.toLowerCase().includes('.gif');
-};
-
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
 export const createMockUser = (id: string): User => {
@@ -195,17 +217,22 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
+    let images: string[] = [];
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
-    // Picsum 대신 Unsplash Source 사용 (더 안정적)
-    let images = [`https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 100000000)}?auto=format&fit=crop&w=800&q=80`, cokeAdImg];
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
-    } else if (isGif) {
-      images = [GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)], cokeAdImg];
+    } else if (content.includes('사고') || content.includes('화재')) {
+      images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
+      category = 'accident';
+    } else if (content.includes('강아지') || content.includes('고양이')) {
+      images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
+      category = 'animal';
+    } else {
+      images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
     }
 
     const randomCount = Math.floor(Math.random() * 16) + 10;
