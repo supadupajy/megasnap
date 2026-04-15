@@ -15,6 +15,8 @@ interface MapContainerProps {
   showDensity?: boolean;
 }
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
 const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center, showDensity }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -25,12 +27,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 롱프레스 제어를 위한 ref
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const startPos = useRef<{ x: number, y: number } | null>(null);
-  const MOVE_THRESHOLD = 10; // 10px 이상 움직이면 롱프레스 취소
+  const MOVE_THRESHOLD = 10;
 
-  // 각 포스트별 주변 밀집도 계산
   const densityData = useMemo(() => {
     if (!showDensity) return new Map<string, number>();
     const scores = new Map<string, number>();
@@ -64,7 +64,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           zoom: 14,
           disableDefaultUI: true,
           clickableIcons: false,
-          gestureHandling: 'greedy', // 모바일 터치 반응성 향상
+          gestureHandling: 'greedy',
           styles: [
             { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
             { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
@@ -85,7 +85,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           }
         });
 
-        // 롱프레스 방지 및 정교한 감지 로직
         const handleStart = (e: any) => {
           const point = e.pixel || (e.touches && { x: e.touches[0].clientX, y: e.touches[0].clientY });
           if (!point) return;
@@ -99,7 +98,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               showActionPin(latLng.lat(), latLng.lng());
               if (window.navigator.vibrate) window.navigator.vibrate(40);
             }
-          }, 1000); // 0.8초에서 1초로 늘려 오작동 방지
+          }, 1000);
         };
 
         const handleMove = (e: any) => {
@@ -121,7 +120,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           startPos.current = null;
         };
 
-        // 구글 맵 이벤트 리스너 등록
         map.addListener('mousedown', handleStart);
         map.addListener('mousemove', handleMove);
         map.addListener('mouseup', clearTimer);
@@ -208,7 +206,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거 로직
     markersRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -222,7 +219,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       }
     });
 
-    // 생성 및 업데이트 로직
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
@@ -232,7 +228,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const isGif = isGifUrl(post.image);
       const category = post.category || 'none';
 
-      // 밀집도 오버레이 최적화
       if (showDensity && !densityRef.current.has(post.id)) {
         const count = densityData.get(post.id) || 1;
         const style = getDensityStyle(count);
@@ -240,7 +235,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityOverlay.onAdd = function() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
-          div.style.width = '240px'; // 크기 약간 축소하여 성능 향상
+          div.style.width = '240px';
           div.style.height = '240px';
           div.style.backgroundColor = style.bg;
           div.style.border = `1px solid ${style.border}`;
@@ -270,7 +265,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityRef.current.set(post.id, densityOverlay);
       }
 
-      // 마커 오버레이 최적화 (기존 마커가 있으면 건너뜀 - 상태 변화가 있을 때만 업데이트하도록 개선 가능)
       if (!markersRef.current.has(post.id)) {
         const markerOverlay = new google.maps.OverlayView();
         markerOverlay.onAdd = function() {
@@ -304,7 +298,9 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                           overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                           background-color: white;">
                 <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
-                  <img src="${post.image}" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+                  <img src="${post.image}" 
+                       onerror="this.src='${FALLBACK_IMAGE}'"
+                       style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
                   <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
                   ${isGif ? `<div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
                   ${categoryIconHtml}
