@@ -87,30 +87,56 @@ const CONTENT_POOL = [
 ];
 
 const GIF_POOL = [
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif", // Nature
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif", // City
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif", // Food
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif", // Travel
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif", // Beach
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif", // Night
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif", // Coffee
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif", // Sunset
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJ6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6bmR6JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKU8rvQuK6iE9Uc/giphy.gif"
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
+  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
+  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
+  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
+  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
+  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
+  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
+  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
+  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
+  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
+  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
+  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
+  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
+  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
+  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
