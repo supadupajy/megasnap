@@ -208,7 +208,7 @@ const PostItem = ({
                     onError={handleImageError}
                   />
                   {idx === adImageIndex && (
-                    <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-3 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                    <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                       AD
                     </div>
                   )}
@@ -235,10 +235,6 @@ const PostItem = ({
             <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5">
               <Star className="w-3.5 h-3.5 fill-black" />
               INFLUENCER
-            </div>
-          ) : isAd ? (
-            <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
-              AD
             </div>
           ) : isPopular && (
             <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">

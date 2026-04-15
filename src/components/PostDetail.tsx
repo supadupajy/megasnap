@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag } from 'lucide-center';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -249,7 +249,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                               />
                               {idx === post.adImageIndex && (
-                                <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-3 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                                <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                                   AD
                                 </div>
                               )}
