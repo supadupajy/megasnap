@@ -91,7 +91,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         mapInstance.current = map;
         setIsMapReady(true);
 
-        map.addListener('idle', () => {
+        // 실시간 업데이트를 위해 bounds_changed 이벤트 사용
+        const updateMapData = () => {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
           if (bounds && currentCenter) {
@@ -102,7 +103,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               center: { lat: currentCenter.lat(), lng: currentCenter.lng() }
             });
           }
-        });
+        };
+
+        map.addListener('bounds_changed', updateMapData);
+        map.addListener('idle', updateMapData);
 
         map.addListener('dragstart', () => {
           if (animationFrameRef.current) {
