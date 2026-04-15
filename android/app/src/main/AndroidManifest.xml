@@ -11,7 +11,7 @@
 
         <meta-data
             android:name="com.naver.maps.map.CLIENT_ID"
-            android:value="여기에_발급받은_클라이언트_아이디를_넣으세요" />
+            android:value="ipu2vry3sw" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
