@@ -189,12 +189,13 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.85;
     
-    // 30% 확률로 핫스팟 주변에 밀집 생성
+    // 40% 확률로 핫스팟 주변에 밀집 생성 (기존 30%에서 상향)
     let lat, lng;
-    if (Math.random() > 0.7) {
+    if (Math.random() > 0.6) {
       const spot = hotspots[Math.floor(Math.random() * hotspots.length)];
-      lat = spot.lat + (Math.random() - 0.5) * 0.005; // 아주 좁은 범위
-      lng = spot.lng + (Math.random() - 0.5) * 0.005;
+      // 아주 좁은 범위(0.003)로 밀집시켜 빨간색 원이 나오도록 유도
+      lat = spot.lat + (Math.random() - 0.5) * 0.006; 
+      lng = spot.lng + (Math.random() - 0.5) * 0.006;
     } else {
       lat = centerLat + (Math.random() - 0.5) * 0.05;
       lng = centerLng + (Math.random() - 0.5) * 0.05;
