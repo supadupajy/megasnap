@@ -15,14 +15,14 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-    <div className="fixed right-4 top-1/2 -translate-y-1/2 h-1/3 w-14 flex flex-col items-center z-50 pointer-events-none">
-      <div className="pointer-events-auto h-full w-full bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 flex flex-col items-center py-3 gap-3">
+    <div className="fixed right-4 top-1/2 -translate-y-1/2 h-1/3 w-8 flex flex-col items-center z-50 pointer-events-none">
+      <div className="pointer-events-auto h-full w-full bg-white/80 backdrop-blur-xl rounded-full shadow-xl border border-white/20 flex flex-col items-center py-4 gap-3">
         <div className="flex flex-col items-center gap-0.5">
-          <Clock className="w-3.5 h-3.5 text-indigo-600" />
-          <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Time</span>
+          <Clock className="w-3 h-3 text-indigo-600" />
+          <span className="text-[6px] font-black text-gray-400 uppercase tracking-tighter">Time</span>
         </div>
 
-        <div className="flex-1 w-full px-2 relative flex flex-col items-center">
+        <div className="flex-1 w-full px-1 relative flex flex-col items-center">
           {/* Track Background */}
           <div className="absolute inset-y-0 w-1 bg-gray-100 rounded-full left-1/2 -translate-x-1/2" />
           
@@ -63,8 +63,8 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
         </div>
 
         <div className="flex flex-col items-center">
-          <span className="text-sm font-black text-indigo-600 leading-none">{value}</span>
-          <span className="text-[7px] font-bold text-gray-400">HR</span>
+          <span className="text-xs font-black text-indigo-600 leading-none">{value}</span>
+          <span className="text-[6px] font-bold text-gray-400">HR</span>
         </div>
       </div>
     </div>
