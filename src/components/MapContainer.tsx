@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import { isGifUrl } from '@/lib/mock-data';
 
 interface MapContainerProps {
   posts: any[];
@@ -217,7 +218,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         
         const isAd = this.post.isAd;
         const imageUrl = this.post.image || '';
-        const isGif = this.post.isGif && (imageUrl.toLowerCase().includes('.gif') || imageUrl.includes('GIF'));
+        const isGif = isGifUrl(imageUrl);
         const isPopular = !isAd && this.post.borderType === 'popular';
         const isInfluencer = !isAd && this.post.isInfluencer;
         const category = this.post.category || 'none';
@@ -262,7 +263,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` :
           (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : '');
 
-        // 인기 포스팅(isPopular)도 인플루언서와 동일한 부유 애니메이션 적용
         const animationClass = (isInfluencer || isPopular) ? 'animate-influencer-float' : '';
 
         div.innerHTML = `
@@ -350,7 +350,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       let overlay = overlaysRef.current.get(post.id);
 
       if (overlay) {
-        if (overlay.isViewed !== isViewed || overlay.isHighlighted !== isHighlighted || overlay.post.isInfluencer !== post.isInfluencer || overlay.post.isGif !== post.isGif || overlay.post.likes !== post.likes || overlay.post.category !== post.category || overlay.post.image !== post.image) {
+        if (overlay.isViewed !== isViewed || overlay.isHighlighted !== isHighlighted || overlay.post.isInfluencer !== post.isInfluencer || isGifUrl(overlay.post.image) !== isGifUrl(post.image) || overlay.post.likes !== post.likes || overlay.post.category !== post.category || overlay.post.image !== post.image) {
           overlay.setMap(null);
           overlay = new HTMLMarker(post, isViewed, isHighlighted, () => onMarkerClick(post));
           overlay.setMap(map);

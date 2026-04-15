@@ -105,6 +105,12 @@ export const GIF_POOL = [
   "https://upload3.inven.co.kr/upload/2025/04/26/bbs/i0827433132.gif"
 ];
 
+// URL이 GIF인지 판별하는 헬퍼 함수
+export const isGifUrl = (url: string) => {
+  if (!url) return false;
+  return GIF_POOL.includes(url) || url.toLowerCase().includes('.gif');
+};
+
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
 const USERNAME_PARTS = [

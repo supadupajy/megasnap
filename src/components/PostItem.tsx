@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isGifUrl } from '@/lib/mock-data';
 
 interface PostItemProps {
   user: {
@@ -48,7 +49,7 @@ const PostItem = ({
   isLiked, 
   isSaved: initialIsSaved,
   isAd, 
-  isGif, 
+  isGif: initialIsGif, 
   isInfluencer,
   isViewed,
   category = 'none',
@@ -70,6 +71,7 @@ const PostItem = ({
   
   const isPopular = !isAd && borderType === 'popular';
   const displayImages = images.length > 0 ? images : [image];
+  const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;

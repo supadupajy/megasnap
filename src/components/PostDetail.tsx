@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { isGifUrl } from '@/lib/mock-data';
 
 interface PostDetailProps {
   posts: any[];
@@ -107,7 +108,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
-  const isGif = post.isGif && (post.image.toLowerCase().includes('.gif') || post.image.includes('GIF'));
+  const isGif = isGifUrl(images[currentImageIndex]);
   const category = post.category || 'none';
 
   const handleUserClick = (e: React.MouseEvent) => {
