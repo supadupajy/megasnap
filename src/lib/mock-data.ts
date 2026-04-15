@@ -129,26 +129,21 @@ const CONTENT_POOL = [
 ];
 
 export const GIF_POOL = [
-  "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
-  "https://i.namu.wiki/i/3qjMoSXb8qZqYZsH-vdZNRkdOaz4ypVfoRZHAj7QT9JDv1fpP7mi9Sike6ij1d6Vd42Lu-__INRCmsJJaiDx0w.gif",
-  "https://coinpick.com/files/attach/images/69383/503/069/2e8cefa582dc5e9d8188aa192cf387ce.gif",
-  "https://i2.ruliweb.com/cmt/20/11/04/1759234a25446f609.gif",
-  "https://dszw1qtcnsa5e.cloudfront.net/community/20200910/cb182eb1-7d92-4bba-b9f1-e2ba799e497f/SmartSelect20190919000029YouTubeVanced.gif",
-  "https://extmovie.com/files/attach/images/148/628/892/079/c1ae2021ee768de37fe0cc554226a7e9.gif",
-  "https://talkimg.imbc.com/TVianUpload/tvian/TViews/image/2020/01/19/82PJLFUPvF67637150471087374630.gif",
-  "http://cfile298.uf.daum.net/original/216A1C475799E34808B225",
-  "https://i.makeagif.com/media/6-30-2021/S02tQQ.gif",
-  "https://i2.ruliweb.com/ori/17/09/21/15ea2c326711457e3.gif",
-  "https://img.extmovie.com/files/attach/images/148/853/595/037/97871ad291a6b65b79a971d59f75e02e.gif",
-  "https://coinpick.com/files/attach/images/69383/807/070/55eb4883efd402e4b29858c545192fb1.gif",
-  "https://cf.channel.io/document/spaces/8276/articles/25059/revisions/37007/usermedia/66b3b5398a260dfef490",
-  "https://cdn.imweb.me/thumbnail/20181125/5bfa6ab8ceeee.gif",
-  "https://upload3.inven.co.kr/upload/2025/04/26/bbs/i0827433132.gif"
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=800&q=80"
 ];
 
 export const isGifUrl = (url: string) => {
   if (!url) return false;
-  return GIF_POOL.includes(url) || url.toLowerCase().includes('.gif');
+  return url.toLowerCase().includes('.gif');
 };
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
@@ -175,7 +170,6 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
-  // 핫스팟 설정 (성수, 홍대, 강남 등)
   const hotspots = [
     { lat: 37.5445, lng: 127.0560 }, // 성수
     { lat: 37.5575, lng: 126.9245 }, // 홍대
@@ -189,11 +183,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.85;
     
-    // 40% 확률로 핫스팟 주변에 밀집 생성 (기존 30%에서 상향)
     let lat, lng;
     if (Math.random() > 0.6) {
       const spot = hotspots[Math.floor(Math.random() * hotspots.length)];
-      // 아주 좁은 범위(0.003)로 밀집시켜 빨간색 원이 나오도록 유도
       lat = spot.lat + (Math.random() - 0.5) * 0.006; 
       lng = spot.lng + (Math.random() - 0.5) * 0.006;
     } else {
@@ -205,7 +197,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
-    let images = [`https://picsum.photos/seed/${id}/800/800`, cokeAdImg];
+    // Picsum 대신 Unsplash Source 사용 (더 안정적)
+    let images = [`https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 100000000)}?auto=format&fit=crop&w=800&q=80`, cokeAdImg];
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
@@ -251,5 +244,5 @@ export const MOCK_USERS = Array.from({ length: 30 }).map((_, i) => createMockUse
 
 export const MOCK_NOTIFICATIONS = [
   { id: 1, type: 'follow', user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=travel_maker' }, content: '님이 회원님을 팔로우하기 시작했습니다.', time: '2시간', isFollowing: false },
-  { id: 2, type: 'like', user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=seoul_snap' }, content: '님이 회원님의 사진을 좋아합니다.', time: '4시간', image: 'https://picsum.photos/seed/notif1/100/100' }
+  { id: 2, type: 'like', user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=seoul_snap' }, content: '님이 회원님의 사진을 좋아합니다.', time: '4시간', image: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=100&q=80' }
 ];
