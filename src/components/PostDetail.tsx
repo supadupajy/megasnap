@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -107,6 +107,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
+  const isGif = post.isGif && (post.image.toLowerCase().includes('.gif') || post.image.includes('GIF'));
   const category = post.category || 'none';
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -141,7 +142,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/40 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 data-[state=open]:animate-none data-[state=closed]:animate-none outline-none"
         onClick={onClose}
       >
         <div className="absolute top-4 right-6 z-[110]">
@@ -163,38 +164,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                onClick={onClose}
+                onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative cursor-pointer",
-                  isAd && "border-4 border-blue-500",
-                  isPopular && "popular-border-container",
-                  isInfluencer && "influencer-border-container"
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative",
+                  isInfluencer && "animate-influencer-float",
+                  isPopular && "animate-hot-pulse"
                 )}
               >
-                {/* Status Bar - Extended background to cover content curves */}
-                {isInfluencer && (
-                  <div className="h-20 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
-                    <Star className="w-4 h-4 fill-black" />
-                    <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
-                    <Star className="w-4 h-4 fill-black" />
-                  </div>
-                )}
-                {isPopular && (
-                  <div className="h-20 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
-                    <Flame className="w-4 h-4 fill-white text-white" />
-                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
-                    <Flame className="w-4 h-4 fill-white text-white" />
-                  </div>
-                )}
-                {isAd && (
-                  <div className="h-20 bg-blue-500 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
-                    <Sparkles className="w-4 h-4 fill-white text-white" />
-                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
-                    <Sparkles className="w-4 h-4 fill-white text-white" />
-                  </div>
-                )}
-
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] z-10">
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white z-10">
                   <div 
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
@@ -234,40 +211,79 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
 
                       {/* Image Section */}
-                      <div className="aspect-square w-full bg-gray-100 relative overflow-hidden shrink-0">
-                        <div 
-                          ref={imageScrollRef}
-                          onScroll={handleImageScroll}
-                          className="image-slider flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                        >
-                          {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                              <img 
-                                src={img} 
-                                alt="" 
-                                className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
-                              />
-                              {idx === post.adImageIndex && (
-                                <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-3 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
-                                  AD
+                      <div className="px-4">
+                        <div className={cn(
+                          "relative aspect-square w-full rounded-2xl transition-all duration-500",
+                          isInfluencer ? "influencer-border-container" : (
+                            isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
+                              isPopular ? "popular-border-container" : ""
+                            )
+                          )
+                        )}>
+                          <div className={cn(
+                            "w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10",
+                            isInfluencer && "shine-overlay"
+                          )}>
+                            <div 
+                              ref={imageScrollRef}
+                              onScroll={handleImageScroll}
+                              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                            >
+                              {images.map((img: string, idx: number) => (
+                                <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                                  <img 
+                                    src={img} 
+                                    alt="" 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                                  />
+                                  {idx === post.adImageIndex && (
+                                    <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                                      AD
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                        {images.length > 1 && (
-                          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
-                            {images.map((_: any, idx: number) => (
-                              <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
-                            ))}
+
+                            {images.length > 1 && (
+                              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
+                                {images.map((_: any, idx: number) => (
+                                  <div 
+                                    key={idx}
+                                    className={cn(
+                                      "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                      currentImageIndex === idx ? "bg-white w-4" : "bg-white/40"
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {isInfluencer ? (
+                            <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5">
+                              <Star className="w-3.5 h-3.5 fill-black" />
+                              INFLUENCER
+                            </div>
+                          ) : isPopular && (
+                            <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                              <Flame className="w-3.5 h-3.5 fill-white" />
+                              HOT
+                            </div>
+                          )}
+
+                          {isGif && !isAd && (
+                            <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20">
+                              <Play className="w-3 h-3 fill-white" />
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Content Section */}
-                      <div className="px-4 py-4 sm:px-5 sm:py-5">
-                        <div className="flex items-start justify-between mb-4">
+                      <div className="px-4 pt-3 pb-4">
+                        <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-4 pt-1.5">
                             <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
                               <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
@@ -314,7 +330,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer" onClick={handleUserClick}>
                               {post.user.name}
                             </span>
-                            <p className="text-gray-700 text-sm leading-relaxed font-medium">{post.content}</p>
+                            <p className="text-gray-800 text-sm leading-snug">{post.content}</p>
                           </div>
                         </div>
 
@@ -342,8 +358,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {/* 최신 댓글 (항상 상단 고정) */}
                           {lastComment && (
                             <div className="flex gap-2 items-start mt-1 mb-2">
-                              <span className="font-bold text-[13px] text-gray-900">{lastComment.user}</span>
-                              <span className="text-[13px] text-gray-500 line-clamp-1">{lastComment.text}</span>
+                              <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+                              <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
                             </div>
                           )}
                           
@@ -351,11 +367,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <AnimatePresence>
                             {showComments && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="space-y-4 py-3">
+                                <div className="space-y-3 py-2">
                                   {comments.slice(0, -1).map((comment, i) => (
                                     <div key={i} className="flex gap-2 items-start">
-                                      <span className="font-bold text-[13px] text-gray-900">{comment.user}</span>
-                                      <span className="text-[13px] text-gray-500">{comment.text}</span>
+                                      <span className="font-bold text-sm text-gray-900">{comment.user}</span>
+                                      <span className="text-sm text-gray-500">{comment.text}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -366,11 +382,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {/* 토글 버튼 (최하단 위치) */}
                           <button 
                             onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
-                            className="w-full py-2 flex items-center justify-between group"
+                            className="w-full py-1 flex items-center justify-between group"
                           >
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                              {showComments ? 'Close Comments' : 'View All Comments'}
-                            </p>
+                            <span className="text-xs text-gray-400 font-medium">
+                              {showComments ? '댓글 닫기' : `댓글 ${comments.length + 11}개 모두 보기`}
+                            </span>
                             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
                           </button>
                         </div>
