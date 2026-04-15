@@ -252,7 +252,7 @@ const PostItem = ({
           </AnimatePresence>
 
           <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-            <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${commentsCount.toLocaleString()}개 모두 보기`}</span>
+            <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
           </button>
         </div>

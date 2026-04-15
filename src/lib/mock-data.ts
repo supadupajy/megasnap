@@ -86,8 +86,8 @@ const COMMENT_USERS = [
 
 const generateRandomComments = (count: number): Comment[] => {
   const comments: Comment[] = [];
-  // 성능을 위해 실제 배열에는 최대 20개까지만 담되, count가 작으면 그만큼만 생성
-  const numToGenerate = Math.min(count, 20); 
+  // 요청받은 count만큼 생성 (최대 30개로 제한하여 성능 유지)
+  const numToGenerate = Math.min(count, 30); 
   
   for (let i = 0; i < numToGenerate; i++) {
     comments.push({
@@ -200,13 +200,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       images = [GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)], cokeAdImg];
     }
 
-    // 댓글 수 생성 로직 (최소 10개 보장)
-    let commentsCount = 0;
-    if (isPopular || isInfluencer) {
-      commentsCount = Math.floor(Math.random() * 200) + 50; // 50~250개
-    } else {
-      commentsCount = Math.floor(Math.random() * 11) + 10; // 10~20개
-    }
+    // 댓글 리스트 먼저 생성 (10~25개 사이)
+    const randomCount = Math.floor(Math.random() * 16) + 10;
+    const comments = generateRandomComments(randomCount);
 
     return {
       id,
@@ -220,8 +216,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lat,
       lng,
       likes: (isPopular || isInfluencer) ? Math.floor(Math.random() * 1000) + 1000 : Math.floor(Math.random() * 500) + 10,
-      commentsCount,
-      comments: generateRandomComments(commentsCount),
+      commentsCount: comments.length, // 실제 리스트 길이와 일치시킴
+      comments: comments,
       image: images[0],
       images,
       adImageIndex: 1,
