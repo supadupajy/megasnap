@@ -10,6 +10,11 @@ export interface User {
   isFollowing?: boolean;
 }
 
+export interface Comment {
+  user: string;
+  text: string;
+}
+
 export interface Post {
   id: string;
   rank?: number;
@@ -23,6 +28,8 @@ export interface Post {
   lat: number;
   lng: number;
   likes: number;
+  commentsCount: number;
+  comments: Comment[];
   image: string;
   images?: string[];
   adImageIndex?: number;
