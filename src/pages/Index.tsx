@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -44,6 +44,7 @@ const Index = () => {
   const [showDensity, setShowDensity] = useState(false);
 
   const TILE_SIZE = 0.02;
+  const MAX_MARKERS = 150; // 표시 한도 상향
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -121,8 +122,8 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 화면 영역 내에 있고 필터 조건에 맞는 모든 마커를 추출
-    const inBoundsMarkers = updatedAllPosts.filter(post => {
+    // 1. 현재 화면 영역 내에 있는 모든 후보 마커 추출
+    const inBoundsCandidates = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -137,17 +138,28 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 너무 많은 마커가 표시되는 것을 방지하기 위해 중요도 순으로 최대 100개까지만 표시
-    // 이 기준은 고정되어 있으므로 지도를 이동해도 마커가 깜빡이지 않음
-    const limitedMarkers = inBoundsMarkers
-      .sort((a, b) => {
-        const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
-        const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
-        return scoreB - scoreA;
-      })
-      .slice(0, 100);
+    // 2. 스티키 로직: 이미 표시 중인 마커가 화면 내에 있다면 최우선적으로 유지
+    const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
+    const stickyMarkers = inBoundsCandidates.filter(m => currentlyDisplayedIds.has(m.id));
+    
+    // 3. 새로운 마커들 중 우선순위가 높은 것들 추가
+    const newCandidates = inBoundsCandidates.filter(m => !currentlyDisplayedIds.has(m.id));
+    const sortedNewCandidates = newCandidates.sort((a, b) => {
+      const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
+      const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
+      return scoreB - scoreA;
+    });
 
-    setDisplayedMarkers(limitedMarkers);
+    // 4. 최종 리스트 구성 (기존 마커 유지 + 새 마커 추가)
+    const combined = [...stickyMarkers, ...sortedNewCandidates].slice(0, MAX_MARKERS);
+    
+    // ID 셋이 달라진 경우에만 상태 업데이트 (불필요한 리렌더링 방지)
+    const nextIds = combined.map(m => m.id).sort().join(',');
+    const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
+    
+    if (nextIds !== prevIds) {
+      setDisplayedMarkers(combined);
+    }
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
