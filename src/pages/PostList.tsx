@@ -116,9 +116,9 @@ const PostList = () => {
         damping: 25,
         mass: 1
       }}
-      className="min-h-screen bg-white pt-[88px] pb-28"
+      className="fixed inset-0 z-[60] bg-white pt-[88px] pb-28 overflow-y-auto"
     >
-      <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-[88px] bg-white/90 backdrop-blur-md z-30">
+      <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
         <button 
           onClick={() => navigate('/')}
           className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"
