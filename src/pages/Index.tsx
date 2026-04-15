@@ -71,7 +71,6 @@ const Index = () => {
       });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 지도 이동 완료(1000ms) 후 핑 효과 시작
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
         setTimeout(() => setHighlightedPostId(null), 3500);
@@ -239,14 +238,11 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
-    // 1. 지도 이동 시작
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 2. 지도 이동 완료(1000ms) 후 핑 효과 시작
     setTimeout(() => {
       setHighlightedPostId(post.id);
-      // 3. 일정 시간 후 핑 효과 제거
       setTimeout(() => setHighlightedPostId(null), 3500);
     }, 1000);
   }, []);
@@ -268,6 +264,16 @@ const Index = () => {
         } 
       });
     }
+  };
+
+  const handlePostCreated = (newPost: Post) => {
+    setAllPosts(prev => [newPost, ...prev]);
+    setMapCenter({ lat: newPost.lat, lng: newPost.lng });
+    
+    setTimeout(() => {
+      setHighlightedPostId(newPost.id);
+      setTimeout(() => setHighlightedPostId(null), 3500);
+    }, 1000);
   };
 
   return (
@@ -329,7 +335,6 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
-          {/* 재검색 버튼 */}
           <button 
             onClick={handleRefresh} 
             disabled={isRefreshing} 
@@ -339,7 +344,6 @@ const Index = () => {
             <span className="text-[9px] font-black mt-1">재검색</span>
           </button>
 
-          {/* 모두 보기 버튼 */}
           <button 
             onClick={handleViewAllClick} 
             disabled={displayedMarkers.length === 0} 
@@ -399,7 +403,7 @@ const Index = () => {
         isOpen={isWriteOpen} 
         onClose={() => setIsWriteOpen(false)} 
         initialLocation={pendingLocation}
-        onPostCreated={(newPost) => setAllPosts(prev => [newPost, ...prev])}
+        onPostCreated={handlePostCreated}
       />
     </motion.div>
   );
