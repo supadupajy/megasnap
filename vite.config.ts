@@ -7,9 +7,8 @@ export default defineConfig(() => ({
   // Vercel 배포 시 루트 경로 설정을 명확히 합니다.
   base: "/",
   server: {
-    host: "localhost",
-    port: 52193,
-    strictPort: true, // 해당 포트가 사용 중일 경우 다른 포트로 자동 전환되지 않도록 설정
+    host: "::",
+    port: 8080,
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

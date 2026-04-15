@@ -43,7 +43,8 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_POPULAR_COUNT = 8; // 마커가 많아지므로 인기 포스트 제한 상향
+  const TARGET_MARKER_COUNT = 30;
+  const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -55,6 +56,7 @@ const Index = () => {
     }
   }, [mapCenter]);
 
+  // 차단된 사용자를 제외한 전체 포스트
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
   }, [allPosts, blockedIds]);
@@ -93,9 +95,6 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    // 마커 개수 랜덤화 (40~50개로 대폭 상향)
-    const targetMarkerCount = Math.floor(Math.random() * (50 - 40 + 1)) + 40;
-    
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -112,8 +111,7 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          // 타일당 생성 개수를 20개로 늘려 충분한 후보군 확보
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 20));
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
         }
       }
     }
@@ -124,11 +122,13 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
+      // 멀티 카테고리 로직
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
@@ -137,15 +137,6 @@ const Index = () => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
-
-    // 그리드 밀도를 10x10으로 높여 더 촘촘하게 배치
-    const ROWS = 10;
-    const COLS = 10;
-    const latStep = (ne.lat - sw.lat) / ROWS;
-    const lngStep = (ne.lng - sw.lng) / COLS;
-
-    const occupiedCells = new Set();
-    let currentPopularCount = 0;
 
     const stillVisible = displayedMarkers.filter(p => {
       const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
@@ -157,6 +148,14 @@ const Index = () => {
       const isNotBlocked = !blockedIds.has(p.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
+
+    const ROWS = 6;
+    const COLS = 5;
+    const latStep = (ne.lat - sw.lat) / ROWS;
+    const lngStep = (ne.lng - sw.lng) / COLS;
+
+    const occupiedCells = new Set();
+    let currentPopularCount = 0;
 
     stillVisible.forEach(p => {
       const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
@@ -178,17 +177,16 @@ const Index = () => {
 
     const getScore = (p: Post) => {
       let score = Math.random() * 100;
-      if (p.isInfluencer) score += 25; 
-      if (p.borderType === 'popular') score += 20;
-      if (p.isAd) score += 15;
-      score += Math.log10(p.likes + 1) * 8;
+      if (p.isInfluencer) score += 15; 
+      if (p.borderType === 'popular') score += 10;
+      if (p.isAd) score += 5;
+      score += Math.log10(p.likes + 1) * 2;
       return score;
     };
 
-    // 1단계: 그리드 기반 분산 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= targetMarkerCount) break;
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -211,16 +209,17 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= targetMarkerCount) break;
+      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
     }
 
-    // 2단계: 목표치 미달 시 그리드 무시하고 추가 (밀집 허용)
-    if (nextMarkers.length < targetMarkerCount) {
+    if (nextMarkers.length < TARGET_MARKER_COUNT) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
+      if (currentPopularCount >= MAX_POPULAR_COUNT) {
+        remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
+      }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
-      
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= targetMarkerCount) break;
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -250,7 +249,7 @@ const Index = () => {
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 150);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
         setAllPosts(refreshedPosts);
         setDisplayedMarkers([]); 
         setIsRefreshing(false);
@@ -357,11 +356,11 @@ const Index = () => {
           </button>
         </div>
 
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
+        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
           <button 
             onClick={handleRefresh} 
             disabled={isRefreshing} 
-            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
+            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
           >
             <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
             <span className="text-[9px] font-black mt-1">재검색</span>
@@ -370,18 +369,10 @@ const Index = () => {
           <button 
             onClick={handleViewAllClick} 
             disabled={displayedMarkers.length === 0} 
-            className={cn(
-              "w-16 h-16 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_10px_25px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border border-indigo-500 relative group",
-              displayedMarkers.length > 0 && "animate-hot-pulse"
-            )}
+            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
           >
-            <LayoutGrid className="w-7 h-7 stroke-[2.5px]" />
-            <span className="text-[10px] font-black mt-1">모두 보기</span>
-            {displayedMarkers.length > 0 && (
-              <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-md">
-                {displayedMarkers.length}
-              </div>
-            )}
+            <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
+            <span className="text-[9px] font-black mt-1">모두 보기</span>
           </button>
         </div>
 
