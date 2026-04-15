@@ -142,6 +142,8 @@ const PostList = () => {
                 content={post.content}
                 location={post.location}
                 likes={post.likes}
+                commentsCount={post.commentsCount}
+                comments={post.comments}
                 image={post.image}
                 images={post.images}
                 adImageIndex={post.adImageIndex}
