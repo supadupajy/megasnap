@@ -118,7 +118,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
 
-  // 인기 포스팅 생성 확률 대폭 하향 (타일당 0~1개)
   const popularIndex = Math.random() > 0.7 ? indices[0] : -1;
   const influencerIndex = Math.random() > 0.8 ? indices[1] : -1;
 
@@ -128,7 +127,10 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isInfluencer = i === influencerIndex;
     const isPopular = i === popularIndex;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.8;
+    
+    // GIF 생성 확률 강화: 4개 중 하나는 반드시 GIF가 되도록 설정 (i % 4 === 0)
+    // 또는 랜덤하게 20% 확률로 GIF 생성
+    const isGif = !isAd && !isInfluencer && !isPopular && (i % 4 === 0 || Math.random() > 0.8);
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
@@ -151,6 +153,10 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       const adImg = AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)];
       images = [adImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
       category = 'food';
+    } else if (isGif) {
+      const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      images = [gifImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
+      content = "생생한 현장 분위기를 GIF로 확인해보세요! ✨";
     } else if (content.includes('교통사고') || content.includes('접촉 사고') || content.includes('도로 통제')) {
       const accImg = ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)];
       images = [accImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
@@ -167,10 +173,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       category = 'food';
     } else if (content.includes('명소') || content.includes('공원') || content.includes('바다') || content.includes('야경')) {
       category = 'place';
-    } else if (isGif) {
-      const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
-      images = [gifImg, cokeAdImg, `https://picsum.photos/seed/${id}-3/800/800`];
-      content = "생생한 현장 분위기를 GIF로 확인해보세요! ✨";
     }
 
     const borderType = isPopular ? 'popular' : 'none';
