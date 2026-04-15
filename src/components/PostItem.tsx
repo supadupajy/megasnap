@@ -181,11 +181,9 @@ const PostItem = ({
         <div className={cn(
           "relative aspect-square w-full rounded-2xl transition-all duration-500",
           isInfluencer ? "influencer-border-container" : (
-            isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (
-              isPopular ? "popular-border-container" : (
-                borderType === 'silver' ? "p-[2px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
-                  borderType === 'gold' ? "p-[2px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
-                )
+            isPopular ? "popular-border-container" : (
+              borderType === 'silver' ? "p-[2px] bg-gradient-to-br from-gray-300 via-white to-gray-400 shadow-lg" : (
+                borderType === 'gold' ? "p-[2px] bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 shadow-lg" : ""
               )
             )
           )
