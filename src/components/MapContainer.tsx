@@ -189,19 +189,20 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const isGif = isGifUrl(post.image);
       const category = post.category || 'none';
 
-      // 1. 밀집도 오버레이 (마커 주변 원형)
+      // 1. 밀집도 오버레이 (마커 주변 단색 원형)
       if (showDensity && !densityRef.current.has(post.id)) {
         const densityOverlay = new google.maps.OverlayView();
         densityOverlay.onAdd = function() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
-          // 크기를 3배 키움 (100px -> 300px)
           div.style.width = '300px';
           div.style.height = '300px';
-          div.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0) 70%)';
+          // 그라데이션 대신 단색 반투명 배경 사용
+          div.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+          div.style.border = '1px solid rgba(239, 68, 68, 0.2)';
           div.style.borderRadius = '50%';
           div.style.pointerEvents = 'none';
-          // 마커의 중앙(약 36px 위)에 맞추기 위해 Y축 오프셋 조정
+          // 마커 중앙 정렬
           div.style.transform = 'translate(-50%, calc(-50% - 36px))';
           div.style.zIndex = '1';
           this.getPanes()!.overlayLayer.appendChild(div);
