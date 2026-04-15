@@ -70,7 +70,7 @@ const SplashScreen = () => {
             className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group"
           >
             <img 
-              src="https://images.unsplash.com/photo-1669170022362-a9702f007949?auto=format&fit=crop&w=800&q=80" 
+              src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" 
               alt="BMW i7" 
               className="w-full h-full object-cover"
             />
