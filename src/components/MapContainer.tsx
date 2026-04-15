@@ -143,7 +143,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      // panTo를 사용하여 부드럽게 이동
+      // panTo를 사용하여 부드럽고 속도감 있게 이동
       mapInstance.current.panTo(center);
     }
   }, [center, isMapReady]);

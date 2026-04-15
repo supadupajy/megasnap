@@ -84,12 +84,12 @@ const Index = () => {
       // 지도를 해당 위치로 이동
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 이동 후 핑 효과 트리거 (약간의 지연을 주어 지도가 이동한 뒤 마커가 보일 때 실행)
+      // 이동 후 핑 효과 트리거 (지도가 이동을 마칠 때쯤 실행되도록 1초 지연)
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
-        // 핑 효과 종료 후 상태 초기화 (애니메이션 2회 반복 시간 고려)
+        // 핑 효과 종료 후 상태 초기화
         setTimeout(() => setHighlightedPostId(null), 3000);
-      }, 800);
+      }, 1000);
       
       return () => clearTimeout(pingTimer);
     } else if (location.state?.center) {
@@ -276,11 +276,11 @@ const Index = () => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
-    // 이동 후 핑 효과 트리거
+    // 이동 후 핑 효과 트리거 (1초 지연)
     setTimeout(() => {
       setHighlightedPostId(post.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
-    }, 800);
+    }, 1000);
   }, []);
 
   const handleCurrentLocation = () => {
@@ -309,7 +309,7 @@ const Index = () => {
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
-    }, 800);
+    }, 1000);
   };
 
   return (
