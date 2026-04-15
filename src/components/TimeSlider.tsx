@@ -15,7 +15,7 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-    <div className="fixed right-3 top-1/2 -translate-y-1/2 h-1/3 w-10 flex flex-col items-center z-50 pointer-events-none">
+    <div className="fixed right-4 top-1/2 -translate-y-1/2 h-1/3 w-14 flex flex-col items-center z-50 pointer-events-none">
       <div className="pointer-events-auto h-full w-full bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 flex flex-col items-center py-3 gap-3">
         <div className="flex flex-col items-center gap-0.5">
           <Clock className="w-3.5 h-3.5 text-indigo-600" />
