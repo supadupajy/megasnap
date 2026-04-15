@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Copy } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,6 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { showSuccess } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
@@ -43,11 +42,8 @@ const Index = () => {
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  const currentDomain = window.location.origin;
-
   const TILE_SIZE = 0.02;
-  const TARGET_MARKER_COUNT = 30;
-  const MAX_POPULAR_COUNT = 3;
+  const MAX_POPULAR_COUNT = 8; // 마커가 많아지므로 인기 포스트 제한 상향
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -97,6 +93,9 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
+    // 마커 개수 랜덤화 (40~50개로 대폭 상향)
+    const targetMarkerCount = Math.floor(Math.random() * (50 - 40 + 1)) + 40;
+    
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -113,7 +112,8 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
+          // 타일당 생성 개수를 20개로 늘려 충분한 후보군 확보
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 20));
         }
       }
     }
@@ -138,6 +138,15 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
+    // 그리드 밀도를 10x10으로 높여 더 촘촘하게 배치
+    const ROWS = 10;
+    const COLS = 10;
+    const latStep = (ne.lat - sw.lat) / ROWS;
+    const lngStep = (ne.lng - sw.lng) / COLS;
+
+    const occupiedCells = new Set();
+    let currentPopularCount = 0;
+
     const stillVisible = displayedMarkers.filter(p => {
       const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
       const isWithinTime = p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs;
@@ -148,14 +157,6 @@ const Index = () => {
       const isNotBlocked = !blockedIds.has(p.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
-
-    const ROWS = 6;
-    const COLS = 5;
-    const latStep = (ne.lat - sw.lat) / ROWS;
-    const lngStep = (ne.lng - sw.lng) / COLS;
-
-    const occupiedCells = new Set();
-    let currentPopularCount = 0;
 
     stillVisible.forEach(p => {
       const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
@@ -177,16 +178,17 @@ const Index = () => {
 
     const getScore = (p: Post) => {
       let score = Math.random() * 100;
-      if (p.isInfluencer) score += 15; 
-      if (p.borderType === 'popular') score += 10;
-      if (p.isAd) score += 5;
-      score += Math.log10(p.likes + 1) * 2;
+      if (p.isInfluencer) score += 25; 
+      if (p.borderType === 'popular') score += 20;
+      if (p.isAd) score += 15;
+      score += Math.log10(p.likes + 1) * 8;
       return score;
     };
 
+    // 1단계: 그리드 기반 분산 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -209,17 +211,16 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+      if (nextMarkers.length >= targetMarkerCount) break;
     }
 
-    if (nextMarkers.length < TARGET_MARKER_COUNT) {
+    // 2단계: 목표치 미달 시 그리드 무시하고 추가 (밀집 허용)
+    if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
-      if (currentPopularCount >= MAX_POPULAR_COUNT) {
-        remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
-      }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
+      
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -249,7 +250,7 @@ const Index = () => {
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 150);
         setAllPosts(refreshedPosts);
         setDisplayedMarkers([]); 
         setIsRefreshing(false);
@@ -298,31 +299,12 @@ const Index = () => {
     }, 1000);
   };
 
-  const copyDomain = () => {
-    navigator.clipboard.writeText(currentDomain);
-    showSuccess('도메인이 복사되었습니다!');
-  };
-
   return (
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
-      {/* 도메인 확인용 배너 (카카오 설정 완료 후 삭제 가능) */}
-      <div className="absolute top-[92px] left-4 right-4 z-[60] bg-black/80 backdrop-blur-md text-white p-3 rounded-2xl flex items-center justify-between shadow-xl border border-white/10">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Kakao Domain Check</span>
-          <span className="text-xs font-bold truncate max-w-[200px]">{currentDomain}</span>
-        </div>
-        <button 
-          onClick={copyDomain}
-          className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-xl transition-colors"
-        >
-          <Copy className="w-4 h-4" />
-        </button>
-      </div>
-
       <div className="absolute inset-0 z-0">
         <MapContainer 
           posts={displayedMarkers}
@@ -375,11 +357,11 @@ const Index = () => {
           </button>
         </div>
 
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
+        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
           <button 
             onClick={handleRefresh} 
             disabled={isRefreshing} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
           >
             <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
             <span className="text-[9px] font-black mt-1">재검색</span>
@@ -388,10 +370,18 @@ const Index = () => {
           <button 
             onClick={handleViewAllClick} 
             disabled={displayedMarkers.length === 0} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+            className={cn(
+              "w-16 h-16 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_10px_25px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border border-indigo-500 relative group",
+              displayedMarkers.length > 0 && "animate-hot-pulse"
+            )}
           >
-            <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
-            <span className="text-[9px] font-black mt-1">모두 보기</span>
+            <LayoutGrid className="w-7 h-7 stroke-[2.5px]" />
+            <span className="text-[10px] font-black mt-1">모두 보기</span>
+            {displayedMarkers.length > 0 && (
+              <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-md">
+                {displayedMarkers.length}
+              </div>
+            )}
           </button>
         </div>
 
