@@ -126,8 +126,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()} 
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none"
-        onClick={onClose}
       >
+        {/* 1. 클릭 가능한 배경 레이어 (가장 아래) */}
+        <div 
+          className="absolute inset-0 z-0 cursor-pointer" 
+          onClick={onClose}
+        />
+
+        {/* 2. 닫기 버튼 (최상단 레이어) */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
@@ -139,11 +145,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           </Button>
         </div>
         
-        {/* 배경 영역 클릭 시 닫기 위해 onClick 추가 */}
-        <div 
-          className="relative w-full h-full flex items-center justify-center overflow-hidden p-4"
-          onClick={onClose}
-        >
+        {/* 3. 콘텐츠 레이어 (중간) */}
+        <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <AnimatePresence mode="wait">
             {isOpen && (
               <motion.div 
@@ -153,11 +156,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} 
                 onClick={(e) => e.stopPropagation()} 
                 className={cn(
-                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative", 
+                  "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto", 
                   (isInfluencer || isPopular) && "animate-influencer-float"
                 )}
               >
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white z-10">
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
