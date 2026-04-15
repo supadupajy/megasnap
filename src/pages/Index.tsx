@@ -39,9 +39,11 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  
+  // 마커 표시 개수를 25~35개 사이의 랜덤 값으로 관리
+  const [targetMarkerCount, setTargetMarkerCount] = useState(() => Math.floor(Math.random() * 11) + 25);
 
   const TILE_SIZE = 0.02;
-  const TARGET_MARKER_COUNT = 30;
   const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
@@ -164,7 +166,7 @@ const Index = () => {
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -187,17 +189,17 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+      if (nextMarkers.length >= targetMarkerCount) break;
     }
 
-    if (nextMarkers.length < TARGET_MARKER_COUNT) {
+    if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       if (currentPopularCount >= MAX_POPULAR_COUNT) {
         remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
       }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -205,7 +207,7 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId]);
+  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId, targetMarkerCount]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -221,6 +223,8 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    // 재검색 시 마커 개수 목표치를 다시 랜덤하게 설정
+    setTargetMarkerCount(Math.floor(Math.random() * 11) + 25);
     mapCache.populatedTiles.clear();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
