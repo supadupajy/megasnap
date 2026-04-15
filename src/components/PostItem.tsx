@@ -47,6 +47,8 @@ interface PostItemProps {
   onClick?: () => void;
 }
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
 const PostItem = ({ 
   user, 
   content, 
@@ -127,6 +129,11 @@ const PostItem = ({
     showError(`${user.name} 님을 차단했습니다.`);
   };
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = FALLBACK_IMAGE;
+  };
+
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
     let Icon = null;
@@ -160,7 +167,7 @@ const PostItem = ({
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={handleImageError} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -208,7 +215,7 @@ const PostItem = ({
             <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
               {displayImages.map((img, idx) => (
                 <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                  <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" />
+                  <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
                   {idx === adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
                 </div>
               ))}

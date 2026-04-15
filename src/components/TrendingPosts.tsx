@@ -73,7 +73,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div 
       className={cn(
         "pointer-events-auto w-full transition-all duration-300",
-        // 메뉴 레이어(z-50, z-70)보다 아래에 있도록 z-index 조정
         isExpanded ? "z-30 relative" : "z-10"
       )} 
       onClick={(e) => e.stopPropagation()}

@@ -13,6 +13,8 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
 }
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80";
+
 const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -278,7 +280,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                         background-color: ${(isPopular || isInfluencer) ? 'transparent' : (isAd ? '#3b82f6' : '#e5e7eb')}; transition: all 0.3s;">
               <div class="${isInfluencer ? 'shine-overlay' : ''}" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: white; position: relative;">
                 <img src="${this.post.image}" 
-                     onerror="this.src='https://picsum.photos/seed/${this.post.id}/300/300'"
+                     onerror="this.src='${FALLBACK_IMAGE}'"
                      style="width: 100%; height: 100%; object-fit: cover; ${this.isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
                 
                 <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; display: flex; align-items: center; gap: 2px; z-index: 5;">
