@@ -171,36 +171,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   isInfluencer && "influencer-border-container"
                 )}
               >
-                {/* Status Bar */}
+                {/* Status Bar - Extended background to cover content curves */}
                 {isInfluencer && (
-                  <div className="h-10 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-center justify-center gap-2 shrink-0">
+                  <div className="h-20 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
                     <Star className="w-4 h-4 fill-black" />
                     <span className="text-[11px] font-black text-black uppercase tracking-widest">Influencer Recommended</span>
                     <Star className="w-4 h-4 fill-black" />
                   </div>
                 )}
                 {isPopular && (
-                  <div className="h-10 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-center justify-center gap-2 shrink-0">
+                  <div className="h-20 bg-gradient-to-r from-red-600 via-orange-500 to-red-600 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
                     <Flame className="w-4 h-4 fill-white text-white" />
                     <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
                     <Flame className="w-4 h-4 fill-white text-white" />
                   </div>
                 )}
                 {isAd && (
-                  <div className="h-10 bg-blue-500 flex items-center justify-center gap-2 shrink-0">
+                  <div className="h-20 bg-blue-500 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
                     <Sparkles className="w-4 h-4 fill-white text-white" />
                     <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
                     <Sparkles className="w-4 h-4 fill-white text-white" />
                   </div>
                 )}
 
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px]">
+                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white rounded-[36px] z-10">
                   <div 
                     ref={scrollContainerRef} 
                     className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain"
                   >
                     <div className="flex flex-col">
-                      {/* Header: User Info (Moved to top to match PostItem) */}
+                      {/* Header: User Info */}
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div 
                           className="flex items-center gap-3 cursor-pointer group"
