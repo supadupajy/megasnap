@@ -6,39 +6,23 @@ const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
   "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1",
   "https://images.unsplash.com/photo-1494976388531-d1058494cdd8",
-  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8"
+  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8",
+  "https://images.unsplash.com/photo-1506015391300-4802dc74de2e",
+  "https://images.unsplash.com/photo-1515524738708-327f6b0037a7",
+  "https://images.unsplash.com/photo-1574672033710-069999999999"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-const FOOD_IMAGES = [
+const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
   "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445",
   "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
   "https://images.unsplash.com/photo-1482049016688-2d3e1b311543",
-  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
-
-const CAFE_IMAGES = [
-  "https://images.unsplash.com/photo-1509042239860-f550ce710b93",
-  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
-  "https://images.unsplash.com/photo-1501339817302-ee4fba9975f6",
-  "https://images.unsplash.com/photo-1442512595331-e89e73853f31",
-  "https://images.unsplash.com/photo-1554118811-1e0d58224f24"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
-
-const SHOPPING_IMAGES = [
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
-  "https://images.unsplash.com/photo-1472851294608-062f824d29cc",
-  "https://images.unsplash.com/photo-1519167758481-83f550bb49b3",
-  "https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d",
-  "https://images.unsplash.com/photo-1483985988355-763728e1935b"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
-
-const NATURE_IMAGES = [
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-  "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d"
+  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5855",
+  "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+  "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
+  "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 const ANIMAL_IMAGES = [
@@ -46,28 +30,35 @@ const ANIMAL_IMAGES = [
   "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
   "https://images.unsplash.com/photo-1543466835-00a7907e9de1",
   "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8",
-  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e"
+  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e",
+  "https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a",
+  "https://images.unsplash.com/photo-1518717758536-85ae29035b6d",
+  "https://images.unsplash.com/photo-1548191265-cc70d3d45ba1"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-const EVENT_IMAGES = [
-  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30",
-  "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4",
-  "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3",
-  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745",
-  "https://images.unsplash.com/photo-1514525253361-bee8718a74a2"
+const PLACE_IMAGES = [
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+  "https://images.unsplash.com/photo-1500673922987-e212871fec22",
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
+  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 const GENERAL_POOL = [
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
-  "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
   "https://images.unsplash.com/photo-1433086966358-54859d0ed716",
+  "https://images.unsplash.com/photo-1501854140801-50d01698950b",
   "https://images.unsplash.com/photo-1505144808419-1957a94ca61e",
   "https://images.unsplash.com/photo-1475924156734-496f6acc671e",
   "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07",
   "https://images.unsplash.com/photo-1470770841072-f978cf4d019e",
-  "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f"
+  "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f",
+  "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
+  "https://images.unsplash.com/photo-1439853949127-fa647821eba0",
+  "https://images.unsplash.com/photo-1508739773434-c26b3d09e071",
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 export const GIF_POOL = GENERAL_POOL.slice(0, 10);
@@ -176,11 +167,7 @@ const CONTENT_POOL = [
   "우리 집 강아지랑 공원 산책 중! 너무 귀엽죠? 🐶",
   "길 가다 만난 고양이... 심쿵사 할 뻔 했어요 🐱",
   "반려동물 동반 가능한 카페 발견! 분위기 너무 좋아요 🐾",
-  "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕",
-  "새로 생긴 쇼핑몰 구경 왔어요! 지갑 조심... 💸",
-  "이번 주말 플리마켓 행사 정보 공유합니다! 🎟️",
-  "주차 공간 찾기 너무 힘드네요 ㅠㅠ 여기 주차장 꿀팁! 🅿️",
-  "자연 속에서 캠핑 중... 공기가 너무 맑아요 🌲"
+  "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
@@ -230,14 +217,14 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
-    let category: Post['category'] = 'none';
+    let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
     if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
-      images = [FOOD_IMAGES[Math.floor(Math.random() * FOOD_IMAGES.length)], cokeAdImg];
+      images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
     } else if (content.includes('사고') || content.includes('화재')) {
       images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
@@ -245,23 +232,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     } else if (content.includes('강아지') || content.includes('고양이')) {
       images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
       category = 'animal';
-    } else if (content.includes('쇼핑') || content.includes('지갑')) {
-      images = [SHOPPING_IMAGES[Math.floor(Math.random() * SHOPPING_IMAGES.length)], cokeAdImg];
-      category = 'shopping';
-    } else if (content.includes('행사') || content.includes('플리마켓')) {
-      images = [EVENT_IMAGES[Math.floor(Math.random() * EVENT_IMAGES.length)], cokeAdImg];
-      category = 'event';
-    } else if (content.includes('주차')) {
-      images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
-      category = 'parking';
-    } else if (content.includes('자연') || content.includes('캠핑')) {
-      images = [NATURE_IMAGES[Math.floor(Math.random() * NATURE_IMAGES.length)], cokeAdImg];
-      category = 'nature';
-    } else if (content.includes('커피') || content.includes('카페')) {
-      images = [CAFE_IMAGES[Math.floor(Math.random() * CAFE_IMAGES.length)], cokeAdImg];
-      category = 'cafe';
     } else if (Math.random() > 0.7) {
-      images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
+      images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
       category = 'place';
     } else {
       images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];

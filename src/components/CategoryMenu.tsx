@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check, User, Coffee, ShoppingBag, Mountain, Ticket, CircleP } from 'lucide-react';
+import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,14 +15,9 @@ interface CategoryMenuProps {
 
 const CATEGORIES = [
   { id: 'food', label: '맛집', icon: Utensils, color: 'bg-orange-500' },
-  { id: 'cafe', label: '카페', icon: Coffee, color: 'bg-amber-700' },
-  { id: 'shopping', label: '쇼핑', icon: ShoppingBag, color: 'bg-pink-500' },
-  { id: 'place', label: '명소', icon: TreePine, color: 'bg-green-600' },
-  { id: 'nature', label: '자연', icon: Mountain, color: 'bg-emerald-600' },
-  { id: 'animal', label: '동물', icon: PawPrint, color: 'bg-purple-600' },
-  { id: 'event', label: '행사', icon: Ticket, color: 'bg-indigo-500' },
-  { id: 'parking', label: '주차', icon: CircleP, color: 'bg-blue-600' },
   { id: 'accident', label: '사고', icon: Car, color: 'bg-red-600' },
+  { id: 'place', label: '명소', icon: TreePine, color: 'bg-green-600' },
+  { id: 'animal', label: '동물', icon: PawPrint, color: 'bg-purple-600' },
 ];
 
 const SPECIAL_FILTERS = [
@@ -101,7 +96,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: Categor
 
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
-                <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto no-scrollbar">
+                <div className="grid grid-cols-1 gap-2">
                   {CATEGORIES.map((cat) => {
                     const Icon = cat.icon;
                     const isChecked = selectedCategories.includes(cat.id);

@@ -21,7 +21,7 @@ export interface Post {
   isAd?: boolean;
   isInfluencer?: boolean;
   isGif?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'cafe' | 'shopping' | 'nature' | 'event' | 'parking' | 'none';
+  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   user: User;
   content: string;
   location: string;
