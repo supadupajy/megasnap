@@ -86,7 +86,7 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-// 사용자 제공 GIF 리스트로 업데이트
+// 사용자 제공 GIF 리스트로 업데이트 (총 15개)
 const GIF_POOL = [
   "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
   "https://i.namu.wiki/i/3qjMoSXb8qZqYZsH-vdZNRkdOaz4ypVfoRZHAj7QT9JDv1fpP7mi9Sike6ij1d6Vd42Lu-__INRCmsJJaiDx0w.gif",
@@ -97,7 +97,12 @@ const GIF_POOL = [
   "https://talkimg.imbc.com/TVianUpload/tvian/TViews/image/2020/01/19/82PJLFUPvF67637150471087374630.gif",
   "http://cfile298.uf.daum.net/original/216A1C475799E34808B225",
   "https://i.makeagif.com/media/6-30-2021/S02tQQ.gif",
-  "https://i2.ruliweb.com/ori/17/09/21/15ea2c326711457e3.gif"
+  "https://i2.ruliweb.com/ori/17/09/21/15ea2c326711457e3.gif",
+  "https://img.extmovie.com/files/attach/images/148/853/595/037/97871ad291a6b65b79a971d59f75e02e.gif",
+  "https://coinpick.com/files/attach/images/69383/807/070/55eb4883efd402e4b29858c545192fb1.gif",
+  "https://cf.channel.io/document/spaces/8276/articles/25059/revisions/37007/usermedia/66b3b5398a260dfef490",
+  "https://cdn.imweb.me/thumbnail/20181125/5bfa6ab8ceeee.gif",
+  "https://upload3.inven.co.kr/upload/2025/04/26/bbs/i0827433132.gif"
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
