@@ -11,6 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
+import AddressBadge from '@/components/AddressBadge';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Sparkles, Activity } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
@@ -28,6 +29,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  const [currentCenter, setCurrentCenter] = useState<{ lat: number; lng: number }>(mapCache.lastCenter);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -53,10 +55,10 @@ const Index = () => {
   useEffect(() => {
     if (mapCenter) {
       mapCache.lastCenter = mapCenter;
+      setCurrentCenter(mapCenter);
     }
   }, [mapCenter]);
 
-  // 차단된 사용자를 제외한 전체 포스트
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
   }, [allPosts, blockedIds]);
@@ -95,6 +97,12 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
+    // 중심 좌표 업데이트
+    setCurrentCenter({
+      lat: (sw.lat + ne.lat) / 2,
+      lng: (sw.lng + ne.lng) / 2
+    });
+
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -121,23 +129,17 @@ const Index = () => {
 
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-
-    // 마커 개수 랜덤화 (25~35개)
     const targetMarkerCount = Math.floor(Math.random() * 11) + 25;
 
-    // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
-      
-      // 멀티 카테고리 로직
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
                               (selectedCategories.includes('mine') && post.user.id === 'me');
-
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
@@ -324,8 +326,13 @@ const Index = () => {
           showDensity={showDensity}
         />
 
+        {/* 실시간 주소 배지 추가 */}
+        <div className="absolute top-24 left-0 right-0 z-20 px-4">
+          <AddressBadge lat={currentCenter.lat} lng={currentCenter.lng} />
+        </div>
+
         <div className={cn(
-          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+          "absolute top-36 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
         )}>
           <div className="w-full shrink-0 pointer-events-auto">
@@ -398,14 +405,12 @@ const Index = () => {
               <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
             </button>
             
-            {/* 숫자 배지 */}
             {displayedMarkers.length > 0 && (
               <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
                 {displayedMarkers.length}
               </div>
             )}
             
-            {/* 펄스 효과 */}
             {displayedMarkers.length > 0 && (
               <div className="absolute inset-0 -z-10 bg-indigo-400/30 rounded-[24px] animate-ping" />
             )}
