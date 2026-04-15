@@ -166,6 +166,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 onClick={onClose}
                 className={cn(
                   "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative cursor-pointer",
+                  isAd && "border-4 border-blue-500",
                   isPopular && "popular-border-container",
                   isInfluencer && "influencer-border-container"
                 )}
@@ -183,6 +184,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     <Flame className="w-4 h-4 fill-white text-white" />
                     <span className="text-[11px] font-black text-white uppercase tracking-widest">Real-time Hot Post</span>
                     <Flame className="w-4 h-4 fill-white text-white" />
+                  </div>
+                )}
+                {isAd && (
+                  <div className="h-20 bg-blue-500 flex items-start justify-center pt-3 gap-2 shrink-0 -mb-10 relative z-0">
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">Sponsored Content</span>
+                    <Sparkles className="w-4 h-4 fill-white text-white" />
                   </div>
                 )}
 
