@@ -201,11 +201,56 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     }
   };
 
+  // 마커 HTML 생성 함수 분리
+  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
+    const isAd = post.isAd;
+    const isPopular = !isAd && post.borderType === 'popular';
+    const isInfluencer = !isAd && post.isInfluencer;
+    const isGif = isGifUrl(post.image);
+    const category = post.category || 'none';
+
+    let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : '');
+    let categoryIconHtml = '';
+    if (category !== 'none') {
+      let iconSvg = '', bgColor = '';
+      if (category === 'food') { iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>'; bgColor = '#f97316'; }
+      else if (category === 'accident') { iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>'; bgColor = '#dc2626'; }
+      else if (category === 'place') { iconSvg = '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2a1 1 0 0 1-.8-1.7L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"></path><path d="M12 22v-3"></path>'; bgColor = '#16a34a'; }
+      else if (category === 'animal') { iconSvg = '<path d="M11 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M18 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M7 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M22 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M12 21c-3.5 0-6-2.5-6-5.5s2.5-4.5 6-4.5 6 1.5 6 4.5-2.5 5.5-6 5.5z"></path>'; bgColor = '#9333ea'; }
+      categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
+    }
+
+    const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : '');
+    
+    return `
+      <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
+        ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
+        ${labelHtml}
+        <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')}"
+             style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
+                    ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
+                    overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    background-color: white;">
+          <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
+            <img src="${post.image}" 
+                 onerror="this.src='${FALLBACK_IMAGE}'"
+                 style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
+            ${isGif ? `<div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
+            ${categoryIconHtml}
+          </div>
+        </div>
+        ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
+      </div>
+    `;
+  };
+
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
+    // 제거된 마커 정리
     markersRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -222,12 +267,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-      const isAd = post.isAd;
-      const isPopular = !isAd && post.borderType === 'popular';
-      const isInfluencer = !isAd && post.isInfluencer;
-      const isGif = isGifUrl(post.image);
-      const category = post.category || 'none';
 
+      // 밀집도 오버레이 처리
       if (showDensity && !densityRef.current.has(post.id)) {
         const count = densityData.get(post.id) || 1;
         const style = getDensityStyle(count);
@@ -265,7 +306,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityRef.current.set(post.id, densityOverlay);
       }
 
-      if (!markersRef.current.has(post.id)) {
+      // 마커 오버레이 처리
+      const existingOverlay = markersRef.current.get(post.id);
+      
+      if (!existingOverlay) {
         const markerOverlay = new google.maps.OverlayView();
         markerOverlay.onAdd = function() {
           const div = document.createElement('div');
@@ -273,42 +317,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           div.style.width = '56px';
           div.style.height = '72px';
           div.style.cursor = 'pointer';
-          div.style.zIndex = isHighlighted ? '1000' : (isAd ? '500' : (isPopular ? '400' : '300'));
-
-          let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : '');
-          let categoryIconHtml = '';
-          if (category !== 'none') {
-            let iconSvg = '', bgColor = '';
-            if (category === 'food') { iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>'; bgColor = '#f97316'; }
-            else if (category === 'accident') { iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>'; bgColor = '#dc2626'; }
-            else if (category === 'place') { iconSvg = '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2a1 1 0 0 1-.8-1.7L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"></path><path d="M12 22v-3"></path>'; bgColor = '#16a34a'; }
-            else if (category === 'animal') { iconSvg = '<path d="M11 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M18 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M7 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M22 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M12 21c-3.5 0-6-2.5-6-5.5s2.5-4.5 6-4.5 6 1.5 6 4.5-2.5 5.5-6 5.5z"></path>'; bgColor = '#9333ea'; }
-            categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
-          }
-
-          const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : '');
-          
-          div.innerHTML = `
-            <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
-              ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-              ${labelHtml}
-              <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')}"
-                   style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                          ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
-                          overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                          background-color: white;">
-                <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
-                  <img src="${post.image}" 
-                       onerror="this.src='${FALLBACK_IMAGE}'"
-                       style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-                  <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-                  ${isGif ? `<div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
-                  ${categoryIconHtml}
-                </div>
-              </div>
-              ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
-            </div>
-          `;
+          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+          div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
           div.onclick = (e) => { e.stopPropagation(); onMarkerClick(post); };
           this.getPanes()!.overlayMouseTarget.appendChild(div);
           (this as any).div = div;
@@ -330,6 +340,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         };
         markerOverlay.setMap(mapInstance.current);
         markersRef.current.set(post.id, markerOverlay);
+      } else {
+        // 기존 마커의 상태(하이라이트, 읽음 여부)가 변경된 경우 HTML 업데이트
+        const div = (existingOverlay as any).div;
+        if (div) {
+          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+          div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+        }
       }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, showDensity, densityData]);

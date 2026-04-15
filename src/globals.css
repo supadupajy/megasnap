@@ -91,7 +91,7 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Pulse Animation for HOT Posts - Glow effect removed */
+/* Pulse Animation for HOT Posts */
 @keyframes hot-pulse {
   0%, 100% { 
     transform: scale(1); 
@@ -114,7 +114,7 @@
   100% { left: 100%; }
 }
 
-/* Marker Highlight Ping Animation - Brighter & Smoother */
+/* Marker Highlight Ping Animation - 2 Times */
 @keyframes marker-ping {
   0% {
     transform: translate(-50%, -50%) scale(0.2);
@@ -124,7 +124,7 @@
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) scale(3.5);
+    transform: translate(-50%, -50%) scale(4);
     opacity: 0;
   }
 }
@@ -143,12 +143,13 @@
   left: 50%;
   width: 80px;
   height: 80px;
-  background: rgba(34, 211, 238, 0.6); /* Bright Cyan */
-  box-shadow: 0 0 25px 5px rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.7); /* Bright Cyan */
+  box-shadow: 0 0 30px 10px rgba(34, 211, 238, 0.5);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
-  animation: marker-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  /* 2회 반복 후 정지 */
+  animation: marker-ping 1.2s cubic-bezier(0, 0, 0.2, 1) 2;
 }
 
 .shine-overlay::after {
