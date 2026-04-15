@@ -71,6 +71,10 @@ const UserProfile = () => {
     target.src = FALLBACK_IMAGE;
   };
 
+  const handleMessageClick = () => {
+    navigate(`/chat/${user.id}`);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -151,7 +155,11 @@ const UserProfile = () => {
                     </>
                   )}
                 </Button>
-                <Button variant="outline" className="flex-1 border-gray-200 text-gray-900 font-bold rounded-xl gap-2 h-12">
+                <Button 
+                  variant="outline" 
+                  onClick={handleMessageClick}
+                  className="flex-1 border-gray-200 text-gray-900 font-bold rounded-xl gap-2 h-12"
+                >
                   <MessageCircle className="w-4 h-4" /> 메시지
                 </Button>
               </div>
