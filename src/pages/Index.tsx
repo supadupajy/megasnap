@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_POPULAR_COUNT = 5; // 마커가 많아지므로 인기 포스트 제한도 약간 상향
+  const MAX_POPULAR_COUNT = 5;
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -93,7 +93,6 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    // 마커 개수 랜덤화 (25~35개)
     const targetMarkerCount = Math.floor(Math.random() * (35 - 25 + 1)) + 25;
     
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
@@ -112,7 +111,6 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          // 타일당 생성 개수를 늘려 후보군 확보
           newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 12));
         }
       }
@@ -138,7 +136,6 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 그리드 밀도를 높여 더 많은 마커가 배치될 수 있도록 함 (8x8)
     const ROWS = 8;
     const COLS = 8;
     const latStep = (ne.lat - sw.lat) / ROWS;
@@ -147,7 +144,6 @@ const Index = () => {
     const occupiedCells = new Set();
     let currentPopularCount = 0;
 
-    // 기존에 보이던 마커 중 유효한 것 유지
     const stillVisible = displayedMarkers.filter(p => {
       const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
       const isWithinTime = p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs;
@@ -168,7 +164,6 @@ const Index = () => {
 
     const nextMarkers = [...stillVisible];
 
-    // 하이라이트된 포스트 강제 포함
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
       if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
@@ -187,7 +182,6 @@ const Index = () => {
       return score;
     };
 
-    // 그리드 기반 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (nextMarkers.length >= targetMarkerCount) break;
@@ -216,14 +210,12 @@ const Index = () => {
       if (nextMarkers.length >= targetMarkerCount) break;
     }
 
-    // 목표치에 미달할 경우 남은 후보군에서 점수순으로 추가
     if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
       
       for (const p of sortedRemaining) {
         if (nextMarkers.length >= targetMarkerCount) break;
-        // 인기 포스트 제한은 유지하되 일반 포스트는 계속 추가
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -360,11 +352,11 @@ const Index = () => {
           </button>
         </div>
 
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
+        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
           <button 
             onClick={handleRefresh} 
             disabled={isRefreshing} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
           >
             <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
             <span className="text-[9px] font-black mt-1">재검색</span>
@@ -373,10 +365,18 @@ const Index = () => {
           <button 
             onClick={handleViewAllClick} 
             disabled={displayedMarkers.length === 0} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+            className={cn(
+              "w-16 h-16 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_10px_25px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border border-indigo-500 relative group",
+              displayedMarkers.length > 0 && "animate-hot-pulse"
+            )}
           >
-            <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
-            <span className="text-[9px] font-black mt-1">모두 보기</span>
+            <LayoutGrid className="w-7 h-7 stroke-[2.5px]" />
+            <span className="text-[10px] font-black mt-1">모두 보기</span>
+            {displayedMarkers.length > 0 && (
+              <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-md">
+                {displayedMarkers.length}
+              </div>
+            )}
           </button>
         </div>
 
