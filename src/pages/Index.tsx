@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_POPULAR_COUNT = 5;
+  const MAX_POPULAR_COUNT = 8; // 마커가 많아지므로 인기 포스트 제한 상향
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -93,7 +93,8 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    const targetMarkerCount = Math.floor(Math.random() * (35 - 25 + 1)) + 25;
+    // 마커 개수 랜덤화 (40~50개로 대폭 상향)
+    const targetMarkerCount = Math.floor(Math.random() * (50 - 40 + 1)) + 40;
     
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
@@ -111,7 +112,8 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 12));
+          // 타일당 생성 개수를 20개로 늘려 충분한 후보군 확보
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 20));
         }
       }
     }
@@ -136,8 +138,9 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const ROWS = 8;
-    const COLS = 8;
+    // 그리드 밀도를 10x10으로 높여 더 촘촘하게 배치
+    const ROWS = 10;
+    const COLS = 10;
     const latStep = (ne.lat - sw.lat) / ROWS;
     const lngStep = (ne.lng - sw.lng) / COLS;
 
@@ -175,13 +178,14 @@ const Index = () => {
 
     const getScore = (p: Post) => {
       let score = Math.random() * 100;
-      if (p.isInfluencer) score += 20; 
-      if (p.borderType === 'popular') score += 15;
-      if (p.isAd) score += 10;
-      score += Math.log10(p.likes + 1) * 5;
+      if (p.isInfluencer) score += 25; 
+      if (p.borderType === 'popular') score += 20;
+      if (p.isAd) score += 15;
+      score += Math.log10(p.likes + 1) * 8;
       return score;
     };
 
+    // 1단계: 그리드 기반 분산 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (nextMarkers.length >= targetMarkerCount) break;
@@ -210,6 +214,7 @@ const Index = () => {
       if (nextMarkers.length >= targetMarkerCount) break;
     }
 
+    // 2단계: 목표치 미달 시 그리드 무시하고 추가 (밀집 허용)
     if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
@@ -245,7 +250,7 @@ const Index = () => {
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 100);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 150);
         setAllPosts(refreshedPosts);
         setDisplayedMarkers([]); 
         setIsRefreshing(false);
