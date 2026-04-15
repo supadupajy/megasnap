@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check } from 'lucide-react';
+import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,7 @@ const CATEGORIES = [
 const SPECIAL_FILTERS = [
   { id: 'hot', label: 'HOT 포스팅', icon: Flame, color: 'bg-red-500' },
   { id: 'influencer', label: 'Influencer', icon: Star, color: 'bg-yellow-400' },
+  { id: 'mine', label: '내 포스팅만 보기', icon: User, color: 'bg-blue-600' },
 ];
 
 const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: CategoryMenuProps) => {
@@ -138,7 +139,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: Categor
                       >
                         <div className="flex items-center gap-3">
                           <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? filter.color : "bg-gray-100 text-gray-400")}>
-                            <Icon className={cn("w-4 h-4", filter.id === 'hot' && isChecked && "fill-white")} />
+                            <Icon className={cn("w-4 h-4", (filter.id === 'hot' || filter.id === 'mine') && isChecked && "fill-white")} />
                           </div>
                           <span className={cn("text-sm font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{filter.label}</span>
                         </div>

@@ -43,7 +43,6 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const TARGET_MARKER_COUNT = 30;
   const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
@@ -122,6 +121,9 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 마커 개수 랜덤화 (25~35개)
+    const targetMarkerCount = Math.floor(Math.random() * 11) + 25;
+
     // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
@@ -132,7 +134,8 @@ const Index = () => {
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && post.isInfluencer);
+                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
+                              (selectedCategories.includes('mine') && post.user.id === 'me');
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -144,7 +147,8 @@ const Index = () => {
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(p.category || 'none') ||
                               (selectedCategories.includes('hot') && p.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && p.isInfluencer);
+                              (selectedCategories.includes('influencer') && p.isInfluencer) ||
+                              (selectedCategories.includes('mine') && p.user.id === 'me');
       const isNotBlocked = !blockedIds.has(p.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
@@ -186,7 +190,7 @@ const Index = () => {
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -209,17 +213,17 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+      if (nextMarkers.length >= targetMarkerCount) break;
     }
 
-    if (nextMarkers.length < TARGET_MARKER_COUNT) {
+    if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       if (currentPopularCount >= MAX_POPULAR_COUNT) {
         remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
       }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
+        if (nextMarkers.length >= targetMarkerCount) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
