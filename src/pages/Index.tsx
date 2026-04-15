@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 45; 
+  const MAX_MARKERS = 45; // 최대 마커 수 제한 (40~50개 사이)
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -90,12 +90,11 @@ const Index = () => {
     }
   }, [location.state, blockedIds]);
 
-  // 마커 업데이트 로직 (진입/퇴출 최적화)
+  // 마커 업데이트 로직 (연속성 유지 및 수 제한)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    // 1. 타일 기반 데이터 생성
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -123,7 +122,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 2. 현재 영역 내에 있는 모든 후보군 필터링 (화면 밖 마커는 여기서 걸러짐)
+    // 1. 현재 영역 내에 있는 모든 후보군 필터링
     const inBoundsCandidates = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -139,32 +138,26 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 3. 연속성 유지: 이미 화면에 있는 마커는 '무조건' 유지 (깜빡임 방지)
+    // 2. 연속성 유지: 이미 화면에 있는 마커는 우선적으로 유지
     const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
     const stickyMarkers = inBoundsCandidates.filter(m => currentlyDisplayedIds.has(m.id));
     
-    // 4. 부족한 수만큼 새로운 후보군에서 선택
-    // 이때, 중앙에서 갑자기 생기는 것을 방지하기 위해 '새로 진입한 영역'의 마커를 우선하거나 랜덤하게 섞음
+    // 3. 부족한 수만큼 새로운 후보군에서 랜덤하게 선택
     const newCandidates = inBoundsCandidates.filter(m => !currentlyDisplayedIds.has(m.id));
+    const shuffledNew = newCandidates.sort(() => Math.random() - 0.5);
     
-    // 마커가 너무 많아지지 않도록 제한
     const neededCount = Math.max(0, MAX_MARKERS - stickyMarkers.length);
-    
-    // 새로운 후보군을 섞어서 필요한 만큼만 가져옴
-    const toAdd = newCandidates
-      .sort(() => Math.random() - 0.5)
-      .slice(0, neededCount);
+    const toAdd = shuffledNew.slice(0, neededCount);
 
-    // 5. 최종 마커 리스트 구성
+    // 4. 최종 마커 리스트 구성
     const finalMarkers = [...stickyMarkers, ...toAdd];
     
-    // 상태 업데이트 (ID 리스트가 변했을 때만)
-    const nextIds = finalMarkers.map(m => m.id).sort().join(',');
-    const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
-    
-    if (nextIds !== prevIds) {
+    // 실시간 생성 느낌을 주기 위해 미세한 지연 후 업데이트
+    const timer = setTimeout(() => {
       setDisplayedMarkers(finalMarkers);
-    }
+    }, 50);
+
+    return () => clearTimeout(timer);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
