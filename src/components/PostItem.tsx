@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PostItemProps {
   user: {
@@ -57,6 +58,7 @@ const PostItem = ({
 }: PostItemProps) => {
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([
     { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." }
   ]);
@@ -296,14 +298,6 @@ const PostItem = ({
             </p>
           </div>
 
-          {/* 최근 댓글 표시 */}
-          {comments.length > 0 && (
-            <div className="flex gap-2 items-start mt-1">
-              <span className="font-bold text-sm text-gray-900">{comments[comments.length - 1].user}</span>
-              <span className="text-sm text-gray-500 line-clamp-1">{comments[comments.length - 1].text}</span>
-            </div>
-          )}
-
           {/* 댓글 입력창 */}
           <form 
             onSubmit={handleAddComment}
@@ -312,7 +306,7 @@ const PostItem = ({
           >
             <Input 
               placeholder="댓글 달기..." 
-              className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-xs h-8"
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
             />
@@ -325,9 +319,51 @@ const PostItem = ({
             </button>
           </form>
 
-          <button className="text-xs text-gray-400 font-medium" onClick={(e) => e.stopPropagation()}>
-            댓글 {comments.length + 11}개 모두 보기
+          {/* 최근 댓글 표시 (입력창 아래) */}
+          {comments.length > 0 && !showComments && (
+            <div className="flex gap-2 items-start mt-1">
+              <span className="font-bold text-sm text-gray-900">{comments[comments.length - 1].user}</span>
+              <span className="text-sm text-gray-500 line-clamp-1">{comments[comments.length - 1].text}</span>
+            </div>
+          )}
+
+          <button 
+            className="w-full py-1 flex items-center justify-between group"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowComments(!showComments);
+            }}
+          >
+            <span className="text-xs text-gray-400 font-medium">
+              댓글 {comments.length + 11}개 {showComments ? '숨기기' : '모두 보기'}
+            </span>
+            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
           </button>
+
+          <AnimatePresence>
+            {showComments && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }} 
+                animate={{ height: "auto", opacity: 1 }} 
+                exit={{ height: 0, opacity: 0 }} 
+                className="overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-3 py-2 pb-4">
+                  {comments.map((comment, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <span className="font-bold text-sm text-gray-900">{comment.user}</span>
+                      <span className="text-sm text-gray-500">{comment.text}</span>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 items-start opacity-50">
+                    <span className="font-bold text-sm text-gray-900">seoul_explorer</span>
+                    <span className="text-sm text-gray-500">주차 공간은 넉넉한가요?</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
