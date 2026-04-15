@@ -30,17 +30,27 @@ const AnimatedRoutes = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
-  // 헤더와 네비게이션을 숨길 경로 설정
   const hideLayout = ["/chat", "/splash"].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
-    // Capacitor 뒤로가기 버튼 리스너 등록
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      // 1. 현재 열려있는 팝업(다이얼로그, 드로어 등)이 있는지 확인
+      const openPopup = document.querySelector('[role="dialog"], [data-vaul-drawer]');
+      
+      if (openPopup) {
+        // 팝업이 열려있다면 닫기 버튼을 찾아 클릭 (팝업만 닫기)
+        const closeBtn = document.querySelector('.close-popup-btn') as HTMLElement;
+        if (closeBtn) {
+          closeBtn.click();
+          return;
+        }
+      }
+
+      // 2. 팝업이 없고 지도 화면(루트)인 경우 종료 팝업 노출
       if (location.pathname === '/') {
-        // 지도 화면(루트)인 경우 종료 팝업 노출
         setShowExitDialog(true);
       } else {
-        // 그 외의 경우 뒤로가기 수행
+        // 3. 그 외의 경우 뒤로가기 수행
         if (canGoBack) {
           window.history.back();
         } else {

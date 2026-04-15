@@ -26,9 +26,9 @@ const ExitDialog = ({ isOpen, onClose, onConfirm }: ExitDialogProps) => {
           <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
             서비스 종료
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-center text-gray-500 font-medium leading-relaxed">
+          <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed break-keep">
             Chora 서비스를 종료하시겠습니까?<br />
-            오늘의 추억은 지도에 안전하게 저장되었습니다.
+            오늘의 추억은 안전하게 저장되었습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">

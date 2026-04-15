@@ -127,25 +127,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onOpenAutoFocus={(e) => e.preventDefault()} 
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none"
       >
-        {/* 1. 클릭 가능한 배경 레이어 */}
         <div 
           className="absolute inset-0 z-0 cursor-pointer" 
           onClick={onClose}
         />
 
-        {/* 2. 닫기 버튼 */}
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.stopPropagation(); onClose(); }} 
-            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all"
+            className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"
           >
             <X className="w-6 h-6 stroke-[2.5px]" />
           </Button>
         </div>
         
-        {/* 3. 콘텐츠 레이어 */}
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <AnimatePresence mode="wait">
             {isOpen && (
@@ -154,7 +151,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 initial={{ opacity: 0, scale: 0.9, y: 20 }} 
                 animate={{ opacity: 1, scale: 1, y: 0 }} 
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }} 
-                onClick={onClose} // 카드 자체를 클릭해도 닫히도록 설정
+                onClick={onClose}
                 className={cn(
                   "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer", 
                   (isInfluencer || isPopular) && "animate-influencer-float"
@@ -163,7 +160,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 헤더 영역: 상호작용 요소 보호 */}
                       <div className="flex items-center justify-between px-4 py-3 shrink-0">
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
@@ -183,7 +179,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <button className="text-gray-400 p-1" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button>
                       </div>
                       
-                      {/* 이미지 영역: 클릭 시 닫힘 (stopPropagation 없음) */}
                       <div className="px-4">
                         <div className={cn(
                           "relative aspect-square w-full rounded-2xl transition-all duration-500", 
@@ -215,7 +210,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </div>
                       </div>
                       
-                      {/* 하단 정보 영역: 상호작용 요소 보호 */}
                       <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-4 pt-1.5">
