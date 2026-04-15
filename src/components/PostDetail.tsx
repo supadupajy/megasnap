@@ -301,7 +301,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 text-cyan-600 rounded-full hover:bg-cyan-100 active:scale-90 transition-all border border-cyan-100"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
-                                  <span className="text-[10px] font-black">배민에서 주문</span>
+                                  <span className="text-[10px] font-black">주문하기</span>
                                 </button>
                               )}
                             </div>
