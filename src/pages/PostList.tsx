@@ -116,7 +116,8 @@ const PostList = () => {
         damping: 30,
         mass: 0.8
       }}
-      className="fixed inset-0 z-[60] bg-white pt-[88px] pb-28 overflow-y-auto shadow-2xl"
+      // 헤더(88px)와 하단바(106px)를 제외한 영역에 고정
+      className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
     >
       <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
         <button 
