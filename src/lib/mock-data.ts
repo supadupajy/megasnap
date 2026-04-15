@@ -86,7 +86,6 @@ const COMMENT_USERS = [
 
 const generateRandomComments = (count: number): Comment[] => {
   const comments: Comment[] = [];
-  // 요청받은 count만큼 생성 (최대 30개로 제한하여 성능 유지)
   const numToGenerate = Math.min(count, 30); 
   
   for (let i = 0; i < numToGenerate; i++) {
@@ -176,6 +175,13 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
+  // 핫스팟 설정 (성수, 홍대, 강남 등)
+  const hotspots = [
+    { lat: 37.5445, lng: 127.0560 }, // 성수
+    { lat: 37.5575, lng: 126.9245 }, // 홍대
+    { lat: 37.4979, lng: 127.0276 }  // 강남
+  ];
+
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
     const isInfluencer = Math.random() > 0.9;
@@ -183,8 +189,16 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.85;
     
-    const lat = centerLat + (Math.random() - 0.5) * 0.05;
-    const lng = centerLng + (Math.random() - 0.5) * 0.05;
+    // 30% 확률로 핫스팟 주변에 밀집 생성
+    let lat, lng;
+    if (Math.random() > 0.7) {
+      const spot = hotspots[Math.floor(Math.random() * hotspots.length)];
+      lat = spot.lat + (Math.random() - 0.5) * 0.005; // 아주 좁은 범위
+      lng = spot.lng + (Math.random() - 0.5) * 0.005;
+    } else {
+      lat = centerLat + (Math.random() - 0.5) * 0.05;
+      lng = centerLng + (Math.random() - 0.5) * 0.05;
+    }
     
     let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
@@ -200,7 +214,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       images = [GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)], cokeAdImg];
     }
 
-    // 댓글 리스트 먼저 생성 (10~25개 사이)
     const randomCount = Math.floor(Math.random() * 16) + 10;
     const comments = generateRandomComments(randomCount);
 
@@ -216,7 +229,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       lat,
       lng,
       likes: (isPopular || isInfluencer) ? Math.floor(Math.random() * 1000) + 1000 : Math.floor(Math.random() * 500) + 10,
-      commentsCount: comments.length, // 실제 리스트 길이와 일치시킴
+      commentsCount: comments.length,
       comments: comments,
       image: images[0],
       images,

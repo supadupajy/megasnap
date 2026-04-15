@@ -50,7 +50,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         mapInstance.current = map;
         setIsMapReady(true);
 
-        // 맵 이벤트 리스너
         map.addListener('bounds_changed', () => {
           const bounds = map.getBounds();
           if (bounds) {
@@ -65,7 +64,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           }
         });
 
-        // 롱프레스(길게 누르기) 구현
         map.addListener('mousedown', (e: any) => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
           pressTimer.current = setTimeout(() => {
@@ -106,14 +104,12 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return () => clearInterval(timer);
   }, []);
 
-  // 센터 변경 시 이동
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       mapInstance.current.panTo(center);
     }
   }, [center, isMapReady]);
 
-  // 글쓰기 핀 표시
   const showActionPin = (lat: number, lng: number) => {
     hideActionPin();
     if (!mapInstance.current) return;
@@ -166,13 +162,11 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     }
   };
 
-  // 마커 및 밀집도 렌더링
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거된 포스트 정리
     markersRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -195,18 +189,21 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const isGif = isGifUrl(post.image);
       const category = post.category || 'none';
 
-      // 1. 밀집도 오버레이
+      // 1. 밀집도 오버레이 (마커 주변 원형)
       if (showDensity && !densityRef.current.has(post.id)) {
         const densityOverlay = new google.maps.OverlayView();
         densityOverlay.onAdd = function() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
-          div.style.width = '120px';
-          div.style.height = '120px';
-          div.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0) 70%)';
+          div.style.width = '100px';
+          div.style.height = '100px';
+          // 반투명한 붉은색 원형 (겹칠수록 진해짐)
+          div.style.background = 'rgba(239, 68, 68, 0.15)';
+          div.style.border = '1px solid rgba(239, 68, 68, 0.3)';
           div.style.borderRadius = '50%';
           div.style.pointerEvents = 'none';
           div.style.transform = 'translate(-50%, -50%)';
+          div.style.zIndex = '1';
           this.getPanes()!.overlayLayer.appendChild(div);
           (this as any).div = div;
         };
@@ -227,13 +224,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityRef.current.set(post.id, densityOverlay);
       }
 
-      // 2. 마커 오버레이 (기존 마커가 있으면 업데이트를 위해 새로 생성하거나 유지)
-      // 여기서는 단순화를 위해 매번 새로 생성하지 않고, 상태가 변했을 때만 갱신하는 로직이 필요하지만
-      // React의 useEffect 의존성 배열을 통해 관리되므로, 변경된 경우에만 다시 그려지도록 합니다.
-      
       if (markersRef.current.has(post.id)) {
-        // 이미 있는 마커의 스타일 업데이트가 필요한 경우 여기서 처리하거나, 
-        // 간단하게 삭제 후 재생성 (성능상 이슈가 적은 수준에서)
         markersRef.current.get(post.id)!.setMap(null);
       }
 
