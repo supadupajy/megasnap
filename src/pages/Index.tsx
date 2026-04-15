@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Sparkles } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Sparkles, Activity } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [showDensity, setShowDensity] = useState(false);
 
   const TILE_SIZE = 0.02;
   const MAX_POPULAR_COUNT = 3;
@@ -320,6 +321,7 @@ const Index = () => {
             setIsWriteOpen(true);
           }} 
           center={mapCenter}
+          showDensity={showDensity}
         />
 
         <div className={cn(
@@ -337,6 +339,18 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
+          <button 
+            onClick={() => setShowDensity(!showDensity)}
+            className={cn(
+              "w-12 h-12 rounded-2xl flex flex-col items-center justify-center shadow-lg active:scale-90 transition-all border",
+              showDensity 
+                ? "bg-red-500 text-white border-red-400" 
+                : "bg-white text-gray-600 border-gray-100"
+            )}
+          >
+            <Activity className={cn("w-5 h-5", showDensity && "animate-pulse")} />
+            <span className="text-[8px] font-black mt-0.5">밀집도</span>
+          </button>
           <button 
             onClick={() => setIsCategoryOpen(true)}
             className={cn(
