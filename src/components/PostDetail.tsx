@@ -119,7 +119,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     );
   };
 
-  const lastComment = localComments[localComments.length - 1];
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

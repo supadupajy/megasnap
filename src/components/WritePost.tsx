@@ -89,6 +89,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       lat,
       lng,
       likes: 0,
+      commentsCount: 0,
+      comments: [],
       image: capturedImage || `https://picsum.photos/seed/${Date.now()}/800/800`,
       isLiked: false,
       createdAt: new Date(),

@@ -44,8 +44,8 @@ const PostItem = ({
   content, 
   location, 
   likes, 
-  commentsCount,
-  comments: initialComments,
+  commentsCount = 0,
+  comments: initialComments = [],
   image, 
   images = [],
   adImageIndex,
@@ -68,7 +68,7 @@ const PostItem = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
-  const [localComments, setLocalComments] = useState<Comment[]>(initialComments);
+  const [localComments, setLocalComments] = useState<Comment[]>(initialComments || []);
   const [commentInput, setCommentInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -127,7 +127,7 @@ const PostItem = ({
     );
   };
 
-  const lastComment = localComments[localComments.length - 1];
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   return (
     <div 
