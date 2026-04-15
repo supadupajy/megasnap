@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 150;
+  const MAX_MARKERS = 50; // 최대 마커 개수를 50개로 조정
 
   useEffect(() => {
     mapCache.posts = allPosts;
