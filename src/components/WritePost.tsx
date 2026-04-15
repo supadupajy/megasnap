@@ -23,7 +23,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
+  const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
     if (isOpen) {
@@ -196,11 +196,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
           {/* Bottom Button Area */}
           <div 
-            className="py-4 bg-white shrink-0 transition-all duration-300"
-            style={{ 
-              paddingBottom: isKeyboardOpen ? '12px' : '32px',
-              marginBottom: isKeyboardOpen ? `${keyboardHeight}px` : '0px'
-            }}
+            className={cn(
+              "py-4 bg-white shrink-0 transition-all duration-300",
+              isKeyboardOpen ? "pb-2" : "pb-8"
+            )}
           >
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
