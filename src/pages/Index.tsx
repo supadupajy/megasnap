@@ -326,13 +326,9 @@ const Index = () => {
           showDensity={showDensity}
         />
 
-        {/* 실시간 주소 배지 추가 */}
-        <div className="absolute top-24 left-0 right-0 z-20 px-4">
-          <AddressBadge lat={currentCenter.lat} lng={currentCenter.lng} />
-        </div>
-
+        {/* 주소 배지 위치를 TrendingPosts 하단으로 이동하기 위해 컨테이너 구조 변경 */}
         <div className={cn(
-          "absolute top-36 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+          "absolute top-24 left-0 right-0 px-4 flex flex-col pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
         )}>
           <div className="w-full shrink-0 pointer-events-auto">
@@ -343,6 +339,11 @@ const Index = () => {
               onPostClick={handleTrendingPostClick}
             />
           </div>
+          
+          {/* 실시간 주소 배지: TrendingPosts 바로 아래에 위치 */}
+          {!isTrendingExpanded && (
+            <AddressBadge lat={currentCenter.lat} lng={currentCenter.lng} />
+          )}
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
