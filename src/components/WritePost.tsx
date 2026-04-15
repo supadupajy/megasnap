@@ -25,22 +25,24 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   useEffect(() => {
     if (isOpen) {
-      if (initialLocation && window.google) {
+      if (initialLocation && window.naver) {
         setIsLoadingAddress(true);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results, status) => {
-            if (status === "OK" && results && results[0]) {
-              // 구글 맵에서 가져온 실제 주소 설정
-              setAddress(results[0].formatted_address);
+        // 네이버 지도 Reverse Geocoding 사용
+        naver.maps.Service.reverseGeocode({
+          coords: new naver.maps.LatLng(initialLocation.lat, initialLocation.lng),
+        }, (status, response) => {
+          if (status === naver.maps.Service.Status.OK) {
+            const result = response.v2;
+            if (result.address && result.address.jibunAddress) {
+              setAddress(result.address.jibunAddress);
             } else {
-              // 지오코딩 실패 시에만 좌표 표시 (최후의 수단)
               setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
-            setIsLoadingAddress(false);
+          } else {
+            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
-        );
+          setIsLoadingAddress(false);
+        });
       } else if (!initialLocation) {
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
