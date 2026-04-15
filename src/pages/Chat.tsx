@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 const CHAT_DATA: Record<string, any[]> = {
   'travel_maker': [
@@ -35,6 +36,7 @@ const CHAT_DATA: Record<string, any[]> = {
 const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
+  const { keyboardHeight } = useKeyboard();
   const initialMessages = useMemo(() => (chatId && CHAT_DATA[chatId]) || CHAT_DATA['travel_maker'], [chatId]);
   
   const [messages, setMessages] = useState(initialMessages);
@@ -45,7 +47,7 @@ const Chat = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, keyboardHeight]);
 
   const handleBack = () => {
     if (window.history.length > 1 && window.history.state?.idx > 0) {
@@ -74,7 +76,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-white overflow-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -108,7 +110,8 @@ const Chat = () => {
       {/* Chat Messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 pt-[100px] pb-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar"
+        className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300"
+        style={{ paddingBottom: keyboardHeight > 0 ? '20px' : '100px' }}
       >
         <div className="flex justify-center my-6">
           <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full uppercase tracking-widest">
@@ -140,7 +143,10 @@ const Chat = () => {
       </div>
 
       {/* Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-8">
+      <div 
+        className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 transition-all duration-300 z-50"
+        style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '32px' }}
+      >
         <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-2 border border-gray-100">
           <Input 
             placeholder="메시지 보내기..." 

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { showSuccess } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const { keyboardHeight } = useKeyboard();
 
   useEffect(() => {
     if (isOpen) {
@@ -32,10 +34,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
           (results, status) => {
             if (status === "OK" && results && results[0]) {
-              // 구글 맵에서 가져온 실제 주소 설정
               setAddress(results[0].formatted_address);
             } else {
-              // 지오코딩 실패 시에만 좌표 표시 (최후의 수단)
               setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
             setIsLoadingAddress(false);
@@ -123,7 +123,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[85vh] outline-none">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4" />
-        <div className="px-6 flex flex-col h-full">
+        <div className="px-6 flex flex-col h-full relative">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -134,7 +134,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </Button>
           </div>
 
-          <div className="flex-1 space-y-6 overflow-y-auto pb-24 no-scrollbar">
+          <div className="flex-1 space-y-6 overflow-y-auto pb-32 no-scrollbar">
             <div 
               onClick={takePhoto}
               className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden"
@@ -174,9 +174,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                   <p className="text-sm font-bold text-gray-800 truncate">{address || '위치 정보 없음'}</p>
                 )}
               </div>
-              {!initialLocation && (
-                <Button variant="ghost" size="sm" className="text-indigo-600 font-black text-xs">변경</Button>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -190,7 +187,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
           </div>
 
-          <div className="absolute bottom-8 left-0 right-0 px-6 bg-gradient-to-t from-white via-white to-transparent pt-4">
+          <div 
+            className="absolute bottom-0 left-0 right-0 px-6 bg-white pt-4 pb-8 transition-all duration-300 z-50"
+            style={{ transform: `translateY(-${keyboardHeight}px)` }}
+          >
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
