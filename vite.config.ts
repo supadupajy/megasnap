@@ -8,7 +8,8 @@ export default defineConfig(() => ({
   base: "/",
   server: {
     host: "localhost",
-    port: 8080,
+    port: 52193,
+    strictPort: true, // 해당 포트가 사용 중일 경우 다른 포트로 자동 전환되지 않도록 설정
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {
