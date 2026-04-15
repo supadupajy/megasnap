@@ -69,21 +69,27 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
 
+  // 외부(인기 포스팅, 위치보기 등)에서 넘어온 위치 및 포스트 처리
   useEffect(() => {
     if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
+      // 포스트가 목록에 없으면 추가
       setAllPosts(prev => {
         if (prev.some(p => p.id === incomingPost.id)) return prev;
         return [incomingPost, ...prev];
       });
+
+      // 지도를 해당 위치로 이동
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
+      // 이동 후 핑 효과 트리거 (약간의 지연을 주어 지도가 이동한 뒤 마커가 보일 때 실행)
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
-        setTimeout(() => setHighlightedPostId(null), 3500);
-      }, 1000);
+        // 핑 효과 종료 후 상태 초기화 (애니메이션 2회 반복 시간 고려)
+        setTimeout(() => setHighlightedPostId(null), 3000);
+      }, 800);
       
       return () => clearTimeout(pingTimer);
     } else if (location.state?.center) {
@@ -171,6 +177,7 @@ const Index = () => {
 
     const nextMarkers = [...stillVisible];
 
+    // 하이라이트된 포스트는 무조건 표시 목록에 포함
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
       if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
@@ -265,13 +272,15 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
+    // 지도를 해당 위치로 부드럽게 이동
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
+    // 이동 후 핑 효과 트리거
     setTimeout(() => {
       setHighlightedPostId(post.id);
-      setTimeout(() => setHighlightedPostId(null), 3500);
-    }, 1000);
+      setTimeout(() => setHighlightedPostId(null), 3000);
+    }, 800);
   }, []);
 
   const handleCurrentLocation = () => {
@@ -299,8 +308,8 @@ const Index = () => {
     
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
-      setTimeout(() => setHighlightedPostId(null), 3500);
-    }, 1000);
+      setTimeout(() => setHighlightedPostId(null), 3000);
+    }, 800);
   };
 
   return (
@@ -445,7 +454,7 @@ const Index = () => {
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
             if (post) {
               setHighlightedPostId(post.id);
-              setTimeout(() => setHighlightedPostId(null), 3500);
+              setTimeout(() => setHighlightedPostId(null), 3000);
             }
             setMapCenter({ lat, lng });
             setSelectedPostId(null);
