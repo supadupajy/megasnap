@@ -134,7 +134,7 @@ const PostItem = ({
     target.src = FALLBACK_IMAGE;
   };
 
-  const renderCategoryBadge = (isOverlay = false) => {
+  const renderCategoryBadge = () => {
     if (category === 'none') return null;
     let Icon = null;
     let bgColor = "";
@@ -146,18 +146,6 @@ const PostItem = ({
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
     if (!Icon) return null;
-
-    if (isOverlay) {
-      return (
-        <div className={cn(
-          "absolute top-4 right-4 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white shadow-lg border border-white/20 backdrop-blur-sm",
-          bgColor
-        )}>
-          <Icon className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-black">{label}</span>
-        </div>
-      );
-    }
 
     return (
       <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
@@ -225,14 +213,11 @@ const PostItem = ({
           isInfluencer ? "influencer-border-container" : (isAd ? "p-[2px] bg-blue-500 shadow-lg shadow-blue-500/20" : (isPopular ? "popular-border-container" : ""))
         )}>
           <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", isInfluencer && "shine-overlay")}>
-            {/* Category Badge Overlay */}
-            {renderCategoryBadge(true)}
-
             <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
               {displayImages.map((img, idx) => (
                 <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                   <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
-                  {idx === adImageIndex && <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                  {idx === adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
                 </div>
               ))}
             </div>
