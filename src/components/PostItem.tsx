@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ExternalLink } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -283,29 +283,15 @@ const PostItem = ({
               <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
             </button>
             {renderCategoryBadge()}
-            <div className="flex flex-col items-end gap-1">
-              {lat !== undefined && lng !== undefined && (
-                <button 
-                  onClick={handleLocationClick}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
-                >
-                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                  <span className="text-[10px] font-black">위치보기</span>
-                </button>
-              )}
-              {isAd && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open('https://www.baemin.com/', '_blank');
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 text-cyan-600 rounded-full hover:bg-cyan-100 active:scale-90 transition-all border border-cyan-100"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-black">배민에서 주문</span>
-                </button>
-              )}
-            </div>
+            {lat !== undefined && lng !== undefined && (
+              <button 
+                onClick={handleLocationClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+              >
+                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                <span className="text-[10px] font-black">위치보기</span>
+              </button>
+            )}
           </div>
         </div>
 
