@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { isGifUrl } from '@/lib/mock-data';
+import { AlertCircle } from 'lucide-react';
 
 interface MapContainerProps {
   posts: any[];
@@ -20,91 +21,107 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const [actionPin, setActionPin] = useState<{ lat: number; lng: number } | null>(null);
   const actionOverlayRef = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const lastLongPressTime = useRef(0);
 
   useEffect(() => {
     const initMap = () => {
-      if (!mapElement.current || !window.kakao || !window.kakao.maps) return false;
+      if (!window.kakao) {
+        setError("카카오 SDK를 불러오지 못했습니다. index.html의 스크립트 태그를 확인해 주세요.");
+        return false;
+      }
+      
+      if (!window.kakao.maps) {
+        setError("카카오 지도 객체가 존재하지 않습니다. API 키나 도메인 설정을 확인해 주세요.");
+        return false;
+      }
 
       window.kakao.maps.load(() => {
         if (!mapElement.current || mapInstance.current) return;
 
-        const initialCenter = new window.kakao.maps.LatLng(
-          center?.lat || 37.5665, 
-          center?.lng || 126.9780
-        );
-        
-        const mapOptions = {
-          center: initialCenter,
-          level: 4,
-        };
-
-        const map = new window.kakao.maps.Map(mapElement.current, mapOptions);
-        mapInstance.current = map;
-        setIsMapReady(true);
-
-        // 롱프레스 구현
-        window.kakao.maps.event.addListener(map, 'mousedown', (e: any) => {
-          if (pressTimer.current) clearTimeout(pressTimer.current);
+        try {
+          const initialCenter = new window.kakao.maps.LatLng(
+            center?.lat || 37.5665, 
+            center?.lng || 126.9780
+          );
           
-          pressTimer.current = setTimeout(() => {
-            const latlng = e.latLng;
-            if (latlng) {
-              lastLongPressTime.current = Date.now();
-              setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
-              if (window.navigator.vibrate) window.navigator.vibrate(50);
-            }
-          }, 1000);
-        });
+          const mapOptions = {
+            center: initialCenter,
+            level: 4,
+          };
 
-        const clearTimer = () => {
-          if (pressTimer.current) {
-            clearTimeout(pressTimer.current);
-            pressTimer.current = null;
-          }
-        };
+          const map = new window.kakao.maps.Map(mapElement.current, mapOptions);
+          mapInstance.current = map;
+          setIsMapReady(true);
+          setError(null);
 
-        window.kakao.maps.event.addListener(map, 'dragstart', clearTimer);
-        window.kakao.maps.event.addListener(map, 'mousemove', clearTimer);
-
-        window.kakao.maps.event.addListener(map, 'click', () => {
-          const now = Date.now();
-          if (now - lastLongPressTime.current < 500) return;
-          setActionPin(null);
-        });
-
-        const updateBounds = () => {
-          const bounds = map.getBounds();
-          if (bounds) {
-            const sw = bounds.getSouthWest();
-            const ne = bounds.getNorthEast();
-            onMapChange({
-              bounds: {
-                sw: { lat: sw.getLat(), lng: sw.getLng() },
-                ne: { lat: ne.getLat(), lng: ne.getLng() }
+          // 롱프레스 구현
+          window.kakao.maps.event.addListener(map, 'mousedown', (e: any) => {
+            if (pressTimer.current) clearTimeout(pressTimer.current);
+            
+            pressTimer.current = setTimeout(() => {
+              const latlng = e.latLng;
+              if (latlng) {
+                lastLongPressTime.current = Date.now();
+                setActionPin({ lat: latlng.getLat(), lng: latlng.getLng() });
+                if (window.navigator.vibrate) window.navigator.vibrate(50);
               }
-            });
-          }
-        };
+            }, 1000);
+          });
 
-        window.kakao.maps.event.addListener(map, 'bounds_changed', updateBounds);
-        updateBounds();
+          const clearTimer = () => {
+            if (pressTimer.current) {
+              clearTimeout(pressTimer.current);
+              pressTimer.current = null;
+            }
+          };
+
+          window.kakao.maps.event.addListener(map, 'dragstart', clearTimer);
+          window.kakao.maps.event.addListener(map, 'mousemove', clearTimer);
+
+          window.kakao.maps.event.addListener(map, 'click', () => {
+            const now = Date.now();
+            if (now - lastLongPressTime.current < 500) return;
+            setActionPin(null);
+          });
+
+          const updateBounds = () => {
+            const bounds = map.getBounds();
+            if (bounds) {
+              const sw = bounds.getSouthWest();
+              const ne = bounds.getNorthEast();
+              onMapChange({
+                bounds: {
+                  sw: { lat: sw.getLat(), lng: sw.getLng() },
+                  ne: { lat: ne.getLat(), lng: ne.getLng() }
+                }
+              });
+            }
+          };
+
+          window.kakao.maps.event.addListener(map, 'bounds_changed', updateBounds);
+          updateBounds();
+        } catch (e) {
+          console.error("Map Init Error:", e);
+          setError("지도를 초기화하는 중 오류가 발생했습니다. 도메인 등록 여부를 확인해 주세요.");
+        }
       });
       return true;
     };
 
-    // 즉시 실행 시도
-    if (!initMap()) {
-      // 실패 시 500ms 간격으로 최대 10번 재시도
-      let count = 0;
-      const timer = setInterval(() => {
-        count++;
-        if (initMap() || count > 10) clearInterval(timer);
-      }, 500);
-      return () => clearInterval(timer);
-    }
+    let retryCount = 0;
+    const maxRetries = 20;
+    
+    const timer = setInterval(() => {
+      if (initMap() || retryCount >= maxRetries) {
+        clearInterval(timer);
+      }
+      retryCount++;
+    }, 500);
+
+    return () => clearInterval(timer);
   }, []);
 
   // 센터 변경 시 이동
@@ -280,7 +297,32 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
-  return <div ref={mapElement} className="w-full h-full bg-gray-100" />;
+  return (
+    <div className="w-full h-full relative bg-gray-100">
+      <div ref={mapElement} className="w-full h-full" />
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm z-[100] p-6 text-center">
+          <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-red-100 max-w-xs">
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
+            <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">
+              {error}
+            </p>
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Checklist</p>
+              <ul className="text-[11px] text-left text-gray-500 space-y-1 list-disc pl-4">
+                <li>JavaScript 키가 맞는지 확인</li>
+                <li>카카오 콘솔에 현재 도메인 등록 여부</li>
+                <li>인터넷 연결 상태 확인</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default MapContainer;
