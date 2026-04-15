@@ -10,9 +10,9 @@ const SplashScreen = () => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.8, ease: "easeInOut" }}
-      className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center px-6"
     >
-      <div className="relative">
+      <div className="relative w-full flex flex-col items-center">
         {/* Background Glow */}
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
@@ -22,10 +22,10 @@ const SplashScreen = () => {
             repeat: Infinity, 
             repeatType: "reverse" 
           }}
-          className="absolute inset-0 bg-indigo-600 blur-3xl rounded-full"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-600 blur-3xl rounded-full"
         />
 
-        <div className="relative flex flex-col items-center gap-6">
+        <div className="relative flex flex-col items-center gap-6 w-full">
           {/* Logo Icon */}
           <motion.div
             initial={{ scale: 0, rotate: -20 }}
@@ -36,9 +36,9 @@ const SplashScreen = () => {
               damping: 20,
               delay: 0.2
             }}
-            className="w-24 h-24 bg-indigo-600 rounded-[32px] flex items-center justify-center shadow-2xl shadow-indigo-200"
+            className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-200"
           >
-            <Camera className="w-12 h-12 text-white" strokeWidth={2.5} />
+            <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
           </motion.div>
 
           {/* Brand Name */}
@@ -47,7 +47,7 @@ const SplashScreen = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }}
-              className="text-5xl font-black text-gray-900 tracking-tighter italic"
+              className="text-4xl font-black text-gray-900 tracking-tighter italic"
             >
               Cho<span className="text-indigo-600">ra</span>
             </motion.h1>
@@ -55,12 +55,37 @@ const SplashScreen = () => {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1, duration: 0.8 }}
-              className="text-sm font-bold text-gray-400 mt-2 tracking-widest uppercase"
+              transition={{ delay: 0.8, duration: 0.8 }}
+              className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase"
             >
               Capture the Moment
             </motion.p>
           </div>
+
+          {/* BMW Ad Image */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2, duration: 1 }}
+            className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group"
+          >
+            <img 
+              src="https://images.unsplash.com/photo-1669170022362-a9702f007949?auto=format&fit=crop&w=800&q=80" 
+              alt="BMW i7" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-white uppercase tracking-tighter">The New i7</span>
+                  <span className="text-[8px] font-bold text-white/70">This is Forwardism.</span>
+                </div>
+                <div className="w-6 h-6 bg-white rounded-full p-1">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/2048px-BMW.svg.png" alt="BMW" className="w-full h-full object-contain" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
 
@@ -69,7 +94,7 @@ const SplashScreen = () => {
         <motion.div 
           initial={{ x: "-100%" }}
           animate={{ x: "0%" }}
-          transition={{ duration: 1.5, ease: "linear" }}
+          transition={{ duration: 2.5, ease: "easeInOut", delay: 0.5 }}
           className="w-full h-full bg-indigo-600"
         />
       </div>

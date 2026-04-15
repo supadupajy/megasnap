@@ -121,7 +121,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 1500);
+    }, 3000); // 1.5초에서 3초로 연장
 
     return () => clearTimeout(timer);
   }, []);
