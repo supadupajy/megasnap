@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
 
 interface PostItemProps {
   user: {
@@ -56,6 +57,10 @@ const PostItem = ({
 }: PostItemProps) => {
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [comments, setComments] = useState([
+    { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." }
+  ]);
+  const [commentInput, setCommentInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const isPopular = !isAd && borderType === 'popular';
@@ -84,6 +89,14 @@ const PostItem = ({
     }
   };
 
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!commentInput.trim()) return;
+    setComments([...comments, { user: "Dyad_Explorer", text: commentInput }]);
+    setCommentInput('');
+  };
+
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
     
@@ -92,26 +105,10 @@ const PostItem = ({
     let label = "";
 
     switch (category) {
-      case 'food':
-        Icon = Utensils;
-        bgColor = "bg-orange-500";
-        label = "맛집";
-        break;
-      case 'accident':
-        Icon = Car;
-        bgColor = "bg-red-600";
-        label = "사고";
-        break;
-      case 'place':
-        Icon = TreePine;
-        bgColor = "bg-green-600";
-        label = "명소";
-        break;
-      case 'animal':
-        Icon = PawPrint;
-        bgColor = "bg-purple-600";
-        label = "동물";
-        break;
+      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
+      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
+      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
+      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
 
     if (!Icon) return null;
@@ -298,7 +295,39 @@ const PostItem = ({
               {content}
             </p>
           </div>
-          <button className="text-xs text-gray-400 font-medium" onClick={(e) => e.stopPropagation()}>댓글 12개 모두 보기</button>
+
+          {/* 최근 댓글 표시 */}
+          {comments.length > 0 && (
+            <div className="flex gap-2 items-start mt-1">
+              <span className="font-bold text-sm text-gray-900">{comments[comments.length - 1].user}</span>
+              <span className="text-sm text-gray-500 line-clamp-1">{comments[comments.length - 1].text}</span>
+            </div>
+          )}
+
+          {/* 댓글 입력창 */}
+          <form 
+            onSubmit={handleAddComment}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+          >
+            <Input 
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+            />
+            <button 
+              type="submit"
+              disabled={!commentInput.trim()}
+              className="text-indigo-600 disabled:text-gray-300 transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+
+          <button className="text-xs text-gray-400 font-medium" onClick={(e) => e.stopPropagation()}>
+            댓글 {comments.length + 11}개 모두 보기
+          </button>
         </div>
       </div>
     </div>

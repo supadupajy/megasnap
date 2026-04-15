@@ -5,8 +5,9 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +22,7 @@ interface PostDetailProps {
   onLocationClick?: (lat: number, lng: number) => void;
 }
 
-const MOCK_COMMENTS = [
+const INITIAL_COMMENTS = [
   { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." },
   { user: "photo_master", text: "날씨 좋을 때 가면 최고죠 ㅎㅎ" },
   { user: "seoul_explorer", text: "주차 공간은 넉넉한가요?" },
@@ -36,6 +37,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [comments, setComments] = useState(INITIAL_COMMENTS);
+  const [commentInput, setCommentInput] = useState('');
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +55,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
+      setComments(INITIAL_COMMENTS);
     }
     if (!isOpen) {
       setHasInitialized(false);
@@ -77,6 +81,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (index !== currentImageIndex) {
       setCurrentImageIndex(index);
     }
+  };
+
+  const handleAddComment = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!commentInput.trim()) return;
+    setComments([...comments, { user: "Dyad_Explorer", text: commentInput }]);
+    setCommentInput('');
+    setShowComments(true);
   };
 
   if (!isOpen || posts.length === 0) return null;
@@ -116,7 +128,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     );
   };
 
-  const lastComment = MOCK_COMMENTS[MOCK_COMMENTS.length - 1];
+  const lastComment = comments[comments.length - 1];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -221,7 +233,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="flex items-center gap-1">
                               <MessageCircle className="w-[18px] h-[18px] text-gray-400" />
-                              <span className="text-[11px] font-bold text-gray-500">12</span>
+                              <span className="text-[11px] font-bold text-gray-500">{comments.length}</span>
                             </button>
                             <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><Share2 className="w-[18px] h-[18px]" /></button>
                           </div>
@@ -256,22 +268,44 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                         <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium" onClick={(e) => e.stopPropagation()}>{post.content}</p>
 
-                        <div className="border-t border-gray-100 pt-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+                          {/* 댓글 입력창 */}
+                          <form 
+                            onSubmit={handleAddComment}
+                            className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+                          >
+                            <Input 
+                              placeholder="댓글 달기..." 
+                              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+                              value={commentInput}
+                              onChange={(e) => setCommentInput(e.target.value)}
+                            />
+                            <button 
+                              type="submit"
+                              disabled={!commentInput.trim()}
+                              className="text-indigo-600 disabled:text-gray-300 transition-colors"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </form>
+
                           <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-2 flex items-center justify-between group">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">{showComments ? 'Hide Comments' : 'View All Comments'}</p>
                             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
                           </button>
-                          {!showComments && (
+                          
+                          {!showComments && lastComment && (
                             <div className="flex gap-2 items-start mt-1 mb-2">
                               <span className="font-bold text-[13px] text-gray-900">{lastComment.user}</span>
                               <span className="text-[13px] text-gray-500 line-clamp-1">{lastComment.text}</span>
                             </div>
                           )}
+                          
                           <AnimatePresence>
                             {showComments && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="space-y-4 py-3 pb-6">
-                                  {MOCK_COMMENTS.map((comment, i) => (
+                                  {comments.map((comment, i) => (
                                     <div key={i} className="flex gap-2 items-start">
                                       <span className="font-bold text-[13px] text-gray-900">{comment.user}</span>
                                       <span className="text-[13px] text-gray-500">{comment.text}</span>
