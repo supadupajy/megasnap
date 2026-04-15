@@ -127,7 +127,7 @@ const PostList = () => {
           onClick={() => navigate('/')}
           className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"
         >
-          <ChevronLeft className="w-6 h-6 text-gray-600" />
+          <ChevronLeft className="w-6 h-6 text-gray-600 rotate-[135deg]" />
         </button>
         <div>
           <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
