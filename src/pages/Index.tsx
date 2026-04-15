@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_POPULAR_COUNT = 3;
+  const MAX_POPULAR_COUNT = 5; // 마커가 많아지므로 인기 포스트 제한도 약간 상향
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -112,7 +112,8 @@ const Index = () => {
           tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
+          // 타일당 생성 개수를 늘려 후보군 확보
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 12));
         }
       }
     }
@@ -137,6 +138,16 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
+    // 그리드 밀도를 높여 더 많은 마커가 배치될 수 있도록 함 (8x8)
+    const ROWS = 8;
+    const COLS = 8;
+    const latStep = (ne.lat - sw.lat) / ROWS;
+    const lngStep = (ne.lng - sw.lng) / COLS;
+
+    const occupiedCells = new Set();
+    let currentPopularCount = 0;
+
+    // 기존에 보이던 마커 중 유효한 것 유지
     const stillVisible = displayedMarkers.filter(p => {
       const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
       const isWithinTime = p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs;
@@ -148,14 +159,6 @@ const Index = () => {
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const ROWS = 6;
-    const COLS = 5;
-    const latStep = (ne.lat - sw.lat) / ROWS;
-    const lngStep = (ne.lng - sw.lng) / COLS;
-
-    const occupiedCells = new Set();
-    let currentPopularCount = 0;
-
     stillVisible.forEach(p => {
       const r = Math.min(Math.floor((p.lat - sw.lat) / latStep), ROWS - 1);
       const c = Math.min(Math.floor((p.lng - sw.lng) / lngStep), COLS - 1);
@@ -165,6 +168,7 @@ const Index = () => {
 
     const nextMarkers = [...stillVisible];
 
+    // 하이라이트된 포스트 강제 포함
     if (highlightedPostId) {
       const hPost = updatedAllPosts.find(p => p.id === highlightedPostId);
       if (hPost && !nextMarkers.some(m => m.id === hPost.id) && !blockedIds.has(hPost.user.id)) {
@@ -176,13 +180,14 @@ const Index = () => {
 
     const getScore = (p: Post) => {
       let score = Math.random() * 100;
-      if (p.isInfluencer) score += 15; 
-      if (p.borderType === 'popular') score += 10;
-      if (p.isAd) score += 5;
-      score += Math.log10(p.likes + 1) * 2;
+      if (p.isInfluencer) score += 20; 
+      if (p.borderType === 'popular') score += 15;
+      if (p.isAd) score += 10;
+      score += Math.log10(p.likes + 1) * 5;
       return score;
     };
 
+    // 그리드 기반 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (nextMarkers.length >= targetMarkerCount) break;
@@ -211,14 +216,14 @@ const Index = () => {
       if (nextMarkers.length >= targetMarkerCount) break;
     }
 
+    // 목표치에 미달할 경우 남은 후보군에서 점수순으로 추가
     if (nextMarkers.length < targetMarkerCount) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
-      if (currentPopularCount >= MAX_POPULAR_COUNT) {
-        remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
-      }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
+      
       for (const p of sortedRemaining) {
         if (nextMarkers.length >= targetMarkerCount) break;
+        // 인기 포스트 제한은 유지하되 일반 포스트는 계속 추가
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -248,7 +253,7 @@ const Index = () => {
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
+        const refreshedPosts = createMockPosts(centerLat, centerLng, 100);
         setAllPosts(refreshedPosts);
         setDisplayedMarkers([]); 
         setIsRefreshing(false);
