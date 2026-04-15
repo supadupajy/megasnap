@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -256,8 +256,8 @@ const PostItem = ({
       </div>
 
       <div className="px-4 pt-3 pb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-4 pt-1.5">
             <button 
               className="transition-transform active:scale-125" 
               onClick={(e) => {
@@ -275,22 +275,36 @@ const PostItem = ({
             </button>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button 
-              className="transition-transform active:scale-125"
-              onClick={handleSaveToggle}
-            >
-              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-            </button>
-            {renderCategoryBadge()}
-            {lat !== undefined && lng !== undefined && (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
               <button 
-                onClick={handleLocationClick}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+                className="transition-transform active:scale-125"
+                onClick={handleSaveToggle}
               >
-                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                <span className="text-[10px] font-black">위치보기</span>
+                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
               </button>
+              {renderCategoryBadge()}
+              {lat !== undefined && lng !== undefined && (
+                <button 
+                  onClick={handleLocationClick}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"
+                >
+                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                  <span className="text-[10px] font-black">위치보기</span>
+                </button>
+              )}
+            </div>
+            {isAd && (
+              <a 
+                href="https://s.baemin.com/t3000fBqlbHGL"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                <span className="text-[10px] font-black">주문하기</span>
+              </a>
             )}
           </div>
         </div>

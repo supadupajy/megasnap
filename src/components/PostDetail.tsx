@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -267,8 +267,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                       {/* Content Section */}
                       <div className="px-4 py-4 sm:px-5 sm:py-5">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-4 pt-1.5">
                             <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
                               <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                             </button>
@@ -277,19 +277,33 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </button>
                             <button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <button 
-                              className="transition-transform active:scale-125"
-                              onClick={handleSaveToggle}
-                            >
-                              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-                            </button>
-                            <div onClick={(e) => e.stopPropagation()}>{renderCategoryBadge()}</div>
-                            {post.lat !== undefined && post.lng !== undefined && (
-                              <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                                <span className="text-[10px] font-black">위치보기</span>
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-3">
+                              <button 
+                                className="transition-transform active:scale-125"
+                                onClick={handleSaveToggle}
+                              >
+                                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                               </button>
+                              <div onClick={(e) => e.stopPropagation()}>{renderCategoryBadge()}</div>
+                              {post.lat !== undefined && post.lng !== undefined && (
+                                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                                  <span className="text-[10px] font-black">위치보기</span>
+                                </button>
+                              )}
+                            </div>
+                            {isAd && (
+                              <a 
+                                href="https://s.baemin.com/t3000fBqlbHGL"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+                              >
+                                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                                <span className="text-[10px] font-black">주문하기</span>
+                              </a>
                             )}
                           </div>
                         </div>
