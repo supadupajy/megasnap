@@ -272,10 +272,10 @@ const Index = () => {
         />
 
         <div className={cn(
-          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+          "absolute top-24 left-0 right-0 flex items-start justify-between pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
         )}>
-          <div className="w-64 shrink-0 pointer-events-auto">
+          <div className="w-full shrink-0 pointer-events-auto">
             <TrendingPosts 
               posts={trendingPosts}
               isExpanded={isTrendingExpanded}
@@ -310,13 +310,6 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
-          {/* 포스팅 개수 표시기 */}
-          <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-100 shadow-lg flex items-center justify-center">
-            <p className="text-[10px] font-black text-gray-500 whitespace-nowrap">
-              현재 <span className="text-indigo-600">{displayedMarkers.length}</span>
-            </p>
-          </div>
-
           {/* 재검색 버튼 */}
           <button 
             onClick={handleRefresh} 
