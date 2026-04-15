@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ interface PostItemProps {
   lat?: number;
   lng?: number;
   isLiked?: boolean;
+  isSaved?: boolean;
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
@@ -45,6 +46,7 @@ const PostItem = ({
   lat,
   lng,
   isLiked, 
+  isSaved: initialIsSaved,
   isAd, 
   isGif, 
   isInfluencer,
@@ -59,6 +61,7 @@ const PostItem = ({
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialIsSaved || false);
   const [comments, setComments] = useState([
     { user: "travel_lover", text: "와 여기 진짜 가보고 싶었는데! 정보 감사합니다." }
   ]);
@@ -89,6 +92,11 @@ const PostItem = ({
     if (lat !== undefined && lng !== undefined && onLocationClick) {
       onLocationClick(e, lat, lng);
     }
+  };
+
+  const handleSaveToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSaved(!isSaved);
   };
 
   const handleAddComment = (e: React.FormEvent) => {
@@ -267,7 +275,13 @@ const PostItem = ({
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button 
+              className="transition-transform active:scale-125"
+              onClick={handleSaveToggle}
+            >
+              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+            </button>
             {renderCategoryBadge()}
             {lat !== undefined && lng !== undefined && (
               <button 

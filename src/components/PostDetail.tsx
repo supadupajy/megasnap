@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -39,6 +39,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [comments, setComments] = useState(INITIAL_COMMENTS);
   const [commentInput, setCommentInput] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
@@ -56,11 +57,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setShowComments(false);
       setCurrentImageIndex(0);
       setComments(INITIAL_COMMENTS);
+      setIsSaved(posts[initialIndex]?.isSaved || false);
     }
     if (!isOpen) {
       setHasInitialized(false);
     }
-  }, [isOpen, initialIndex, hasInitialized]);
+  }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
     const currentPost = posts[currentIndex];
@@ -69,11 +71,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
     setShowComments(false);
     setCurrentImageIndex(0);
+    setIsSaved(currentPost?.isSaved || false);
     
     if (imageScrollRef.current) {
       imageScrollRef.current.scrollLeft = 0;
     }
-  }, [currentIndex, isOpen, onViewPost]);
+  }, [currentIndex, isOpen, onViewPost, posts]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -88,6 +91,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (!commentInput.trim()) return;
     setComments([...comments, { user: "Dyad_Explorer", text: commentInput }]);
     setCommentInput('');
+  };
+
+  const handleSaveToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSaved(!isSaved);
   };
 
   if (!isOpen || posts.length === 0) return null;
@@ -225,18 +233,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                       <div className="px-4 py-4 sm:px-5 sm:py-5">
                         <div className="flex items-center justify-between mb-5">
-                          <div className="flex items-center gap-3.5">
-                            <button className="flex items-center gap-1 group" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
-                              <Heart className={cn("w-[18px] h-[18px] transition-transform group-active:scale-125", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-                              <span className="text-[11px] font-bold text-gray-500">{post.likes}</span>
+                          <div className="flex items-center gap-4">
+                            <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
+                              <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="flex items-center gap-1">
-                              <MessageCircle className="w-[18px] h-[18px] text-gray-400" />
-                              <span className="text-[11px] font-bold text-gray-500">{comments.length}</span>
+                            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                              <MessageCircle className="w-6 h-6 text-gray-700" />
                             </button>
-                            <button className="text-gray-400" onClick={(e) => e.stopPropagation()}><Share2 className="w-[18px] h-[18px]" /></button>
+                            <button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              className="transition-transform active:scale-125"
+                              onClick={handleSaveToggle}
+                            >
+                              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+                            </button>
                             <div onClick={(e) => e.stopPropagation()}>{renderCategoryBadge()}</div>
                             {post.lat !== undefined && post.lng !== undefined && (
                               <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
@@ -265,7 +277,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </div>
                         </div>
 
-                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium" onClick={(e) => e.stopPropagation()}>{post.content}</p>
+                        <div className="space-y-1 mb-4" onClick={(e) => e.stopPropagation()}>
+                          <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
+                          <p className="text-gray-700 text-sm leading-relaxed font-medium">{post.content}</p>
+                        </div>
 
                         <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
                           {/* 댓글 입력창 */}

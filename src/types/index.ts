@@ -27,6 +27,7 @@ export interface Post {
   images?: string[];
   adImageIndex?: number;
   isLiked: boolean;
+  isSaved?: boolean;
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'none';
 }
