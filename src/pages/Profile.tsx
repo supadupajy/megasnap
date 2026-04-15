@@ -7,7 +7,7 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
-import { createMockPosts } from '@/lib/mock-data';
+import { createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -24,15 +24,24 @@ const Profile = () => {
     // 내 포스트 30개 생성
     const rawMine = createMockPosts(37.5665, 126.9780, 30);
     
-    const mine = rawMine.map((p, idx) => ({
-      ...p,
-      isGif: idx < 10, // 10개는 GIF로 설정
-      user: {
-        id: 'me',
-        name: 'Dyad_Explorer',
-        avatar: 'https://i.pravatar.cc/150?u=me'
-      }
-    })).sort(() => Math.random() - 0.5);
+    const mine = rawMine.map((p, idx) => {
+      const isGif = idx < 10;
+      const image = isGif 
+        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] 
+        : p.image;
+
+      return {
+        ...p,
+        isGif,
+        image,
+        images: isGif ? [image, ...p.images.slice(1)] : p.images,
+        user: {
+          id: 'me',
+          name: 'Dyad_Explorer',
+          avatar: 'https://i.pravatar.cc/150?u=me'
+        }
+      };
+    }).sort(() => Math.random() - 0.5);
 
     setMyPosts(mine);
 

@@ -86,7 +86,7 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-// 사용자 제공 GIF 리스트 (총 15개) - export 추가
+// 사용자 제공 GIF 리스트 (총 15개)
 export const GIF_POOL = [
   "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
   "https://i.namu.wiki/i/3qjMoSXb8qZqYZsH-vdZNRkdOaz4ypVfoRZHAj7QT9JDv1fpP7mi9Sike6ij1d6Vd42Lu-__INRCmsJJaiDx0w.gif",
@@ -143,7 +143,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   const indices = Array.from({ length: count }, (_, i) => i);
   for (let i = indices.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
+    [indices[j], indices[i]] = [indices[i], indices[j]];
   }
 
   const popularIndex = Math.random() > 0.7 ? indices[0] : -1;
