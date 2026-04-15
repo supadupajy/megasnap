@@ -42,7 +42,7 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const TARGET_MARKER_COUNT = 30;
-  const MAX_POPULAR_COUNT = 3; // 인기 포스팅 최대 노출 개수
+  const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -78,7 +78,6 @@ const Index = () => {
     }
   }, [location.state]);
 
-  // 마커 계산 및 표시 로직
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -151,7 +150,6 @@ const Index = () => {
       return score;
     };
 
-    // 1단계: 그리드 기반 분산 배치
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
@@ -165,7 +163,6 @@ const Index = () => {
             !nextMarkers.some(m => m.id === p.id)
           );
 
-          // 인기 포스팅 개수 제한 적용
           if (currentPopularCount >= MAX_POPULAR_COUNT) {
             cellCandidates = cellCandidates.filter(p => p.borderType !== 'popular');
           }
@@ -181,20 +178,15 @@ const Index = () => {
       if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
     }
 
-    // 2단계: 부족한 마커 채우기 (인기 포스팅 제한 유지)
     if (nextMarkers.length < TARGET_MARKER_COUNT) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
-      
       if (currentPopularCount >= MAX_POPULAR_COUNT) {
         remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
       }
-
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
-      
       for (const p of sortedRemaining) {
         if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
-        
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
       }
@@ -218,16 +210,12 @@ const Index = () => {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
-    
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
-      
       setTimeout(() => {
         const centerLat = (ne.lat + sw.lat) / 2;
         const centerLng = (ne.lng + sw.lng) / 2;
-        
         const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
-        
         setAllPosts(refreshedPosts);
         setDisplayedMarkers([]); 
         setIsRefreshing(false);
@@ -295,15 +283,6 @@ const Index = () => {
               onPostClick={handleTrendingPostClick}
             />
           </div>
-          <div className="flex flex-col items-end gap-2 pointer-events-auto shrink-0 w-[92px]">
-            <button onClick={handleRefresh} disabled={isRefreshing} className="w-full bg-white/90 backdrop-blur-md h-[44px] rounded-full shadow-lg border border-gray-100 flex items-center justify-center gap-1.5 text-sm font-bold text-indigo-600 active:scale-90 transition-all">
-              <RefreshCw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")} />
-              <span>재검색</span>
-            </button>
-            <div className="w-full bg-white/70 backdrop-blur-md py-1.5 rounded-full border border-gray-100/50 shadow-sm flex items-center justify-center">
-              <p className="text-[10px] font-bold text-gray-500">현재 <span className="text-indigo-600">{displayedMarkers.length}</span></p>
-            </div>
-          </div>
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
@@ -330,11 +309,29 @@ const Index = () => {
           </button>
         </div>
 
-        <div className="absolute bottom-32 right-4 z-20">
+        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
+          {/* 포스팅 개수 표시기 */}
+          <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-100 shadow-lg flex items-center justify-center">
+            <p className="text-[10px] font-black text-gray-500 whitespace-nowrap">
+              현재 <span className="text-indigo-600">{displayedMarkers.length}</span>
+            </p>
+          </div>
+
+          {/* 재검색 버튼 */}
+          <button 
+            onClick={handleRefresh} 
+            disabled={isRefreshing} 
+            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
+          >
+            <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
+            <span className="text-[9px] font-black mt-1">재검색</span>
+          </button>
+
+          {/* 모두 보기 버튼 */}
           <button 
             onClick={handleViewAllClick} 
             disabled={displayedMarkers.length === 0} 
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50"
+            className="w-14 h-14 bg-indigo-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg active:scale-90 transition-all disabled:opacity-50 border border-indigo-500"
           >
             <LayoutGrid className="w-6 h-6 stroke-[2.5px]" />
             <span className="text-[9px] font-black mt-1">모두 보기</span>
