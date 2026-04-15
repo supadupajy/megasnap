@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Copy } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showSuccess } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
@@ -42,6 +43,8 @@ const Index = () => {
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  const currentDomain = window.location.origin;
+
   const TILE_SIZE = 0.02;
   const TARGET_MARKER_COUNT = 30;
   const MAX_POPULAR_COUNT = 3;
@@ -56,7 +59,6 @@ const Index = () => {
     }
   }, [mapCenter]);
 
-  // 차단된 사용자를 제외한 전체 포스트
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
   }, [allPosts, blockedIds]);
@@ -122,13 +124,11 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      // 멀티 카테고리 로직
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
@@ -298,12 +298,31 @@ const Index = () => {
     }, 1000);
   };
 
+  const copyDomain = () => {
+    navigator.clipboard.writeText(currentDomain);
+    showSuccess('도메인이 복사되었습니다!');
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
+      {/* 도메인 확인용 배너 (카카오 설정 완료 후 삭제 가능) */}
+      <div className="absolute top-[92px] left-4 right-4 z-[60] bg-black/80 backdrop-blur-md text-white p-3 rounded-2xl flex items-center justify-between shadow-xl border border-white/10">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Kakao Domain Check</span>
+          <span className="text-xs font-bold truncate max-w-[200px]">{currentDomain}</span>
+        </div>
+        <button 
+          onClick={copyDomain}
+          className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-xl transition-colors"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+      </div>
+
       <div className="absolute inset-0 z-0">
         <MapContainer 
           posts={displayedMarkers}
