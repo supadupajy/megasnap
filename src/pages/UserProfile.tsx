@@ -30,22 +30,24 @@ const UserProfile = () => {
 
   // 해당 사용자의 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
-    // 사용자의 게시물 (그리드 뷰용)
-    const userPosts = createMockPosts(37.5665, 126.9780, 15)
-      .filter(p => !p.isAd)
-      .slice(0, 12)
-      .map(p => ({
-        ...p,
-        user: {
-          id: user.id,
-          name: user.nickname || user.name,
-          avatar: user.avatar
-        }
-      }));
+    // 사용자의 게시물 30개 생성
+    const rawPosts = createMockPosts(37.5665, 126.9780, 30);
+    
+    // 10개는 확실히 GIF로 설정하고 나머지는 일반 포스트로 설정하여 섞기
+    const userPosts = rawPosts.map((p, idx) => ({
+      ...p,
+      isGif: idx < 10, // 처음 10개는 GIF로 강제 설정
+      user: {
+        id: user.id,
+        name: user.nickname || user.name,
+        avatar: user.avatar
+      }
+    })).sort(() => Math.random() - 0.5); // 랜덤하게 섞기
+
     setPosts(userPosts);
 
-    // 사용자가 저장한 게시물 (북마크 탭용 - 다른 사람들의 게시물)
-    const saved = createMockPosts(37.5665, 126.9780, 8)
+    // 사용자가 저장한 게시물 (북마크 탭용)
+    const saved = createMockPosts(37.5665, 126.9780, 12)
       .filter(p => p.user.id !== user.id)
       .map(p => ({ ...p, isLiked: true }));
     setSavedPosts(saved);

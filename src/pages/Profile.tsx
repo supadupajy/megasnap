@@ -21,22 +21,23 @@ const Profile = () => {
 
   // 내 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
-    // 내 포스트
-    const mine = createMockPosts(37.5665, 126.9780, 15)
-      .filter(p => !p.isInfluencer && !p.isAd)
-      .slice(0, 12)
-      .map(p => ({
-        ...p,
-        user: {
-          id: 'me',
-          name: 'Dyad_Explorer',
-          avatar: 'https://i.pravatar.cc/150?u=me'
-        }
-      }));
+    // 내 포스트 30개 생성
+    const rawMine = createMockPosts(37.5665, 126.9780, 30);
+    
+    const mine = rawMine.map((p, idx) => ({
+      ...p,
+      isGif: idx < 10, // 10개는 GIF로 설정
+      user: {
+        id: 'me',
+        name: 'Dyad_Explorer',
+        avatar: 'https://i.pravatar.cc/150?u=me'
+      }
+    })).sort(() => Math.random() - 0.5);
+
     setMyPosts(mine);
 
-    // 저장된 포스트 (다른 사용자들의 포스트)
-    const saved = createMockPosts(37.5665, 126.9780, 10)
+    // 저장된 포스트
+    const saved = createMockPosts(37.5665, 126.9780, 12)
       .filter(p => p.user.id !== 'me')
       .map(p => ({ ...p, isLiked: true }));
     setSavedPosts(saved);
