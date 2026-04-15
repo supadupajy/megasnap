@@ -43,7 +43,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 45; 
+  const MAX_MARKERS = 45; // 최대 마커 수 제한 (40~50개 사이)
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -90,13 +90,11 @@ const Index = () => {
     }
   }, [location.state, blockedIds]);
 
-  // 마커 업데이트 로직: 가장자리 생성 및 소멸
+  // 마커 업데이트 로직 (연속성 유지 및 수 제한)
   useEffect(() => {
-    if (!mapData?.bounds || !mapData?.center) return;
+    if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
-    const center = mapData.center;
     
-    // 1. 새로운 타일 데이터 생성
     const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
     const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
@@ -124,59 +122,42 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 2. 현재 화면에 유지할 마커 필터링 (화면 밖으로 나가면 제거)
-    const stillInBounds = displayedMarkers.filter(post => {
+    // 1. 현재 영역 내에 있는 모든 후보군 필터링
+    const inBoundsCandidates = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
+      
+      const matchesCategory = selectedCategories.includes('all') || 
+                              selectedCategories.includes(post.category || 'none') ||
+                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
+                              (selectedCategories.includes('mine') && post.user.id === 'me');
+
       const isNotBlocked = !blockedIds.has(post.user.id);
-      return isWithinBounds && isWithinTime && isNotBlocked;
+      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 3. 부족한 마커를 채우기 위한 후보군 추출
-    if (stillInBounds.length < MAX_MARKERS) {
-      const displayedIds = new Set(stillInBounds.map(m => m.id));
-      
-      const candidates = updatedAllPosts.filter(post => {
-        if (displayedIds.has(post.id)) return false;
-        
-        const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
-                               post.lng >= sw.lng && post.lng <= ne.lng;
-        const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
-        
-        const matchesCategory = selectedCategories.includes('all') || 
-                                selectedCategories.includes(post.category || 'none') ||
-                                (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                                (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                                (selectedCategories.includes('mine') && post.user.id === 'me');
+    // 2. 연속성 유지: 이미 화면에 있는 마커는 우선적으로 유지
+    const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
+    const stickyMarkers = inBoundsCandidates.filter(m => currentlyDisplayedIds.has(m.id));
+    
+    // 3. 부족한 수만큼 새로운 후보군에서 랜덤하게 선택
+    const newCandidates = inBoundsCandidates.filter(m => !currentlyDisplayedIds.has(m.id));
+    const shuffledNew = newCandidates.sort(() => Math.random() - 0.5);
+    
+    const neededCount = Math.max(0, MAX_MARKERS - stickyMarkers.length);
+    const toAdd = shuffledNew.slice(0, neededCount);
 
-        const isNotBlocked = !blockedIds.has(post.user.id);
-        return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
-      });
+    // 4. 최종 마커 리스트 구성
+    const finalMarkers = [...stickyMarkers, ...toAdd];
+    
+    // 실시간 생성 느낌을 주기 위해 미세한 지연 후 업데이트
+    const timer = setTimeout(() => {
+      setDisplayedMarkers(finalMarkers);
+    }, 50);
 
-      // 4. "가장자리 생성" 핵심 로직: 중심에서 가장 먼(가장자리에 가까운) 후보부터 선택
-      const sortedByEdge = candidates.sort((a, b) => {
-        const distA = Math.pow(a.lat - center.lat, 2) + Math.pow(a.lng - center.lng, 2);
-        const distB = Math.pow(b.lat - center.lat, 2) + Math.pow(b.lng - center.lng, 2);
-        return distB - distA; // 먼 순서대로 (가장자리 우선)
-      });
-
-      const neededCount = MAX_MARKERS - stillInBounds.length;
-      const toAdd = sortedByEdge.slice(0, neededCount);
-      
-      const finalMarkers = [...stillInBounds, ...toAdd];
-      
-      // 상태 업데이트 (ID 리스트가 변했을 때만)
-      const nextIds = finalMarkers.map(m => m.id).sort().join(',');
-      const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
-      
-      if (nextIds !== prevIds) {
-        setDisplayedMarkers(finalMarkers);
-      }
-    } else if (stillInBounds.length !== displayedMarkers.length) {
-      // 화면 밖으로 나간 마커만 제거된 경우
-      setDisplayedMarkers(stillInBounds);
-    }
+    return () => clearTimeout(timer);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
