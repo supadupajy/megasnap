@@ -208,7 +208,7 @@ const PostItem = ({
                     onError={handleImageError}
                   />
                   {idx === adImageIndex && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-blue-500 text-white px-10 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
+                    <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-3 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">
                       AD
                     </div>
                   )}
@@ -247,7 +247,7 @@ const PostItem = ({
             </div>
           )}
 
-          {isGif && (
+          {isGif && !isAd && (
             <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20">
               <Play className="w-3 h-3 fill-white" />
             </div>

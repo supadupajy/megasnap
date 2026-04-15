@@ -4,7 +4,6 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import PostItem from '@/components/PostItem';
-import PostDetail from '@/components/PostDetail';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { createMockPosts } from '@/lib/mock-data';
@@ -46,7 +45,6 @@ const PostList = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { viewedIds, markAsViewed } = useViewedPosts();
   
@@ -116,7 +114,6 @@ const PostList = () => {
         damping: 30,
         mass: 0.8
       }}
-      // 헤더(88px)와 하단바(106px)를 제외한 영역에 고정
       className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
     >
       <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
@@ -159,10 +156,6 @@ const PostList = () => {
                 disablePulse={true}
                 onLikeToggle={() => handleLikeToggle(post.id)}
                 onLocationClick={handleLocationClick}
-                onClick={() => {
-                  setSelectedPostId(post.id);
-                  markAsViewed(post.id);
-                }}
               />
             ))}
             
@@ -183,21 +176,6 @@ const PostList = () => {
           </div>
         )}
       </div>
-
-      {selectedPostId && (
-        <PostDetail 
-          posts={posts} 
-          initialIndex={posts.findIndex(p => p.id === selectedPostId)}
-          isOpen={true} 
-          onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed}
-          onLikeToggle={handleLikeToggle}
-          onLocationClick={(lat, lng) => {
-            const post = posts.find(p => p.lat === lat && p.lng === lng);
-            navigate('/', { state: { center: { lat, lng }, post } });
-          }}
-        />
-      )}
     </motion.div>
   );
 };
