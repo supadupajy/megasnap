@@ -36,7 +36,7 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -122,22 +122,32 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 차단된 사용자 필터링 포함
+    // 차단된 사용자 필터링 포함 및 멀티 카테고리 필터링
     const inBoundsPool = updatedAllPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
-      const isWithinCategory = selectedCategory === 'all' || post.category === selectedCategory;
+      
+      // 멀티 카테고리 로직
+      const matchesCategory = selectedCategories.includes('all') || 
+                              selectedCategories.includes(post.category || 'none') ||
+                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                              (selectedCategories.includes('influencer') && post.isInfluencer);
+
       const isNotBlocked = !blockedIds.has(post.user.id);
-      return isWithinBounds && isWithinTime && isWithinCategory && isNotBlocked;
+      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const stillVisible = displayedMarkers.filter(p => 
-      p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
-      (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
-      (selectedCategory === 'all' || p.category === selectedCategory) &&
-      !blockedIds.has(p.user.id)
-    );
+    const stillVisible = displayedMarkers.filter(p => {
+      const isWithinBounds = p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng;
+      const isWithinTime = p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs;
+      const matchesCategory = selectedCategories.includes('all') || 
+                              selectedCategories.includes(p.category || 'none') ||
+                              (selectedCategories.includes('hot') && p.borderType === 'popular') ||
+                              (selectedCategories.includes('influencer') && p.isInfluencer);
+      const isNotBlocked = !blockedIds.has(p.user.id);
+      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
+    });
 
     const ROWS = 6;
     const COLS = 5;
@@ -217,7 +227,7 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId, blockedIds]);
+  }, [mapData, timeValue, selectedCategories, allPosts, highlightedPostId, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -327,7 +337,7 @@ const Index = () => {
             onClick={() => setIsCategoryOpen(true)}
             className={cn(
               "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
-              selectedCategory !== 'all' && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
+              !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
             )}
           >
             <Layers className="w-6 h-6" />
@@ -382,8 +392,8 @@ const Index = () => {
 
       <CategoryMenu 
         isOpen={isCategoryOpen}
-        selectedCategory={selectedCategory}
-        onSelect={setSelectedCategory}
+        selectedCategories={selectedCategories}
+        onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
       />
 
