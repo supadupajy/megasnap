@@ -34,7 +34,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {!hideLayout && <Header />}
       
       <main className="relative">
-        <AnimatePresence mode="wait" initial={false}>
+        {/* mode="wait"를 제거하여 이전 페이지가 사라지기 전에 새 페이지가 나타날 수 있게 함 (오버랩 가능) */}
+        <AnimatePresence initial={false}>
           {children}
         </AnimatePresence>
       </main>

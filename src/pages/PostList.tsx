@@ -107,16 +107,16 @@ const PostList = () => {
 
   return (
     <motion.div 
-      initial={{ x: "100%", opacity: 0.5 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0.5 }}
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
       transition={{ 
         type: "spring", 
-        stiffness: 200, 
-        damping: 25,
-        mass: 1
+        stiffness: 300, 
+        damping: 30,
+        mass: 0.8
       }}
-      className="fixed inset-0 z-[60] bg-white pt-[88px] pb-28 overflow-y-auto"
+      className="fixed inset-0 z-[60] bg-white pt-[88px] pb-28 overflow-y-auto shadow-2xl"
     >
       <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
         <button 
