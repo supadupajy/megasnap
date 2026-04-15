@@ -86,7 +86,7 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-// 사용자 제공 GIF 리스트로 업데이트 (총 15개)
+// 사용자 제공 GIF 리스트 (총 15개)
 const GIF_POOL = [
   "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
   "https://i.namu.wiki/i/3qjMoSXb8qZqYZsH-vdZNRkdOaz4ypVfoRZHAj7QT9JDv1fpP7mi9Sike6ij1d6Vd42Lu-__INRCmsJJaiDx0w.gif",
@@ -156,7 +156,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const isPopular = i === popularIndex;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     
-    const isGif = !isAd && !isInfluencer && !isPopular && (i % 4 === 0 || Math.random() > 0.8);
+    // GIF 확률 조정: 광고나 인기 포스트가 아닐 때만 낮은 확률로 GIF 설정
+    const isGif = !isAd && !isInfluencer && !isPopular && Math.random() > 0.85;
     
     const lat = centerLat + (Math.random() - 0.5) * 0.05;
     const lng = centerLng + (Math.random() - 0.5) * 0.05;
