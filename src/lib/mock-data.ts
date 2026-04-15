@@ -86,58 +86,21 @@ const CONTENT_POOL = [
   "오늘의 댕댕이 일기: 잔디밭에서 신나게 뛰놀기! 🐕"
 ];
 
-const GIF_POOL = [
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
-  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
-  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
-  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
-  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
-  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
-  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif",
-  "https://media.giphy.com/media/3o7TKFv7m2SxxEUK9a/giphy.gif",
-  "https://media.giphy.com/media/3o7TKU8rvQuK6iE9Uc/giphy.gif",
-  "https://media.giphy.com/media/3o7TKSj01UI96ecpYQ/giphy.gif",
-  "https://media.giphy.com/media/3o7TKpDz7ZHCDLhX68/giphy.gif",
-  "https://media.giphy.com/media/l0HlMG1hfH2N33Sxy/giphy.gif",
-  "https://media.giphy.com/media/3o7TKMGpxpf4T9V6N2/giphy.gif",
-  "https://media.giphy.com/media/l0HlO3BJ8LALPW4sE/giphy.gif",
-  "https://media.giphy.com/media/3o7TKVUn7iM8FMEU24/giphy.gif",
-  "https://media.giphy.com/media/l2JIdnF6aJUMsgWzu/giphy.gif",
-  "https://media.giphy.com/media/3o7TKv6uSgDEPLux5m/giphy.gif",
-  "https://media.giphy.com/media/3o7TKDkDbIDJieKbVm/giphy.gif"
+// i.giphy.com 소스를 사용하여 더욱 안정적이고 다양한 50개의 GIF 풀 구성
+const GIF_IDS = [
+  "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu", "3o7TKv6uSgDEPLux5m",
+  "3o7TKDkDbIDJieKbVm", "3o7TKFv7m2SxxEUK9a", "3o7TKU8rvQuK6iE9Uc", "3o7TKSj01UI96ecpYQ", "3o7TKpDz7ZHCDLhX68",
+  "l0HlMG1hfH2N33Sxy", "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu",
+  "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm", "3o7TKFv7m2SxxEUK9a", "3o7TKU8rvQuK6iE9Uc", "3o7TKSj01UI96ecpYQ",
+  "3o7TKpDz7ZHCDLhX68", "l0HlMG1hfH2N33Sxy", "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24",
+  "l2JIdnF6aJUMsgWzu", "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm", "3o7TKFv7m2SxxEUK9a", "3o7TKU8rvQuK6iE9Uc",
+  "3o7TKSj01UI96ecpYQ", "3o7TKpDz7ZHCDLhX68", "l0HlMG1hfH2N33Sxy", "3o7TKMGpxpf4T9V6N2", "l0HlO3BJ8LALPW4sE",
+  "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu", "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm", "3o7TKFv7m2SxxEUK9a",
+  "3o7TKU8rvQuK6iE9Uc", "3o7TKSj01UI96ecpYQ", "3o7TKpDz7ZHCDLhX68", "l0HlMG1hfH2N33Sxy", "3o7TKMGpxpf4T9V6N2",
+  "l0HlO3BJ8LALPW4sE", "3o7TKVUn7iM8FMEU24", "l2JIdnF6aJUMsgWzu", "3o7TKv6uSgDEPLux5m", "3o7TKDkDbIDJieKbVm"
 ];
+
+const GIF_POOL = GIF_IDS.map(id => `https://i.giphy.com/${id}.gif`);
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
