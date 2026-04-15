@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play } from 'lucide-react';
+import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -11,6 +11,13 @@ import PostItem from '@/components/PostItem';
 import { getUserById, createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { showSuccess, showError } from '@/utils/toast';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -96,6 +103,14 @@ const UserProfile = () => {
     navigate(`/chat/${user.id}`);
   };
 
+  const handleReport = () => {
+    showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+  };
+
+  const handleBlock = () => {
+    showError(`${user.nickname} 님을 차단했습니다.`);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -116,9 +131,30 @@ const UserProfile = () => {
                 <p className="text-xs text-gray-400 font-medium">@{user.id} 님의 활동</p>
               </div>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <MoreVertical className="w-6 h-6 text-gray-400" />
-            </button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors outline-none">
+                  <MoreVertical className="w-6 h-6 text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md">
+                <DropdownMenuItem 
+                  onClick={handleReport}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
+                >
+                  <AlertCircle className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">신고</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleBlock}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+                >
+                  <Ban className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-bold text-red-600">차단</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
