@@ -11,7 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, MapPin } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -39,11 +39,9 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
-  
-  // 마커 표시 개수를 25~35개 사이의 랜덤 값으로 관리
-  const [targetMarkerCount, setTargetMarkerCount] = useState(() => Math.floor(Math.random() * 11) + 25);
 
   const TILE_SIZE = 0.02;
+  const TARGET_MARKER_COUNT = 30;
   const MAX_POPULAR_COUNT = 3;
 
   useEffect(() => {
@@ -73,6 +71,7 @@ const Index = () => {
       });
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
+      // 지도 이동 완료(1000ms) 후 핑 효과 시작
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
         setTimeout(() => setHighlightedPostId(null), 3500);
@@ -84,7 +83,6 @@ const Index = () => {
     }
   }, [location.state]);
 
-  // 마커 필터링 및 표시 로직 (실시간 반영을 위해 의존성 배열 최적화)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -124,7 +122,6 @@ const Index = () => {
       return isWithinBounds && isWithinTime && isWithinCategory;
     });
 
-    // 현재 화면에 이미 있는 마커 중 유효한 것들 유지
     const stillVisible = displayedMarkers.filter(p => 
       p.lat >= sw.lat && p.lat <= ne.lat && p.lng >= sw.lng && p.lng <= ne.lng &&
       (p.isAd || (now - p.createdAt.getTime()) <= timeLimitMs) &&
@@ -168,7 +165,7 @@ const Index = () => {
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (nextMarkers.length >= targetMarkerCount) break;
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (!occupiedCells.has(`${r}-${c}`)) {
           const cellSw = { lat: sw.lat + r * latStep, lng: sw.lng + c * lngStep };
           const cellNe = { lat: sw.lat + (r + 1) * latStep, lng: sw.lng + (c + 1) * lngStep };
@@ -191,17 +188,17 @@ const Index = () => {
           }
         }
       }
-      if (nextMarkers.length >= targetMarkerCount) break;
+      if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
     }
 
-    if (nextMarkers.length < targetMarkerCount) {
+    if (nextMarkers.length < TARGET_MARKER_COUNT) {
       let remainingCandidates = candidates.filter(p => !nextMarkers.some(m => m.id === p.id));
       if (currentPopularCount >= MAX_POPULAR_COUNT) {
         remainingCandidates = remainingCandidates.filter(p => p.borderType !== 'popular');
       }
       const sortedRemaining = remainingCandidates.sort((a, b) => getScore(b) - getScore(a));
       for (const p of sortedRemaining) {
-        if (nextMarkers.length >= targetMarkerCount) break;
+        if (nextMarkers.length >= TARGET_MARKER_COUNT) break;
         if (p.borderType === 'popular' && currentPopularCount >= MAX_POPULAR_COUNT) continue;
         nextMarkers.push(p);
         if (p.borderType === 'popular') currentPopularCount++;
@@ -209,7 +206,7 @@ const Index = () => {
     }
 
     setDisplayedMarkers(nextMarkers);
-  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId, targetMarkerCount]);
+  }, [mapData, timeValue, selectedCategory, allPosts, highlightedPostId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -225,7 +222,6 @@ const Index = () => {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    setTargetMarkerCount(Math.floor(Math.random() * 11) + 25);
     mapCache.populatedTiles.clear();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
@@ -243,11 +239,14 @@ const Index = () => {
   }, [mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
+    // 1. 지도 이동 시작
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
     
+    // 2. 지도 이동 완료(1000ms) 후 핑 효과 시작
     setTimeout(() => {
       setHighlightedPostId(post.id);
+      // 3. 일정 시간 후 핑 효과 제거
       setTimeout(() => setHighlightedPostId(null), 3500);
     }, 1000);
   }, []);
@@ -330,12 +329,6 @@ const Index = () => {
         </div>
 
         <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-3">
-          {/* 마커 개수 표시 버튼 (높이 축소 및 실시간 반영) */}
-          <div className="w-14 h-7 bg-white/90 backdrop-blur-md rounded-xl flex items-center justify-center gap-1.5 text-indigo-600 shadow-lg border border-indigo-100 mb-1">
-            <MapPin className="w-3.5 h-3.5 fill-indigo-600" />
-            <span className="text-xs font-black">{displayedMarkers.length}</span>
-          </div>
-
           {/* 재검색 버튼 */}
           <button 
             onClick={handleRefresh} 
