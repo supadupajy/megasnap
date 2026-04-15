@@ -91,16 +91,7 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* AD Blue Gradient Border */
-.ad-border-container {
-  position: relative;
-  padding: 4px;
-  border-radius: 1.25rem;
-  background-image: conic-gradient(from var(--angle), #3b82f6, #93c5fd, #3b82f6, #93c5fd, #3b82f6);
-  animation: rotate-border 2s linear infinite;
-}
-
-/* Pulse Animation for HOT Posts */
+/* Pulse Animation for HOT Posts - Glow effect removed */
 @keyframes hot-pulse {
   0%, 100% { 
     transform: scale(1); 
@@ -110,7 +101,7 @@
   }
 }
 
-/* Floating Animation for Influencer/Ad Posts */
+/* Floating Animation for Influencer Posts */
 @keyframes influencer-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
@@ -123,7 +114,7 @@
   100% { left: 100%; }
 }
 
-/* Marker Highlight Ping Animation */
+/* Marker Highlight Ping Animation - Brighter & Smoother */
 @keyframes marker-ping {
   0% {
     transform: translate(-50%, -50%) scale(0.2);

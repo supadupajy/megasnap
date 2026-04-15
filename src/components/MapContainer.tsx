@@ -1,224 +1,3 @@
-`.
-It got to `overlay.setMap(mapInstance`.
-
-So I will provide the full `MapContainer.tsx` file now.
-
-Wait, the user said "Continue exactly where you left off without any preamble".
-If I start with `.current); ...`, it might not work with the UI's file writing system which expects a full tag.
-But if I provide the full tag, it's not "exactly where I left off" in terms of text stream, but it is in terms of task.
-
-Actually, the system instructions say: "Only use ONE <dyad-write> block per file that you write!".
-And "ALWAYS write the entire file. It needs to be a complete file."
-
-So I will provide the complete `MapContainer.tsx` file.
-
-Wait, I also need to make sure the logic for the Ad marker is included as requested in the previous prompt ("광고 마커도 HOT과 INFLUENCER처럼 파란색으로 표시해줘").
-
-In the previous (cut off) response, I was adding `.ad-border-container` to `globals.css`.
-And I was updating `MapContainer.tsx`.
-
-Let's finish `MapContainer.tsx`.
-
-```tsx
-.current);
-    actionOverlayRef.current = overlay;
-  };
-
-  const hideActionPin = () => {
-    if (actionOverlayRef.current) {
-      actionOverlayRef.current.setMap(null);
-      actionOverlayRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    if (!isMapReady || !mapInstance.current) return;
-
-    const currentPostIds = new Set(posts.map(p => p.id));
-
-    markersRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) {
-        overlay.setMap(null);
-        markersRef.current.delete(id);
-      }
-    });
-    densityRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id) || !showDensity) {
-        overlay.setMap(null);
-        densityRef.current.delete(id);
-      }
-    });
-
-    posts.forEach(post => {
-      const isViewed = viewedPostIds.has(post.id);
-      const isHighlighted = highlightedPostId === post.id;
-      const isAd = post.isAd;
-      const isPopular = !isAd && post.borderType === 'popular';
-      const isInfluencer = !isAd && post.isInfluencer;
-      const isGif = isGifUrl(post.image);
-      const category = post.category || 'none';
-
-      if (showDensity && !densityRef.current.has(post.id)) {
-        const count = densityData.get(post.id) || 1;
-        const style = getDensityStyle(count);
-        const densityOverlay = new google.maps.OverlayView();
-        densityOverlay.onAdd = function() {
-          const div = document.createElement('div');
-          div.style.position = 'absolute';
-          div.style.width = '240px';
-          div.style.height = '240px';
-          div.style.backgroundColor = style.bg;
-          div.style.border = `1px solid ${style.border}`;
-          div.style.borderRadius = '50%';
-          div.style.pointerEvents = 'none';
-          div.style.transform = 'translate(-50%, calc(-50% - 36px))';
-          div.style.zIndex = '1';
-          this.getPanes()!.overlayLayer.appendChild(div);
-          (this as any).div = div;
-        };
-        densityOverlay.draw = function() {
-          const projection = this.getProjection();
-          const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(post.lat, post.lng))!;
-          const div = (this as any).div;
-          if (div) {
-            div.style.left = position.x + 'px';
-            div.style.top = position.y + 'px';
-          }
-        };
-        densityOverlay.onRemove = function() {
-          if ((this as any).div) {
-            (this as any).div.parentNode.removeChild((this as any).div);
-            (this as any).div = null;
-          }
-        };
-        densityOverlay.setMap(mapInstance.current);
-        densityRef.current.set(post.id, densityOverlay);
-      }
-
-      if (!markersRef.current.has(post.id)) {
-        const markerOverlay = new google.maps.OverlayView();
-        markerOverlay.onAdd = function() {
-          const div = document.createElement('div');
-          div.style.position = 'absolute';
-          div.style.width = '56px';
-          div.style.height = '72px';
-          div.style.cursor = 'pointer';
-          div.style.zIndex = isHighlighted ? '1000' : (isAd ? '500' : (isPopular ? '400' : '300'));
-
-          let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : (isAd ? '#3b82f6' : ''));
-          let categoryIconHtml = '';
-          if (category !== 'none') {
-            let iconSvg = '', bgColor = '';
-            if (category === 'food') { iconSvg = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>'; bgColor = '#f97316'; }
-            else if (category === 'accident') { iconSvg = '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>'; bgColor = '#dc2626'; }
-            else if (category === 'place') { iconSvg = '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2a1 1 0 0 1-.8-1.7L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z"></path><path d="M12 22v-3"></path>'; bgColor = '#16a34a'; }
-            else if (category === 'animal') { iconSvg = '<path d="M11 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M18 5a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0V5z"></path><path d="M7 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M22 12a2.5 2.5 0 1 0-5 0v1a2.5 2.5 0 1 0 5 0v-1z"></path><path d="M12 21c-3.5 0-6-2.5-6-5.5s2.5-4.5 6-4.5 6 1.5 6 4.5-2.5 5.5-6 5.5z"></path>'; bgColor = '#9333ea'; }
-            categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
-          }
-
-          const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : (isAd ? `<div style="width: 56px; background: #3b82f6; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">AD</div>` : ''));
-          
-          div.innerHTML = `
-            <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
-              ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-              ${labelHtml}
-              <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''))}"
-                   style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                          ${(isPopular || isInfluencer || isAd) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
-                          overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                          background-color: white;">
-                <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
-                  <img src="${post.image}" 
-                       onerror="this.src='${FALLBACK_IMAGE}'"
-                       style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-                  <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-                  ${isGif ? `<div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
-                  ${categoryIconHtml}
-                </div>
-              </div>
-              ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
-            </div>
-          `;
-          div.onclick = (e) => { e.stopPropagation(); onMarkerClick(post); };
-          this.getPanes()!.overlayMouseTarget.appendChild(div);
-          (this as any).div = div;
-        };
-        markerOverlay.draw = function() {
-          const projection = this.getProjection();
-          const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(post.lat, post.lng))!;
-          const div = (this as any).div;
-          if (div) {
-            div.style.left = position.x + 'px';
-            div.style.top = position.y + 'px';
-          }
-        };
-        markerOverlay.onRemove = function() {
-          if ((this as any).div) {
-            (this as any).div.parentNode.removeChild((this as any).div);
-            (this as any).div = null;
-          }
-        };
-        markerOverlay.setMap(mapInstance.current);
-        markersRef.current.set(post.id, markerOverlay);
-      }
-    });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, showDensity, densityData]);
-
-  return (
-    <div className="w-full h-full relative bg-gray-100">
-      <div ref={mapElement} className="w-full h-full" />
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm z-[100] p-6 text-center">
-          <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-red-100 max-w-xs">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-8 h-8 text-red-500" /></div>
-            <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
-            <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">{error}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default MapContainer;
-```
-
-Wait, I should provide the full response including the summary.
-
-Actually, the previous response already had the `globals.css` part.
-I will just provide the full `MapContainer.tsx` file now.
-
-Wait, the user said "Continue exactly where you left off".
-If I just output the code, it might be interpreted as a continuation of the previous message's stream.
-But the UI needs the closing tag.
-
-I'll provide the full `MapContainer.tsx` file to be safe and follow the "complete file" rule.
-
-One more thing: I need to make sure the `pinColor` logic includes `isAd`.
-`let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : (isAd ? '#3b82f6' : ''));`
-
-And the `labelHtml` logic:
-`const labelHtml = isInfluencer ? ... : (isPopular ? ... : (isAd ? ... : ''));`
-
-And the `border-container` class:
-`class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''))}"`
-
-Let's do it.
-
-Wait, I should also check if I need to update `PostItem.tsx` or `PostDetail.tsx` for consistency? The user only asked for "지도화면에서" (on the map screen).
-
-Okay, let's go.
-
-Actually, I'll just provide the full `MapContainer.tsx` file.
-
-Wait, I should also include the summary.
-
-One detail: the previous message ended at `overlay.setMap(mapInstance`.
-So I will start with `.current);` and then the rest of the file, but I'll wrap it in the tag.
-
-Actually, the best way to "continue" in this context is to provide the full file that was being written.
-
-<dyad-write path="src/components/MapContainer.tsx" description="광고 마커에 파란색 라벨과 그라데이션 테두리 적용">
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -496,7 +275,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           div.style.cursor = 'pointer';
           div.style.zIndex = isHighlighted ? '1000' : (isAd ? '500' : (isPopular ? '400' : '300'));
 
-          let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : (isAd ? '#3b82f6' : ''));
+          let pinColor = isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : '');
           let categoryIconHtml = '';
           if (category !== 'none') {
             let iconSvg = '', bgColor = '';
@@ -507,15 +286,15 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
             categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
           }
 
-          const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : (isAd ? `<div style="width: 56px; background: #3b82f6; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">AD</div>` : ''));
+          const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : '');
           
           div.innerHTML = `
             <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
               ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
               ${labelHtml}
-              <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''))}"
+              <div class="${isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : '')}"
                    style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                          ${(isPopular || isInfluencer || isAd) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
+                          ${(isPopular || isInfluencer) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : (isAd ? '#3b82f6' : '#ffffff')};`}
                           overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                           background-color: white;">
                 <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
