@@ -24,6 +24,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const densityRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
   const actionOverlayRef = useRef<google.maps.OverlayView | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const lastShowTime = useRef<number>(0);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +54,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.2)' };
   };
 
-  // 가속도가 붙는 부드러운 이동 함수
   const smoothMoveTo = (target: { lat: number, lng: number }) => {
     if (!mapInstance.current) return;
     
@@ -65,14 +65,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const start = map.getCenter()!;
     const startLat = start.lat();
     const startLng = start.lng();
-    const duration = 1200; // 1.2초 동안 이동
+    const duration = 1200;
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      // Ease In Out Cubic (가속 후 감속)
       const ease = progress < 0.5
         ? 4 * progress * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 3) / 2;
@@ -125,7 +124,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           }
         });
 
-        // 사용자가 지도를 조작하면 애니메이션 중단
         map.addListener('dragstart', () => {
           if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
@@ -173,7 +171,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         map.addListener('mouseup', clearTimer);
         map.addListener('dragstart', clearTimer);
         map.addListener('zoom_changed', clearTimer);
-        map.addListener('click', hideActionPin);
+        
+        // 클릭 시 핀 숨기기 (단, 방금 생성된 핀은 제외)
+        map.addListener('click', () => {
+          const now = Date.now();
+          if (now - lastShowTime.current > 300) {
+            hideActionPin();
+          }
+        });
 
         return true;
       } catch (e) {
@@ -191,7 +196,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      // 커스텀 부드러운 이동 엔진 사용
       smoothMoveTo(center);
     }
   }, [center, isMapReady]);
@@ -199,6 +203,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const showActionPin = (lat: number, lng: number) => {
     hideActionPin();
     if (!mapInstance.current) return;
+
+    lastShowTime.current = Date.now();
 
     const overlay = new google.maps.OverlayView();
     overlay.onAdd = function() {
@@ -250,7 +256,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     }
   };
 
-  // 마커 HTML 생성 함수 분리
   const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isPopular = !isAd && post.borderType === 'popular';
@@ -303,7 +308,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거된 마커 정리
     markersRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -321,7 +325,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
 
-      // 밀집도 오버레이 처리
       if (showDensity && !densityRef.current.has(post.id)) {
         const count = densityData.get(post.id) || 1;
         const style = getDensityStyle(count);
@@ -359,7 +362,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityRef.current.set(post.id, densityOverlay);
       }
 
-      // 마커 오버레이 처리
       const existingOverlay = markersRef.current.get(post.id);
       
       if (!existingOverlay) {
@@ -394,13 +396,11 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         markerOverlay.setMap(mapInstance.current);
         markersRef.current.set(post.id, markerOverlay);
       } else {
-        // 기존 마커의 상태(하이라이트, 읽음 여부)가 변경된 경우에만 HTML 업데이트
         const div = (existingOverlay as any).div;
         if (div) {
           const currentHtml = div.innerHTML;
           const nextHtml = getMarkerHtml(post, isViewed, isHighlighted);
           
-          // 하이라이트 상태가 변했거나 읽음 상태가 변했을 때만 innerHTML 교체 (애니메이션 재트리거)
           if (currentHtml.includes('marker-highlight-ping') !== isHighlighted || currentHtml.includes('grayscale') !== isViewed) {
             div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
             div.innerHTML = nextHtml;
