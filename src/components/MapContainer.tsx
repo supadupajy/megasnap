@@ -195,14 +195,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         densityOverlay.onAdd = function() {
           const div = document.createElement('div');
           div.style.position = 'absolute';
-          div.style.width = '100px';
-          div.style.height = '100px';
-          // 반투명한 붉은색 원형 (겹칠수록 진해짐)
-          div.style.background = 'rgba(239, 68, 68, 0.15)';
-          div.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+          // 크기를 3배 키움 (100px -> 300px)
+          div.style.width = '300px';
+          div.style.height = '300px';
+          div.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0) 70%)';
           div.style.borderRadius = '50%';
           div.style.pointerEvents = 'none';
-          div.style.transform = 'translate(-50%, -50%)';
+          // 마커의 중앙(약 36px 위)에 맞추기 위해 Y축 오프셋 조정
+          div.style.transform = 'translate(-50%, calc(-50% - 36px))';
           div.style.zIndex = '1';
           this.getPanes()!.overlayLayer.appendChild(div);
           (this as any).div = div;
