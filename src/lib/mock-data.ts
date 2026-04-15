@@ -196,11 +196,11 @@ export const getUserById = (id: string): User => {
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const isInfluencer = Math.random() > 0.9;
-    const isPopular = Math.random() > 0.85;
+    // 인플루언서와 인기 포스팅 확률을 대폭 낮춤 (각각 2%, 5%)
+    const isInfluencer = Math.random() > 0.98;
+    const isPopular = Math.random() > 0.95;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
     
-    // 핫스팟 로직 제거: 중심점 기준 완전 랜덤 분포
     const lat = centerLat + (Math.random() - 0.5) * 0.04;
     const lng = centerLng + (Math.random() - 0.5) * 0.04;
     
