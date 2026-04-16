@@ -204,8 +204,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           <div 
             className={cn(
               "py-4 bg-white shrink-0 transition-all duration-300",
-              isKeyboardOpen ? "pb-2" : "pb-8"
+              isKeyboardOpen ? "pb-2" : "pb-14" // 하단 네비게이션 바를 고려하여 pb-8에서 pb-14로 상향 조정
             )}
+            style={{ paddingBottom: !isKeyboardOpen ? 'calc(env(safe-area-inset-bottom, 0px) + 3.5rem)' : undefined }}
           >
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
