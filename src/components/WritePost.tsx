@@ -127,7 +127,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden z-[40]">
+      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -200,7 +200,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
           </div>
 
-          {/* Bottom Button Area - Adjusted for BottomNav visibility */}
+          {/* Bottom Button Area */}
           <div 
             className={cn(
               "py-4 bg-white shrink-0 transition-all duration-300",
