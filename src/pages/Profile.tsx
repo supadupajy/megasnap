@@ -17,7 +17,7 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'saved'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
 
   // 내 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
@@ -68,7 +68,12 @@ const Profile = () => {
   }, []);
 
   const handleGridItemClick = (postId: string) => {
-    setViewMode('list');
+    if (viewMode === 'gifs') {
+      setViewMode('gif-list');
+    } else {
+      setViewMode('list');
+    }
+    
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
       if (element) {
@@ -157,10 +162,10 @@ const Profile = () => {
               onClick={() => setViewMode('gifs')}
               className={cn(
                 "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'gifs' ? "border-b-2 border-indigo-600" : "text-gray-300"
+                (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300"
               )}
             >
-              <Play className={cn("w-6 h-6", viewMode === 'gifs' ? "text-indigo-600" : "")} />
+              <Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} />
             </button>
             <button 
               onClick={() => setViewMode('saved')}
@@ -214,9 +219,9 @@ const Profile = () => {
                 </div>
               )}
             </div>
-          ) : viewMode === 'list' ? (
+          ) : (viewMode === 'list' || viewMode === 'gif-list') ? (
             <div className="flex flex-col -mx-6">
-              {myPosts.map((post) => (
+              {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                 <div 
                   key={post.id} 
                   id={`post-${post.id}`}
