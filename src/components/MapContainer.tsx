@@ -36,8 +36,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const initMap = () => {
       const kakao = (window as any).kakao;
       
-      // 라이브러리가 아직 로드되지 않았으면 false 반환하여 다시 시도하게 함
-      if (!kakao || !kakao.maps || !kakao.maps.LatLng || !kakao.maps.Map) {
+      // 라이브러리가 아직 로드되지 않았으면 false 반환
+      if (!kakao || !kakao.maps || !kakao.maps.LatLng) {
         return false;
       }
 
@@ -128,27 +128,31 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         return true;
       } catch (e) {
-        console.error("Map Init Error:", e);
+        console.error(e);
         setError("지도를 초기화하는 중 오류가 발생했습니다.");
-        return true; 
+        return true; // 에러가 발생했으므로 인터벌 중단
       }
     };
 
-    // 라이브러리가 로드될 때까지 100ms 간격으로 체크 (최대 10초)
-    let retryCount = 0;
+    // 라이브러리가 로드될 때까지 100ms 간격으로 체크
     const interval = setInterval(() => {
       if (initMap()) {
         clearInterval(interval);
-      } else {
-        retryCount++;
-        if (retryCount > 100) { // 10초 경과
-          clearInterval(interval);
-          setError("카카오맵 라이브러리를 불러올 수 없습니다. 도메인 등록 여부와 네트워크를 확인해주세요.");
-        }
       }
     }, 100);
 
-    return () => clearInterval(interval);
+    // 5초 후에도 로드되지 않으면 에러 표시
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      if (!mapInstance.current) {
+        setError("카카오맵 라이브러리를 불러올 수 없습니다. 네트워크 상태를 확인해주세요.");
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -304,12 +308,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
             <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-8 h-8 text-red-500" /></div>
             <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
             <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl active:scale-95 transition-all"
-            >
-              새로고침
-            </button>
           </div>
         </div>
       )}
