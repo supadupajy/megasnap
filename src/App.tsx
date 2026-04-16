@@ -43,11 +43,9 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      // 1. 현재 열려있는 팝업(다이얼로그, 드로어 등)이 있는지 확인
       const openPopup = document.querySelector('[role="dialog"], [data-vaul-drawer]');
       
       if (openPopup) {
-        // 팝업이 열려있다면 닫기 버튼을 찾아 클릭 (팝업만 닫기)
         const closeBtn = document.querySelector('.close-popup-btn') as HTMLElement;
         if (closeBtn) {
           closeBtn.click();
@@ -55,11 +53,9 @@ const AnimatedRoutes = () => {
         }
       }
 
-      // 2. 팝업이 없고 지도 화면(루트)인 경우 종료 팝업 노출
       if (location.pathname === '/') {
         setShowExitDialog(true);
       } else {
-        // 3. 그 외의 경우 뒤로가기 수행
         if (canGoBack) {
           window.history.back();
         } else {
@@ -79,6 +75,11 @@ const AnimatedRoutes = () => {
   
   return (
     <div className="relative min-h-screen bg-white">
+      {/* 도메인 확인용 임시 디버그 바 */}
+      <div className="fixed top-0 left-0 right-0 z-[9999] bg-black text-white text-[10px] py-1 px-2 text-center font-mono break-all select-all">
+        카카오 등록용 도메인: {window.location.origin}
+      </div>
+
       <ScrollToTop />
       {!hideLayout && <Header />}
       
@@ -121,7 +122,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000); // 1.5초에서 3초로 연장
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);

@@ -27,21 +27,21 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
+    const kakao = (window as any).kakao;
     if (isOpen) {
-      if (initialLocation && window.google) {
+      if (initialLocation && kakao && kakao.maps && kakao.maps.services) {
         setIsLoadingAddress(true);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results, status) => {
-            if (status === "OK" && results && results[0]) {
-              setAddress(results[0].formatted_address);
-            } else {
-              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-            }
-            setIsLoadingAddress(false);
+        const geocoder = new kakao.maps.services.Geocoder();
+        
+        geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const addr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+            setAddress(addr);
+          } else {
+            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
-        );
+          setIsLoadingAddress(false);
+        });
       } else if (!initialLocation) {
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
