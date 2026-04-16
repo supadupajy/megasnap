@@ -99,7 +99,7 @@ const AnimatedRoutes = () => {
 
       {!hideLayout && (
         <>
-          <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+          <BottomNav onWriteClick={() => setIsWriteOpen(prev => !prev)} />
           <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
         </>
       )}
