@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -20,6 +20,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 
 const Index = () => {
   const location = useLocation();
@@ -46,6 +47,45 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
+
+  // Supabase에서 실제 데이터 가져오기
+  const fetchSupabasePosts = useCallback(async () => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: {
+          id: p.user_id,
+          name: p.user_name,
+          avatar: p.user_avatar
+        },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: 'none'
+      })) as Post[];
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      return [];
+    }
+  }, []);
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -101,29 +141,47 @@ const Index = () => {
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
     const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
-    const newPosts: Post[] = [];
-    let tilesAdded = false;
+    const loadPosts = async () => {
+      const newMockPosts: Post[] = [];
+      let tilesAdded = false;
 
-    for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
-      for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
-        const tileKey = `${latIdx},${lngIdx}`;
-        if (!mapCache.populatedTiles.has(tileKey)) {
-          mapCache.populatedTiles.add(tileKey);
-          tilesAdded = true;
-          const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
-          const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
+      for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
+        for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
+          const tileKey = `${latIdx},${lngIdx}`;
+          if (!mapCache.populatedTiles.has(tileKey)) {
+            mapCache.populatedTiles.add(tileKey);
+            tilesAdded = true;
+            const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
+            const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
+            newMockPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
+          }
         }
       }
-    }
 
-    const updatedAllPosts = tilesAdded ? [...allPosts, ...newPosts] : allPosts;
-    if (tilesAdded) setAllPosts(updatedAllPosts);
+      // 실제 데이터와 목 데이터를 합침
+      const realPosts = await fetchSupabasePosts();
+      
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewMock = newMockPosts.filter(p => !existingIds.has(p.id));
+        const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
+        
+        if (uniqueNewMock.length === 0 && uniqueReal.length === 0) return prev;
+        return [...prev, ...uniqueReal, ...uniqueNewMock];
+      });
+    };
+
+    loadPosts();
+  }, [mapData, fetchSupabasePosts]);
+
+  useEffect(() => {
+    if (!mapData?.bounds) return;
+    const { sw, ne } = mapData.bounds;
 
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    const inBoundsCandidates = updatedAllPosts.filter(post => {
+    const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -156,7 +214,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, displayedMarkers]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -170,23 +228,24 @@ const Index = () => {
     setDisplayedMarkers(update);
   }, []);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
-      setTimeout(() => {
-        const centerLat = (ne.lat + sw.lat) / 2;
-        const centerLng = (ne.lng + sw.lng) / 2;
-        const refreshedPosts = createMockPosts(centerLat, centerLng, 80);
-        setAllPosts(refreshedPosts);
-        setDisplayedMarkers([]); 
-        setIsRefreshing(false);
-      }, 600);
+      const centerLat = (ne.lat + sw.lat) / 2;
+      const centerLng = (ne.lng + sw.lng) / 2;
+      
+      const realPosts = await fetchSupabasePosts();
+      const refreshedMockPosts = createMockPosts(centerLat, centerLng, 80);
+      
+      setAllPosts([...realPosts, ...refreshedMockPosts]);
+      setDisplayedMarkers([]); 
+      setIsRefreshing(false);
     } else {
       setIsRefreshing(false);
     }
-  }, [mapData]);
+  }, [mapData, fetchSupabasePosts]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
@@ -242,7 +301,6 @@ const Index = () => {
           center={mapCenter}
         />
 
-        {/* 인기 포스팅 리스트 배경 레이어 */}
         <AnimatePresence>
           {isTrendingExpanded && (
             <motion.div
@@ -304,7 +362,6 @@ const Index = () => {
           </button>
 
           <div className="relative">
-            {/* 핑 효과 레이어 */}
             {displayedMarkers.length > 0 && (
               <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
             )}
@@ -317,10 +374,7 @@ const Index = () => {
               )}
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-              
-              {/* 반짝임 효과 레이어 */}
               <div className="shine-overlay absolute inset-0 pointer-events-none" />
-              
               <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
               <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
             </button>

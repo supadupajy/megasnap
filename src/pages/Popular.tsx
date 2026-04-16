@@ -11,6 +11,7 @@ import StoryBar from '@/components/StoryBar';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
+import { supabase } from '@/lib/supabase';
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -26,12 +27,58 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
+  // Supabase에서 실제 데이터 가져오기
+  const fetchSupabasePosts = useCallback(async () => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('likes', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      return (data || []).map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: {
+          id: p.user_id,
+          name: p.user_name,
+          avatar: p.user_avatar
+        },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: Number(p.likes) > 100 ? 'popular' : 'none'
+      })) as Post[];
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      return [];
+    }
+  }, []);
+
   // 초기 데이터 로드
   useEffect(() => {
-    const initialPosts = createMockPosts(37.5665, 126.9780, 20)
-      .sort((a, b) => b.likes - a.likes);
-    setPosts(initialPosts);
-  }, []);
+    const loadInitialData = async () => {
+      const realPosts = await fetchSupabasePosts();
+      const mockPosts = createMockPosts(37.5665, 126.9780, 20)
+        .sort((a, b) => b.likes - a.likes);
+      
+      setPosts([...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes));
+    };
+    
+    loadInitialData();
+  }, [fetchSupabasePosts]);
 
   // 추가 데이터 로드 함수
   const loadMorePosts = useCallback(() => {
