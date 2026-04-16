@@ -33,14 +33,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
-    const initMap = () => {
-      const kakao = (window as any).kakao;
-      
-      // 라이브러리가 아직 로드되지 않았으면 false 반환
-      if (!kakao || !kakao.maps || !kakao.maps.LatLng) {
-        return false;
-      }
+    const kakao = (window as any).kakao;
+    if (!kakao || !kakao.maps) {
+      setError("카카오맵 라이브러리를 찾을 수 없습니다.");
+      return;
+    }
 
+    // autoload=false 설정을 사용했으므로 kakao.maps.load() 내에서 초기화해야 합니다.
+    kakao.maps.load(() => {
       try {
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
@@ -125,34 +125,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           isLongPressActive.current = false;
         });
 
+        // 초기 데이터 업데이트
         updateMapData();
-        return true;
+
       } catch (e) {
         console.error(e);
         setError("지도를 초기화하는 중 오류가 발생했습니다.");
-        return true; // 에러가 발생했으므로 인터벌 중단
       }
-    };
-
-    // 라이브러리가 로드될 때까지 100ms 간격으로 체크
-    const interval = setInterval(() => {
-      if (initMap()) {
-        clearInterval(interval);
-      }
-    }, 100);
-
-    // 5초 후에도 로드되지 않으면 에러 표시
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      if (!mapInstance.current) {
-        setError("카카오맵 라이브러리를 불러올 수 없습니다. 네트워크 상태를 확인해주세요.");
-      }
-    }, 5000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
+    });
   }, []);
 
   useEffect(() => {
