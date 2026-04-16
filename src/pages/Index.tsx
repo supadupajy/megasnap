@@ -226,7 +226,7 @@ const Index = () => {
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      className="relative w-full h-screen overflow-hidden bg-gray-50"
+      className="relative w-full h-[100dvh] overflow-hidden bg-gray-50"
     >
       <div className="absolute inset-0 z-0">
         <MapContainer 
@@ -242,7 +242,7 @@ const Index = () => {
           center={mapCenter}
         />
 
-        {/* 인기 포스팅 리스트 배경 레이어 (펼쳐졌을 때 외부 터치 시 닫기용) */}
+        {/* 인기 포스팅 리스트 배경 레이어 */}
         <AnimatePresence>
           {isTrendingExpanded && (
             <motion.div
