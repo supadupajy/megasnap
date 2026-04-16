@@ -73,7 +73,9 @@ const Index = () => {
   useEffect(() => {
     if (location.state?.filterUserId) {
       const userId = location.state.filterUserId;
-      setTargetUserId(userId);
+      // 'me'인 경우 'Dyad_Explorer'로 변환하여 저장
+      const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
+      setTargetUserId(finalUserId);
       setSelectedCategories(['user_filter']);
       
       // 현재 중심점 주변으로 해당 유저의 포스팅 10개 즉시 생성
@@ -81,7 +83,6 @@ const Index = () => {
       const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, userId);
       
       setAllPosts(prev => {
-        // 중복 방지하며 추가
         const existingIds = new Set(prev.map(p => p.id));
         const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
         return [...uniqueNewPosts, ...prev];
@@ -146,12 +147,16 @@ const Index = () => {
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
+      // 유저 필터링 시 'me'와 'Dyad_Explorer'를 동일하게 취급
+      const isTargetUser = post.user.id === targetUserId || 
+                          (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
+
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && post.user.id === 'me') ||
-                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
+                              (selectedCategories.includes('mine') && (post.user.id === 'me' || post.user.id === 'Dyad_Explorer')) ||
+                              (selectedCategories.includes('user_filter') && isTargetUser);
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;

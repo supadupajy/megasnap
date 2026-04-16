@@ -180,14 +180,16 @@ const CONTENT_POOL = [
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
 export const createMockUser = (id: string): User => {
-  let nickname = `Explorer_${id}`;
+  // 'me'인 경우 전체 ID인 'Dyad_Explorer'를 사용
+  const finalId = id === 'me' ? 'Dyad_Explorer' : id;
+  let nickname = `Explorer_${finalId}`;
   if (id === 'me') nickname = 'Dyad_Explorer';
 
   return {
-    id,
-    name: id,
+    id: finalId,
+    name: finalId,
     nickname: nickname,
-    avatar: `https://i.pravatar.cc/150?u=${id}`,
+    avatar: `https://i.pravatar.cc/150?u=${finalId}`,
     bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
     followers: Math.floor(Math.random() * 5000) + 100,
     following: Math.floor(Math.random() * 1000) + 50,
