@@ -70,7 +70,6 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
 
-  // 특정 유저 또는 내 포스팅 보기 시 데이터 생성
   useEffect(() => {
     const isMine = selectedCategories.includes('mine');
     const isUserFilter = selectedCategories.includes('user_filter');
@@ -79,7 +78,6 @@ const Index = () => {
       const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
       const filterId = isMine ? 'me' : (targetUserId || 'traveler');
       
-      // 해당 유저의 포스팅이 충분하지 않으면 추가 생성
       const existingUserPosts = allPosts.filter(p => 
         p.user.id === filterId || (filterId === 'me' && p.user.id === 'Dyad_Explorer')
       );
@@ -166,7 +164,6 @@ const Index = () => {
       const isTargetUser = post.user.id === targetUserId || 
                           (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
 
-      // 필터링 로직: '내 포스팅' 또는 '유저 필터'가 있으면 해당 조건만 엄격하게 적용
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) {
         matchesCategory = isMe;
@@ -433,108 +430,7 @@ const Index = () => {
           onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
-            const post = allPosts.find(p => p.lat === lat &&think
-The user wants me to continue the previous response exactly where it left off.
-
-Looking at the previous response:
-The last line was: `onLocationClick={(lat, lng) => { const post = allPosts.find(p => p.lat === lat &&`
-
-I need to complete the `Index.tsx` file.
-
-The code block in `Index.tsx` was:
-```tsx
-      {selectedPostId && (
-        <PostDetail 
-          posts={displayedMarkers} 
-          initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
-          isOpen={true} 
-          onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed}
-          onLikeToggle={handleLikeToggle}
-          onLocationClick={(lat, lng) => {
-            const post = allPosts.find(p => p.lat === lat &&
-```
-
-I need to finish the `onLocationClick` handler and the rest of the component.
-
-```tsx
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
-            if (post) {
-              setHighlightedPostId(post.id);
-              setTimeout(() => setHighlightedPostId(null), 3000);
-            }
-            setMapCenter({ lat, lng });
-            setSelectedPostId(null);
-          }}
-        />
-      )}
-      <PlaceSearch 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-        onSelect={handlePlaceSelect} 
-      />
-      <WritePost 
-        isOpen={isWriteOpen} 
-        onClose={() => setIsWriteOpen(false)} 
-        initialLocation={pendingLocation}
-        onPostCreated={handlePostCreated}
-      />
-      <PostListOverlay 
-        isOpen={isPostListOpen}
-        onClose={() => setIsPostListOpen(false)}
-        initialPosts={displayedMarkers}
-        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
-      />
-    </motion.div>
-  );
-};
-
-export default Index;
-```
-
-Wait, the user said "Continue exactly where you left off without any preamble".
-The previous response ended with: `onLocationClick={(lat, lng) => { const post = allPosts.find(p => p.lat === lat &&`
-
-So I should start with ` p.lng === lng);`.
-
-However, the instructions say "Only use ONE <dyad-write> block per file that you write!".
-Since the previous response was cut off, the `<dyad-write>` tag was never closed.
-Actually, the previous response was cut off *inside* the `<dyad-write>` block.
-
-If I just output the rest of the code, it might not be valid XML if the system expects a full tag.
-But usually, these systems handle continuations by just appending.
-However, the prompt says "ALWAYS write the entire file. It needs to be a complete file."
-
-So I should probably rewrite the entire `Index.tsx` file to be safe and ensure it's complete.
-
-Let's check the previous response again. It was a full response that got cut off by the token limit.
-The user wants me to continue.
-
-I will rewrite the entire `Index.tsx` file with the corrected logic.
-
-Logic changes:
-- In `Index.tsx`, update the filtering logic to strictly show only "me" or "Dyad_Explorer" posts when `mine` is selected.
-- Ensure that if `mine` is selected, it overrides other category filters (except maybe time).
-
-Let's look at the filtering logic I was writing:
-```tsx
-      // 필터링 로직: '내 포스팅' 또는 '유저 필터'가 있으면 해당 조건만 엄격하게 적용
-      let matchesCategory = false;
-      if (selectedCategories.includes('mine')) {
-        matchesCategory = isMe;
-      } else if (selectedCategories.includes('user_filter')) {
-        matchesCategory = isTargetUser;
-      } else if (selectedCategories.includes('all')) {
-        matchesCategory = true;
-      } else {
-        matchesCategory = selectedCategories.includes(post.category || 'none') ||
-                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                          (selectedCategories.includes('influencer') && post.isInfluencer);
-      }
-```
-This looks correct.
-
-I will provide the full `Index.tsx` file now.p.lng === lng);
             if (post) {
               setHighlightedPostId(post.id);
               setTimeout(() => setHighlightedPostId(null), 3000);
