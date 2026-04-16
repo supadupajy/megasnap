@@ -10,7 +10,6 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Popular from "./pages/Popular";
-import PostList from "./pages/PostList";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
@@ -44,7 +43,7 @@ const AnimatedRoutes = () => {
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       // 1. 현재 열려있는 팝업(다이얼로그, 드로어 등)이 있는지 확인
-      const openPopup = document.querySelector('[role="dialog"], [data-vaul-drawer]');
+      const openPopup = document.querySelector('[role="dialog"], [data-vaul-drawer], .close-popup-btn');
       
       if (openPopup) {
         // 팝업이 열려있다면 닫기 버튼을 찾아 클릭 (팝업만 닫기)
@@ -87,7 +86,6 @@ const AnimatedRoutes = () => {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Index />} />
             <Route path="/popular" element={<Popular />} />
-            <Route path="/post-list" element={<PostList />} />
             <Route path="/search" element={<Search />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/messages" element={<Messages />} />

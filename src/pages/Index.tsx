@@ -11,6 +11,7 @@ import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
+import PostListOverlay from '@/components/PostListOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
@@ -36,6 +37,7 @@ const Index = () => {
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
@@ -206,12 +208,7 @@ const Index = () => {
 
   const handleViewAllClick = () => {
     if (displayedMarkers.length > 0) {
-      navigate('/post-list', { 
-        state: { 
-          posts: displayedMarkers,
-          center: mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 }
-        } 
-      });
+      setIsPostListOpen(true);
     }
   };
 
@@ -413,6 +410,12 @@ const Index = () => {
         onClose={() => setIsWriteOpen(false)} 
         initialLocation={pendingLocation}
         onPostCreated={handlePostCreated}
+      />
+      <PostListOverlay 
+        isOpen={isPostListOpen}
+        onClose={() => setIsPostListOpen(false)}
+        initialPosts={displayedMarkers}
+        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
       />
     </motion.div>
   );
