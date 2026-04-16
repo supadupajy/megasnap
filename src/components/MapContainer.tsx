@@ -36,6 +36,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const initMap = () => {
       const kakao = (window as any).kakao;
       
+      // 라이브러리가 아직 로드되지 않았으면 false 반환하여 다시 시도하게 함
       if (!kakao || !kakao.maps || !kakao.maps.LatLng || !kakao.maps.Map) {
         return false;
       }
@@ -43,7 +44,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       try {
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: 6 // 기존 4에서 6으로 변경하여 더 넓은 범위를 보여줌
+          level: 4
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
@@ -69,6 +70,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         kakao.maps.event.addListener(map, 'idle', updateMapData);
 
+        // 롱프레스 구현
         const container = mapElement.current!;
         
         const handleStart = (e: any) => {
@@ -132,13 +134,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       }
     };
 
+    // 라이브러리가 로드될 때까지 100ms 간격으로 체크 (최대 10초)
     let retryCount = 0;
     const interval = setInterval(() => {
       if (initMap()) {
         clearInterval(interval);
       } else {
         retryCount++;
-        if (retryCount > 100) {
+        if (retryCount > 100) { // 10초 경과
           clearInterval(interval);
           setError("카카오맵 라이브러리를 불러올 수 없습니다. 도메인 등록 여부와 네트워크를 확인해주세요.");
         }
