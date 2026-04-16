@@ -172,8 +172,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ 
               duration: 0.45, 
-              ease: [0.4, 0, 0.2, 1] // 부드러운 가속도 곡선
+              ease: [0.4, 0, 0.2, 1]
             }}
+            onClick={onClose}
             className={cn(
               "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
             )}
@@ -181,7 +182,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                 <div className="flex flex-col">
-                  <div className="flex items-center justify-between px-4 py-3 shrink-0">
+                  {/* Header - Stop propagation to allow profile clicks */}
+                  <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
                         <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
@@ -223,6 +225,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </DropdownMenu>
                   </div>
                   
+                  {/* Image Area - Clicking here will close the popup (bubbles to motion.div) */}
                   <div className="px-4">
                     <div className={cn(
                       "relative aspect-square w-full rounded-2xl transition-all duration-500", 
@@ -256,6 +259,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
+                  {/* Action Area - Stop propagation to allow interactions */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-4 pt-1.5">
