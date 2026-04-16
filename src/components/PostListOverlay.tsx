@@ -123,10 +123,8 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
           animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
           exit={{ x: "20%", y: "20%", scale: 0, opacity: 0 }}
           transition={{ 
-            type: "spring", 
-            stiffness: 100, 
-            damping: 20,    
-            mass: 1.2       
+            duration: 0.3,
+            ease: "easeInOut"
           }}
           style={{ transformOrigin: 'bottom right' }}
           className="fixed top-[88px] bottom-0 left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
