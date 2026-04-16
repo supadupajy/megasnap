@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play, AlertCircle, Ban } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play, AlertCircle, Ban, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -20,22 +20,18 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 
 interface PostDetailProps {
-  posts: any[];
-  initialIndex: number;
+  post: any | null;
   isOpen: boolean;
   onClose: () => void;
-  onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
   onLocationClick?: (lat: number, lng: number) => void;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
+const PostDetail = ({ post, isOpen, onClose, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { blockUser } = useBlockedUsers();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [localComments, setLocalComments] = useState<Comment[]>([]);
@@ -45,38 +41,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
-    if (isOpen && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
-    }
-  }, [currentIndex, isOpen]);
-
   useEffect(() => {
-    if (isOpen && !hasInitialized && initialIndex !== -1) {
-      setCurrentIndex(initialIndex);
-      setHasInitialized(true);
-      setShowComments(false);
+    if (isOpen && post) {
+      setLocalComments(post.comments || []);
+      setIsSaved(post.isSaved || false);
       setCurrentImageIndex(0);
-      const post = posts[initialIndex];
-      if (post) {
-        setLocalComments(post.comments || []);
-        setIsSaved(post.isSaved || false);
-      }
+      setShowComments(false);
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
     }
-    if (!isOpen) setHasInitialized(false);
-  }, [isOpen, initialIndex, hasInitialized, posts]);
+  }, [isOpen, post]);
 
-  useEffect(() => {
-    const currentPost = posts[currentIndex];
-    if (isOpen && currentPost) {
-      if (onViewPost) onViewPost(currentPost.id);
-      setShowComments(false);
-      setCurrentImageIndex(0);
-      setLocalComments(currentPost.comments || []);
-      setIsSaved(currentPost.isSaved || false);
-      if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
-    }
-  }, [currentIndex, isOpen, onViewPost, posts]);
+  if (!isOpen || !post) return null;
+
+  const images = post.images || [post.image];
+  const isAd = post.isAd;
+  const isPopular = !isAd && post.borderType === 'popular';
+  const isInfluencer = !isAd && post.isInfluencer;
+  const isGif = isGifUrl(images[currentImageIndex]);
+  const category = post.category || 'none';
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -90,17 +72,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     setLocalComments([...localComments, { user: "Dyad_Explorer", text: commentInput }]);
     setCommentInput('');
   };
-
-  if (!isOpen || posts.length === 0) return null;
-  const post = posts[currentIndex];
-  if (!post) return null;
-
-  const images = post.images || [post.image];
-  const isAd = post.isAd;
-  const isPopular = !isAd && post.borderType === 'popular';
-  const isInfluencer = !isAd && post.isInfluencer;
-  const isGif = isGifUrl(images[currentImageIndex]);
-  const category = post.category || 'none';
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -146,12 +117,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()} 
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none data-[state=open]:duration-0"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none"
       >
-        <div 
-          className="absolute inset-0 z-0 cursor-pointer" 
-          onClick={onClose}
-        />
+        <div className="absolute inset-0 z-0 cursor-pointer" onClick={onClose} />
 
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
@@ -166,11 +134,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <div 
-            key={post.id} 
-            onClick={onClose}
-            className={cn(
-              "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
-            )}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto"
           >
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
@@ -194,22 +159,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}>
+                        <button className="text-gray-400 p-1 outline-none">
                           <MoreHorizontal className="w-5 h-5" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[120]">
-                        <DropdownMenuItem 
-                          onClick={handleReport}
-                          className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
-                        >
+                        <DropdownMenuItem onClick={handleReport} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
                           <AlertCircle className="w-4 h-4 text-gray-600" />
                           <span className="text-sm font-bold text-gray-700">신고</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={handleBlock}
-                          className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                        >
+                        <DropdownMenuItem onClick={handleBlock} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                           <Ban className="w-4 h-4 text-red-600" />
                           <span className="text-sm font-bold text-red-600">차단</span>
                         </DropdownMenuItem>
@@ -227,7 +186,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           {images.map((img: string, idx: number) => (
                             <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                               <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
-                              {idx === post.adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
                             </div>
                           ))}
                         </div>
@@ -250,23 +208,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
-                  <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="px-4 pt-3 pb-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-4 pt-1.5">
-                        <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button>
-                        <button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button>
+                        <button className="transition-transform active:scale-125" onClick={() => onLikeToggle?.(post.id)}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button>
+                        <button onClick={() => setShowComments(!showComments)}><MessageCircle className="w-6 h-6 text-gray-700" /></button>
+                        <button className="text-gray-700"><Share2 className="w-6 h-6" /></button>
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-3">
-                          <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved); }}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
+                          <button className="transition-transform active:scale-125" onClick={() => setIsSaved(!isSaved)}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
                           {renderCategoryBadge()}
                           {post.lat !== undefined && post.lng !== undefined && (
-                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100"><Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span></button>
+                            <button onClick={() => onLocationClick?.(post.lat, post.lng)} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100"><Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span></button>
                           )}
                         </div>
                         {isAd && (
-                          <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"><ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span></a>
+                          <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"><ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span></a>
                         )}
                       </div>
                     </div>
@@ -278,7 +236,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} /><button type="submit" disabled={!commentInput.trim()} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>
                       {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
                       <AnimatePresence>{showComments && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="space-y-3 py-2">{localComments.slice(0, -1).map((comment, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{comment.user}</span><span className="text-sm text-gray-500">{comment.text}</span></div>))}</div></motion.div>}</AnimatePresence>
-                      <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
+                      <button onClick={() => setShowComments(!showComments)} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
                     </div>
                   </div>
                 </div>
