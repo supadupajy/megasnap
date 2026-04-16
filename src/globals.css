@@ -153,7 +153,7 @@
     opacity: 0.8;
   }
   100% {
-    transform: translate(-50%, -50%) scale(3.5);
+    transform: translate(-50%, -50%) scale(6.0); /* 스케일을 3.5에서 6.0으로 확대 */
     opacity: 0;
   }
 }
@@ -165,12 +165,12 @@
   width: 40px;
   height: 40px;
   background: rgba(34, 211, 238, 0.6);
-  box-shadow: 0 0 20px 5px rgba(34, 211, 238, 0.4);
+  box-shadow: 0 0 30px 10px rgba(34, 211, 238, 0.4);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
   transform: translate(-50%, -50%);
-  animation: marker-ping 1s cubic-bezier(0, 0, 0.2, 1) 2 forwards;
+  animation: marker-ping 1.2s cubic-bezier(0, 0, 0.2, 1) 2 forwards;
 }
 
 .shine-overlay::after {

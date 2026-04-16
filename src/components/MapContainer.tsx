@@ -91,7 +91,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         mapInstance.current = map;
         setIsMapReady(true);
 
-        // 실시간 업데이트를 위해 bounds_changed 이벤트 사용
         const updateMapData = () => {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
@@ -274,7 +273,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const borderContainerClass = isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''));
 
     return `
-      <div class="animate-marker-appear" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
+      <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${(isInfluencer || isPopular) ? 'animate-marker-float' : ''}">
           ${labelHtml}
@@ -324,6 +323,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           div.style.width = '56px';
           div.style.height = '72px';
           div.style.cursor = 'pointer';
+          div.classList.add('animate-marker-appear'); // 처음 생성될 때만 애니메이션 적용
           div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
           div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
           div.onclick = (e) => { e.stopPropagation(); onMarkerClick(post); };
@@ -353,6 +353,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           const currentHtml = div.innerHTML;
           const nextHtml = getMarkerHtml(post, isViewed, isHighlighted);
           
+          // 강조 상태나 읽음 상태가 변할 때만 내부 HTML 업데이트 (깜빡임 방지)
           if (currentHtml.includes('marker-highlight-ping') !== isHighlighted || currentHtml.includes('grayscale') !== isViewed) {
             div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
             div.innerHTML = nextHtml;
