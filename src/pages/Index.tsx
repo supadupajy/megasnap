@@ -70,28 +70,25 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
 
-  // 유저 필터 활성화 공통 함수
-  const activateUserFilter = useCallback((userId: string) => {
-    const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
-    setTargetUserId(finalUserId);
-    setSelectedCategories(['user_filter']);
-    
-    // 현재 중심점 주변으로 해당 유저의 포스팅 즉시 생성 및 로드
-    const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
-    const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 15, userId);
-    
-    setAllPosts(prev => {
-      const existingIds = new Set(prev.map(p => p.id));
-      const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
-      return [...uniqueNewPosts, ...prev];
-    });
-
-    setMapCenter(currentCenter);
-  }, [mapCenter]);
-
   useEffect(() => {
     if (location.state?.filterUserId) {
-      activateUserFilter(location.state.filterUserId);
+      const userId = location.state.filterUserId;
+      // 'me'인 경우 'Dyad_Explorer'로 변환하여 저장
+      const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
+      setTargetUserId(finalUserId);
+      setSelectedCategories(['user_filter']);
+      
+      // 현재 중심점 주변으로 해당 유저의 포스팅 10개 즉시 생성
+      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
+      const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, userId);
+      
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
+        return [...uniqueNewPosts, ...prev];
+      });
+
+      setMapCenter(currentCenter);
     } else if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
@@ -112,7 +109,7 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
-  }, [location.state, blockedIds, activateUserFilter]);
+  }, [location.state, blockedIds]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -150,6 +147,7 @@ const Index = () => {
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
+      // 유저 필터링 시 'me'와 'Dyad_Explorer'를 동일하게 취급
       const isTargetUser = post.user.id === targetUserId || 
                           (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
 
@@ -157,6 +155,7 @@ const Index = () => {
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
+                              (selectedCategories.includes('mine') && (post.user.id === 'me' || post.user.id === 'Dyad_Explorer')) ||
                               (selectedCategories.includes('user_filter') && isTargetUser);
 
       const isNotBlocked = !blockedIds.has(post.user.id);
@@ -361,6 +360,8 @@ const Index = () => {
                 className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] z-20"
               />
               
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+              
               <div className="relative z-30 flex flex-col items-center justify-center">
                 <LayoutGrid className="w-7 h-7 stroke-[3px]" />
                 <span className="text-[10px] font-black mt-1">모두 보기</span>
@@ -399,7 +400,6 @@ const Index = () => {
         onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
         targetUserId={targetUserId}
-        onActivateUserFilter={activateUserFilter}
       />
 
       {selectedPostId && (
