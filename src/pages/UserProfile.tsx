@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban } from 'lucide-react';
+import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -255,127 +255,121 @@ const UserProfile = () => {
           </div>
 
           {/* Content Area */}
-          {viewMode === 'saved' ? (
-            <div className="flex flex-col -mx-6">
-              <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
-                <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                  <Bookmark className="w-4 h-4 fill-indigo-600" />
-                  저장된 포스팅
-                </h3>
-                <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
-              </div>
-              {savedPosts.map((post) => (
-                <div 
-                  key={post.id} 
-                  id={`post-${post.id}`}
-                  className="scroll-mt-[150px]"
-                >
-                  <PostItem
-                    user={post.user}
-                    content={post.content}
-                    location={post.location}
-                    likes={post.likes}
-                    commentsCount={post.commentsCount}
-                    comments={post.comments}
-                    image={post.image}
-                    images={post.images}
-                    isLiked={post.isLiked}
-                    isAd={post.isAd}
-                    isGif={post.isGif}
-                    isInfluencer={post.isInfluencer}
-                    borderType={post.borderType}
-                    disablePulse={true}
-                    onLikeToggle={() => handleLikeToggle(post.id, true)}
-                  />
+          <div className="flex flex-col -mx-6">
+            {viewMode === 'saved' ? (
+              <>
+                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
+                    <Bookmark className="w-4 h-4 fill-indigo-600" />
+                    저장된 포스팅
+                  </h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
                 </div>
-              ))}
-              {savedPosts.length === 0 && (
-                <div className="py-20 text-center text-gray-400 font-medium">
-                  저장된 게시물이 없습니다.
-                </div>
-              )}
-            </div>
-          ) : (viewMode === 'list' || viewMode === 'gif-list') ? (
-            <div className="flex flex-col -mx-6">
-              {(viewMode === 'gif-list' ? posts.filter(p => p.isGif) : posts).map((post) => (
-                <div 
-                  key={post.id} 
-                  id={`post-${post.id}`}
-                  className="scroll-mt-[150px]"
-                >
-                  <PostItem
-                    user={post.user}
-                    content={post.content}
-                    location={post.location}
-                    likes={post.likes}
-                    commentsCount={post.commentsCount}
-                    comments={post.comments}
-                    image={post.image}
-                    images={post.images}
-                    isLiked={post.isLiked}
-                    isAd={post.isAd}
-                    isGif={post.isGif}
-                    isInfluencer={post.isInfluencer}
-                    borderType={post.borderType}
-                    disablePulse={true}
-                    onLikeToggle={() => handleLikeToggle(post.id, false)}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : viewMode === 'gifs' ? (
-            <div className="grid grid-cols-3 gap-1">
-              {posts.filter(p => p.isGif).map((post) => (
-                <div 
-                  key={post.id} 
-                  className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                  onClick={() => handleGridItemClick(post.id)}
-                >
-                  <img 
-                    src={post.image} 
-                    alt="" 
-                    className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
-                    onError={handleImageError}
-                  />
-                  <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
-                    <Play className="w-2.5 h-2.5 text-white fill-white" />
+                {savedPosts.map((post) => (
+                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                    <PostItem
+                      user={post.user}
+                      content={post.content}
+                      location={post.location}
+                      likes={post.likes}
+                      commentsCount={post.commentsCount}
+                      comments={post.comments}
+                      image={post.image}
+                      images={post.images}
+                      isLiked={post.isLiked}
+                      isAd={post.isAd}
+                      isGif={post.isGif}
+                      isInfluencer={post.isInfluencer}
+                      borderType={post.borderType}
+                      disablePulse={true}
+                      onLikeToggle={() => handleLikeToggle(post.id, true)}
+                    />
                   </div>
-                </div>
-              ))}
-              {posts.filter(p => p.isGif).length === 0 && (
-                <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
-                  등록된 GIF가 없습니다.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-1">
-              {posts.map((post) => (
+                ))}
+                {savedPosts.length === 0 && (
+                  <div className="py-20 text-center text-gray-400 font-medium">저장된 게시물이 없습니다.</div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* 지도에서 보기 배너 (사진/동영상 탭 공통) */}
                 <div 
-                  key={post.id} 
-                  className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                  onClick={() => handleGridItemClick(post.id)}
+                  onClick={() => navigate('/')}
+                  className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
                 >
-                  <img 
-                    src={post.image} 
-                    alt="" 
-                    className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer"
-                    onError={handleImageError}
-                  />
-                  {post.isGif && (
-                    <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
-                      <Play className="w-2.5 h-2.5 text-white fill-white" />
-                    </div>
-                  )}
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
+                    <Map className="w-4 h-4 fill-indigo-600" />
+                    지도에서 보기
+                  </h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{user.nickname} 님의 추억들을 지도에서 확인하세요</p>
                 </div>
-              ))}
-              {posts.length === 0 && (
-                <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
-                  게시물이 없습니다.
-                </div>
-              )}
-            </div>
-          )}
+
+                {(viewMode === 'list' || viewMode === 'gif-list') ? (
+                  <div className="flex flex-col">
+                    {(viewMode === 'gif-list' ? posts.filter(p => p.isGif) : posts).map((post) => (
+                      <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                        <PostItem
+                          user={post.user}
+                          content={post.content}
+                          location={post.location}
+                          likes={post.likes}
+                          commentsCount={post.commentsCount}
+                          comments={post.comments}
+                          image={post.image}
+                          images={post.images}
+                          isLiked={post.isLiked}
+                          isAd={post.isAd}
+                          isGif={post.isGif}
+                          isInfluencer={post.isInfluencer}
+                          borderType={post.borderType}
+                          disablePulse={true}
+                          onLikeToggle={() => handleLikeToggle(post.id, false)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : viewMode === 'gifs' ? (
+                  <div className="grid grid-cols-3 gap-1 px-6">
+                    {posts.filter(p => p.isGif).map((post) => (
+                      <div 
+                        key={post.id} 
+                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
+                        onClick={() => handleGridItemClick(post.id)}
+                      >
+                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
+                        <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
+                          <Play className="w-2.5 h-2.5 text-white fill-white" />
+                        </div>
+                      </div>
+                    ))}
+                    {posts.filter(p => p.isGif).length === 0 && (
+                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">등록된 GIF가 없습니다.</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 px-6">
+                    {posts.map((post) => (
+                      <div 
+                        key={post.id} 
+                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
+                        onClick={() => handleGridItemClick(post.id)}
+                      >
+                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
+                        {post.isGif && (
+                          <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
+                            <Play className="w-2.5 h-2.5 text-white fill-white" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {posts.length === 0 && (
+                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">게시물이 없습니다.</div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
