@@ -70,24 +70,39 @@ const Index = () => {
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
 
+  // 특정 유저 또는 내 포스팅 보기 시 데이터 생성
+  useEffect(() => {
+    const isMine = selectedCategories.includes('mine');
+    const isUserFilter = selectedCategories.includes('user_filter');
+
+    if (isMine || isUserFilter) {
+      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
+      const filterId = isMine ? 'me' : (targetUserId || 'traveler');
+      
+      // 해당 유저의 포스팅이 충분하지 않으면 추가 생성
+      const existingUserPosts = allPosts.filter(p => 
+        p.user.id === filterId || (filterId === 'me' && p.user.id === 'Dyad_Explorer')
+      );
+
+      if (existingUserPosts.length < 5) {
+        const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, filterId);
+        setAllPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
+          return [...uniqueNewPosts, ...prev];
+        });
+      }
+    }
+  }, [selectedCategories, targetUserId, mapCenter]);
+
   useEffect(() => {
     if (location.state?.filterUserId) {
       const userId = location.state.filterUserId;
-      // 'me'인 경우 'Dyad_Explorer'로 변환하여 저장
       const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
       setTargetUserId(finalUserId);
-      setSelectedCategories(['user_filter']);
+      setSelectedCategories([userId === 'me' ? 'mine' : 'user_filter']);
       
-      // 현재 중심점 주변으로 해당 유저의 포스팅 10개 즉시 생성
       const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
-      const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, userId);
-      
-      setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
-        return [...uniqueNewPosts, ...prev];
-      });
-
       setMapCenter(currentCenter);
     } else if (location.state?.post) {
       const incomingPost = location.state.post;
@@ -147,16 +162,23 @@ const Index = () => {
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      // 유저 필터링 시 'me'와 'Dyad_Explorer'를 동일하게 취급
+      const isMe = post.user.id === 'me' || post.user.id === 'Dyad_Explorer';
       const isTargetUser = post.user.id === targetUserId || 
                           (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
 
-      const matchesCategory = selectedCategories.includes('all') || 
-                              selectedCategories.includes(post.category || 'none') ||
-                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && (post.user.id === 'me' || post.user.id === 'Dyad_Explorer')) ||
-                              (selectedCategories.includes('user_filter') && isTargetUser);
+      // 필터링 로직: '내 포스팅' 또는 '유저 필터'가 있으면 해당 조건만 엄격하게 적용
+      let matchesCategory = false;
+      if (selectedCategories.includes('mine')) {
+        matchesCategory = isMe;
+      } else if (selectedCategories.includes('user_filter')) {
+        matchesCategory = isTargetUser;
+      } else if (selectedCategories.includes('all')) {
+        matchesCategory = true;
+      } else {
+        matchesCategory = selectedCategories.includes(post.category || 'none') ||
+                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                          (selectedCategories.includes('influencer') && post.isInfluencer);
+      }
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -411,7 +433,108 @@ const Index = () => {
           onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
           onLocationClick={(lat, lng) => {
+            const post = allPosts.find(p => p.lat === lat &&think
+The user wants me to continue the previous response exactly where it left off.
+
+Looking at the previous response:
+The last line was: `onLocationClick={(lat, lng) => { const post = allPosts.find(p => p.lat === lat &&`
+
+I need to complete the `Index.tsx` file.
+
+The code block in `Index.tsx` was:
+```tsx
+      {selectedPostId && (
+        <PostDetail 
+          posts={displayedMarkers} 
+          initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
+          isOpen={true} 
+          onClose={() => setSelectedPostId(null)} 
+          onViewPost={markAsViewed}
+          onLikeToggle={handleLikeToggle}
+          onLocationClick={(lat, lng) => {
+            const post = allPosts.find(p => p.lat === lat &&
+```
+
+I need to finish the `onLocationClick` handler and the rest of the component.
+
+```tsx
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
+            if (post) {
+              setHighlightedPostId(post.id);
+              setTimeout(() => setHighlightedPostId(null), 3000);
+            }
+            setMapCenter({ lat, lng });
+            setSelectedPostId(null);
+          }}
+        />
+      )}
+      <PlaceSearch 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={handlePlaceSelect} 
+      />
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+        initialLocation={pendingLocation}
+        onPostCreated={handlePostCreated}
+      />
+      <PostListOverlay 
+        isOpen={isPostListOpen}
+        onClose={() => setIsPostListOpen(false)}
+        initialPosts={displayedMarkers}
+        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
+      />
+    </motion.div>
+  );
+};
+
+export default Index;
+```
+
+Wait, the user said "Continue exactly where you left off without any preamble".
+The previous response ended with: `onLocationClick={(lat, lng) => { const post = allPosts.find(p => p.lat === lat &&`
+
+So I should start with ` p.lng === lng);`.
+
+However, the instructions say "Only use ONE <dyad-write> block per file that you write!".
+Since the previous response was cut off, the `<dyad-write>` tag was never closed.
+Actually, the previous response was cut off *inside* the `<dyad-write>` block.
+
+If I just output the rest of the code, it might not be valid XML if the system expects a full tag.
+But usually, these systems handle continuations by just appending.
+However, the prompt says "ALWAYS write the entire file. It needs to be a complete file."
+
+So I should probably rewrite the entire `Index.tsx` file to be safe and ensure it's complete.
+
+Let's check the previous response again. It was a full response that got cut off by the token limit.
+The user wants me to continue.
+
+I will rewrite the entire `Index.tsx` file with the corrected logic.
+
+Logic changes:
+- In `Index.tsx`, update the filtering logic to strictly show only "me" or "Dyad_Explorer" posts when `mine` is selected.
+- Ensure that if `mine` is selected, it overrides other category filters (except maybe time).
+
+Let's look at the filtering logic I was writing:
+```tsx
+      // 필터링 로직: '내 포스팅' 또는 '유저 필터'가 있으면 해당 조건만 엄격하게 적용
+      let matchesCategory = false;
+      if (selectedCategories.includes('mine')) {
+        matchesCategory = isMe;
+      } else if (selectedCategories.includes('user_filter')) {
+        matchesCategory = isTargetUser;
+      } else if (selectedCategories.includes('all')) {
+        matchesCategory = true;
+      } else {
+        matchesCategory = selectedCategories.includes(post.category || 'none') ||
+                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                          (selectedCategories.includes('influencer') && post.isInfluencer);
+      }
+```
+This looks correct.
+
+I will provide the full `Index.tsx` file now.p.lng === lng);
             if (post) {
               setHighlightedPostId(post.id);
               setTimeout(() => setHighlightedPostId(null), 3000);
