@@ -11,6 +11,7 @@ import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
@@ -74,61 +76,90 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     }
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!capturedImage) {
       showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
       return;
     }
 
+    setIsSubmitting(true);
+
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
-    const newPost = {
-      id: Math.random().toString(36).substr(2, 9),
-      isAd: false,
-      isGif: false,
-      isInfluencer: false,
-      user: {
-        id: 'me',
-        name: 'Dyad_Explorer',
-        avatar: 'https://i.pravatar.cc/150?u=me'
-      },
+    const postData = {
       content: content,
-      location: address,
-      lat,
-      lng,
+      location_name: address,
+      latitude: lat,
+      longitude: lng,
+      image_url: capturedImage, // 실제 서비스에서는 Storage에 업로드 후 URL을 저장해야 합니다.
+      user_id: 'me',
+      user_name: 'Dyad_Explorer',
+      user_avatar: 'https://i.pravatar.cc/150?u=me',
       likes: 0,
-      commentsCount: 0,
-      comments: [],
-      image: capturedImage,
-      isLiked: false,
-      createdAt: new Date(),
-      borderType: 'none'
+      created_at: new Date().toISOString()
     };
 
-    const duration = 3 * 1000;
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+    try {
+      // Supabase 'posts' 테이블에 데이터 삽입
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([postData])
+        .select();
 
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+      if (error) throw error;
 
-    const interval: any = setInterval(function() {
-      const timeLeft = animationEnd - Date.now();
-      if (timeLeft <= 0) return clearInterval(interval);
-      const particleCount = 50 * (timeLeft / duration);
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-    }, 250);
+      // 로컬 상태 업데이트를 위한 객체 생성
+      const newPost = {
+        id: data[0].id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: {
+          id: 'me',
+          name: 'Dyad_Explorer',
+          avatar: 'https://i.pravatar.cc/150?u=me'
+        },
+        content: content,
+        location: address,
+        lat,
+        lng,
+        likes: 0,
+        commentsCount: 0,
+        comments: [],
+        image: capturedImage,
+        isLiked: false,
+        createdAt: new Date(),
+        borderType: 'none'
+      };
 
-    if (onPostCreated) onPostCreated(newPost);
+      // 축하 효과
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-    showSuccess('새로운 추억이 지도에 등록되었습니다! ✨');
-    onClose();
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+      }, 250);
+
+      if (onPostCreated) onPostCreated(newPost);
+      showSuccess('새로운 추억이 Supabase에 안전하게 저장되었습니다! ✨');
+      onClose();
+    } catch (err) {
+      console.error('Error saving post:', err);
+      showError('저장 중 오류가 발생했습니다. Supabase 설정을 확인해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <>
-      {/* 커스텀 배경 레이어 (하단 메뉴 클릭을 방해하지 않음) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -144,14 +175,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       <Drawer 
         open={isOpen} 
         onOpenChange={(open) => !open && onClose()}
-        modal={false} // 하단 메뉴 클릭이 가능하도록 모달 모드 해제
+        modal={false}
       >
         <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[40] shadow-2xl">
-          {/* Handle Bar */}
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
           
           <div className="px-6 flex flex-col flex-1 min-h-0">
-            {/* Header */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -162,9 +191,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               </Button>
             </div>
 
-            {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-              {/* Photo Area */}
               <div 
                 onClick={takePhoto}
                 className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
@@ -182,14 +209,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                     </div>
                   </>
                 )}
-                {isTakingPhoto && (
+                {(isTakingPhoto || isSubmitting) && (
                   <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
                     <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
 
-              {/* Location Info */}
               <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                   <MapPin className="w-5 h-5 text-indigo-600" />
@@ -207,7 +233,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                 </div>
               </div>
 
-              {/* Content Input */}
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
                 <Textarea 
@@ -219,7 +244,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               </div>
             </div>
 
-            {/* Bottom Button Area */}
             <div 
               className={cn(
                 "py-4 bg-white shrink-0 transition-all duration-300",
@@ -229,9 +253,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               <Button 
                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
                 onClick={handlePost}
-                disabled={!content || isTakingPhoto || isLoadingAddress}
+                disabled={!content || isTakingPhoto || isLoadingAddress || isSubmitting}
               >
-                지도에 등록하기
+                {isSubmitting ? '저장 중...' : '지도에 등록하기'}
               </Button>
             </div>
           </div>
