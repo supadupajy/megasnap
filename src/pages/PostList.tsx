@@ -111,15 +111,16 @@ const PostList = () => {
 
   return (
     <motion.div 
-      initial={{ x: "100%", y: "100%", opacity: 0 }}
-      animate={{ x: 0, y: 0, opacity: 1 }}
-      exit={{ x: "100%", y: "100%", opacity: 0 }}
+      initial={{ x: "20%", y: "20%", scale: 0, opacity: 0 }}
+      animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+      exit={{ x: "20%", y: "20%", scale: 0, opacity: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 120, // 강성을 낮춰 더 부드럽게
-        damping: 22,    // 감쇠를 조절하여 튕김을 줄임
-        mass: 1.2       // 질량을 높여 묵직한 느낌 추가
+        stiffness: 100, 
+        damping: 20,    
+        mass: 1.2       
       }}
+      style={{ transformOrigin: 'bottom right' }}
       className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
     >
       <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
