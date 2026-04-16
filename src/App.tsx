@@ -99,7 +99,7 @@ const AnimatedRoutes = () => {
 
       {!hideLayout && (
         <>
-          <BottomNav onWriteClick={() => setIsWriteOpen(!isWriteOpen)} />
+          <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
           <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
         </>
       )}
@@ -119,7 +119,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 3000); // 1.5초에서 3초로 연장
 
     return () => clearTimeout(timer);
   }, []);
