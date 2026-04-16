@@ -61,7 +61,18 @@ const GENERAL_POOL = [
   "https://images.unsplash.com/photo-1414235077428-338989a2e8c0"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-export const GIF_POOL = GENERAL_POOL.slice(0, 10);
+export const GIF_POOL = [
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxx6B9D6h8w/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlR3kU6hNdxCQ6s/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKDkDbIDJieKbVm/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlM0pBf1IT0JHCU/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxx6B9D6h8w/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlO3BJ8LALPW4sE/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKVUn7iM8FMEU24/giphy.gif",
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueXJueSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0HlR3kU6hNdxCQ6s/giphy.gif"
+];
 
 export const isGifUrl = (url: string) => {
   if (!url) return false;
