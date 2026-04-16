@@ -207,10 +207,10 @@ export const getUserById = (id: string): User => {
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
+    // 인플루언서와 인기 포스팅 확률을 대폭 낮춤 (각각 2%, 5%)
     const isInfluencer = Math.random() > 0.98;
     const isPopular = Math.random() > 0.95;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = Math.random() > 0.85; // 15% 확률로 GIF 설정
     
     const lat = centerLat + (Math.random() - 0.5) * 0.04;
     const lng = centerLng + (Math.random() - 0.5) * 0.04;
@@ -223,13 +223,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const categoryRoll = Math.random();
 
-    // 이미지 할당 로직
-    if (isGif) {
-      // GIF인 경우 GIF_POOL에서 이미지 선택
-      const gifUrl = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
-      images = [gifUrl, cokeAdImg];
-      category = 'place'; // 기본 카테고리
-    } else if (isAd) {
+    if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
@@ -256,7 +250,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     return {
       id,
       isAd,
-      isGif,
+      isGif: Math.random() > 0.85,
       isInfluencer,
       category,
       user: createMockUser(isAd ? "sponsored" : id),
