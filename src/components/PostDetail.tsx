@@ -250,10 +250,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
                       {isInfluencer ? (
                         <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />INFLUENCER</div>
-                      ) : isPopular ? (
+                      ) : isPopular && (
                         <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
-                      ) : isAd && (
-                        <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>
                       )}
                       {isGif && !isAd && <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
                     </div>

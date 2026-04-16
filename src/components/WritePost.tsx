@@ -127,7 +127,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden">
+      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden z-[40]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -200,13 +200,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
           </div>
 
-          {/* Bottom Button Area */}
+          {/* Bottom Button Area - Adjusted for BottomNav visibility */}
           <div 
             className={cn(
               "py-4 bg-white shrink-0 transition-all duration-300",
-              isKeyboardOpen ? "pb-2" : "pb-14" // 하단 네비게이션 바를 고려하여 pb-8에서 pb-14로 상향 조정
+              isKeyboardOpen ? "pb-2" : "pb-[120px]"
             )}
-            style={{ paddingBottom: !isKeyboardOpen ? 'calc(env(safe-area-inset-bottom, 0px) + 3.5rem)' : undefined }}
           >
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"

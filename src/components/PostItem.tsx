@@ -231,10 +231,8 @@ const PostItem = ({
           </div>
           {isInfluencer ? (
             <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />INFLUENCER</div>
-          ) : isPopular ? (
+          ) : isPopular && (
             <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
-          ) : isAd && (
-            <div className="absolute top-4 left-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>
           )}
           {isGif && !isAd && <div className="absolute top-4 left-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
         </div>
@@ -288,21 +286,6 @@ const PostItem = ({
               <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
             </div>
           )}
-
-          <AnimatePresence>
-            {showComments && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                <div className="space-y-3 py-2">
-                  {localComments.slice(0, -1).map((comment, i) => (
-                    <div key={i} className="flex gap-2 items-start">
-                      <span className="font-bold text-sm text-gray-900">{comment.user}</span>
-                      <span className="text-sm text-gray-500">{comment.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
             <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
