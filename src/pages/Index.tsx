@@ -294,11 +294,11 @@ const Index = () => {
           </button>
 
           <div className="relative">
-            {/* Pulse Effect Background */}
+            {/* Pulse Effect Background (Stable Glow) */}
             <motion.div 
               animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.3, 0.1, 0.3]
+                scale: [1, 1.15, 1],
+                opacity: [0.4, 0.2, 0.4]
               }}
               transition={{ 
                 duration: 2, 
@@ -308,26 +308,26 @@ const Index = () => {
               className="absolute inset-0 bg-indigo-400 rounded-[24px] blur-xl"
             />
 
-            <motion.button 
+            <button 
               onClick={handleViewAllClick} 
               disabled={displayedMarkers.length === 0} 
-              animate={{ 
-                scale: [1, 1.05, 1],
-                boxShadow: [
-                  "0 15px 30px rgba(79,70,229,0.4)",
-                  "0 20px 40px rgba(79,70,229,0.6)",
-                  "0 15px 30px rgba(79,70,229,0.4)"
-                ]
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10"
+                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
               )}
             >
+              {/* Animated Background Layer (Only this scales) */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.08, 1]
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+                className="absolute inset-0 bg-indigo-600 z-0"
+              />
+
               {/* Shine Sweep Effect */}
               <motion.div 
                 animate={{ 
@@ -339,19 +339,23 @@ const Index = () => {
                   ease: "linear",
                   repeatDelay: 1
                 }}
-                className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] z-20"
+                className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] z-20"
               />
               
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-              <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
-            </motion.button>
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+              
+              {/* Stable Content (No scaling here to prevent jitter) */}
+              <div className="relative z-30 flex flex-col items-center justify-center">
+                <LayoutGrid className="w-7 h-7 stroke-[3px]" />
+                <span className="text-[10px] font-black mt-1">모두 보기</span>
+              </div>
+            </button>
             
             {displayedMarkers.length > 0 && (
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg z-30"
+                className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg z-40"
               >
                 {displayedMarkers.length}
               </motion.div>
