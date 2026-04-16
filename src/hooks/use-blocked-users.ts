@@ -7,9 +7,12 @@ export function useBlockedUsers() {
   const [blockedIds, setBlockedIds] = useState(blockedStore.getAll());
 
   useEffect(() => {
-    return blockedStore.subscribe(() => {
+    const unsubscribe = blockedStore.subscribe(() => {
       setBlockedIds(blockedStore.getAll());
     });
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   return {

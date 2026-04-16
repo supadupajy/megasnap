@@ -9,9 +9,19 @@ import BottomNav from '@/components/BottomNav';
 import { MOCK_NOTIFICATIONS } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface Notification {
+  id: number;
+  type: string;
+  user: { name: string; avatar: string };
+  content: string;
+  time: string;
+  isFollowing?: boolean;
+  image?: string;
+}
+
 const Notifications = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS as Notification[]);
 
   const handleBack = () => {
     if (window.history.length > 1 && window.history.state?.idx > 0) {

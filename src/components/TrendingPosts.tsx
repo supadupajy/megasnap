@@ -4,22 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Flame, ExternalLink, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type Post = {
-  id: string;
-  rank: number;
-  user: { name: string; avatar: string };
-  content: string;
-  location: string;
-  likes: number;
-  image: string;
-  isLiked: boolean;
-  lat: number;
-  lng: number;
-  isAd?: boolean;
-  isInfluencer?: boolean;
-  borderType?: string;
-};
+import { Post } from "@/types";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -169,7 +154,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
                 {displayPosts.map((post) => {
                   const isInfluencer = post.isInfluencer;
-                  const isPopular = post.rank <= 3 || post.borderType === 'popular';
+                  const isPopular = post.rank && post.rank <= 3 || post.borderType === 'popular';
                   
                   return (
                     <div
@@ -180,7 +165,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                       <span
                         className={cn(
                           "text-sm font-black italic w-4 shrink-0 transition-colors",
-                          post.rank <= 3 ? "text-indigo-600" : "text-gray-300 group-hover:text-gray-400",
+                          post.rank && post.rank <= 3 ? "text-indigo-600" : "text-gray-300 group-hover:text-gray-400",
                         )}
                       >
                         {post.rank}

@@ -11,7 +11,7 @@ import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ObservedPostItem = ({ post, onVisible, isViewed, ...props }: { post: Post, onVisible: (id: string) => void, isViewed: boolean, [key: string]: any }) => {
+const ObservedPostItem = ({ post, onVisible, isViewed, onLikeToggle, onLocationClick }: { post: Post, onVisible: (id: string) => void, isViewed: boolean, onLikeToggle: (id: string) => void, onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void }) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +37,12 @@ const ObservedPostItem = ({ post, onVisible, isViewed, ...props }: { post: Post,
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
-      <PostItem {...props} isViewed={isViewed} />
+      <PostItem 
+        {...post}
+        isViewed={isViewed} 
+        onLikeToggle={() => onLikeToggle(post.id)}
+        onLocationClick={onLocationClick}
+      />
     </div>
   );
 };
@@ -150,25 +155,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
                     post={post}
                     onVisible={markAsViewed}
                     isViewed={viewedIds.has(post.id)}
-                    user={post.user}
-                    content={post.content}
-                    location={post.location}
-                    likes={post.likes}
-                    commentsCount={post.commentsCount}
-                    comments={post.comments}
-                    image={post.image}
-                    images={post.images}
-                    adImageIndex={post.adImageIndex}
-                    lat={post.lat}
-                    lng={post.lng}
-                    isLiked={post.isLiked}
-                    isAd={post.isAd}
-                    isGif={post.isGif}
-                    isInfluencer={post.isInfluencer}
-                    category={post.category}
-                    borderType={post.borderType}
-                    disablePulse={true}
-                    onLikeToggle={() => handleLikeToggle(post.id)}
+                    onLikeToggle={handleLikeToggle}
                     onLocationClick={handleLocationClick}
                   />
                 ))}

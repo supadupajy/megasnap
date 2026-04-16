@@ -30,13 +30,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
+    const google = (window as any).google;
     if (isOpen) {
-      if (initialLocation && window.google) {
+      if (initialLocation && google) {
         setIsLoadingAddress(true);
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results, status) => {
+          (results: any, status: any) => {
             if (status === "OK" && results && results[0]) {
               setAddress(results[0].formatted_address);
             } else {
@@ -82,6 +83,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       return;
     }
 
+    if (!supabase) {
+      showError('Supabase 설정이 완료되지 않았습니다. 연동 버튼을 클릭해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
@@ -92,7 +98,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       location_name: address,
       latitude: lat,
       longitude: lng,
-      image_url: capturedImage, // 실제 서비스에서는 Storage에 업로드 후 URL을 저장해야 합니다.
+      image_url: capturedImage,
       user_id: 'me',
       user_name: 'Dyad_Explorer',
       user_avatar: 'https://i.pravatar.cc/150?u=me',
@@ -101,7 +107,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     };
 
     try {
-      // Supabase 'posts' 테이블에 데이터 삽입
       const { data, error } = await supabase
         .from('posts')
         .insert([postData])
@@ -109,7 +114,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
       if (error) throw error;
 
-      // 로컬 상태 업데이트를 위한 객체 생성
       const newPost = {
         id: data[0].id,
         isAd: false,
@@ -133,7 +137,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         borderType: 'none'
       };
 
-      // 축하 효과
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };

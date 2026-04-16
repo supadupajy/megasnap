@@ -18,9 +18,9 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 
 const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
-  const actionOverlayRef = useRef<google.maps.OverlayView | null>(null);
+  const mapInstance = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const actionOverlayRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastShowTime = useRef<number>(0);
   const isLongPressActive = useRef<boolean>(false);
@@ -73,6 +73,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     if (!mapElement.current || mapInstance.current) return;
 
     const initMap = () => {
+      const google = (window as any).google;
       if (typeof google === 'undefined' || !google.maps) return false;
 
       try {
@@ -197,7 +198,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   const showActionPin = (lat: number, lng: number) => {
     hideActionPin();
-    if (!mapInstance.current) return;
+    const google = (window as any).google;
+    if (!mapInstance.current || !google) return;
 
     lastShowTime.current = Date.now();
 
@@ -300,7 +302,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   };
 
   useEffect(() => {
-    if (!isMapReady || !mapInstance.current) return;
+    const google = (window as any).google;
+    if (!isMapReady || !mapInstance.current || !google) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
