@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Compass } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -43,6 +43,7 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isCompassMode, setIsCompassMode] = useState(false);
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
@@ -240,6 +241,7 @@ const Index = () => {
             setIsWriteOpen(true);
           }} 
           center={mapCenter}
+          isCompassMode={isCompassMode}
         />
 
         {/* 인기 포스팅 리스트 배경 레이어 */}
@@ -267,6 +269,21 @@ const Index = () => {
               onPostClick={handleTrendingPostClick}
             />
           </div>
+        </div>
+
+        {/* 나침반 모드 버튼 (오른쪽 상단 인기 리스트 아래) */}
+        <div className="absolute top-[140px] right-4 z-20 pointer-events-auto">
+          <button 
+            onClick={() => setIsCompassMode(!isCompassMode)}
+            className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border",
+              isCompassMode 
+                ? "bg-indigo-600 text-white border-indigo-500" 
+                : "bg-white text-indigo-600 border-indigo-100"
+            )}
+          >
+            <Compass className={cn("w-6 h-6", isCompassMode && "animate-pulse")} />
+          </button>
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">

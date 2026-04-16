@@ -12,11 +12,12 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapWriteClick: (location?: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
+  isCompassMode?: boolean;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
+const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center, isCompassMode }: MapContainerProps) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.OverlayView>>(new Map());
@@ -69,6 +70,45 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
+  // 나침반 모드 센서 연동
+  useEffect(() => {
+    if (!isCompassMode || !mapInstance.current) {
+      if (mapInstance.current) mapInstance.current.setHeading(0);
+      return;
+    }
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      if (!mapInstance.current) return;
+      
+      // absolute orientation (iOS/Android support)
+      let heading = 0;
+      if ((event as any).webkitCompassHeading) {
+        heading = (event as any).webkitCompassHeading;
+      } else if (event.alpha !== null) {
+        heading = 360 - event.alpha;
+      }
+      
+      mapInstance.current.setHeading(heading);
+    };
+
+    // iOS 13+ 권한 요청 대응
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      (DeviceOrientationEvent as any).requestPermission()
+        .then((permissionState: string) => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        })
+        .catch(console.error);
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
+  }, [isCompassMode, isMapReady]);
+
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
@@ -82,6 +122,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           disableDefaultUI: true,
           clickableIcons: false,
           gestureHandling: 'greedy',
+          // 나침반 모드를 위해 heading/tilt 지원 옵션 활성화
+          heading: 0,
+          tilt: 0,
+          mapId: 'DEMO_MAP_ID', // Vector Map 활성화를 위한 더미 ID
           styles: [
             { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
             { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
