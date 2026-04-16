@@ -39,7 +39,6 @@ const Index = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
-  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -71,38 +70,7 @@ const Index = () => {
   }, [filteredAllPosts]);
 
   useEffect(() => {
-    const isMine = selectedCategories.includes('mine');
-    const isUserFilter = selectedCategories.includes('user_filter');
-
-    if (isMine || isUserFilter) {
-      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
-      const filterId = isMine ? 'me' : (targetUserId || 'traveler');
-      
-      const existingUserPosts = allPosts.filter(p => 
-        p.user.id === filterId || (filterId === 'me' && p.user.id === 'Dyad_Explorer')
-      );
-
-      if (existingUserPosts.length < 5) {
-        const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, filterId);
-        setAllPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
-          return [...uniqueNewPosts, ...prev];
-        });
-      }
-    }
-  }, [selectedCategories, targetUserId, mapCenter]);
-
-  useEffect(() => {
-    if (location.state?.filterUserId) {
-      const userId = location.state.filterUserId;
-      const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
-      setTargetUserId(finalUserId);
-      setSelectedCategories([userId === 'me' ? 'mine' : 'user_filter']);
-      
-      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
-      setMapCenter(currentCenter);
-    } else if (location.state?.post) {
+    if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
@@ -160,22 +128,11 @@ const Index = () => {
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      const isMe = post.user.id === 'me' || post.user.id === 'Dyad_Explorer';
-      const isTargetUser = post.user.id === targetUserId || 
-                          (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
-
-      let matchesCategory = false;
-      if (selectedCategories.includes('mine')) {
-        matchesCategory = isMe;
-      } else if (selectedCategories.includes('user_filter')) {
-        matchesCategory = isTargetUser;
-      } else if (selectedCategories.includes('all')) {
-        matchesCategory = true;
-      } else {
-        matchesCategory = selectedCategories.includes(post.category || 'none') ||
-                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                          (selectedCategories.includes('influencer') && post.isInfluencer);
-      }
+      const matchesCategory = selectedCategories.includes('all') || 
+                              selectedCategories.includes(post.category || 'none') ||
+                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
+                              (selectedCategories.includes('mine') && post.user.id === 'me');
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -199,7 +156,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -285,6 +242,19 @@ const Index = () => {
           center={mapCenter}
         />
 
+        {/* 인기 포스팅 리스트 배경 레이어 (펼쳐졌을 때 외부 터치 시 닫기용) */}
+        <AnimatePresence>
+          {isTrendingExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTrendingExpanded(false)}
+              className="absolute inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
+            />
+          )}
+        </AnimatePresence>
+
         <div className={cn(
           "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
@@ -334,67 +304,22 @@ const Index = () => {
           </button>
 
           <div className="relative">
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.15, 1],
-                opacity: [0.4, 0.2, 0.4]
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
-              className="absolute inset-0 bg-indigo-400 rounded-[24px] blur-xl"
-            />
-
             <button 
               onClick={handleViewAllClick} 
               disabled={displayedMarkers.length === 0} 
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
+                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden"
               )}
             >
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.08, 1]
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                }}
-                className="absolute inset-0 bg-indigo-600 z-0"
-              />
-
-              <motion.div 
-                animate={{ 
-                  left: ["-100%", "200%"] 
-                }}
-                transition={{ 
-                  duration: 3, 
-                  repeat: Infinity, 
-                  ease: "linear",
-                  repeatDelay: 1
-                }}
-                className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] z-20"
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
-              
-              <div className="relative z-30 flex flex-col items-center justify-center">
-                <LayoutGrid className="w-7 h-7 stroke-[3px]" />
-                <span className="text-[10px] font-black mt-1">모두 보기</span>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
+              <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
             </button>
             
             {displayedMarkers.length > 0 && (
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg z-40"
-              >
+              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
                 {displayedMarkers.length}
-              </motion.div>
+              </div>
             )}
           </div>
         </div>
@@ -418,7 +343,6 @@ const Index = () => {
         selectedCategories={selectedCategories}
         onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
-        targetUserId={targetUserId}
       />
 
       {selectedPostId && (
