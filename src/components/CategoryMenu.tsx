@@ -11,6 +11,7 @@ interface CategoryMenuProps {
   selectedCategories: string[];
   onSelect: (categories: string[]) => void;
   onClose: () => void;
+  targetUserId?: string | null;
 }
 
 const CATEGORIES = [
@@ -26,7 +27,7 @@ const SPECIAL_FILTERS = [
   { id: 'mine', label: '내 포스팅만 보기', icon: User, color: 'bg-blue-600' },
 ];
 
-const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: CategoryMenuProps) => {
+const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUserId }: CategoryMenuProps) => {
   const isAllSelected = selectedCategories.includes('all');
 
   const toggleCategory = (id: string) => {
@@ -76,7 +77,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: Categor
               </button>
             </div>
             
-            <div className="space-y-5">
+            <div className="space-y-5 max-h-[60vh] overflow-y-auto no-scrollbar">
               {/* All Toggle */}
               <button
                 onClick={() => toggleCategory('all')}
@@ -153,6 +154,32 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose }: Categor
                   })}
                 </div>
               </div>
+
+              {/* Dynamic User Filter */}
+              {targetUserId && (
+                <div className="space-y-3 pt-2 border-t border-gray-100">
+                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-1">유저 필터</p>
+                  <div 
+                    onClick={() => toggleCategory('user_filter')}
+                    className="flex items-center justify-between p-2 hover:bg-indigo-50 rounded-xl cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", selectedCategories.includes('user_filter') ? "bg-indigo-600" : "bg-gray-100 text-gray-400")}>
+                        <User className="w-4 h-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={cn("text-xs font-black", selectedCategories.includes('user_filter') ? "text-indigo-600" : "text-gray-500")}>@{targetUserId}</span>
+                        <span className="text-[9px] text-gray-400 font-bold">님의 포스팅만 보기</span>
+                      </div>
+                    </div>
+                    <Checkbox 
+                      checked={selectedCategories.includes('user_filter')} 
+                      onCheckedChange={() => toggleCategory('user_filter')}
+                      className="rounded-md border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>

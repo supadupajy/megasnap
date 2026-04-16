@@ -220,7 +220,7 @@ const Profile = () => {
               <>
                 {/* 지도에서 보기 배너 (사진/동영상 탭 공통) */}
                 <div 
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/', { state: { filterUserId: 'me' } })}
                   className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
                 >
                   <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">

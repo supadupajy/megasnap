@@ -39,6 +39,7 @@ const Index = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -70,7 +71,17 @@ const Index = () => {
   }, [filteredAllPosts]);
 
   useEffect(() => {
-    if (location.state?.post) {
+    if (location.state?.filterUserId) {
+      const userId = location.state.filterUserId;
+      setTargetUserId(userId);
+      setSelectedCategories(['user_filter']);
+      
+      // 해당 유저의 포스트가 이미 있다면 그 위치로 이동
+      const userPost = allPosts.find(p => p.user.id === userId);
+      if (userPost) {
+        setMapCenter({ lat: userPost.lat, lng: userPost.lng });
+      }
+    } else if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
@@ -90,7 +101,7 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
-  }, [location.state, blockedIds]);
+  }, [location.state, blockedIds, allPosts]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -132,7 +143,8 @@ const Index = () => {
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && post.user.id === 'me');
+                              (selectedCategories.includes('mine') && post.user.id === 'me') ||
+                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -156,7 +168,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -291,7 +303,6 @@ const Index = () => {
           </button>
 
           <div className="relative">
-            {/* Pulse Effect Background (Stable Glow) */}
             <motion.div 
               animate={{ 
                 scale: [1, 1.15, 1],
@@ -312,7 +323,6 @@ const Index = () => {
                 "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
               )}
             >
-              {/* Animated Background Layer (Only this scales) */}
               <motion.div 
                 animate={{ 
                   scale: [1, 1.08, 1]
@@ -325,7 +335,6 @@ const Index = () => {
                 className="absolute inset-0 bg-indigo-600 z-0"
               />
 
-              {/* Shine Sweep Effect */}
               <motion.div 
                 animate={{ 
                   left: ["-100%", "200%"] 
@@ -341,7 +350,6 @@ const Index = () => {
               
               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
               
-              {/* Stable Content (No scaling here to prevent jitter) */}
               <div className="relative z-30 flex flex-col items-center justify-center">
                 <LayoutGrid className="w-7 h-7 stroke-[3px]" />
                 <span className="text-[10px] font-black mt-1">모두 보기</span>
@@ -379,6 +387,7 @@ const Index = () => {
         selectedCategories={selectedCategories}
         onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
+        targetUserId={targetUserId}
       />
 
       {selectedPostId && (
