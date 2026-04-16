@@ -434,6 +434,7 @@ const Index = () => {
       />
     )}
     <PlaceSearch 
+      key={isSearchOpen ? 'open' : 'closed'}
       isOpen={isSearchOpen} 
       onClose={() => setIsSearchOpen(false)} 
       onSelect={handlePlaceSelect} 
