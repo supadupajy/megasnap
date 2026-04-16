@@ -129,7 +129,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
             mass: 1.2       
           }}
           style={{ transformOrigin: 'bottom right' }}
-          className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
+          className="fixed top-[88px] bottom-0 left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
           <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
             <button 
@@ -144,7 +144,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
             </div>
           </div>
 
-          <div className="flex flex-col pt-4">
+          <div className="flex flex-col pt-4 pb-32">
             {filteredPosts.length > 0 ? (
               <>
                 {filteredPosts.map((post) => (
