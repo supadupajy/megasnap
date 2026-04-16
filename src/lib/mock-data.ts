@@ -63,7 +63,6 @@ const GENERAL_POOL = [
 
 export const GIF_POOL = [
   "https://mblogthumb-phinf.pstatic.net/MjAxOTA0MjFfMjc4/MDAxNTU1ODE0NDE0ODU3.drWDdLbQz1d0s0965X4GOXgVGHrw-tMnEbSc0s6yapQg.aub3hwUuijNYHfXtj26ma9NR8kYL_IceNILS9Miv9aIg.GIF.parkamsterdam/IMG_2021.GIF?type=w800",
-  "https://mblogthumb-phinf.pstatic.net/MjAyMTA1MjdfMjI0/MDAxNjIyMDQ2ODc2MDA0.2UJSyRLFY0BzwFD9O2wDPNZvUAZTH3UFEujSX71iKVgg.U0MxROyEBf_Bk5zNBVzKOrDuYuIYjXSJ9zlK0V4tp70g.GIF.hssnfl/IMG_1897.GIF?type=w800",
   "https://dszw1qtcnsa5e.cloudfront.net/community/20200910/cb182eb1-7d92-4bba-b9f1-e2ba799e497f/SmartSelect20190919000029YouTubeVanced.gif",
   "https://coinpick.com/files/attach/images/69383/503/069/2e8cefa582dc5e9d8188aa192cf387ce.gif",
   "https://talkimg.imbc.com/TVianUpload/tvian/TViews/image/2020/01/19/82PJLFUPvF67637150471087374630.gif",
