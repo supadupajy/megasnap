@@ -127,8 +127,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* 배경을 투명하게 처리하기 위해 별도의 스타일 적용 */}
-      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden z-[40] border-none shadow-[0_-20px_50px_rgba(0,0,0,0.1)]">
+      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden z-[40]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -201,7 +200,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
           </div>
 
-          {/* Bottom Button Area */}
+          {/* Bottom Button Area - Adjusted for BottomNav visibility */}
           <div 
             className={cn(
               "py-4 bg-white shrink-0 transition-all duration-300",

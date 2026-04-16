@@ -16,6 +16,9 @@ import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
+import Header from "./components/Header";
+import BottomNav from "./components/BottomNav";
+import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
 
 const queryClient = new QueryClient();
@@ -32,8 +35,11 @@ const ScrollToTop = () => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
+  const hideLayout = ["/chat", "/splash"].some(path => location.pathname.startsWith(path));
+
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       // 1. 현재 열려있는 팝업(다이얼로그, 드로어 등)이 있는지 확인
@@ -73,6 +79,7 @@ const AnimatedRoutes = () => {
   return (
     <div className="relative min-h-screen bg-white">
       <ScrollToTop />
+      {!hideLayout && <Header />}
       
       <main className="relative">
         <AnimatePresence mode="popLayout">
@@ -90,6 +97,13 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
+      {!hideLayout && (
+        <>
+          <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+          <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+        </>
+      )}
+
       <ExitDialog 
         isOpen={showExitDialog} 
         onClose={() => setShowExitDialog(false)} 
@@ -105,7 +119,7 @@ const App = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 3000); // 1.5초에서 3초로 연장
 
     return () => clearTimeout(timer);
   }, []);
