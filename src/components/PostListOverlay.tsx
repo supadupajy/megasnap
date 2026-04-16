@@ -119,27 +119,26 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          initial={{ x: "20%", y: "20%", scale: 0, opacity: 0 }}
-          animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-          exit={{ x: "20%", y: "20%", scale: 0, opacity: 0 }}
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
           transition={{ 
-            duration: 0.3,
-            ease: "easeInOut"
+            duration: 0.4,
+            ease: [0.4, 0, 0.2, 1]
           }}
-          style={{ transformOrigin: 'bottom right' }}
           className="fixed top-[88px] bottom-0 left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
-          <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-600 rotate-[225deg]" />
-            </button>
+          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
             <div>
               <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
             </div>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
+            </button>
           </div>
 
           <div className="flex flex-col pt-4 pb-32">
