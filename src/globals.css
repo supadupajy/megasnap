@@ -100,16 +100,6 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* Pulse Animation for HOT Posts */
-@keyframes hot-pulse {
-  0%, 100% { 
-    transform: scale(1); 
-  }
-  50% { 
-    transform: scale(1.06); 
-  }
-}
-
 /* Floating Animation */
 @keyframes marker-float {
   0%, 100% { transform: translateY(0); }
@@ -118,6 +108,47 @@
 
 .animate-marker-float {
   animation: marker-float 3s ease-in-out infinite;
+}
+
+/* Button Glow Animation */
+@keyframes button-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px 2px rgba(79, 70, 229, 0.4), 0 15px 30px rgba(79, 70, 229, 0.3);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 35px 8px rgba(79, 70, 229, 0.6), 0 20px 40px rgba(79, 70, 229, 0.4);
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+.animate-view-all-glow {
+  animation: button-glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Shine Sweep Animation */
+@keyframes shine-sweep {
+  0% { left: -100%; }
+  20% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.shine-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: shine-sweep 4s infinite;
+  z-index: 20;
 }
 
 /* Marker Appear Animation */
@@ -134,13 +165,6 @@
 
 .animate-marker-appear {
   animation: marker-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* Shine Sweep Animation */
-@keyframes shine-sweep {
-  0% { left: -100%; }
-  20% { left: 100%; }
-  100% { left: 100%; }
 }
 
 /* Marker Highlight Ping Animation */
@@ -171,22 +195,4 @@
   z-index: -1;
   transform: translate(-50%, -50%);
   animation: marker-ping 1s cubic-bezier(0, 0, 0.2, 1) 2 forwards;
-}
-
-.shine-overlay::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transform: skewX(-25deg);
-  animation: shine-sweep 4s infinite;
-  z-index: 20;
 }
