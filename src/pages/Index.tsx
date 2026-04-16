@@ -76,11 +76,18 @@ const Index = () => {
       setTargetUserId(userId);
       setSelectedCategories(['user_filter']);
       
-      // 해당 유저의 포스트가 이미 있다면 그 위치로 이동
-      const userPost = allPosts.find(p => p.user.id === userId);
-      if (userPost) {
-        setMapCenter({ lat: userPost.lat, lng: userPost.lng });
-      }
+      // 현재 중심점 주변으로 해당 유저의 포스팅 10개 즉시 생성
+      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
+      const userSpecificPosts = createMockPosts(currentCenter.lat, currentCenter.lng, 10, userId);
+      
+      setAllPosts(prev => {
+        // 중복 방지하며 추가
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewPosts = userSpecificPosts.filter(p => !existingIds.has(p.id));
+        return [...uniqueNewPosts, ...prev];
+      });
+
+      setMapCenter(currentCenter);
     } else if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
@@ -101,7 +108,7 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
-  }, [location.state, blockedIds, allPosts]);
+  }, [location.state, blockedIds]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;

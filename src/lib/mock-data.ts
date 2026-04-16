@@ -200,13 +200,13 @@ export const getUserById = (id: string): User => {
   return createMockUser(id);
 };
 
-export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
+export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15, specificUserId?: string): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const isInfluencer = Math.random() > 0.98;
-    const isPopular = Math.random() > 0.95;
-    const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && Math.random() > 0.85; // GIF 확률 설정
+    const isInfluencer = specificUserId ? false : Math.random() > 0.98;
+    const isPopular = specificUserId ? false : Math.random() > 0.95;
+    const isAd = !specificUserId && !isInfluencer && !isPopular && Math.random() > 0.92;
+    const isGif = !isAd && Math.random() > 0.85; 
     
     const lat = centerLat + (Math.random() - 0.5) * 0.04;
     const lng = centerLng + (Math.random() - 0.5) * 0.04;
@@ -218,10 +218,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
     if (isGif) {
-      // GIF 포스트인 경우 GIF_POOL에서 이미지 선택
       const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
       images = [gifImg, cokeAdImg];
-      category = 'place'; // 기본 카테고리
+      category = 'place';
     } else if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
@@ -255,7 +254,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isGif,
       isInfluencer,
       category,
-      user: createMockUser(isAd ? "sponsored" : id),
+      user: specificUserId ? createMockUser(specificUserId) : createMockUser(isAd ? "sponsored" : id),
       content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
