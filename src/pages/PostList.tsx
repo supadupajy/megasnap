@@ -116,9 +116,9 @@ const PostList = () => {
       exit={{ x: "100%", y: "100%", opacity: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 260, 
-        damping: 28,
-        mass: 0.8
+        stiffness: 120, // 강성을 낮춰 더 부드럽게
+        damping: 22,    // 감쇠를 조절하여 튕김을 줄임
+        mass: 1.2       // 질량을 높여 묵직한 느낌 추가
       }}
       className="fixed top-[88px] bottom-[106px] left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
     >

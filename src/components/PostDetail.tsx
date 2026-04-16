@@ -165,9 +165,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
         
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
-          <div 
+          <motion.div 
             key={post.id} 
-            onClick={onClose}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ 
+              duration: 0.45, 
+              ease: [0.4, 0, 0.2, 1] // 부드러운 가속도 곡선
+            }}
             className={cn(
               "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
             )}
@@ -284,7 +290,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </DialogContent>
     </Dialog>
