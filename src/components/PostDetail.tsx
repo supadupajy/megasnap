@@ -31,7 +31,7 @@ interface PostDetailProps {
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
+const PostDetail = ({ posts = [], initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { blockUser } = useBlockedUsers();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,7 +52,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [currentIndex, isOpen]);
 
   useEffect(() => {
-    if (isOpen && !hasInitialized && initialIndex !== -1) {
+    if (isOpen && !hasInitialized && initialIndex !== -1 && posts && posts.length > 0) {
       setCurrentIndex(initialIndex);
       setHasInitialized(true);
       setShowComments(false);
@@ -67,8 +67,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
-    const currentPost = posts[currentIndex];
-    if (isOpen && currentPost) {
+    if (isOpen && posts && posts[currentIndex]) {
+      const currentPost = posts[currentIndex];
       if (onViewPost) onViewPost(currentPost.id);
       setShowComments(false);
       setCurrentImageIndex(0);
@@ -91,7 +91,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     setCommentInput('');
   };
 
-  if (!isOpen || posts.length === 0) return null;
+  if (!isOpen || !posts || posts.length === 0) return null;
   const post = posts[currentIndex];
   if (!post) return null;
 

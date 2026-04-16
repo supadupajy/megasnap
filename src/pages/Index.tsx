@@ -299,7 +299,21 @@ const Index = () => {
       </motion.div>
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <PostDetail post={selectedPost} isOpen={!!selectedPost} onClose={() => setSelectedPost(null)} />
+      
+      <PostDetail 
+        posts={selectedPost ? [selectedPost] : []} 
+        initialIndex={0}
+        isOpen={!!selectedPost} 
+        onClose={() => setSelectedPost(null)} 
+        onLikeToggle={(postId) => {
+          setPosts(prev => prev.map(p => p.id === postId ? { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 } : p));
+        }}
+        onLocationClick={(lat, lng) => {
+          setMapCenter({ lat, lng });
+          setSelectedPost(null);
+        }}
+      />
+
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
       <PlaceSearch 
         isOpen={isPlaceSearchOpen} 
