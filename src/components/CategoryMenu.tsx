@@ -12,6 +12,7 @@ interface CategoryMenuProps {
   onSelect: (categories: string[]) => void;
   onClose: () => void;
   targetUserId?: string | null;
+  onActivateUserFilter?: (userId: string) => void;
 }
 
 const CATEGORIES = [
@@ -27,12 +28,18 @@ const SPECIAL_FILTERS = [
   { id: 'mine', label: '내 포스팅만 보기', icon: User, color: 'bg-blue-600' },
 ];
 
-const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUserId }: CategoryMenuProps) => {
+const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUserId, onActivateUserFilter }: CategoryMenuProps) => {
   const isAllSelected = selectedCategories.includes('all');
 
   const toggleCategory = (id: string) => {
     if (id === 'all') {
       onSelect(['all']);
+      return;
+    }
+
+    // '내 포스팅만 보기' 클릭 시 프로필 페이지의 '지도에서 보기'와 동일한 로직 수행
+    if (id === 'mine' && onActivateUserFilter) {
+      onActivateUserFilter('me');
       return;
     }
 
@@ -130,7 +137,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                 <div className="grid grid-cols-1 gap-1">
                   {SPECIAL_FILTERS.map((filter) => {
                     const Icon = filter.icon;
-                    const isChecked = selectedCategories.includes(filter.id);
+                    const isChecked = selectedCategories.includes(filter.id) || (filter.id === 'mine' && selectedCategories.includes('user_filter') && targetUserId === 'Dyad_Explorer');
                     
                     return (
                       <div 
