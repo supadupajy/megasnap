@@ -203,10 +203,10 @@ export const getUserById = (id: string): User => {
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    // 인플루언서와 인기 포스팅 확률을 대폭 낮춤 (각각 2%, 5%)
     const isInfluencer = Math.random() > 0.98;
     const isPopular = Math.random() > 0.95;
     const isAd = !isInfluencer && !isPopular && Math.random() > 0.92;
+    const isGif = !isAd && Math.random() > 0.85; // GIF 확률 설정
     
     const lat = centerLat + (Math.random() - 0.5) * 0.04;
     const lng = centerLng + (Math.random() - 0.5) * 0.04;
@@ -217,27 +217,33 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
-    const categoryRoll = Math.random();
-
-    if (isAd) {
+    if (isGif) {
+      // GIF 포스트인 경우 GIF_POOL에서 이미지 선택
+      const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      images = [gifImg, cokeAdImg];
+      category = 'place'; // 기본 카테고리
+    } else if (isAd) {
       content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
       images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
-    } else if (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15) {
-      images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
-      category = 'accident';
-    } else if (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35)) {
-      images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
-      category = 'animal';
-    } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
-      images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
-      category = 'food';
-    } else if (categoryRoll >= 0.6 && categoryRoll < 0.85) {
-      images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
-      category = 'place';
     } else {
-      images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
-      category = 'none';
+      const categoryRoll = Math.random();
+      if (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15) {
+        images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
+        category = 'accident';
+      } else if (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35)) {
+        images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
+        category = 'animal';
+      } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
+        images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
+        category = 'food';
+      } else if (categoryRoll >= 0.6 && categoryRoll < 0.85) {
+        images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
+        category = 'place';
+      } else {
+        images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
+        category = 'none';
+      }
     }
 
     const randomCount = Math.floor(Math.random() * 16) + 10;
@@ -246,7 +252,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     return {
       id,
       isAd,
-      isGif: Math.random() > 0.85,
+      isGif,
       isInfluencer,
       category,
       user: createMockUser(isAd ? "sponsored" : id),
