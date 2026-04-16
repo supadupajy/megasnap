@@ -68,36 +68,36 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute bottom-[140px] left-4 z-[70] bg-white rounded-[32px] shadow-2xl border border-gray-100 p-5 w-64"
+            className="absolute bottom-[140px] left-4 z-[70] bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 w-60"
           >
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-xs font-black text-gray-900 uppercase tracking-widest">필터 설정</span>
-              <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">필터 설정</span>
+              <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-4 h-4 text-gray-400" />
               </button>
             </div>
             
-            <div className="space-y-5 max-h-[60vh] overflow-y-auto no-scrollbar">
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto no-scrollbar">
               {/* All Toggle */}
               <button
                 onClick={() => toggleCategory('all')}
                 className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-2xl transition-all border-2",
+                  "w-full flex items-center justify-between p-2 rounded-xl transition-all border-2",
                   isAllSelected ? "bg-indigo-50 border-indigo-600" : "bg-gray-50 border-transparent"
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white", isAllSelected ? "bg-indigo-600" : "bg-gray-300")}>
-                    <Sparkles className="w-4 h-4" />
+                <div className="flex items-center gap-2.5">
+                  <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white", isAllSelected ? "bg-indigo-600" : "bg-gray-300")}>
+                    <Sparkles className="w-3.5 h-3.5" />
                   </div>
-                  <span className={cn("text-sm font-bold", isAllSelected ? "text-indigo-600" : "text-gray-600")}>전체 보기</span>
+                  <span className={cn("text-xs font-bold", isAllSelected ? "text-indigo-600" : "text-gray-600")}>전체 보기</span>
                 </div>
-                {isAllSelected && <Check className="w-4 h-4 text-indigo-600" />}
+                {isAllSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
               </button>
 
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
-                <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
+                <div className="grid grid-cols-1 gap-1">
                   {CATEGORIES.map((cat) => {
                     const Icon = cat.icon;
                     const isChecked = selectedCategories.includes(cat.id);
@@ -106,18 +106,18 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                       <div 
                         key={cat.id}
                         onClick={() => toggleCategory(cat.id)}
-                        className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors group"
+                        className="flex items-center justify-between p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors group"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? cat.color : "bg-gray-100 text-gray-400")}>
-                            <Icon className="w-4 h-4" />
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? cat.color : "bg-gray-100 text-gray-400")}>
+                            <Icon className="w-3.5 h-3.5" />
                           </div>
-                          <span className={cn("text-sm font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{cat.label}</span>
+                          <span className={cn("text-xs font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{cat.label}</span>
                         </div>
                         <Checkbox 
                           checked={isChecked} 
                           onCheckedChange={() => toggleCategory(cat.id)}
-                          className="rounded-md border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                          className="w-4 h-4 rounded border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                         />
                       </div>
                     );
@@ -125,9 +125,9 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">특수 필터</p>
-                <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">특수 필터</p>
+                <div className="grid grid-cols-1 gap-1">
                   {SPECIAL_FILTERS.map((filter) => {
                     const Icon = filter.icon;
                     const isChecked = selectedCategories.includes(filter.id);
@@ -136,18 +136,18 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                       <div 
                         key={filter.id}
                         onClick={() => toggleCategory(filter.id)}
-                        className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors group"
+                        className="flex items-center justify-between p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors group"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? filter.color : "bg-gray-100 text-gray-400")}>
-                            <Icon className={cn("w-4 h-4", (filter.id === 'hot' || filter.id === 'mine') && isChecked && "fill-white")} />
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? filter.color : "bg-gray-100 text-gray-400")}>
+                            <Icon className={cn("w-3.5 h-3.5", (filter.id === 'hot' || filter.id === 'mine') && isChecked && "fill-white")} />
                           </div>
-                          <span className={cn("text-sm font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{filter.label}</span>
+                          <span className={cn("text-xs font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{filter.label}</span>
                         </div>
                         <Checkbox 
                           checked={isChecked} 
                           onCheckedChange={() => toggleCategory(filter.id)}
-                          className="rounded-md border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                          className="w-4 h-4 rounded border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                         />
                       </div>
                     );
@@ -157,25 +157,25 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
 
               {/* Dynamic User Filter */}
               {targetUserId && (
-                <div className="space-y-3 pt-2 border-t border-gray-100">
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-1">유저 필터</p>
+                <div className="space-y-2 pt-1.5 border-t border-gray-100">
+                  <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest px-1">유저 필터</p>
                   <div 
                     onClick={() => toggleCategory('user_filter')}
-                    className="flex items-center justify-between p-2 hover:bg-indigo-50 rounded-xl cursor-pointer transition-colors group"
+                    className="flex items-center justify-between p-1.5 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", selectedCategories.includes('user_filter') ? "bg-indigo-600" : "bg-gray-100 text-gray-400")}>
-                        <User className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", selectedCategories.includes('user_filter') ? "bg-indigo-600" : "bg-gray-100 text-gray-400")}>
+                        <User className="w-3.5 h-3.5" />
                       </div>
                       <div className="flex flex-col">
-                        <span className={cn("text-xs font-black", selectedCategories.includes('user_filter') ? "text-indigo-600" : "text-gray-500")}>@{targetUserId}</span>
-                        <span className="text-[9px] text-gray-400 font-bold">님의 포스팅만 보기</span>
+                        <span className={cn("text-[10px] font-black", selectedCategories.includes('user_filter') ? "text-indigo-600" : "text-gray-500")}>@{targetUserId}</span>
+                        <span className="text-[8px] text-gray-400 font-bold">님의 포스팅만 보기</span>
                       </div>
                     </div>
                     <Checkbox 
                       checked={selectedCategories.includes('user_filter')} 
                       onCheckedChange={() => toggleCategory('user_filter')}
-                      className="rounded-md border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                      className="w-4 h-4 rounded border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                     />
                   </div>
                 </div>
