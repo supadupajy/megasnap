@@ -262,6 +262,19 @@ const Index = () => {
           center={mapCenter}
         />
 
+        {/* Trending Posts Backdrop */}
+        <AnimatePresence>
+          {isTrendingExpanded && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTrendingExpanded(false)}
+              className="fixed inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
+            />
+          )}
+        </AnimatePresence>
+
         <div className={cn(
           "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
           isTrendingExpanded ? "z-40" : "z-10"
