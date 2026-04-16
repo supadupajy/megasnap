@@ -33,14 +33,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
-    const kakao = (window as any).kakao;
-    if (!kakao || !kakao.maps) {
-      setError("카카오맵 라이브러리를 찾을 수 없습니다.");
-      return;
-    }
+    const initMap = () => {
+      const kakao = (window as any).kakao;
+      if (!kakao || !kakao.maps) return false;
 
-    // autoload=false 설정을 사용했으므로 kakao.maps.load() 내에서 초기화해야 합니다.
-    kakao.maps.load(() => {
       try {
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
@@ -70,7 +66,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         kakao.maps.event.addListener(map, 'idle', updateMapData);
 
-        // 롱프레스 구현
+        // 롱프레스 구현을 위한 이벤트 리스너
         const container = mapElement.current!;
         
         const handleStart = (e: any) => {
@@ -82,6 +78,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           
           pressTimer.current = setTimeout(() => {
             isLongPressActive.current = true;
+            // 카카오맵 좌표 변환
             const proj = map.getProjection();
             const latlng = proj.fromPointToLatLng(new kakao.maps.Point(point.x, point.y));
             if (latlng) {
@@ -125,14 +122,18 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           isLongPressActive.current = false;
         });
 
-        // 초기 데이터 업데이트
-        updateMapData();
-
+        return true;
       } catch (e) {
-        console.error(e);
-        setError("지도를 초기화하는 중 오류가 발생했습니다.");
+        setError("지도를 불러오는 중 오류가 발생했습니다.");
+        return false;
       }
-    });
+    };
+
+    const timer = setInterval(() => {
+      if (initMap()) clearInterval(timer);
+    }, 100);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
