@@ -272,11 +272,11 @@ const Index = () => {
         </div>
 
         {/* 나침반 모드 버튼 (오른쪽 상단 인기 리스트 아래) */}
-        <div className="absolute top-[140px] right-4 z-20 pointer-events-auto">
+        <div className="absolute top-[160px] right-4 z-20 pointer-events-auto">
           <button 
             onClick={() => setIsCompassMode(!isCompassMode)}
             className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border",
+              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all border",
               isCompassMode 
                 ? "bg-indigo-600 text-white border-indigo-500" 
                 : "bg-white text-indigo-600 border-indigo-100"
@@ -304,7 +304,7 @@ const Index = () => {
           </button>
           <button 
             onClick={handleCurrentLocation}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-100"
           >
             <Navigation className="w-6 h-6 fill-white" />
           </button>
