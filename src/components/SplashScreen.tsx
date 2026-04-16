@@ -80,8 +80,12 @@ const SplashScreen = () => {
                   <span className="text-[10px] font-black text-white uppercase tracking-tighter">The New i7</span>
                   <span className="text-[8px] font-bold text-white/70">This is Forwardism.</span>
                 </div>
-                <div className="w-6 h-6 bg-white rounded-full p-1">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/2048px-BMW.svg.png" alt="BMW" className="w-full h-full object-contain" />
+                <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg" 
+                    alt="BMW" 
+                    className="w-full h-full object-contain" 
+                  />
                 </div>
               </div>
             </div>
