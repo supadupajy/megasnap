@@ -66,7 +66,12 @@ export const GIF_POOL = [
   "https://dszw1qtcnsa5e.cloudfront.net/community/20200910/cb182eb1-7d92-4bba-b9f1-e2ba799e497f/SmartSelect20190919000029YouTubeVanced.gif",
   "https://coinpick.com/files/attach/images/69383/503/069/2e8cefa582dc5e9d8188aa192cf387ce.gif",
   "https://talkimg.imbc.com/TVianUpload/tvian/TViews/image/2020/01/19/82PJLFUPvF67637150471087374630.gif",
-  "https://i.makeagif.com/media/6-30-2021/S02tQQ.gif"
+  "https://i.makeagif.com/media/6-30-2021/S02tQQ.gif",
+  "https://coinpick.com/files/attach/images/69383/807/070/55eb4883efd402e4b29858c545192fb1.gif",
+  "https://i2.ruliweb.com/cmt/20/11/04/1759234a25446f609.gif",
+  "https://media.giphy.com/media/3oEjHIkSghZWtK1xCg/giphy.gif",
+  "https://upload3.inven.co.kr/upload/2025/04/26/bbs/i0827433132.gif",
+  "https://xe.obg.co.kr/files/attach/images/4199/283/004/22bf3016a34eda54a624f8b031041b67.gif"
 ];
 
 export const isGifUrl = (url: string) => {
