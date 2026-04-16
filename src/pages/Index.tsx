@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Compass } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -39,11 +39,11 @@ const Index = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [isCompassMode, setIsCompassMode] = useState(false);
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
@@ -71,7 +71,15 @@ const Index = () => {
   }, [filteredAllPosts]);
 
   useEffect(() => {
-    if (location.state?.post) {
+    if (location.state?.filterUserId) {
+      const userId = location.state.filterUserId;
+      const finalUserId = userId === 'me' ? 'Dyad_Explorer' : userId;
+      setTargetUserId(finalUserId);
+      setSelectedCategories([userId === 'me' ? 'mine' : 'user_filter']);
+      
+      const currentCenter = mapCenter || { lat: 37.5665, lng: 126.9780 };
+      setMapCenter(currentCenter);
+    } else if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
@@ -129,11 +137,22 @@ const Index = () => {
                              post.lng >= sw.lng && post.lng <= ne.lng;
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      const matchesCategory = selectedCategories.includes('all') || 
-                              selectedCategories.includes(post.category || 'none') ||
-                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && post.user.id === 'me');
+      const isMe = post.user.id === 'me' || post.user.id === 'Dyad_Explorer';
+      const isTargetUser = post.user.id === targetUserId || 
+                          (targetUserId === 'Dyad_Explorer' && post.user.id === 'me');
+
+      let matchesCategory = false;
+      if (selectedCategories.includes('mine')) {
+        matchesCategory = isMe;
+      } else if (selectedCategories.includes('user_filter')) {
+        matchesCategory = isTargetUser;
+      } else if (selectedCategories.includes('all')) {
+        matchesCategory = true;
+      } else {
+        matchesCategory = selectedCategories.includes(post.category || 'none') ||
+                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                          (selectedCategories.includes('influencer') && post.isInfluencer);
+      }
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -157,7 +176,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -227,7 +246,7 @@ const Index = () => {
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      className="relative w-full h-[100dvh] overflow-hidden bg-gray-50"
+      className="relative w-full h-screen overflow-hidden bg-gray-50"
     >
       <div className="absolute inset-0 z-0">
         <MapContainer 
@@ -241,21 +260,7 @@ const Index = () => {
             setIsWriteOpen(true);
           }} 
           center={mapCenter}
-          isCompassMode={isCompassMode}
         />
-
-        {/* 인기 포스팅 리스트 배경 레이어 */}
-        <AnimatePresence>
-          {isTrendingExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsTrendingExpanded(false)}
-              className="absolute inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
-            />
-          )}
-        </AnimatePresence>
 
         <div className={cn(
           "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
@@ -269,21 +274,6 @@ const Index = () => {
               onPostClick={handleTrendingPostClick}
             />
           </div>
-        </div>
-
-        {/* 나침반 모드 버튼 (오른쪽 상단 인기 리스트 아래) */}
-        <div className="absolute top-[160px] right-4 z-20 pointer-events-auto">
-          <button 
-            onClick={() => setIsCompassMode(!isCompassMode)}
-            className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all border",
-              isCompassMode 
-                ? "bg-indigo-600 text-white border-indigo-500" 
-                : "bg-white text-indigo-600 border-indigo-100"
-            )}
-          >
-            <Compass className={cn("w-6 h-6", isCompassMode && "animate-pulse")} />
-          </button>
         </div>
 
         <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
@@ -304,7 +294,7 @@ const Index = () => {
           </button>
           <button 
             onClick={handleCurrentLocation}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-100"
+            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
           >
             <Navigation className="w-6 h-6 fill-white" />
           </button>
@@ -321,22 +311,67 @@ const Index = () => {
           </button>
 
           <div className="relative">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.15, 1],
+                opacity: [0.4, 0.2, 0.4]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute inset-0 bg-indigo-400 rounded-[24px] blur-xl"
+            />
+
             <button 
               onClick={handleViewAllClick} 
               disabled={displayedMarkers.length === 0} 
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden"
+                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-              <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.08, 1]
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+                className="absolute inset-0 bg-indigo-600 z-0"
+              />
+
+              <motion.div 
+                animate={{ 
+                  left: ["-100%", "200%"] 
+                }}
+                transition={{ 
+                  duration: 3, 
+                  repeat: Infinity, 
+                  ease: "linear",
+                  repeatDelay: 1
+                }}
+                className="absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] z-20"
+              />
+              
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+              
+              <div className="relative z-30 flex flex-col items-center justify-center">
+                <LayoutGrid className="w-7 h-7 stroke-[3px]" />
+                <span className="text-[10px] font-black mt-1">모두 보기</span>
+              </div>
             </button>
             
             {displayedMarkers.length > 0 && (
-              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg z-40"
+              >
                 {displayedMarkers.length}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -360,6 +395,7 @@ const Index = () => {
         selectedCategories={selectedCategories}
         onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
+        targetUserId={targetUserId}
       />
 
       {selectedPostId && (
