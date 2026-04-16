@@ -17,7 +17,7 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'saved'>('grid');
 
   // 내 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
@@ -148,10 +148,10 @@ const Profile = () => {
               onClick={() => setViewMode('grid')}
               className={cn(
                 "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'grid' ? "border-b-2 border-indigo-600" : "text-gray-300"
+                (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300"
               )}
             >
-              <Grid className={cn("w-6 h-6", viewMode === 'grid' ? "text-indigo-600" : "")} />
+              <Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} />
             </button>
             <button 
               onClick={() => setViewMode('gifs')}
@@ -163,18 +163,18 @@ const Profile = () => {
               <Play className={cn("w-6 h-6", viewMode === 'gifs' ? "text-indigo-600" : "")} />
             </button>
             <button 
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode('saved')}
               className={cn(
                 "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'list' ? "border-b-2 border-indigo-600" : "text-gray-300"
+                viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300"
               )}
             >
-              <Bookmark className={cn("w-6 h-6", viewMode === 'list' ? "text-indigo-600" : "")} />
+              <Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} />
             </button>
           </div>
 
           {/* Content Area */}
-          {viewMode === 'list' ? (
+          {viewMode === 'saved' ? (
             <div className="flex flex-col -mx-6">
               <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
                 <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
@@ -213,6 +213,34 @@ const Profile = () => {
                   저장된 게시물이 없습니다.
                 </div>
               )}
+            </div>
+          ) : viewMode === 'list' ? (
+            <div className="flex flex-col -mx-6">
+              {myPosts.map((post) => (
+                <div 
+                  key={post.id} 
+                  id={`post-${post.id}`}
+                  className="scroll-mt-[150px]"
+                >
+                  <PostItem
+                    user={post.user}
+                    content={post.content}
+                    location={post.location}
+                    likes={post.likes}
+                    commentsCount={post.commentsCount}
+                    comments={post.comments}
+                    image={post.image}
+                    images={post.images}
+                    isLiked={post.isLiked}
+                    isAd={post.isAd}
+                    isGif={post.isGif}
+                    isInfluencer={post.isInfluencer}
+                    borderType={post.borderType}
+                    disablePulse={true}
+                    onLikeToggle={() => handleLikeToggle(post.id, false)}
+                  />
+                </div>
+              ))}
             </div>
           ) : viewMode === 'gifs' ? (
             <div className="grid grid-cols-3 gap-1">

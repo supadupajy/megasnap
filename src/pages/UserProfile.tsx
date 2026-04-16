@@ -26,7 +26,7 @@ const UserProfile = () => {
   const { userId } = useParams();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'saved'>('grid');
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
@@ -40,7 +40,6 @@ const UserProfile = () => {
     // 사용자의 게시물 30개 생성
     const rawPosts = createMockPosts(37.5665, 126.9780, 30);
     
-    // 10개는 확실히 GIF로 설정하고 나머지는 일반 포스트로 설정하여 섞기
     const userPosts = rawPosts.map((p, idx) => {
       const isGif = idx < 10;
       const image = isGif 
@@ -58,11 +57,11 @@ const UserProfile = () => {
           avatar: user.avatar
         }
       };
-    }).sort(() => Math.random() - 0.5); // 랜덤하게 섞기
+    }).sort(() => Math.random() - 0.5);
 
     setPosts(userPosts);
 
-    // 사용자가 저장한 게시물 (북마크 탭용)
+    // 사용자가 저장한 게시물
     const saved = createMockPosts(37.5665, 126.9780, 12)
       .filter(p => p.user.id !== user.id)
       .map(p => ({ ...p, isLiked: true }));
@@ -225,10 +224,10 @@ const UserProfile = () => {
               onClick={() => setViewMode('grid')}
               className={cn(
                 "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'grid' ? "border-b-2 border-indigo-600" : "text-gray-300"
+                (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300"
               )}
             >
-              <Grid className={cn("w-6 h-6", viewMode === 'grid' ? "text-indigo-600" : "")} />
+              <Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} />
             </button>
             <button 
               onClick={() => setViewMode('gifs')}
@@ -240,18 +239,18 @@ const UserProfile = () => {
               <Play className={cn("w-6 h-6", viewMode === 'gifs' ? "text-indigo-600" : "")} />
             </button>
             <button 
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode('saved')}
               className={cn(
                 "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'list' ? "border-b-2 border-indigo-600" : "text-gray-300"
+                viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300"
               )}
             >
-              <Bookmark className={cn("w-6 h-6", viewMode === 'list' ? "text-indigo-600" : "")} />
+              <Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} />
             </button>
           </div>
 
           {/* Content Area */}
-          {viewMode === 'list' ? (
+          {viewMode === 'saved' ? (
             <div className="flex flex-col -mx-6">
               <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
                 <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
@@ -290,6 +289,34 @@ const UserProfile = () => {
                   저장된 게시물이 없습니다.
                 </div>
               )}
+            </div>
+          ) : viewMode === 'list' ? (
+            <div className="flex flex-col -mx-6">
+              {posts.map((post) => (
+                <div 
+                  key={post.id} 
+                  id={`post-${post.id}`}
+                  className="scroll-mt-[150px]"
+                >
+                  <PostItem
+                    user={post.user}
+                    content={post.content}
+                    location={post.location}
+                    likes={post.likes}
+                    commentsCount={post.commentsCount}
+                    comments={post.comments}
+                    image={post.image}
+                    images={post.images}
+                    isLiked={post.isLiked}
+                    isAd={post.isAd}
+                    isGif={post.isGif}
+                    isInfluencer={post.isInfluencer}
+                    borderType={post.borderType}
+                    disablePulse={true}
+                    onLikeToggle={() => handleLikeToggle(post.id, false)}
+                  />
+                </div>
+              ))}
             </div>
           ) : viewMode === 'gifs' ? (
             <div className="grid grid-cols-3 gap-1">
