@@ -243,115 +243,116 @@ const Index = () => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      className="relative w-full h-screen overflow-hidden bg-gray-50"
-    >
-      <div className="absolute inset-0 z-0">
-        <MapContainer 
-          posts={displayedMarkers}
-          viewedPostIds={viewedIds}
-          highlightedPostId={highlightedPostId}
-          onMarkerClick={(p) => setSelectedPostId(p.id)}
-          onMapChange={setMapData}
-          onMapWriteClick={(loc) => {
-            setPendingLocation(loc);
-            setIsWriteOpen(true);
-          }} 
-          center={mapCenter}
-        />
+    <>
+      <motion.div 
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
+        className="relative w-full h-screen overflow-hidden bg-gray-50"
+      >
+        <div className="absolute inset-0 z-0">
+          <MapContainer 
+            posts={displayedMarkers}
+            viewedPostIds={viewedIds}
+            highlightedPostId={highlightedPostId}
+            onMarkerClick={(p) => setSelectedPostId(p.id)}
+            onMapChange={setMapData}
+            onMapWriteClick={(loc) => {
+              setPendingLocation(loc);
+              setIsWriteOpen(true);
+            }} 
+            center={mapCenter}
+          />
 
-        {/* Trending Posts Backdrop */}
-        <AnimatePresence>
-          {isTrendingExpanded && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsTrendingExpanded(false)}
-              className="fixed inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
-            />
-          )}
-        </AnimatePresence>
-
-        <div className={cn(
-          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
-          isTrendingExpanded ? "z-40" : "z-10"
-        )}>
-          <div className="w-full shrink-0 pointer-events-auto">
-            <TrendingPosts 
-              posts={trendingPosts}
-              isExpanded={isTrendingExpanded}
-              onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-              onPostClick={handleTrendingPostClick}
-            />
-          </div>
-        </div>
-
-        <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
-          <button 
-            onClick={() => setIsCategoryOpen(true)}
-            className={cn(
-              "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
-              !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
+          {/* Trending Posts Backdrop */}
+          <AnimatePresence>
+            {isTrendingExpanded && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsTrendingExpanded(false)}
+                className="fixed inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
+              />
             )}
-          >
-            <Layers className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={() => setIsSearchOpen(true)}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-          >
-            <Search className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={handleCurrentLocation}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-          >
-            <Navigation className="w-6 h-6 fill-white" />
-          </button>
-        </div>
+          </AnimatePresence>
 
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
-          <button 
-            onClick={handleRefresh} 
-            disabled={isRefreshing} 
-            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
-          >
-            <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
-            <span className="text-[9px] font-black mt-1">재검색</span>
-          </button>
+          <div className={cn(
+            "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+            isTrendingExpanded ? "z-40" : "z-10"
+          )}>
+            <div className="w-full shrink-0 pointer-events-auto">
+              <TrendingPosts 
+                posts={trendingPosts}
+                isExpanded={isTrendingExpanded}
+                onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+                onPostClick={handleTrendingPostClick}
+              />
+            </div>
+          </div>
 
-          <div className="relative">
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.15, 1],
-                opacity: [0.4, 0.2, 0.4]
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
-              className="absolute inset-0 bg-indigo-400 rounded-[24px] blur-xl"
-            />
-
+          <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
             <button 
-              onClick={handleViewAllClick} 
-              disabled={displayedMarkers.length === 0} 
+              onClick={() => setIsCategoryOpen(true)}
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
+                "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
+                !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
               )}
             >
+              <Layers className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => setIsSearchOpen(true)}
+              className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+            >
+              <Search className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={handleCurrentLocation}
+              className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+            >
+              <Navigation className="w-6 h-6 fill-white" />
+            </button>
+          </div>
+
+          <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
+            <button 
+              onClick={handleRefresh} 
+              disabled={isRefreshing} 
+              className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
+            >
+              <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
+              <span className="text-[9px] font-black mt-1">재검색</span>
+            </button>
+
+            <div className="relative">
               <motion.div 
                 animate={{ 
-                  scale: [1, 1.08, 1]
+                  scale: [1, 1.15, 1],
+                  opacity: [0.4, 0.2, 0.4]
                 }}
                 transition={{ 
                   duration: 2, 
                   repeat: Infinity, 
                   ease: "easeInOut" 
+                }}
+                className="absolute inset-0 bg-indigo-400 rounded-[24px] blur-xl"
+              />
+
+              <button 
+                onClick={handleViewAllClick} 
+                disabled={displayedMarkers.length === 0} 
+                className={cn(
+                  "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative z-10 shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
+                )}
+              >
+                <motion.div 
+                  animate={{ 
+                    scale: [1, 1.08, 1]
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
                 }}
                 className="absolute inset-0 bg-indigo-600 z-0"
               />
@@ -402,52 +403,54 @@ const Index = () => {
           )}
         </AnimatePresence>
       </div>
-
-      <CategoryMenu 
-        isOpen={isCategoryOpen}
-        selectedCategories={selectedCategories}
-        onSelect={setSelectedCategories}
-        onClose={() => setIsCategoryOpen(false)}
-        targetUserId={targetUserId}
-      />
-
-      {selectedPostId && (
-        <PostDetail 
-          posts={displayedMarkers} 
-          initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
-          isOpen={true} 
-          onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed}
-          onLikeToggle={handleLikeToggle}
-          onLocationClick={(lat, lng) => {
-            const post = allPosts.find(p => p.lat === lat && p.lng === lng);
-            if (post) {
-              setHighlightedPostId(post.id);
-              setTimeout(() => setHighlightedPostId(null), 3000);
-            }
-            setMapCenter({ lat, lng });
-            setSelectedPostId(null);
-          }}
-        />
-      )}
-      <PlaceSearch 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-        onSelect={handlePlaceSelect} 
-      />
-      <WritePost 
-        isOpen={isWriteOpen} 
-        onClose={() => setIsWriteOpen(false)} 
-        initialLocation={pendingLocation}
-        onPostCreated={handlePostCreated}
-      />
-      <PostListOverlay 
-        isOpen={isPostListOpen}
-        onClose={() => setIsPostListOpen(false)}
-        initialPosts={displayedMarkers}
-        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
-      />
     </motion.div>
+
+    {/* Overlays outside motion.div to avoid fixed positioning bugs on mobile */}
+    <CategoryMenu 
+      isOpen={isCategoryOpen}
+      selectedCategories={selectedCategories}
+      onSelect={setSelectedCategories}
+      onClose={() => setIsCategoryOpen(false)}
+      targetUserId={targetUserId}
+    />
+
+    {selectedPostId && (
+      <PostDetail 
+        posts={displayedMarkers} 
+        initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
+        isOpen={true} 
+        onClose={() => setSelectedPostId(null)} 
+        onViewPost={markAsViewed}
+        onLikeToggle={handleLikeToggle}
+        onLocationClick={(lat, lng) => {
+          const post = allPosts.find(p => p.lat === lat && p.lng === lng);
+          if (post) {
+            setHighlightedPostId(post.id);
+            setTimeout(() => setHighlightedPostId(null), 3000);
+          }
+          setMapCenter({ lat, lng });
+          setSelectedPostId(null);
+        }}
+      />
+    )}
+    <PlaceSearch 
+      isOpen={isSearchOpen} 
+      onClose={() => setIsSearchOpen(false)} 
+      onSelect={handlePlaceSelect} 
+    />
+    <WritePost 
+      isOpen={isWriteOpen} 
+      onClose={() => setIsWriteOpen(false)} 
+      initialLocation={pendingLocation}
+      onPostCreated={handlePostCreated}
+    />
+    <PostListOverlay 
+      isOpen={isPostListOpen}
+      onClose={() => setIsPostListOpen(false)}
+      initialPosts={displayedMarkers}
+      mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
+    />
+  </>
   );
 };
 
