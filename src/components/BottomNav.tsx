@@ -29,7 +29,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         <span className="text-[10px] font-bold tracking-tight">지도</span>
       </button>
 
-      {/* 두 번째 메뉴: HOT */}
+      {/* 두 번째 메뉴: 인기 */}
       <button 
         onClick={() => navigate('/popular')}
         className={cn(
@@ -38,7 +38,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         )}
       >
         <Flame className={cn("w-6 h-6", isActive('/popular') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">HOT</span>
+        <span className="text-[10px] font-bold tracking-tight">인기</span>
       </button>
       
       {/* 세 번째 메뉴: 글쓰기 (중앙) */}
