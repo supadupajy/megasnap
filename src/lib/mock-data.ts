@@ -71,7 +71,10 @@ export const GIF_POOL = [
   "https://i2.ruliweb.com/cmt/20/11/04/1759234a25446f609.gif",
   "https://media.giphy.com/media/3oEjHIkSghZWtK1xCg/giphy.gif",
   "https://upload3.inven.co.kr/upload/2025/04/26/bbs/i0827433132.gif",
-  "https://xe.obg.co.kr/files/attach/images/4199/283/004/22bf3016a34eda54a624f8b031041b67.gif"
+  "https://xe.obg.co.kr/files/attach/images/4199/283/004/22bf3016a34eda54a624f8b031041b67.gif",
+  "https://mblogthumb-phinf.pstatic.net/MjAyMDEyMTZfMTU3%2FMDAxNjA4MTI4ODg4MTky.aWkKMViTqfQhEQoW9nsIeSDyEuTTn9rUftwyF-Asv_8g.BjcNvxADxT4NCxHE4xtQV1RtF4K78X_VrZ9o0oy7C_4g.GIF.sosohan_n%2F20201216_202833_-438562236.gif?type=w800",
+  "http://cfile298.uf.daum.net/original/216A1C475799E34808B225",
+  "http://upload3.inven.co.kr/upload/2020/05/16/bbs/i015464934237.gif"
 ];
 
 export const isGifUrl = (url: string) => {
