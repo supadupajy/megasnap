@@ -324,10 +324,41 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           div.style.width = '56px';
           div.style.height = '72px';
           div.style.cursor = 'pointer';
-          div.classList.add('animate-marker-appear'); // 처음 생성될 때만 애니메이션 적용
+          div.classList.add('animate-marker-appear');
           div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+          
+          // 드래그와 클릭 구분을 위한 변수
+          let startX = 0;
+          let startY = 0;
+          const CLICK_THRESHOLD = 5;
+
+          const handleDown = (e: any) => {
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            startX = clientX;
+            startY = clientY;
+          };
+
+          const handleUp = (e: any) => {
+            const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+            const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+            
+            const diffX = Math.abs(clientX - startX);
+            const diffY = Math.abs(clientY - startY);
+
+            // 이동 거리가 임계값보다 작을 때만 클릭으로 간주
+            if (diffX < CLICK_THRESHOLD && diffY < CLICK_THRESHOLD) {
+              e.stopPropagation();
+              onMarkerClick(post);
+            }
+          };
+
+          div.addEventListener('mousedown', handleDown);
+          div.addEventListener('mouseup', handleUp);
+          div.addEventListener('touchstart', handleDown, { passive: true });
+          div.addEventListener('touchend', handleUp);
+
           div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
-          div.onclick = (e) => { e.stopPropagation(); onMarkerClick(post); };
           this.getPanes()!.overlayMouseTarget.appendChild(div);
           (this as any).div = div;
         };
@@ -354,7 +385,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           const currentHtml = div.innerHTML;
           const nextHtml = getMarkerHtml(post, isViewed, isHighlighted);
           
-          // 강조 상태나 읽음 상태가 변할 때만 내부 HTML 업데이트 (깜빡임 방지)
           if (currentHtml.includes('marker-highlight-ping') !== isHighlighted || currentHtml.includes('grayscale') !== isViewed) {
             div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
             div.innerHTML = nextHtml;
