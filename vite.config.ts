@@ -6,9 +6,9 @@ import path from "path";
 export default defineConfig(() => ({
   base: "/",
   server: {
-    host: "0.0.0.0",
+    host: "::",
     port: 57130,
-    strictPort: true, // 지정된 포트가 사용 중이면 서버 실행을 중단하여 포트 변경 방지
+    strictPort: true, // 포트가 이미 사용 중일 경우 다른 포트로 변경되지 않도록 설정
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {
