@@ -271,18 +271,19 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const labelHtml = isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : (isAd ? `<div style="width: 56px; background: #3b82f6; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">AD</div>` : ''));
     
     const borderContainerClass = isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : ''));
+    const animationClass = isAd ? 'animate-ad-breathing' : ((isInfluencer || isPopular) ? 'animate-marker-float' : '');
 
     return `
       <div style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%); ${isHighlighted ? 'transform: translate(-50%, -100%) scale(1.3);' : ''}">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-        <div class="${(isInfluencer || isPopular) ? 'animate-marker-float' : ''}">
+        <div class="${animationClass}">
           ${labelHtml}
           <div class="${borderContainerClass}"
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                       ${(isPopular || isInfluencer || isAd) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                       background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(isInfluencer || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
                    style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />

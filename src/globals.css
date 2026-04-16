@@ -91,13 +91,24 @@
   animation: rotate-border 2s linear infinite;
 }
 
-/* AD Blue Gradient Border */
+/* AD Blue Gradient Border with Glow */
 .ad-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #3b82f6, #60a5fa, #3b82f6, #60a5fa, #3b82f6);
   animation: rotate-border 2s linear infinite;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Ad Breathing Animation */
+@keyframes ad-breathing {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.4)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.7)); }
+}
+
+.animate-ad-breathing {
+  animation: ad-breathing 3s ease-in-out infinite;
 }
 
 /* Pulse Animation for HOT Posts */
@@ -153,7 +164,7 @@
     opacity: 0.8;
   }
   100% {
-    transform: translate(-50%, -50%) scale(6.0); /* 스케일을 3.5에서 6.0으로 확대 */
+    transform: translate(-50%, -50%) scale(6.0);
     opacity: 0;
   }
 }
