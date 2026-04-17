@@ -56,7 +56,7 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 1000; // 표시 제한을 대폭 늘려 영역 내 마커가 사라지지 않도록 함
+  const MAX_MARKERS = 60; // 요청에 따라 최대 마커 수를 60개로 조정
   const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
@@ -73,7 +73,7 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 지도 변경 이벤트 디바운스 시간을 30ms로 줄여 실시간성 확보
+  // 지도 변경 이벤트 디바운스 시간을 30ms로 유지하여 실시간성 확보
   const handleMapChange = useCallback((data: any) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -158,6 +158,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 1. 현재 지도 영역 내에 있는 모든 후보 마커 필터링
     const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -186,13 +187,24 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const sorted = inBoundsCandidates.sort((a, b) => {
+    // 2. 마커 유지 로직 (Sticky Logic)
+    // 이미 표시되고 있는 마커들 중 여전히 영역 내에 있는 것들을 찾음
+    const currentDisplayedIds = new Set(displayedMarkers.map(m => m.id));
+    const stillInBounds = inBoundsCandidates.filter(m => currentDisplayedIds.has(m.id));
+    
+    // 새로 영역에 들어온 마커들
+    const newlyInBounds = inBoundsCandidates.filter(m => !currentDisplayedIds.has(m.id));
+    
+    // 새로 들어온 마커들을 우선순위(인플루언서 > 인기 > 좋아요)에 따라 정렬
+    newlyInBounds.sort((a, b) => {
       const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
       const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
-    const combined = sorted.slice(0, MAX_MARKERS);
+    // 3. 최종 표시 목록 구성 (기존 유지 마커 + 빈 자리에 새 마커 채우기)
+    const combined = [...stillInBounds, ...newlyInBounds].slice(0, MAX_MARKERS);
+    
     setDisplayedMarkers(combined);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser]);
 
