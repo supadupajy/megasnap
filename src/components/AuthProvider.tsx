@@ -39,7 +39,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const ensureProfile = useCallback(async (userId: string, email: string | undefined) => {
     try {
-      // 1. 기존 프로필 조회
       const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url, bio, email')
@@ -51,7 +50,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data && data.nickname) {
         setProfile(data);
       } else {
-        // 2. 닉네임이 없으면 랜덤 생성 및 저장
         const randomId = Math.random().toString(36).substring(2, 7);
         const generatedNickname = `탐험가_${randomId}`;
         
@@ -73,37 +71,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (err) {
       console.error('[Auth] 프로필 처리 중 오류:', err);
-    } finally {
-      // 프로필 로드 성공 여부와 상관없이 인증 로딩은 종료
-      setLoading(false);
+      // 프로필 로드 실패 시에도 기본 정보는 세팅하여 무한 로딩 방지
+      setProfile({
+        nickname: email?.split('@')[0] || '탐험가',
+        avatar_url: null,
+        bio: null,
+        email: email || null
+      });
     }
   }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    // 초기 세션 확인
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // 저장된 세션 가져오기 시도
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
         if (mounted) {
           if (initialSession) {
             setSession(initialSession);
             setUser(initialSession.user);
             await ensureProfile(initialSession.user.id, initialSession.user.email);
-          } else {
-            setLoading(false);
           }
+          setLoading(false);
         }
       } catch (error) {
-        console.error('[Auth] 초기 인증 오류:', error);
+        console.error('[Auth] 세션 복구 오류:', error);
         if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    // 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
@@ -111,12 +114,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await ensureProfile(currentSession.user.id, currentSession.user.email);
-        } else {
-          // 이미 세션이 있는 경우(INITIAL_SESSION 등) 로딩 종료 보장
-          setLoading(false);
         }
+        setLoading(false);
       } else {
         setSession(null);
         setUser(null);
@@ -125,32 +126,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // 5초 후에는 강제로 로딩 종료 (안전장치)
-    const safetyTimer = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('[Auth] 인증 로딩 타임아웃 - 강제 종료');
-        setLoading(false);
-      }
-    }, 5000);
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(safetyTimer);
     };
-  }, [ensureProfile, loading]);
+  }, [ensureProfile]);
 
   const refreshProfile = async () => {
     if (user) await ensureProfile(user.id, user.email);
   };
 
   const updateProfileState = (updates: Partial<Profile>) => {
-    setProfile(prev => prev ? { ...prev, ...updates } : { nickname: null, avatar_url: null, bio: null, email: null, ...updates });
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
   const signOut = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
+    }
   };
 
   return (
