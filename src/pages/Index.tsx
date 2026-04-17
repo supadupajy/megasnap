@@ -56,7 +56,7 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 50; 
+  const MAX_MARKERS = 200; // 마커 표시 제한을 대폭 늘려 사라짐 현상 방지
   const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
@@ -73,13 +73,13 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 지도 변경 이벤트 디바운스 처리 (깜빡임 방지)
+  // 지도 변경 이벤트 디바운스 처리 (실시간성 향상을 위해 100ms로 단축)
   const handleMapChange = useCallback((data: any) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-    }, 150); // 150ms 지연으로 잦은 업데이트 방지
+    }, 100); 
   }, []);
 
   const filteredAllPosts = useMemo(() => {
@@ -159,8 +159,12 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
     const inBoundsCandidates = allPosts.filter(post => {
+      // 지도 경계 밖으로 나가면 즉시 필터링
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
+      
+      if (!isWithinBounds) return false;
+
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
       const isMe = authUser && post.user.id === authUser.id;
@@ -180,9 +184,10 @@ const Index = () => {
       }
 
       const isNotBlocked = !blockedIds.has(post.user.id);
-      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
+      return isWithinTime && matchesCategory && isNotBlocked;
     });
 
+    // 중요도 순으로 정렬하되, MAX_MARKERS를 충분히 크게 잡아 깜빡임 방지
     const sorted = inBoundsCandidates.sort((a, b) => {
       const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
       const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
