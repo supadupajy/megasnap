@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ChevronLeft, 
   User, 
@@ -18,6 +18,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
+import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: { 
   icon: any, 
@@ -45,11 +56,10 @@ const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: {
   </button>
 );
 
-import { cn } from '@/lib/utils';
-
 const Settings = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -107,7 +117,7 @@ const Settings = () => {
               icon={LogOut} 
               label="로그아웃" 
               variant="danger" 
-              onClick={handleSignOut}
+              onClick={() => setShowLogoutConfirm(true)}
             />
           </div>
           <p className="text-center text-[10px] text-gray-300 font-bold mt-8 uppercase tracking-tighter">
@@ -115,6 +125,33 @@ const Settings = () => {
           </p>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
+              로그아웃
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
+              로그아웃 하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
+            <AlertDialogCancel 
+              className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0"
+            >
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleSignOut}
+              className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0"
+            >
+              로그아웃
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
