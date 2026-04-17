@@ -18,6 +18,12 @@ interface Message {
   created_at: string;
 }
 
+// UUID 유효성 검사 함수
+const isValidUUID = (uuid: string) => {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return regex.test(uuid);
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams(); // 상대방의 userId
@@ -34,6 +40,14 @@ const Chat = () => {
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
+      
+      // Mock ID인 경우 프로필 조회를 건너뜀
+      if (!isValidUUID(chatId)) {
+        setOtherUser({ nickname: `Explorer_${chatId}`, avatar_url: `https://i.pravatar.cc/150?u=${chatId}` });
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url')
@@ -42,14 +56,20 @@ const Chat = () => {
       
       if (!error && data) {
         setOtherUser(data);
+      } else {
+        setOtherUser({ nickname: '사용자', avatar_url: null });
       }
+      setIsLoading(false);
     };
     fetchOtherUser();
   }, [chatId]);
 
   // 메시지 내역 가져오기 및 실시간 구독
   useEffect(() => {
-    if (!authUser || !chatId) return;
+    if (!authUser || !chatId || !isValidUUID(chatId)) {
+      setIsLoading(false);
+      return;
+    }
 
     const fetchMessages = async () => {
       const { data, error } = await supabase
@@ -77,10 +97,13 @@ const Chat = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${chatId},receiver_id=eq.${authUser.id}`
+          filter: `receiver_id=eq.${authUser.id}`
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          const newMsg = payload.new as Message;
+          if (newMsg.sender_id === chatId) {
+            setMessages((prev) => [...prev, newMsg]);
+          }
         }
       )
       .subscribe();
@@ -99,28 +122,35 @@ const Chat = () => {
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
-    const newMessage = {
-      sender_id: authUser.id,
-      receiver_id: chatId,
-      content: inputValue.trim(),
-    };
-
-    // 낙관적 업데이트 (UI에 즉시 반영)
+    const content = inputValue.trim();
     const tempId = Math.random().toString();
     const optimisticMsg: Message = {
       id: tempId,
-      content: newMessage.content,
+      content: content,
       sender_id: authUser.id,
       created_at: new Date().toISOString(),
     };
+
+    // UI 즉시 업데이트
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
 
-    const { error } = await supabase.from('messages').insert([newMessage]);
+    // 상대방 ID가 유효한 UUID인 경우에만 DB 저장 시도
+    if (isValidUUID(chatId)) {
+      const { error } = await supabase.from('messages').insert([{
+        sender_id: authUser.id,
+        receiver_id: chatId,
+        content: content,
+      }]);
 
-    if (error) {
-      showError('메시지 전송에 실패했습니다.');
-      setMessages((prev) => prev.filter(m => m.id !== tempId));
+      if (error) {
+        console.error('Send error:', error);
+        showError('메시지 전송에 실패했습니다.');
+        setMessages((prev) => prev.filter(m => m.id !== tempId));
+      }
+    } else {
+      // Mock User인 경우 DB 저장은 건너뛰고 성공한 것처럼 처리 (데모용)
+      console.log('Mock user message simulated');
     }
   };
 
