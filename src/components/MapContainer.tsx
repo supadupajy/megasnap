@@ -30,7 +30,6 @@ const MapContainer = ({
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
-  const selectionMarkerRef = useRef<any>(null);
   const lastDragEnd = useRef<number>(0);
   
   const onMapClickRef = useRef(onMapClick);
@@ -109,11 +108,12 @@ const MapContainer = ({
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
       const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+      // panTo는 내부적으로 거리가 가까우면 애니메이션, 멀면 순간이동을 수행합니다.
       mapInstance.current.panTo(moveLatLng);
     }
   }, [center, isMapReady]);
 
-  // 마커 HTML 생성 함수 (내부 구조만 반환)
+  // 마커 HTML 생성 함수
   const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
@@ -195,12 +195,13 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
+      // 우선순위 계산
+      const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+
       if (!existingOverlay) {
         // 새 마커 생성
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
-        // 강조된 마커는 z-index 1000으로 최상단 배치
-        content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; pointer-events: auto;`;
         
         // 초기 HTML 설정
         content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
@@ -215,26 +216,28 @@ const MapContainer = ({
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(post.lat, post.lng),
           content: content,
-          yAnchor: 1
+          yAnchor: 1,
+          zIndex: baseZIndex // 초기 zIndex 설정
         });
 
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        // 기존 마커 업데이트 (DOM 요소를 유지하여 CSS 트랜지션 보장)
+        // 기존 마커 업데이트
         const content = existingOverlay.getContent();
+        
+        // 1. 지도 엔진 레벨에서 zIndex 강제 업데이트 (가장 중요)
+        existingOverlay.setZIndex(baseZIndex);
+
         if (content instanceof HTMLElement) {
-          // 강조 여부에 따라 z-index 실시간 업데이트 (최상단 레이어 보장)
-          content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          
-          // 하이라이트 클래스 토글 (CSS 트랜지션 트리거)
+          // 2. 하이라이트 클래스 토글 (CSS 트랜지션 트리거)
           if (isHighlighted) {
             content.classList.add('highlighted');
           } else {
             content.classList.remove('highlighted');
           }
 
-          // 내부 HTML 업데이트 (필요한 경우에만)
+          // 3. 내부 HTML 업데이트 (필요한 경우에만)
           const newInnerHtml = getMarkerInnerHtml(post, isViewed, isHighlighted);
           if (content.innerHTML !== newInnerHtml) {
             content.innerHTML = newInnerHtml;
