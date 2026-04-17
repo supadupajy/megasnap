@@ -226,8 +226,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 </button>
               </div>
               
-              <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+              <div 
+                onClick={onStartLocationSelection}
+                className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div className="flex-1 min-w-0">

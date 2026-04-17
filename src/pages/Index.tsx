@@ -252,14 +252,27 @@ const Index = () => {
     if (tempSelectedLocation) {
       setFinalSelectedLocation(tempSelectedLocation);
       setIsSelectingLocation(false);
-      setIsWriteOpen(true); // 글쓰기 팝업 다시 열기
+      // 약간의 지연을 주어 지도가 안정된 후 팝업을 엽니다.
+      setTimeout(() => {
+        setIsWriteOpen(true);
+      }, 100);
     }
   };
 
   const cancelLocationSelection = () => {
     setIsSelectingLocation(false);
     setTempSelectedLocation(null);
-    setIsWriteOpen(true);
+    setTimeout(() => {
+      setIsWriteOpen(true);
+    }, 100);
+  };
+
+  const startLocationSelection = () => {
+    setIsWriteOpen(false);
+    // Drawer가 닫히는 애니메이션 시간을 고려하여 지연 실행
+    setTimeout(() => {
+      setIsSelectingLocation(true);
+    }, 300);
   };
 
   return (
@@ -458,10 +471,7 @@ const Index = () => {
         onClose={() => setIsWriteOpen(false)} 
         initialLocation={finalSelectedLocation}
         onPostCreated={handlePostCreated}
-        onStartLocationSelection={() => {
-          setIsWriteOpen(false);
-          setIsSelectingLocation(true);
-        }}
+        onStartLocationSelection={startLocationSelection}
       />
       <PostListOverlay 
         isOpen={isPostListOpen}
