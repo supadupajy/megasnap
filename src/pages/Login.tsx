@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Mail, Lock, Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { Camera, Mail, Lock, Loader2, Eye, EyeOff, Check, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  // 저장된 이메일 불러오기
   useEffect(() => {
     const savedEmail = localStorage.getItem('remembered_email');
     if (savedEmail) {
@@ -42,7 +41,12 @@ const Login = () => {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('Email limit exceeded')) {
+            throw new Error('이메일 발송 제한을 초과했습니다. 잠시 후 다시 시도하거나 테스트 계정을 이용해주세요.');
+          }
+          throw error;
+        }
         showSuccess('회원가입이 완료되었습니다. 이메일을 확인해주세요!');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -51,19 +55,38 @@ const Login = () => {
         });
         if (error) throw error;
 
-        // 로그인 정보 저장 처리
         if (rememberMe) {
           localStorage.setItem('remembered_email', email);
         } else {
           localStorage.removeItem('remembered_email');
         }
-
-        // 로그인 성공 알림 제거됨
         navigate('/');
       }
     } catch (err: any) {
       console.error('Auth error:', err);
       showError(err.message || '인증에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 테스트용 빠른 로그인 함수
+  const handleTestLogin = async () => {
+    setIsLoading(true);
+    try {
+      // 미리 생성된 테스트 계정 정보 (필요시 Supabase 대시보드에서 생성해두어야 합니다)
+      const testEmail = "test@example.com";
+      const testPassword = "password123";
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+      
+      if (error) throw error;
+      navigate('/');
+    } catch (err: any) {
+      showError('테스트 계정 로그인에 실패했습니다. 계정이 생성되어 있는지 확인해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +99,6 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-[400px] space-y-8"
       >
-        {/* Logo Section */}
         <div className="flex flex-col items-center gap-4">
           <motion.div 
             whileHover={{ scale: 1.05 }}
@@ -95,7 +117,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Form Section */}
         <div className="bg-white p-8 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
           <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
@@ -145,11 +166,6 @@ const Login = () => {
                   로그인 정보 저장하기
                 </label>
               </div>
-              {!isSignUp && (
-                <button type="button" className="text-xs font-bold text-indigo-600 hover:underline">
-                  비밀번호 찾기
-                </button>
-              )}
             </div>
 
             <Button 
@@ -163,6 +179,20 @@ const Login = () => {
                 isSignUp ? '회원가입' : '로그인'
               )}
             </Button>
+
+            {/* 테스트 로그인 버튼 추가 */}
+            {!isSignUp && (
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={handleTestLogin}
+                disabled={isLoading}
+                className="w-full h-14 border-2 border-indigo-100 text-indigo-600 rounded-2xl text-sm font-black hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 fill-indigo-600" />
+                테스트 계정으로 바로 시작하기
+              </Button>
+            )}
           </form>
 
           <div className="mt-8 pt-6 border-t border-gray-50 text-center">
@@ -178,7 +208,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Footer Info */}
         <div className="text-center space-y-4">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
             By continuing, you agree to Chora's<br />
