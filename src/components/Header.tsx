@@ -31,8 +31,9 @@ const Header = () => {
 
     fetchUnreadCount();
 
-    // 채널 이름을 고유하게 설정하여 충돌 방지
-    const channelName = `header_notifs_${authUser.id}`;
+    // 채널 이름에 랜덤 문자열을 추가하여 매 렌더링/구독마다 고유함을 보장
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    const channelName = `header_notifs_${authUser.id}_${uniqueId}`;
     const channel = supabase.channel(channelName);
 
     channel
@@ -48,14 +49,10 @@ const Header = () => {
           fetchUnreadCount();
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Header] Realtime subscribed');
-        }
-      });
+      .subscribe();
 
     return () => {
-      // 채널 구독 해제 및 제거
+      // 컴포넌트 언마운트 시 채널 제거
       supabase.removeChannel(channel);
     };
   }, [authUser]);
