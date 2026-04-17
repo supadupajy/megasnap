@@ -41,6 +41,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
           (results: any, status: any) => {
             if (status === "OK" && results && results[0]) {
+              // 주소 컴포넌트에서 필요한 부분만 추출 (예: 서울특별시 강남구 역삼동)
               const components = results[0].address_components;
               let city = '';
               let district = '';
@@ -61,10 +62,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           }
         );
       } else if (!initialLocation) {
+        // 기본 위치 주소 (예시)
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
       }
     } else {
+      // 닫힐 때 초기화
       setAddress('');
       setIsLoadingAddress(false);
       setContent('');
@@ -107,7 +110,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
-    // 실제 닉네임 사용 (없으면 이메일 앞자리)
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
     const postData = {
@@ -154,6 +156,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         borderType: 'none'
       };
 
+      // 축하 효과
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
@@ -212,6 +215,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
+              {/* Photo Section */}
               <div 
                 onClick={takePhoto}
                 className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
@@ -236,6 +240,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                 )}
               </div>
 
+              {/* Location Section */}
               <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                   <MapPin className="w-5 h-5 text-indigo-600" />
@@ -253,6 +258,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
                 </div>
               </div>
 
+              {/* Content Section */}
               <div className="space-y-2">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
                 <Textarea 
@@ -264,6 +270,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               </div>
             </div>
 
+            {/* Submit Button */}
             <div 
               className={cn(
                 "py-4 bg-white shrink-0 transition-all duration-300",
