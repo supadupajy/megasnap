@@ -96,7 +96,8 @@ const PostItem = ({
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
 
-  const isMine = authUser && (user.id === authUser.id || user.id === 'me');
+  // 실제 Supabase 사용자 ID와 비교하여 본인 확인
+  const isMine = authUser && user.id === authUser.id;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;

@@ -108,7 +108,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isGif = isGifUrl(images[currentImageIndex]);
   const category = post.category || 'none';
 
-  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+  // 실제 Supabase 사용자 ID와 비교하여 본인 확인
+  const isMine = authUser && post.user.id === authUser.id;
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();

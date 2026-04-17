@@ -12,6 +12,7 @@ import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface WritePostProps {
 }
 
 const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePostProps) => {
+  const { user: authUser, profile } = useAuth();
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
@@ -39,7 +41,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
           (results: any, status: any) => {
             if (status === "OK" && results && results[0]) {
-              // 주소 컴포넌트에서 시, 구, 동 추출
               const components = results[0].address_components;
               let city = '';
               let district = '';
@@ -91,6 +92,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   };
 
   const handlePost = async () => {
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
     if (!capturedImage) {
       showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
       return;
@@ -101,15 +107,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
+    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+
     const postData = {
       content: content,
       location_name: address,
       latitude: lat,
       longitude: lng,
       image_url: capturedImage,
-      user_id: 'me',
-      user_name: 'Dyad_Explorer',
-      user_avatar: 'https://i.pravatar.cc/150?u=me',
+      user_id: authUser.id, // 실제 사용자 ID 저장
+      user_name: displayName,
+      user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
       likes: 0,
       created_at: new Date().toISOString()
     };
@@ -128,9 +136,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         isGif: false,
         isInfluencer: false,
         user: {
-          id: 'me',
-          name: 'Dyad_Explorer',
-          avatar: 'https://i.pravatar.cc/150?u=me'
+          id: authUser.id,
+          name: displayName,
+          avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
         },
         content: content,
         location: address,
