@@ -31,6 +31,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const lastDragEnd = useRef<number>(0);
+  const animationRef = useRef<number | null>(null);
   
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -75,7 +76,13 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
+        kakao.maps.event.addListener(map, 'dragstart', () => { 
+          isDragging.current = true; 
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
+          }
+        });
         kakao.maps.event.addListener(map, 'dragend', () => { 
           isDragging.current = false; 
           lastDragEnd.current = Date.now(); 
@@ -103,13 +110,57 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 지도 중심 이동 (panTo 사용)
+  // 커스텀 부드러운 이동 함수
+  const animateMapTo = (targetLat: number, targetLng: number) => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const kakao = (window as any).kakao;
+    
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    const startPos = map.getCenter();
+    const startLat = startPos.getLat();
+    const startLng = startPos.getLng();
+    
+    // 거리에 따른 유동적인 시간 설정 (최소 600ms, 최대 1200ms)
+    const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
+    const duration = Math.min(Math.max(dist * 5000, 600), 1200);
+    const startTime = performance.now();
+    
+    const step = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease Out Cubic 이징 함수
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      
+      const currentLat = startLat + (targetLat - startLat) * easeProgress;
+      const currentLng = startLng + (targetLng - startLng) * easeProgress;
+      
+      map.setCenter(new kakao.maps.LatLng(currentLat, currentLng));
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(step);
+      } else {
+        animationRef.current = null;
+      }
+    };
+    
+    animationRef.current = requestAnimationFrame(step);
+  };
+
+  // 지도 중심 이동 감시
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      const kakao = (window as any).kakao;
-      const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
-      // panTo는 내부적으로 거리가 가까우면 애니메이션, 멀면 순간이동을 수행합니다.
-      mapInstance.current.panTo(moveLatLng);
+      const currentCenter = mapInstance.current.getCenter();
+      const dist = Math.sqrt(Math.pow(center.lat - currentCenter.getLat(), 2) + Math.pow(center.lng - currentCenter.getLng(), 2));
+      
+      // 아주 미세한 차이가 아닐 때만 이동 애니메이션 실행
+      if (dist > 0.00001) {
+        animateMapTo(center.lat, center.lng);
+      }
     }
   }, [center, isMapReady]);
 
