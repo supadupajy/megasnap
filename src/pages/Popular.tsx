@@ -60,7 +60,7 @@ const Popular = () => {
         image: p.image_url,
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType: Number(p.likes) > 100 ? 'popular' : 'none'
+        borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
       })) as Post[];
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -95,7 +95,7 @@ const Popular = () => {
       const newPosts = createMockPosts(37.5665, 126.9780, 20)
         .map(p => ({
           ...p,
-          likes: Math.floor(Math.random() * 1000) + 500 
+          likes: Math.floor(Math.random() * 1000) + 1000 // 더 높은 좋아요 수 생성 유도
         }))
         .sort((a, b) => b.likes - a.likes);
         

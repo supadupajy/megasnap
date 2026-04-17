@@ -33,7 +33,7 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
   "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
   "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
-  "https://images.unsplash.com/photo-1565299507177-b0ac66763828",
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
   "https://images.unsplash.com/photo-1493770348161-369560ae357d",
   "https://images.unsplash.com/photo-1476224489176-e88811028ef1",
   "https://images.unsplash.com/photo-1499028344343-cd173ffc68a9",
@@ -268,7 +268,7 @@ export const getUserById = (id: string): User => {
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15, specificUserId?: string): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const isInfluencer = specificUserId ? false : Math.random() > 0.9; // 인플루언서 비율 증가
+    const isInfluencer = specificUserId ? false : Math.random() > 0.9; 
     const isPopular = specificUserId ? false : Math.random() > 0.95;
     const isAd = !specificUserId && !isInfluencer && !isPopular && Math.random() > 0.92;
     const isGif = !isAd && Math.random() > 0.85; 
@@ -314,14 +314,19 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const comments = generateRandomComments(randomCount);
     const user = specificUserId ? createMockUser(specificUserId) : createMockUser(isAd ? "sponsored" : id);
 
-    // 팔로워 수에 따른 등급 결정
+    // 좋아요 수 결정 (인기 포스팅은 1500개 이상으로 설정 가능하도록 범위 조정)
+    const likes = (isPopular || isInfluencer) 
+      ? Math.floor(Math.random() * 2000) + 800 // 800 ~ 2800 범위
+      : Math.floor(Math.random() * 500) + 10;
+
+    // 팔로워 수 및 좋아요 수에 따른 등급 결정
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
-    if (isPopular) {
-      borderType = 'popular';
-    } else if (isInfluencer && user.followers) {
+    if (isInfluencer && user.followers) {
       if (user.followers >= 10000000) borderType = 'diamond';
       else if (user.followers >= 1000000) borderType = 'gold';
       else if (user.followers >= 100000) borderType = 'silver';
+    } else if (likes >= 1500) {
+      borderType = 'popular';
     }
 
     return {
@@ -335,7 +340,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
       lng,
-      likes: (isPopular || isInfluencer) ? Math.floor(Math.random() * 1000) + 1000 : Math.floor(Math.random() * 500) + 10,
+      likes,
       commentsCount: comments.length,
       comments: comments,
       image: images[0],

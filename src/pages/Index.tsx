@@ -84,7 +84,7 @@ const Index = () => {
         image: p.image_url,
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType: 'none'
+        borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
       })) as Post[];
     } catch (err) {
       console.error('Error fetching posts:', err);
