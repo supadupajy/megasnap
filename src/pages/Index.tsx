@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import Header from '@/components/Header';
@@ -51,6 +51,7 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 80; 
+  const prevMarkersRef = useRef<Post[]>([]);
 
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
@@ -180,25 +181,42 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 화면에 표시할 마커 필터링 (비율 고정 로직 적용)
+  // 화면에 표시할 마커 필터링 (스티키 로직 + 비율 고정)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
-
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 1. 현재 화면 영역 내에 있는 모든 후보 포스트 필터링
-    const inBoundsCandidates = allPosts.filter(post => {
-      const margin = 0.005;
-      const isWithinBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
-                             post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
-      if (!isWithinBounds) return false;
+    // 1. 현재 화면에 이미 있는 마커들 중 유효한 것들 유지 (스티키)
+    const margin = 0.01; // 화면 밖으로 조금 나가도 유지
+    const stickyMarkers = prevMarkersRef.current.filter(post => {
+      const isInExtendedBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
+                                 post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
+      if (!isInExtendedBounds) return false;
+      if (blockedIds.has(post.user.id)) return false;
       
+      // 카테고리 필터 확인
+      const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+      const matchesCategory = selectedCategories.includes('all') || 
+                              selectedCategories.includes(post.category || 'none') ||
+                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
+                              (selectedCategories.includes('mine') && isMine);
+      return matchesCategory;
+    });
+
+    // 2. 새로운 후보들 필터링 (현재 화면 내에 있고 아직 표시되지 않은 것들)
+    const displayedIds = new Set(stickyMarkers.map(m => m.id));
+    const newCandidates = allPosts.filter(post => {
+      if (displayedIds.has(post.id)) return false;
+      
+      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
+                             post.lng >= sw.lng && post.lng <= ne.lng;
+      if (!isWithinBounds) return false;
       if (blockedIds.has(post.user.id)) return false;
 
       const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-      
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
       
@@ -207,40 +225,47 @@ const Index = () => {
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
                               (selectedCategories.includes('mine') && isMine);
-
       return matchesCategory;
     });
 
-    // 2. 버킷 분류
-    const myPosts = inBoundsCandidates.filter(p => authUser && (p.user.id === authUser.id || p.user.id === 'me'));
-    const influencerPosts = inBoundsCandidates.filter(p => p.isInfluencer && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
-    const popularPosts = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
-    const generalPosts = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
+    // 3. 부족한 슬롯 채우기 (비율 유지: 일반 93%, 인기 5%, 인플루언서 2%)
+    const remainingSlots = Math.max(0, MAX_MARKERS - stickyMarkers.length);
+    if (remainingSlots > 0 && newCandidates.length > 0) {
+      const influencerPool = newCandidates.filter(p => p.isInfluencer);
+      const popularPool = newCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer);
+      const generalPool = newCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular');
 
-    // 3. 비율 계산 (내 포스팅 제외한 나머지 슬롯에 대해 적용)
-    const remainingSlots = Math.max(0, MAX_MARKERS - myPosts.length);
-    
-    // 목표 개수 (93% 일반, 5% 인기, 2% 인플루언서)
-    const targetInfluencerCount = Math.max(1, Math.round(remainingSlots * 0.02));
-    const targetPopularCount = Math.max(2, Math.round(remainingSlots * 0.05));
-    const targetGeneralCount = remainingSlots - targetInfluencerCount - targetPopularCount;
+      const targetInf = Math.max(1, Math.round(remainingSlots * 0.02));
+      const targetPop = Math.max(2, Math.round(remainingSlots * 0.05));
+      const targetGen = remainingSlots - targetInf - targetPop;
 
-    // 4. 각 버킷에서 포스팅 추출 (좋아요 순)
-    const selectedInfluencers = influencerPosts.sort((a, b) => b.likes - a.likes).slice(0, targetInfluencerCount);
-    const selectedPopulars = popularPosts.sort((a, b) => b.likes - a.likes).slice(0, targetPopularCount);
-    
-    // 부족한 슬롯 계산 (인기나 인플루언서가 부족할 경우 일반으로 채움)
-    const actualRemainingForGeneral = remainingSlots - selectedInfluencers.length - selectedPopulars.length;
-    const selectedGenerals = generalPosts.sort((a, b) => b.likes - a.likes).slice(0, actualRemainingForGeneral);
+      const selected = [
+        ...influencerPool.sort((a, b) => b.likes - a.likes).slice(0, targetInf),
+        ...popularPool.sort((a, b) => b.likes - a.likes).slice(0, targetPop),
+        ...generalPool.sort((a, b) => b.likes - a.likes).slice(0, targetGen)
+      ];
 
-    // 5. 최종 결합
-    const combined = [...myPosts, ...selectedInfluencers, ...selectedPopulars, ...selectedGenerals];
-    
-    const nextIds = combined.map(m => m.id).sort().join(',');
-    const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
+      // 만약 특정 풀이 부족해서 슬롯이 남으면 일반 풀에서 더 채움
+      if (selected.length < remainingSlots) {
+        const currentSelectedIds = new Set(selected.map(s => s.id));
+        const extra = generalPool
+          .filter(p => !currentSelectedIds.has(p.id))
+          .sort((a, b) => b.likes - a.likes)
+          .slice(0, remainingSlots - selected.length);
+        selected.push(...extra);
+      }
+
+      stickyMarkers.push(...selected);
+    }
+
+    // 4. 최종 업데이트
+    const finalMarkers = stickyMarkers.slice(0, MAX_MARKERS);
+    const nextIds = finalMarkers.map(m => m.id).sort().join(',');
+    const prevIds = prevMarkersRef.current.map(m => m.id).sort().join(',');
     
     if (nextIds !== prevIds) {
-      setDisplayedMarkers(combined);
+      prevMarkersRef.current = finalMarkers;
+      setDisplayedMarkers(finalMarkers);
     }
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
 
@@ -263,6 +288,7 @@ const Index = () => {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
+    prevMarkersRef.current = []; // 리프레시 시에는 스티키 초기화
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       const centerLat = (ne.lat + sw.lat) / 2;

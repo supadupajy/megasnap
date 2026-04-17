@@ -387,12 +387,27 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       } else {
         const div = (existingOverlay as any).div;
         if (div) {
-          const currentHtml = div.innerHTML;
-          const nextHtml = getMarkerHtml(post, isViewed, isHighlighted);
-          
-          if (currentHtml.includes('marker-highlight-ping') !== isHighlighted || currentHtml.includes('grayscale') !== isViewed) {
+          const container = div.querySelector('.marker-container') as HTMLElement;
+          if (container) {
+            // 1. 크기 변화 트랜지션 적용
+            container.style.transform = `translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}`;
             div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
-            div.innerHTML = nextHtml;
+            
+            // 2. 핑(Ping) 효과 처리
+            let ping = container.querySelector('.marker-highlight-ping');
+            if (isHighlighted && !ping) {
+              const p = document.createElement('div');
+              p.className = 'marker-highlight-ping';
+              container.prepend(p);
+            } else if (!isHighlighted && ping) {
+              ping.remove();
+            }
+
+            // 3. 읽음 상태(Grayscale) 처리
+            const img = container.querySelector('img');
+            if (img) {
+              img.style.filter = isViewed ? 'grayscale(1) brightness(0.7)' : '';
+            }
           }
         }
       }
