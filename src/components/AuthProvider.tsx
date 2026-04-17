@@ -16,10 +16,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true); // 1. 무조건 true로 시작
+  const [loading, setLoading] = useState(true);
   
-  // 무한 호출 방지를 위한 Ref
-  const isInitializing = useRef(true);
+  // 초기화 완료 여부를 체크하는 Ref
+  const initialized = useRef(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -28,27 +28,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select("*")
         .eq("id", userId)
         .single();
-      
-      if (error) {
-        console.warn("프로필을 찾을 수 없습니다:", error.message);
-        setProfile(null);
-      } else {
-        setProfile(data);
-      }
+      if (!error) setProfile(data);
     } catch (err) {
-      console.error("프로필 로드 중 예외 발생:", err);
+      console.error("Profile fetch error:", err);
     }
   };
 
   useEffect(() => {
-    let mounted = true;
+    // [강제 해제] 3초 후에도 앱이 안 뜨면 무조건 loading을 풉니다.
+    const fallbackTimer = setTimeout(() => {
+      if (!initialized.current) {
+        console.warn("⚠️ 인증 확인이 지연되어 강제로 로딩을 해제합니다.");
+        setLoading(false);
+        initialized.current = true;
+      }
+    }, 3000);
 
     const initializeAuth = async () => {
       try {
-        // 현재 세션 가져오기
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (error) throw error;
 
         if (initialSession) {
           setSession(initialSession);
@@ -56,42 +56,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
-        console.error("인증 초기화 에러:", error);
+        console.error("Auth init error:", error);
       } finally {
-        if (mounted) {
+        // 정상적으로 확인이 끝났을 때
+        if (!initialized.current) {
           setLoading(false);
-          isInitializing.current = false;
+          initialized.current = true;
+          clearTimeout(fallbackTimer);
         }
       }
     };
 
     initializeAuth();
 
-    // 상태 변경 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (!mounted) return;
-
-        console.log(`🔐 Auth Event: ${event}`);
-
-        // 초기화 중에는 onAuthStateChange의 중복 처리를 방지
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          if (currentSession?.user) await fetchProfile(currentSession.user.id);
-          setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
+        console.log("🔐 Auth Event:", event);
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        } else {
           setProfile(null);
+        }
+
+        // 어떤 이벤트가 발생하든 인증 상태 체크 시도가 있었다면 로딩을 해제
+        if (!initialized.current) {
           setLoading(false);
+          initialized.current = true;
+          clearTimeout(fallbackTimer);
         }
       }
     );
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
     };
   }, []);
 
@@ -99,13 +101,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user?.id) await fetchProfile(user.id);
   };
 
-  // 컨텍스트 값 메모이제이션 (불필요한 리렌더링 방지)
   const value = React.useMemo(() => ({
-    session,
-    user,
-    profile,
-    loading,
-    refreshProfile
+    session, user, profile, loading, refreshProfile
   }), [session, user, profile, loading]);
 
   return (
@@ -117,8 +114,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth는 AuthProvider 내에서 사용되어야 합니다.");
-  }
+  if (context === undefined) throw new Error("useAuth error");
   return context;
 };
