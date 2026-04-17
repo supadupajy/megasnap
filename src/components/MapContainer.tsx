@@ -26,7 +26,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const [error, setError] = useState<string | null>(null);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
-  const startPos = useRef<{ x: number, y: number } | null>(null);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -63,62 +62,47 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         setIsMapReady(true);
 
-        kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
-        kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; });
+        // --- 카카오 지도 공식 이벤트 리스너 사용 ---
         
-        // 지도를 클릭하면 떠있는 글쓰기 버튼 숨기기
-        kakao.maps.event.addListener(map, 'click', () => hideActionPin());
+        // 1. 지도 영역 변화 감지
+        kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
+        
+        // 2. 드래그 상태 관리
+        kakao.maps.event.addListener(map, 'dragstart', () => {
+          isDragging.current = true;
+          if (pressTimer.current) clearTimeout(pressTimer.current);
+        });
+        
+        kakao.maps.event.addListener(map, 'dragend', () => {
+          isDragging.current = false;
+        });
 
-        // --- 롱프레스 로직 (네이티브 DOM 이벤트 사용) ---
-        const container = mapElement.current!;
-
-        const onStart = (e: any) => {
-          const x = e.pageX || (e.touches ? e.touches[0].pageX : 0);
-          const y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
-          startPos.current = { x, y };
-          
+        // 3. 롱프레스 구현 (mousedown/touchstart 대용)
+        kakao.maps.event.addListener(map, 'mousedown', (mouseEvent: any) => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
-            if (isDragging.current) return;
-            
-            // 현재 터치/마우스 위치의 좌표를 지도의 위경도로 변환
-            const projection = map.getProjection();
-            const containerPoint = new kakao.maps.Point(
-              x - container.getBoundingClientRect().left,
-              y - container.getBoundingClientRect().top
-            );
-            const latLng = projection.fromContainerPointToLatLng(containerPoint);
-            
-            if (latLng) {
+            if (!isDragging.current) {
+              const latLng = mouseEvent.latLng;
               showActionPin(latLng.getLat(), latLng.getLng());
-              if (window.navigator.vibrate) window.navigator.vibrate(60);
+              if (window.navigator.vibrate) window.navigator.vibrate(50);
             }
-          }, 700); // 0.7초 유지 시 롱프레스
-        };
+          }, 800); // 0.8초 유지 시 롱프레스
+        });
 
-        const onMove = (e: any) => {
-          if (!startPos.current) return;
-          const x = e.pageX || (e.touches ? e.touches[0].pageX : 0);
-          const y = e.pageY || (e.touches ? e.touches[0].pageY : 0);
-          
-          const dist = Math.sqrt(Math.pow(x - startPos.current.x, 2) + Math.pow(y - startPos.current.y, 2));
-          if (dist > 10) { // 10px 이상 움직이면 취소
-            if (pressTimer.current) clearTimeout(pressTimer.current);
-          }
-        };
-
-        const onEnd = () => {
+        // 4. 이동 시 타이머 취소
+        kakao.maps.event.addListener(map, 'mousemove', () => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
-        };
+        });
 
-        container.addEventListener('mousedown', onStart);
-        container.addEventListener('touchstart', onStart, { passive: true });
-        container.addEventListener('mousemove', onMove);
-        container.addEventListener('touchmove', onMove, { passive: true });
-        window.addEventListener('mouseup', onEnd);
-        window.addEventListener('touchend', onEnd);
+        // 5. 클릭/마우스업 시 타이머 취소 및 핀 숨기기
+        kakao.maps.event.addListener(map, 'mouseup', () => {
+          if (pressTimer.current) clearTimeout(pressTimer.current);
+        });
+
+        kakao.maps.event.addListener(map, 'click', () => {
+          hideActionPin();
+        });
 
         return true;
       } catch (e) {
@@ -149,7 +133,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     if (!mapInstance.current || !kakao) return;
 
     const container = document.createElement('div');
-    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 10000;';
+    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 10000; position: relative; display: block !important;';
     
     const inner = document.createElement('div');
     inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%); filter: drop-shadow(0 12px 24px rgba(79, 70, 229, 0.5)); animation: marker-appear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;';
@@ -231,7 +215,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; pointer-events: auto;">
+      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
@@ -239,11 +223,11 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                       ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                      background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
+                      background-color: white; display: block !important;">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block !important;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
-                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+                   style="width: 100%; height: 100%; object-fit: cover; display: block !important; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${categoryIconHtml}
             </div>
@@ -276,9 +260,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'kakao-overlay animate-marker-appear';
-        content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-        content.style.opacity = '1';
-        content.style.pointerEvents = 'auto';
+        content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
         content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         
         content.onclick = (e) => {
