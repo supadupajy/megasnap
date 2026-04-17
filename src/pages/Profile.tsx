@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Settings, Grid, Bookmark, User as UserIcon, ChevronLeft, Play, Map, Loader2 } from 'lucide-react';
+import { Settings, Grid, Bookmark, User as UserIcon, Play, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -21,6 +21,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
   
+  // 무한 루프 및 로딩 방지용 Ref
   const isFetching = useRef(false);
   const lastFetchedId = useRef<string | null>(null);
 
@@ -29,6 +30,9 @@ const Profile = () => {
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
+  
+  // 핵심: 데이터 로딩 상태를 더 세분화
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const userId = authUser?.id;
@@ -95,6 +99,7 @@ const Profile = () => {
       console.error('[Profile] Fetch Error:', err);
     } finally {
       setIsDataLoading(false);
+      setIsInitialLoadDone(true); // 성공하든 실패하든 초기 로딩은 끝난 것으로 간주
       isFetching.current = false;
     }
   }, [displayName, profileAvatar]);
@@ -136,13 +141,19 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (isDataLoading && myPosts.length === 0)) {
+  // --- 핵심: 로딩 조건 수정 ---
+  // 1. 세션 확인 중(authLoading)이면 로딩
+  // 2. 유저는 있는데 아직 첫 데이터를 가져오기 전(isInitialLoadDone)이면 로딩
+  if (authLoading || (!isInitialLoadDone && userId)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
+
+  // 인증 실패 시 (useEffect에서 navigate 하지만 안전 장치로 추가)
+  if (!userId && !authLoading) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -164,6 +175,7 @@ const Profile = () => {
             </button>
           </div>
         </div>
+
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
@@ -180,31 +192,64 @@ const Profile = () => {
               <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
               <p className="text-sm text-gray-500 mb-4">{bio}</p>
               <div className="flex gap-4">
-                <div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{myPosts.length}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
+                </div>
+                {/* 팔로워/팔로잉은 정적 데이터이므로 유지 */}
                 <div className="text-center"><p className="font-bold text-gray-900">1.2k</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div>
                 <div className="text-center"><p className="font-bold text-gray-900">850</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div>
               </div>
             </div>
           </div>
+
           <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
+
+          {/* 탭 네비게이션 */}
           <div className="flex border-b border-gray-100 mb-4">
             <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button>
             <button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button>
             <button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button>
           </div>
+
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
-                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Bookmark className="w-4 h-4 fill-indigo-600" />저장된 포스팅</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p></div>
-                {savedPosts.map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={() => handleImageError(post.id)} /></div>))}
+                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Bookmark className="w-4 h-4 fill-indigo-600" />저장된 포스팅</h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
+                </div>
+                {savedPosts.map((post) => (
+                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                    <PostItem {...post} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={() => handleImageError(post.id)} />
+                  </div>
+                ))}
               </>
             ) : (
               <>
-                <div onClick={() => navigate('/', { state: { filterUserId: 'me' } })} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>
+                <div onClick={() => navigate('/', { state: { filterUserId: 'me' } })} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
+                </div>
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
-                  <div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>
+                  <div className="flex flex-col">
+                    {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
+                      <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                        <PostItem {...post} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>
+                  <div className="grid grid-cols-3 gap-1 px-6">
+                    {myPosts.map((post) => (
+                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}>
+                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} />
+                      </div>
+                    ))}
+                    {myPosts.length === 0 && (
+                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
+                    )}
+                  </div>
                 )}
               </>
             )}
