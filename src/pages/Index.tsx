@@ -57,6 +57,7 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 60; 
+  const throttleTimer = useRef<any>(null);
 
   useEffect(() => {
     if (supabasePosts.length > 0) {
@@ -72,15 +73,19 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 디바운스를 제거하여 실시간으로 지도의 변화를 감지하고 상태를 업데이트합니다.
+  // 30ms 스로틀을 적용하여 실시간성을 유지하면서도 과도한 업데이트를 방지합니다.
   const handleMapChange = useCallback((data: any) => {
-    setMapData(data);
-    mapCache.lastCenter = data.center;
+    if (throttleTimer.current) return;
     
-    // 위치 선택 모드일 때 지도의 중심 좌표를 실시간으로 tempSelectedLocation에 반영
-    if (isSelectingLocation) {
-      setTempSelectedLocation(data.center);
-    }
+    throttleTimer.current = setTimeout(() => {
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+      
+      if (isSelectingLocation) {
+        setTempSelectedLocation(data.center);
+      }
+      throttleTimer.current = null;
+    }, 30);
   }, [isSelectingLocation]);
 
   const filteredAllPosts = useMemo(() => {
@@ -123,7 +128,6 @@ const Index = () => {
     }
   }, [location.state, blockedIds, authUser]);
 
-  // 지도가 움직일 때마다 새로운 타일의 포스트를 생성합니다.
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -154,7 +158,6 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 지도가 움직일 때마다 화면에 표시될 마커를 실시간으로 필터링합니다.
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
