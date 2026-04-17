@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Settings, Grid, Bookmark, User as UserIcon, ChevronLeft, Play, Map } from 'lucide-react';
+import { Settings, Grid, Bookmark, User as UserIcon, ChevronLeft, Play, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -19,15 +19,16 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { profile, user: authUser, refreshProfile } = useAuth();
+  const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-  const bio = (profile as any)?.bio || "지도를 여행하는 탐험가 📍";
+  const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
 
   const fetchMyRealPosts = useCallback(async () => {
     if (!authUser || !supabase) return [];
@@ -47,63 +48,74 @@ const Profile = () => {
         isInfluencer: false,
         user: {
           id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
+          name: p.user_name || displayName,
+          avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
         },
-        content: p.content,
-        location: p.location_name,
+        content: p.content || '',
+        location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
-        likes: Number(p.likes),
+        likes: Number(p.likes || 0),
         commentsCount: 0,
         comments: [],
-        image: p.image_url,
+        image: p.image_url || FALLBACK_IMAGE,
         isLiked: false,
         createdAt: new Date(p.created_at),
         borderType: 'none'
       })) as Post[];
     } catch (err) {
-      console.error('Error fetching my posts:', err);
+      console.error('[Profile] Error fetching real posts:', err);
       return [];
     }
-  }, [authUser]);
+  }, [authUser, displayName, profile]);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!authUser) return;
+      // 인증 정보가 로딩 중이거나 사용자가 없으면 대기
+      if (authLoading || !authUser) return;
 
-      const realPosts = await fetchMyRealPosts();
-      
-      const rawMock = createMockPosts(37.5665, 126.9780, 12);
-      const mockMine = rawMock.map((p, idx) => {
-        const isGif = idx < 4;
-        const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
-        return {
-          ...p,
-          isGif,
-          image,
-          user: {
-            id: authUser.id,
-            name: displayName,
-            avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?u=me'
-          }
-        };
-      });
+      setIsDataLoading(true);
+      try {
+        const realPosts = await fetchMyRealPosts();
+        
+        // 추천 데이터 생성 (실제 데이터가 적을 때를 대비)
+        const rawMock = createMockPosts(37.5665, 126.9780, 12);
+        const mockMine = rawMock.map((p, idx) => {
+          const isGif = idx < 4;
+          const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
+          return {
+            ...p,
+            isGif,
+            image,
+            user: {
+              id: authUser.id,
+              name: displayName,
+              avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
+            }
+          };
+        });
 
-      const combined = [...realPosts, ...mockMine].sort((a, b) => 
-        b.createdAt.getTime() - a.createdAt.getTime()
-      );
+        // 실제 포스팅을 최상단에 배치하고 추천 데이터를 섞음
+        const combined = [...realPosts, ...mockMine].sort((a, b) => 
+          b.createdAt.getTime() - a.createdAt.getTime()
+        );
 
-      setMyPosts(combined);
+        setMyPosts(combined);
 
-      const saved = createMockPosts(37.5665, 126.9780, 12)
-        .filter(p => p.user.id !== authUser.id)
-        .map(p => ({ ...p, isLiked: true }));
-      setSavedPosts(saved);
+        // 저장된 포스팅 (Mock)
+        const saved = createMockPosts(37.5665, 126.9780, 12)
+          .filter(p => p.user.id !== authUser.id)
+          .map(p => ({ ...p, isLiked: true }));
+        setSavedPosts(saved);
+      } catch (err) {
+        console.error('[Profile] Data load error:', err);
+      } finally {
+        setIsDataLoading(false);
+      }
     };
 
     loadData();
-  }, [displayName, profile, authUser, fetchMyRealPosts]);
+  }, [authLoading, authUser, fetchMyRealPosts, displayName, profile]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
@@ -144,6 +156,14 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  if (authLoading || (isDataLoading && myPosts.length === 0)) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -174,7 +194,7 @@ const Profile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img 
-                  src={profile?.avatar_url || "https://i.pravatar.cc/150?u=me"} 
+                  src={profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                   onError={handleImageError}
