@@ -9,11 +9,11 @@ const seededRandom = (seed: string) => {
   }
   return () => {
     hash = (hash * 16807) % 2147483647;
-    return (hash - 1) / 2147483646;
+    return ((hash - 1) / 2147483646) * 0.999999999999999;
   };
 };
 
-// 안정적인 Unsplash 이미지들로 구성된 카테고리별 이미지 풀
+// 안정적인 Unsplash 이미지들
 const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
@@ -54,13 +54,15 @@ const GENERAL_POOL = [
   "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-// GIF 풀도 안정적인 Unsplash 이미지로 대체 (실제 GIF는 아니지만 깨짐 방지 우선)
+// GIF 풀도 안정적인 Unsplash 이미지로 교체 (깨짐 방지)
 export const GIF_POOL = [
   "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f",
   "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
   "https://images.unsplash.com/photo-1439853949127-fa647821eba0",
   "https://images.unsplash.com/photo-1508739773434-c26b3d09e071",
-  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0"
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0",
+  "https://images.unsplash.com/photo-1490730141103-6cac27aaab94",
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
 export const isGifUrl = (url: string) => {

@@ -131,9 +131,10 @@ const Profile = () => {
     }, 100);
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = FALLBACK_IMAGE;
+  // 이미지 로드 실패 시 해당 포스팅을 목록에서 제거
+  const handleImageError = (postId: string, isSaved: boolean) => {
+    const setter = isSaved ? setSavedPosts : setMyPosts;
+    setter(prev => prev.filter(p => p.id !== postId));
   };
 
   const handlePostDelete = useCallback((postId: string) => {
@@ -181,7 +182,7 @@ const Profile = () => {
                   src={profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
-                  onError={handleImageError}
+                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                 />
               </div>
             </div>
@@ -322,7 +323,12 @@ const Profile = () => {
                         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
                         onClick={() => handleGridItemClick(post.id)}
                       >
-                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
+                        <img 
+                          src={post.image} 
+                          alt="" 
+                          className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
+                          onError={() => handleImageError(post.id, false)} 
+                        />
                       </div>
                     ))}
                   </div>
