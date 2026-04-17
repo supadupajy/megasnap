@@ -72,10 +72,10 @@ const Profile = () => {
       // 1. 실제 DB 포스팅 로드
       const realPosts = await fetchMyRealPosts();
       
-      // 2. 부족한 경우 랜덤 데이터로 채우기 (UI 풍성함을 위해)
-      const rawMock = createMockPosts(37.5665, 126.9780, Math.max(0, 15 - realPosts.length));
+      // 2. 랜덤 데이터 생성 (항상 12개 정도 추가하여 풍성하게 유지)
+      const rawMock = createMockPosts(37.5665, 126.9780, 12);
       const mockMine = rawMock.map((p, idx) => {
-        const isGif = idx < 5;
+        const isGif = idx < 4;
         const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
         return {
           ...p,
@@ -89,7 +89,12 @@ const Profile = () => {
         };
       });
 
-      setMyPosts([...realPosts, ...mockMine]);
+      // 실제 데이터와 랜덤 데이터를 합치고 최신순으로 정렬
+      const combined = [...realPosts, ...mockMine].sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
+
+      setMyPosts(combined);
 
       // 저장된 포스팅 (랜덤)
       const saved = createMockPosts(37.5665, 126.9780, 12)
