@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,26 @@ import { Camera } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Login = () => {
+  // 에러 메시지를 실시간으로 감시하여 변경하는 로직
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          // Supabase Auth UI의 에러 메시지 클래스 선택
+          const messages = document.querySelectorAll('.supabase-auth-ui_ui-message');
+          messages.forEach((msg) => {
+            if (msg.textContent === 'missing email or phone') {
+              msg.textContent = 'invalid email';
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
       <motion.div 
@@ -48,8 +68,6 @@ const Login = () => {
               }
             }}
             providers={[]}
-            // 세션은 기본적으로 로그아웃 전까지 유지됩니다.
-            // 로그인 실패 시 메시지를 한국어로 설정합니다.
             localization={{
               variables: {
                 sign_in: {
