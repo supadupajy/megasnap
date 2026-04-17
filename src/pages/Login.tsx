@@ -58,7 +58,7 @@ const Login = () => {
           localStorage.removeItem('remembered_email');
         }
 
-        showSuccess('반갑습니다! 탐험을 시작합니다.');
+        // 로그인 성공 알림 제거됨
         navigate('/');
       }
     } catch (err: any) {
