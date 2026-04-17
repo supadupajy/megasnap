@@ -180,7 +180,7 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 화면에 표시할 마커 필터링 (Sticky Logic 적용)
+  // 화면에 표시할 마커 필터링
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -190,7 +190,6 @@ const Index = () => {
 
     // 1. 현재 화면 영역 내에 있는 모든 후보 포스트 필터링
     const inBoundsCandidates = allPosts.filter(post => {
-      // 영역 체크 (약간의 여유분 포함)
       const margin = 0.005;
       const isWithinBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
                              post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
@@ -200,7 +199,6 @@ const Index = () => {
 
       const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
       
-      // 본인 포스팅은 시간 필터 무시하고 항상 표시
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
       
@@ -213,31 +211,19 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 2. Sticky Logic: 이미 표시 중인 마커 중 여전히 화면 안에 있는 것들은 유지
-    const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
-    const stillInBounds = displayedMarkers.filter(m => {
-      const margin = 0.005;
-      const isStillIn = m.lat >= sw.lat - margin && m.lat <= ne.lat + margin &&
-                        m.lng >= sw.lng - margin && m.lng <= ne.lng + margin;
-      // 카테고리나 시간 필터가 바뀌었을 때는 사라져야 하므로 후보군에 있는지 확인
-      const isStillCandidate = inBoundsCandidates.some(c => c.id === m.id);
-      return isStillIn && isStillCandidate;
-    });
+    // 2. 본인 포스팅과 일반 포스팅 분리하여 우선순위 처리
+    const myPostsInBounds = inBoundsCandidates.filter(p => authUser && (p.user.id === authUser.id || p.user.id === 'me'));
+    const otherPostsInBounds = inBoundsCandidates.filter(p => !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
 
-    // 3. 새로운 후보들 중 추가할 마커 선정
-    const newCandidates = inBoundsCandidates.filter(c => !currentlyDisplayedIds.has(c.id));
-    const sortedNewCandidates = newCandidates.sort((a, b) => {
-      const isMineA = authUser && (a.user.id === authUser.id || a.user.id === 'me');
-      const isMineB = authUser && (b.user.id === authUser.id || b.user.id === 'me');
-      
-      // 본인 포스팅에 압도적인 우선순위 부여 (10000점)
-      const scoreA = (isMineA ? 10000 : 0) + (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
-      const scoreB = (isMineB ? 10000 : 0) + (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
+    // 3. 일반 포스팅 정렬 (인플루언서, 인기, 광고 순)
+    const sortedOthers = otherPostsInBounds.sort((a, b) => {
+      const scoreA = (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
+      const scoreB = (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
-    // 4. 기존 유지 마커 + 새로운 마커 결합 (최대 개수 제한)
-    const combined = [...stillInBounds, ...sortedNewCandidates].slice(0, MAX_MARKERS);
+    // 4. 본인 포스팅을 무조건 앞에 두고 나머지를 채움
+    const combined = [...myPostsInBounds, ...sortedOthers].slice(0, MAX_MARKERS);
     
     const nextIds = combined.map(m => m.id).sort().join(',');
     const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
@@ -245,7 +231,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, displayedMarkers]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -293,7 +279,6 @@ const Index = () => {
 
   const handleCurrentLocation = async () => {
     try {
-      // 1. 권한 확인 및 요청
       const permissions = await Geolocation.checkPermissions();
       if (permissions.location !== 'granted') {
         const request = await Geolocation.requestPermissions();
@@ -303,7 +288,6 @@ const Index = () => {
         }
       }
 
-      // 2. 위치 정보 가져오기 (고정밀도 시도)
       const coordinates = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 10000
@@ -317,8 +301,6 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error getting location', error);
-      
-      // 3. 폴백: 일반 정밀도로 재시도
       try {
         const coordinates = await Geolocation.getCurrentPosition({
           enableHighAccuracy: false,
