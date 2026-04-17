@@ -39,14 +39,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       try {
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: 6 // 카카오 지도는 레벨이 낮을수록 확대됨 (기존 4에서 6으로 변경)
+          level: 6
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
         mapInstance.current = map;
-        setIsMapReady(true);
 
-        // 지도 이벤트 리스너
+        // 지도 데이터 업데이트 함수
         const updateMapData = () => {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
@@ -62,11 +61,16 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           });
         };
 
+        // 초기 로드 시 즉시 데이터 업데이트 호출
+        updateMapData();
+        setIsMapReady(true);
+
+        // 지도 이벤트 리스너 등록
         kakao.maps.event.addListener(map, 'idle', updateMapData);
         kakao.maps.event.addListener(map, 'dragstart', () => hideActionPin());
         kakao.maps.event.addListener(map, 'zoom_start', () => hideActionPin());
 
-        // 롱프레스 구현 (카카오 지도는 mousedown/touchstart 활용)
+        // 롱프레스 구현
         const handleStart = (e: any) => {
           const point = { x: e.offsetX || e.pageX, y: e.offsetY || e.pageY };
           startPos.current = point;
@@ -74,7 +78,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
-            // 카카오 지도의 좌표 변환
             const latLng = e.latLng;
             if (latLng) {
               showActionPin(latLng.getLat(), latLng.getLng());
@@ -114,7 +117,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return () => clearInterval(timer);
   }, []);
 
-  // 중심점 변경 시 이동
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
@@ -233,7 +235,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거된 포스트 오버레이 삭제
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -241,7 +242,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       }
     });
 
-    // 포스트 마커 업데이트 및 생성
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
@@ -268,7 +268,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        // 기존 오버레이 업데이트
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
