@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings, Grid, Bookmark, User as UserIcon, Play, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -17,34 +17,28 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
+  // 1. useAuth에서 필요한 것만 가져오되, 객체 통째로 의존성에 넣지 않음
+  const { profile, user, loading: authLoading, refreshProfile } = useAuth();
   
-  // 상태 관리
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false); // 데이터 로드 완료 여부
+  
+  // 2. 데이터 로드 완료 여부 (성공/실패 상관없이 '시도'했는지)
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const fetchLock = useRef(false);
 
-  // 1. 컴포넌트 생명주기 동안 유지되는 Ref
-  const hasFetched = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // 3. 의존성 전염을 막기 위해 원시값으로 고정
+  const userId = user?.id;
+  const profileName = profile?.nickname || user?.email?.split('@')[0] || '탐험가';
+  const profileAvatar = profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`;
 
-  // 2. 값 고정 (의존성 최소화)
-  const userId = authUser?.id;
-  const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-  const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`;
-
-  // 3. 데이터 로드 함수
-  const loadProfileData = useCallback(async (uid: string) => {
-    // 이미 가져오는 중이면 중단
-    if (hasFetched.current) return;
-    hasFetched.current = true;
-
-    // 이전 요청이 있다면 취소
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
+  // 4. 데이터 로드 로직
+  const loadContent = useCallback(async (uid: string) => {
+    if (fetchLock.current) return;
+    fetchLock.current = true;
 
     try {
       const { data, error } = await supabase
@@ -55,9 +49,9 @@ const Profile = () => {
 
       if (error) throw error;
 
-      const formatted = (data || []).map(p => ({
+      const posts = (data || []).map(p => ({
         id: p.id,
-        user: { id: p.user_id, name: p.user_name || displayName, avatar: p.user_avatar || avatarUrl },
+        user: { id: p.user_id, name: p.user_name || profileName, avatar: p.user_avatar || profileAvatar },
         content: p.content || '',
         location: p.location_name || '알 수 없는 장소',
         image: p.image_url,
@@ -72,38 +66,36 @@ const Profile = () => {
         borderType: 'none'
       })) as Post[];
 
-      setMyPosts(formatted);
+      setMyPosts(posts);
       setSavedPosts(createMockPosts(37.5665, 126.9780, 8, `saved_${uid}`).map(p => ({ ...p, isLiked: true })));
-    } catch (err: any) {
-      if (err.name !== 'AbortError') console.error('Fetch error:', err);
+    } catch (err) {
+      console.error('Data loading failed:', err);
     } finally {
-      setIsLoaded(true);
+      setDataLoaded(true);
+      fetchLock.current = false;
     }
-  }, [displayName, avatarUrl]);
+  }, [profileName, profileAvatar]);
 
-  // 4. 실행 트리거 (가장 안전한 방식)
+  // 5. [중요] 실행 트리거 분리
   useEffect(() => {
-    // 1단계: 인증 정보 로딩 중이면 아무것도 하지 않음
+    // 세션 로딩 중일 때는 아무것도 하지 않음 (루프 방지 핵심)
     if (authLoading) return;
 
-    // 2단계: 인증 정보 로딩이 끝났는데 유저가 없으면 로그인 페이지로
+    // 로딩 끝났는데 유저 없으면 로그인 이동
     if (!userId) {
       navigate('/login', { replace: true });
       return;
     }
 
-    // 3단계: 유저가 있고 아직 데이터를 가져오지 않았다면 실행
-    if (!isLoaded && !hasFetched.current) {
-      loadProfileData(userId);
+    // 유저 있고 아직 데이터 로드 전이면 실행
+    if (!dataLoaded) {
+      loadContent(userId);
     }
+  }, [authLoading, userId, dataLoaded, loadContent, navigate]);
 
-    return () => {
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-    };
-  }, [authLoading, userId, isLoaded, loadProfileData, navigate]);
-
-  // --- UI 로직 (이전과 동일) ---
-  if (authLoading || (!isLoaded && userId)) {
+  // --- 렌더링 가드 ---
+  // 리프레시 시 authLoading이 true인 동안은 '아무런 로직'도 실행하지 않고 스피너만 보여줌
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -111,55 +103,66 @@ const Profile = () => {
     );
   }
 
+  // 유저가 없는 상태에서 렌더링되는 것을 방지
   if (!userId) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px]">
-        {/* 프로필 상단부 */}
+        {/* 프로필 헤더 */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+            <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
               <UserIcon className="w-7 h-7 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900">내 프로필</h2>
-              <p className="text-xs text-gray-400 font-medium">활동 기록</p>
+              <h2 className="text-xl font-black text-gray-900">{profileName}</h2>
+              <p className="text-xs text-gray-400 font-medium">나의 여행 기록</p>
             </div>
           </div>
           <button onClick={() => navigate('/settings')} className="p-2"><Settings className="w-6 h-6 text-gray-400" /></button>
         </div>
 
         <div className="p-6">
+          {/* 프로필 정보 */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
-              <img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+              <img src={profileAvatar} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
-              <p className="text-sm text-gray-500 mb-4">{profile?.bio || "탐험가 📍"}</p>
-              <div className="flex gap-4 text-center">
-                <div><p className="font-bold">{myPosts.length}</p><p className="text-[10px] text-gray-400">Posts</p></div>
-                <div><p className="font-bold">1.2k</p><p className="text-[10px] text-gray-400">Followers</p></div>
-                <div><p className="font-bold">850</p><p className="text-[10px] text-gray-400">Following</p></div>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{profileName}</h2>
+              <p className="text-sm text-gray-500 mb-4">{profile?.bio || "세상을 탐험하는 중 📍"}</p>
+              <div className="flex gap-4">
+                <div className="text-center"><p className="font-bold">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div>
+                <div className="text-center"><p className="font-bold">1.2k</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div>
+                <div className="text-center"><p className="font-bold">850</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div>
               </div>
             </div>
           </div>
 
-          <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 text-gray-900 mb-8">프로필 편집</Button>
+          <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
 
-          {/* 탭 & 포스트 영역 생략 (동일) */}
+          {/* 탭 네비게이션 */}
+          <div className="flex border-b border-gray-100 mb-4">
+            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Grid className="w-6 h-6" /></button>
+            <button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Bookmark className="w-6 h-6" /></button>
+          </div>
+
+          {/* 게시물 그리드 */}
           <div className="grid grid-cols-3 gap-1">
             {myPosts.map(post => (
-              <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm" onClick={() => setViewMode('list')}>
+              <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden" onClick={() => setViewMode('list')}>
                 <img src={post.image} className="w-full h-full object-cover" alt="" />
               </div>
             ))}
           </div>
-          {myPosts.length === 0 && <div className="text-center py-20 text-gray-400">포스팅이 없습니다.</div>}
+          {dataLoaded && myPosts.length === 0 && (
+            <div className="text-center py-20 text-gray-400 font-medium">등록된 포스팅이 없습니다.</div>
+          )}
         </div>
       </div>
+
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
       <ProfileEditDrawer isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onUpdate={refreshProfile} />
