@@ -48,7 +48,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 60; 
+  const MAX_MARKERS = 80; 
 
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
@@ -88,7 +88,6 @@ const Index = () => {
     }
   }, []);
 
-  // 1. 초기 로드 시 DB 데이터 가져오기
   useEffect(() => {
     const initLoad = async () => {
       const realPosts = await fetchSupabasePosts();
@@ -148,7 +147,6 @@ const Index = () => {
     }
   }, [location.state, blockedIds]);
 
-  // 2. 지도 영역에 따른 랜덤 포스팅 생성 (DB 데이터는 여기서 건드리지 않음)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -180,7 +178,7 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 3. 화면에 표시할 마커 필터링
+  // 화면에 표시할 마커 필터링 (Sticky Logic 적용)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -188,24 +186,20 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 1. 현재 화면 영역 내에 있는 모든 후보 포스트 필터링
     const inBoundsCandidates = allPosts.filter(post => {
-      // 영역 체크
+      // 영역 체크 (약간의 여유분 포함)
       const margin = 0.005;
       const isWithinBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
                              post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
       if (!isWithinBounds) return false;
       
-      // 차단 유저 체크
       if (blockedIds.has(post.user.id)) return false;
 
-      // 본인 포스팅 여부 확인 (실제 ID 또는 테스트용 'me' ID)
       const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-
-      // 시간 필터 (광고나 내 포스팅은 항상 표시)
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
       
-      // 카테고리 필터
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
@@ -215,18 +209,29 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 중요도 순으로 정렬하여 상위 마커만 표시
-    const sorted = inBoundsCandidates.sort((a, b) => {
+    // 2. Sticky Logic: 이미 표시 중인 마커 중 여전히 화면 안에 있는 것들은 유지
+    const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
+    const stillInBounds = displayedMarkers.filter(m => {
+      const margin = 0.005;
+      const isStillIn = m.lat >= sw.lat - margin && m.lat <= ne.lat + margin &&
+                        m.lng >= sw.lng - margin && m.lng <= ne.lng + margin;
+      // 카테고리나 시간 필터가 바뀌었을 때는 사라져야 하므로 후보군에 있는지 확인
+      const isStillCandidate = inBoundsCandidates.some(c => c.id === m.id);
+      return isStillIn && isStillCandidate;
+    });
+
+    // 3. 새로운 후보들 중 추가할 마커 선정
+    const newCandidates = inBoundsCandidates.filter(c => !currentlyDisplayedIds.has(c.id));
+    const sortedNewCandidates = newCandidates.sort((a, b) => {
       const isMineA = authUser && (a.user.id === authUser.id || a.user.id === 'me');
       const isMineB = authUser && (b.user.id === authUser.id || b.user.id === 'me');
-      
-      // 내 포스팅에 가장 높은 우선순위 부여
       const scoreA = (isMineA ? 5000 : 0) + (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
       const scoreB = (isMineB ? 5000 : 0) + (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
-    const combined = sorted.slice(0, MAX_MARKERS);
+    // 4. 기존 유지 마커 + 새로운 마커 결합 (최대 개수 제한)
+    const combined = [...stillInBounds, ...sortedNewCandidates].slice(0, MAX_MARKERS);
     
     const nextIds = combined.map(m => m.id).sort().join(',');
     const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
@@ -234,7 +239,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, displayedMarkers]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
