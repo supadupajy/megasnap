@@ -50,13 +50,13 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  // 위치 선택 모드 관련 상태
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const TILE_BUFFER = 2; // 현재 영역 밖의 타일을 2개 더 미리 로드하여 돌발 생성 방지
-  const MAX_MARKERS = 100; 
+  const MAX_MARKERS = 60; 
   const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
@@ -125,11 +125,10 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    // 버퍼를 적용하여 화면 밖의 데이터를 미리 생성
-    const startLat = Math.floor((sw.lat - (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
-    const endLat = Math.ceil((ne.lat + (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
-    const startLng = Math.floor((sw.lng - (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
-    const endLng = Math.ceil((ne.lng + (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
+    const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
+    const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
+    const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
+    const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
     const newPosts: Post[] = [];
     let tilesAdded = false;
@@ -186,7 +185,6 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // Sticky Logic: 이미 표시 중인 마커는 영역 내에 있다면 최우선 유지
     const currentDisplayedIds = new Set(displayedMarkers.map(m => m.id));
     const stillInBounds = inBoundsCandidates.filter(m => currentDisplayedIds.has(m.id));
     const newlyInBounds = inBoundsCandidates.filter(m => !currentDisplayedIds.has(m.id));
@@ -253,6 +251,7 @@ const Index = () => {
     }, 1000);
   };
 
+  // 위치 선택 모드 핸들러
   const handleMapClick = (loc: { lat: number; lng: number }) => {
     if (isSelectingLocation) {
       setTempSelectedLocation(loc);
@@ -263,6 +262,7 @@ const Index = () => {
     if (tempSelectedLocation) {
       setFinalSelectedLocation(tempSelectedLocation);
       setIsSelectingLocation(false);
+      // 약간의 지연을 주어 지도가 안정된 후 팝업을 엽니다.
       setTimeout(() => {
         setIsWriteOpen(true);
       }, 100);
@@ -279,6 +279,7 @@ const Index = () => {
 
   const startLocationSelection = () => {
     setIsWriteOpen(false);
+    // Drawer가 닫히는 애니메이션 시간을 고려하여 지연 실행
     setTimeout(() => {
       setIsSelectingLocation(true);
     }, 300);
@@ -303,6 +304,7 @@ const Index = () => {
             selectionLocation={tempSelectedLocation}
           />
 
+          {/* 위치 선택 모드 UI */}
           <AnimatePresence>
             {isSelectingLocation && (
               <motion.div 

@@ -32,6 +32,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
 
+  // 선택된 좌표가 있을 경우 주소로 변환
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen) {

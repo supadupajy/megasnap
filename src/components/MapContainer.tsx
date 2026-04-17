@@ -109,6 +109,7 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
+  // 위치 선택용 마커 관리
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
