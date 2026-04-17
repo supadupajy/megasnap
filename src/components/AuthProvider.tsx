@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error && error.code !== 'PGRST116') throw error;
       setProfile(data || { nickname: null, avatar_url: null });
     } catch (err) {
-      console.error('Error fetching profile:', err);
+      console.error('[Auth] Profile fetch error:', err);
       setProfile({ nickname: null, avatar_url: null });
     }
   };
@@ -52,51 +52,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // 1. 초기 세션 확인
-    const checkSession = async () => {
+    // 무한 로딩 방지를 위한 안전장치 (5초 후 강제 로딩 해제)
+    const safetyTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] Loading timed out, forcing start');
+        setLoading(false);
+      }
+    }, 5000);
+
+    const initAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // 1. 현재 세션 즉시 확인
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
         if (mounted) {
           if (initialSession) {
             setSession(initialSession);
             setUser(initialSession.user);
-            await fetchProfile(initialSession.user.id);
+            // 프로필은 백그라운드에서 로드 (메인 로딩을 막지 않음)
+            fetchProfile(initialSession.user.id);
           }
         }
       } catch (error) {
-        console.error('Initial session check error:', error);
+        console.error('[Auth] Session check error:', error);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(safetyTimer);
+        }
       }
     };
 
-    checkSession();
+    initAuth();
 
     // 2. 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('Auth event:', event);
+      console.log('[Auth] Event:', event);
       
       if (!mounted) return;
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (currentSession) {
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
-        }
-      } else if (event === 'SIGNED_OUT') {
+        setUser(currentSession.user);
+        fetchProfile(currentSession.user.id);
+      } else {
         setSession(null);
         setUser(null);
         setProfile(null);
       }
       
-      // INITIAL_SESSION 이벤트 등에서도 로딩이 확실히 풀리도록 보장
+      // 어떤 이벤트가 발생하든 로딩 상태는 해제
       setLoading(false);
+      clearTimeout(safetyTimer);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimer);
     };
   }, []);
 
@@ -108,7 +123,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('[Auth] Sign out error:', error);
     }
   };
 
