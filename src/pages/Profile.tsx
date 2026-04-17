@@ -11,19 +11,21 @@ import PostItem from '@/components/PostItem';
 import { createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { profile, user: authUser } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
 
-  // 내 포스트 및 저장된 포스트 데이터 생성
+  const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
+
   useEffect(() => {
-    // 내 포스트 30개 생성
     const rawMine = createMockPosts(37.5665, 126.9780, 30);
     
     const mine = rawMine.map((p, idx) => {
@@ -39,20 +41,19 @@ const Profile = () => {
         images: isGif ? [image, ...p.images.slice(1)] : p.images,
         user: {
           id: 'me',
-          name: 'Dyad_Explorer',
-          avatar: 'https://i.pravatar.cc/150?u=me'
+          name: displayName,
+          avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?u=me'
         }
       };
     }).sort(() => Math.random() - 0.5);
 
     setMyPosts(mine);
 
-    // 저장된 포스트
     const saved = createMockPosts(37.5665, 126.9780, 12)
       .filter(p => p.user.id !== 'me')
       .map(p => ({ ...p, isLiked: true }));
     setSavedPosts(saved);
-  }, []);
+  }, [displayName, profile]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
@@ -94,7 +95,6 @@ const Profile = () => {
       <Header />
 
       <div className="pt-[88px]">
-        {/* Profile Header Section */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -113,12 +113,11 @@ const Profile = () => {
         </div>
 
         <div className="p-6">
-          {/* Profile Info */}
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img 
-                  src="https://i.pravatar.cc/150?u=me" 
+                  src={profile?.avatar_url || "https://i.pravatar.cc/150?u=me"} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                   onError={handleImageError}
@@ -126,7 +125,7 @@ const Profile = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">Dyad_Explorer</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
               <p className="text-sm text-gray-500 mb-4">지도를 여행하는 탐험가 📍</p>
               <div className="flex gap-4">
                 <div className="text-center">
@@ -149,7 +148,6 @@ const Profile = () => {
             프로필 편집
           </Button>
 
-          {/* Tabs */}
           <div className="flex border-b border-gray-100 mb-4">
             <button 
               onClick={() => setViewMode('grid')}
@@ -180,7 +178,6 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* Content Area */}
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
@@ -212,13 +209,9 @@ const Profile = () => {
                     />
                   </div>
                 ))}
-                {savedPosts.length === 0 && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 게시물이 없습니다.</div>
-                )}
               </>
             ) : (
               <>
-                {/* 지도에서 보기 배너 (사진/동영상 탭 공통) */}
                 <div 
                   onClick={() => navigate('/', { state: { filterUserId: 'me' } })}
                   className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
@@ -254,27 +247,9 @@ const Profile = () => {
                       </div>
                     ))}
                   </div>
-                ) : viewMode === 'gifs' ? (
-                  <div className="grid grid-cols-3 gap-1 px-6">
-                    {myPosts.filter(p => p.isGif).map((post) => (
-                      <div 
-                        key={post.id} 
-                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                        onClick={() => handleGridItemClick(post.id)}
-                      >
-                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
-                        <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
-                          <Play className="w-2.5 h-2.5 text-white fill-white" />
-                        </div>
-                      </div>
-                    ))}
-                    {myPosts.filter(p => p.isGif).length === 0 && (
-                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">등록된 GIF가 없습니다.</div>
-                    )}
-                  </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
-                    {myPosts.map((post) => (
+                    {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                       <div 
                         key={post.id} 
                         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
@@ -288,9 +263,6 @@ const Profile = () => {
                         )}
                       </div>
                     ))}
-                    {myPosts.length === 0 && (
-                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">게시물이 없습니다.</div>
-                    )}
                   </div>
                 )}
               </>

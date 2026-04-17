@@ -21,6 +21,7 @@ import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
+import NicknameDialog from "./components/NicknameDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 
 const queryClient = new QueryClient();
@@ -43,11 +44,20 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, user, profile, refreshProfile } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
   
   const hideLayout = ["/chat", "/splash", "/login"].some(path => location.pathname.startsWith(path));
+
+  useEffect(() => {
+    if (session && profile && !profile.nickname && !hideLayout) {
+      setShowNicknameDialog(true);
+    } else {
+      setShowNicknameDialog(false);
+    }
+  }, [session, profile, hideLayout]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -112,6 +122,17 @@ const AnimatedRoutes = () => {
         onClose={() => setShowExitDialog(false)} 
         onConfirm={handleExitApp} 
       />
+
+      {user && (
+        <NicknameDialog 
+          isOpen={showNicknameDialog} 
+          userId={user.id} 
+          onComplete={() => {
+            setShowNicknameDialog(false);
+            refreshProfile();
+          }} 
+        />
+      )}
     </div>
   );
 };
