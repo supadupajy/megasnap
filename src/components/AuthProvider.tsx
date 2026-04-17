@@ -39,8 +39,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const ensureProfile = useCallback(async (userId: string, email: string | undefined) => {
     try {
-      console.log('[Auth] 프로필 확인 및 자동 생성 시작:', userId);
-      
       // 1. 기존 프로필 조회
       const { data, error } = await supabase
         .from('profiles')
@@ -51,14 +49,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
 
       if (data && data.nickname) {
-        console.log('[Auth] 기존 닉네임 확인됨:', data.nickname);
         setProfile(data);
       } else {
         // 2. 닉네임이 없으면 랜덤 생성 및 저장
         const randomId = Math.random().toString(36).substring(2, 7);
         const generatedNickname = `탐험가_${randomId}`;
-        
-        console.log('[Auth] 닉네임 자동 생성:', generatedNickname);
         
         const newProfile = {
           id: userId,
@@ -67,11 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           updated_at: new Date().toISOString()
         };
 
-        const { error: upsertError } = await supabase
-          .from('profiles')
-          .upsert(newProfile);
-
-        if (upsertError) throw upsertError;
+        await supabase.from('profiles').upsert(newProfile);
 
         setProfile({
           nickname: generatedNickname,
@@ -83,6 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error('[Auth] 프로필 처리 중 오류:', err);
     } finally {
+      // 프로필 로드 성공 여부와 상관없이 인증 로딩은 종료
       setLoading(false);
     }
   }, []);
@@ -90,6 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
+    // 초기 세션 확인
     const initAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -110,6 +103,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initAuth();
 
+    // 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
@@ -117,8 +111,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_IN') {
           await ensureProfile(currentSession.user.id, currentSession.user.email);
+        } else {
+          // 이미 세션이 있는 경우(INITIAL_SESSION 등) 로딩 종료 보장
+          setLoading(false);
         }
       } else {
         setSession(null);
@@ -128,11 +125,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
+    // 5초 후에는 강제로 로딩 종료 (안전장치)
+    const safetyTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] 인증 로딩 타임아웃 - 강제 종료');
+        setLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimer);
     };
-  }, [ensureProfile]);
+  }, [ensureProfile, loading]);
 
   const refreshProfile = async () => {
     if (user) await ensureProfile(user.id, user.email);
@@ -143,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
   };
 

@@ -39,6 +39,7 @@ const ScrollToTop = () => {
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   
+  // 인증 확인 중일 때만 로더 표시
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -133,9 +134,10 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // 스플래시 화면을 2초로 단축하여 더 빠른 진입 유도
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
