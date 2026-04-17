@@ -18,6 +18,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostItemProps {
   id: string;
@@ -88,13 +89,13 @@ const PostItem = ({
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
   const [localComments, setLocalComments] = useState<Comment[]>(initialComments || []);
   const [commentInput, setCommentInput] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const isPopular = !isAd && borderType === 'popular';
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
 
-  // 본인 포스팅 여부 확인
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -139,10 +140,7 @@ const PostItem = ({
     showError(`${user.name} 님을 차단했습니다.`);
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('정말로 이 포스팅을 삭제하시겠습니까?')) return;
-
+  const confirmDelete = async () => {
     try {
       const { error } = await supabase
         .from('posts')
@@ -156,6 +154,8 @@ const PostItem = ({
     } catch (err) {
       console.error('Error deleting post:', err);
       showError('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -221,7 +221,7 @@ const PostItem = ({
           <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
             {isMine ? (
               <DropdownMenuItem 
-                onClick={handleDelete}
+                onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }}
                 className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
               >
                 <Trash2 className="w-4 h-4 text-red-600" />
@@ -335,6 +335,12 @@ const PostItem = ({
           </button>
         </div>
       </div>
+
+      <DeleteConfirmDialog 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

@@ -20,6 +20,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostDetailProps {
   posts: any[];
@@ -45,6 +46,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [localComments, setLocalComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
@@ -106,7 +108,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isGif = isGifUrl(images[currentImageIndex]);
   const category = post.category || 'none';
 
-  // 본인 포스팅 여부 확인
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -127,10 +128,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     onClose();
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('정말로 이 포스팅을 삭제하시겠습니까?')) return;
-
+  const confirmDelete = async () => {
     try {
       const { error } = await supabase
         .from('posts')
@@ -145,6 +143,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     } catch (err) {
       console.error('Error deleting post:', err);
       showError('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -237,7 +237,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[120]">
                         {isMine ? (
                           <DropdownMenuItem 
-                            onClick={handleDelete}
+                            onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }}
                             className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
@@ -335,6 +335,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           </motion.div>
         </div>
       </DialogContent>
+
+      <DeleteConfirmDialog 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </Dialog>
   );
 };
