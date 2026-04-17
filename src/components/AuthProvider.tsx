@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         setProfile(data);
       } else {
+        // 프로필이 없는 경우 기본값 설정
         setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
       }
     } catch (err) {
@@ -63,9 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (mounted) {
           if (initialSession) {
             setSession(initialSession);
@@ -75,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('[Auth] Session check error:', error);
+        console.error('[Auth] Init error:', error);
         if (mounted) setLoading(false);
       }
     };
@@ -88,6 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
+        // 로그인이나 토큰 갱신 시 프로필 다시 가져오기
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await fetchProfile(currentSession.user.id);
         }
@@ -96,7 +96,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setProfile(null);
       }
-      
       setLoading(false);
     });
 
@@ -115,11 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('[Auth] Sign out error:', error);
-    }
+    await supabase.auth.signOut();
   };
 
   return (
