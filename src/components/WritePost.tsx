@@ -107,6 +107,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
+    // 실제 닉네임 사용 (없으면 이메일 앞자리)
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
     const postData = {
@@ -115,7 +116,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       latitude: lat,
       longitude: lng,
       image_url: capturedImage,
-      user_id: authUser.id, // 실제 사용자 ID 저장
+      user_id: authUser.id,
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
       likes: 0,

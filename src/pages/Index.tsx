@@ -48,6 +48,7 @@ const Index = () => {
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
 
+  // Supabase에서 실제 포스팅 가져오기
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
     try {
@@ -154,6 +155,7 @@ const Index = () => {
         }
       }
 
+      // 실제 포스팅 데이터 가져오기
       const realPosts = await fetchSupabasePosts();
       
       setAllPosts(prev => {
@@ -277,6 +279,7 @@ const Index = () => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });
     
+    // 핑 효과 적용
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
