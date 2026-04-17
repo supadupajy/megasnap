@@ -293,8 +293,20 @@ const Index = () => {
 
   const handleCurrentLocation = async () => {
     try {
+      // 1. 권한 확인 및 요청
+      const permissions = await Geolocation.checkPermissions();
+      if (permissions.location !== 'granted') {
+        const request = await Geolocation.requestPermissions();
+        if (request.location !== 'granted') {
+          showError('위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.');
+          return;
+        }
+      }
+
+      // 2. 위치 정보 가져오기 (고정밀도 시도)
       const coordinates = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true
+        enableHighAccuracy: true,
+        timeout: 10000
       });
       
       if (coordinates.coords) {
@@ -305,9 +317,23 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error getting location', error);
-      showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
-      // 실패 시 기본 위치로 이동 (서울시청)
-      setMapCenter({ lat: 37.5665, lng: 126.9780 });
+      
+      // 3. 폴백: 일반 정밀도로 재시도
+      try {
+        const coordinates = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 10000
+        });
+        if (coordinates.coords) {
+          setMapCenter({ 
+            lat: coordinates.coords.latitude, 
+            lng: coordinates.coords.longitude 
+          });
+          return;
+        }
+      } catch (fallbackError) {
+        showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
+      }
     }
   };
 
