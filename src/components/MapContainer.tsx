@@ -39,7 +39,6 @@ const MapContainer = ({
   }, [onMapClick]);
 
   const [isMapReady, setIsMapReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -77,9 +76,7 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { 
-          isDragging.current = true; 
-        });
+        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
         kakao.maps.event.addListener(map, 'dragend', () => { 
           isDragging.current = false; 
           lastDragEnd.current = Date.now(); 
@@ -87,7 +84,6 @@ const MapContainer = ({
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
           if (Date.now() - lastDragEnd.current < 200) return;
-          
           if (onMapClickRef.current) {
             const latLng = mouseEvent.latLng;
             onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
@@ -97,7 +93,6 @@ const MapContainer = ({
         return true;
       } catch (e) {
         console.error('Kakao Map Init Error:', e);
-        setError("카카오 지도를 불러오는 중 오류가 발생했습니다.");
         return false;
       }
     };
@@ -109,52 +104,17 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 위치 선택용 마커 관리
-  useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao) return;
-
-    if (selectionMarkerRef.current) {
-      selectionMarkerRef.current.setMap(null);
-      selectionMarkerRef.current = null;
-    }
-
-    if (selectionLocation) {
-      const container = document.createElement('div');
-      container.style.cssText = 'pointer-events: none; z-index: 10000;';
-      container.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
-          <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 50%; border: 3px solid white; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          </div>
-          <div style="width: 4px; height: 8px; background: #4f46e5; margin-top: -2px;"></div>
-        </div>
-      `;
-
-      const overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(selectionLocation.lat, selectionLocation.lng),
-        content: container,
-        yAnchor: 1,
-        zIndex: 10000
-      });
-
-      overlay.setMap(mapInstance.current);
-      selectionMarkerRef.current = overlay;
-    }
-  }, [selectionLocation, isMapReady]);
-
+  // 지도 중심 이동 (panTo 사용)
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
       const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
-      
-      // panTo는 거리가 멀면 순간이동하므로, 부드러운 이동을 위해 panTo를 사용하되
-      // 거리에 상관없이 최대한 부드럽게 이동하도록 설정 (카카오 API 기본 panTo 활용)
       mapInstance.current.panTo(moveLatLng);
     }
   }, [center, isMapReady]);
 
-  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
+  // 마커 HTML 생성 함수 (내부 구조만 반환)
+  const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
@@ -194,35 +154,35 @@ const MapContainer = ({
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.4)' : 'scale(1)'};">
-        ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-        <div class="${animationClass}">
-          ${labelHtml}
-          <div class="${borderClass || ''}"
-               style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                      ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
-                      overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                      background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
-              <img src="${post.image}" 
-                   onerror="this.src='${FALLBACK_IMAGE}'"
-                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-              ${categoryIconHtml}
-            </div>
+      ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
+      <div class="${animationClass}">
+        ${labelHtml}
+        <div class="${borderClass || ''}"
+             style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
+                    ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
+                    overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    background-color: white;">
+          <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
+            <img src="${post.image}" 
+                 onerror="this.src='${FALLBACK_IMAGE}'"
+                 style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
+            ${categoryIconHtml}
           </div>
-          ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
         </div>
+        ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
       </div>
     `;
   };
 
+  // 마커 업데이트 로직
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
+    // 제거된 포스트 오버레이 삭제
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -236,11 +196,15 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
+        // 새 마커 생성
         const content = document.createElement('div');
-        content.className = 'kakao-overlay';
+        content.className = 'marker-container kakao-overlay';
         content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; pointer-events: auto;`;
-        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         
+        // 초기 HTML 설정
+        content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
+        if (isHighlighted) content.classList.add('highlighted');
+
         content.onclick = (e) => {
           e.stopPropagation();
           if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return;
@@ -256,12 +220,23 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
+        // 기존 마커 업데이트 (DOM 요소를 유지하여 CSS 트랜지션 보장)
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
+          // z-index 업데이트
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          const newHtml = getMarkerHtml(post, isViewed, isHighlighted);
-          if (content.innerHTML !== newHtml) {
-            content.innerHTML = newHtml;
+          
+          // 하이라이트 클래스 토글 (CSS 트랜지션 트리거)
+          if (isHighlighted) {
+            content.classList.add('highlighted');
+          } else {
+            content.classList.remove('highlighted');
+          }
+
+          // 내부 HTML 업데이트 (필요한 경우에만)
+          const newInnerHtml = getMarkerInnerHtml(post, isViewed, isHighlighted);
+          if (content.innerHTML !== newInnerHtml) {
+            content.innerHTML = newInnerHtml;
           }
         }
       }
@@ -271,14 +246,6 @@ const MapContainer = ({
   return (
     <div className="w-full h-full relative bg-gray-100">
       <div ref={mapElement} className="w-full h-full" style={{ pointerEvents: 'auto' }} />
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm z-[100] p-6 text-center">
-          <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-red-100 max-w-xs">
-            <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
-            <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">{error}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
