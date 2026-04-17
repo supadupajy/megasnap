@@ -9,7 +9,7 @@ import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
-import { createMockPosts, GIF_POOL } from '@/lib/mock-data';
+import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -38,11 +38,8 @@ const Profile = () => {
 
     setIsDataLoading(true);
     
-    // 1. 결정론적 가상 데이터 생성
-    const mockMine = createMockPosts(37.5665, 126.9780, 12, authUser.id);
-
     try {
-      // 2. 실제 DB 포스팅 가져오기 (이미지가 있는 것만 필터링)
+      // 실제 DB 포스팅만 가져오기 (가상 데이터 mockMine 제거)
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
@@ -51,8 +48,9 @@ const Profile = () => {
 
       if (error) throw error;
 
+      // 이미지가 확실히 있는 데이터만 필터링
       const realPosts = (realData || [])
-        .filter(p => p.image_url && p.image_url.trim() !== '') // 이미지가 없는 게시물 제외
+        .filter(p => p.image_url && p.image_url.startsWith('data:image') || p.image_url?.includes('http'))
         .map(p => ({
           id: p.id,
           isAd: false,
@@ -76,20 +74,14 @@ const Profile = () => {
           borderType: 'none'
         })) as Post[];
       
-      // 3. 데이터 통합 및 정렬
-      const combined = [...realPosts, ...mockMine].sort((a, b) => 
-        b.createdAt.getTime() - a.createdAt.getTime()
-      );
+      setMyPosts(realPosts);
 
-      setMyPosts(combined);
-
-      // 4. 저장된 포스팅 (결정론적 생성)
-      const saved = createMockPosts(37.5665, 126.9780, 12, `saved_${authUser.id}`)
+      // 저장된 포스팅은 데모를 위해 유지하되, 에러 처리를 강화함
+      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${authUser.id}`)
         .map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
     } catch (err) {
-      console.error('[Profile] DB Fetch Error, using mock only:', err);
-      setMyPosts(mockMine);
+      console.error('[Profile] Data Fetch Error:', err);
     } finally {
       setIsDataLoading(false);
     }
@@ -131,7 +123,7 @@ const Profile = () => {
     }, 100);
   };
 
-  // 이미지 로드 실패 시 해당 포스팅을 목록에서 즉시 제거 (그리드/리스트 공통)
+  // 이미지 로드 실패 시 해당 포스팅을 상태에서 즉시 제거 (강제 삭제 효과)
   const handleImageError = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
@@ -333,6 +325,11 @@ const Profile = () => {
                         />
                       </div>
                     ))}
+                    {myPosts.length === 0 && !isDataLoading && (
+                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
+                        아직 등록된 포스팅이 없습니다.
+                      </div>
+                    )}
                   </div>
                 )}
               </>
