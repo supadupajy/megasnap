@@ -33,45 +33,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // 1. 세션 초기화 (비동기지만 setLoading을 최대한 빨리 호출)
+    let mounted = true;
+
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        if (initialSession?.user) {
-          // 프로필은 백그라운드에서 가져옴 (await 하지 않음)
-          fetchProfile(initialSession.user.id);
+        // 세션 확인에 타임아웃을 두어 무한 로딩 방지
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Auth timeout")), 5000)
+        );
+
+        const { data: { session: initialSession } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+
+        if (mounted) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          
+          if (initialSession?.user) {
+            fetchProfile(initialSession.user.id);
+          }
         }
       } catch (error) {
         console.error("Auth init error:", error);
       } finally {
-        // 세션 확인이 끝나면 즉시 로딩 해제
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initAuth();
 
-    // 2. 인증 상태 변화 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          fetchProfile(currentSession.user.id);
-        } else {
-          setProfile(null);
+        if (mounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            fetchProfile(currentSession.user.id);
+          } else {
+            setProfile(null);
+          }
+          setLoading(false);
         }
-        
-        // 상태 변화가 감지되면 로딩 해제 보장
-        setLoading(false);
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -81,10 +94,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
   };
 
   return (
