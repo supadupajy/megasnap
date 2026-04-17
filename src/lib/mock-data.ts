@@ -1,6 +1,18 @@
 import { Post, User, Comment } from '@/types';
 
-// ... (기존 이미지 풀 및 유틸리티 함수 유지)
+// 결정론적 랜덤 함수 (씨앗 기반)
+const seededRandom = (seed: string) => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return () => {
+    hash = (hash * 16807) % 2147483647;
+    return (hash - 1) / 2147483646;
+  };
+};
+
 const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
@@ -185,14 +197,14 @@ const COMMENT_USERS = [
   "luna_moon", "atlas_map", "flow_river", "pixel_art", "cloud_nine"
 ];
 
-const generateRandomComments = (count: number): Comment[] => {
+const generateRandomComments = (count: number, randomFn: () => number = Math.random): Comment[] => {
   const comments: Comment[] = [];
   const numToGenerate = Math.min(count, 30); 
   
   for (let i = 0; i < numToGenerate; i++) {
     comments.push({
-      user: COMMENT_USERS[Math.floor(Math.random() * COMMENT_USERS.length)],
-      text: COMMENT_TEXTS[Math.floor(Math.random() * COMMENT_TEXTS.length)]
+      user: COMMENT_USERS[Math.floor(randomFn() * COMMENT_USERS.length)],
+      text: COMMENT_TEXTS[Math.floor(randomFn() * COMMENT_TEXTS.length)]
     });
   }
   return comments;
@@ -231,21 +243,20 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
-export const createMockUser = (id: string): User => {
+export const createMockUser = (id: string, randomFn: () => number = Math.random): User => {
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
   let nickname = `Explorer_${finalId}`;
   if (id === 'me') nickname = 'Dyad_Explorer';
 
-  // 인플루언서 등급 테스트를 위해 랜덤하게 높은 팔로워 수 할당
-  const roll = Math.random();
-  let followers = Math.floor(Math.random() * 5000) + 100;
+  const roll = randomFn();
+  let followers = Math.floor(randomFn() * 5000) + 100;
   
   if (roll > 0.98) {
-    followers = Math.floor(Math.random() * 5000000) + 10000000; // 10M+ (Diamond)
+    followers = Math.floor(randomFn() * 5000000) + 10000000; 
   } else if (roll > 0.95) {
-    followers = Math.floor(Math.random() * 4000000) + 1000000; // 1M - 5M (Gold)
+    followers = Math.floor(randomFn() * 4000000) + 1000000; 
   } else if (roll > 0.9) {
-    followers = Math.floor(Math.random() * 800000) + 100000; // 100k - 900k (Silver)
+    followers = Math.floor(randomFn() * 800000) + 100000; 
   }
 
   return {
@@ -255,9 +266,9 @@ export const createMockUser = (id: string): User => {
     avatar: `https://i.pravatar.cc/150?u=${finalId}`,
     bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
     followers,
-    following: Math.floor(Math.random() * 1000) + 50,
-    postsCount: Math.floor(Math.random() * 100) + 5,
-    isFollowing: Math.random() > 0.8
+    following: Math.floor(randomFn() * 1000) + 50,
+    postsCount: Math.floor(randomFn() * 100) + 5,
+    isFollowing: randomFn() > 0.8
   };
 };
 
@@ -266,60 +277,61 @@ export const getUserById = (id: string): User => {
 };
 
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15, specificUserId?: string): Post[] => {
+  // 특정 사용자의 경우 결정론적 랜덤 함수 사용
+  const randomFn = specificUserId ? seededRandom(specificUserId) : Math.random;
+
   return Array.from({ length: count }).map((_, i) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const isInfluencer = specificUserId ? false : Math.random() > 0.9; 
-    const isPopular = specificUserId ? false : Math.random() > 0.95;
-    const isAd = !specificUserId && !isInfluencer && !isPopular && Math.random() > 0.92;
-    const isGif = !isAd && Math.random() > 0.85; 
+    const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
+    const isInfluencer = specificUserId ? false : randomFn() > 0.9; 
+    const isPopular = specificUserId ? false : randomFn() > 0.95;
+    const isAd = !specificUserId && !isInfluencer && !isPopular && randomFn() > 0.92;
+    const isGif = !isAd && randomFn() > 0.85; 
     
-    const lat = centerLat + (Math.random() - 0.5) * 0.04;
-    const lng = centerLng + (Math.random() - 0.5) * 0.04;
+    const lat = centerLat + (randomFn() - 0.5) * 0.04;
+    const lng = centerLng + (randomFn() - 0.5) * 0.04;
     
-    let content = CONTENT_POOL[Math.floor(Math.random() * CONTENT_POOL.length)];
+    let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)];
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
     if (isGif) {
-      const gifImg = GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)];
+      const gifImg = GIF_POOL[Math.floor(randomFn() * GIF_POOL.length)];
       images = [gifImg, cokeAdImg];
       category = 'place';
     } else if (isAd) {
-      content = AD_FOOD_CONTENT[Math.floor(Math.random() * AD_FOOD_CONTENT.length)];
-      images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
+      content = AD_FOOD_CONTENT[Math.floor(randomFn() * AD_FOOD_CONTENT.length)];
+      images = [AD_FOOD_IMAGES[Math.floor(randomFn() * AD_FOOD_IMAGES.length)], cokeAdImg];
       category = 'food';
     } else {
-      const categoryRoll = Math.random();
+      const categoryRoll = randomFn();
       if (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15) {
-        images = [ACCIDENT_IMAGES[Math.floor(Math.random() * ACCIDENT_IMAGES.length)], cokeAdImg];
+        images = [ACCIDENT_IMAGES[Math.floor(randomFn() * ACCIDENT_IMAGES.length)], cokeAdImg];
         category = 'accident';
       } else if (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35)) {
-        images = [ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)], cokeAdImg];
+        images = [ANIMAL_IMAGES[Math.floor(randomFn() * ANIMAL_IMAGES.length)], cokeAdImg];
         category = 'animal';
       } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
-        images = [AD_FOOD_IMAGES[Math.floor(Math.random() * AD_FOOD_IMAGES.length)], cokeAdImg];
+        images = [AD_FOOD_IMAGES[Math.floor(randomFn() * AD_FOOD_IMAGES.length)], cokeAdImg];
         category = 'food';
       } else if (categoryRoll >= 0.6 && categoryRoll < 0.85) {
-        images = [PLACE_IMAGES[Math.floor(Math.random() * PLACE_IMAGES.length)], cokeAdImg];
+        images = [PLACE_IMAGES[Math.floor(randomFn() * PLACE_IMAGES.length)], cokeAdImg];
         category = 'place';
       } else {
-        images = [GENERAL_POOL[Math.floor(Math.random() * GENERAL_POOL.length)], cokeAdImg];
+        images = [GENERAL_POOL[Math.floor(randomFn() * GENERAL_POOL.length)], cokeAdImg];
         category = 'none';
       }
     }
 
-    const randomCount = Math.floor(Math.random() * 16) + 10;
-    const comments = generateRandomComments(randomCount);
-    const user = specificUserId ? createMockUser(specificUserId) : createMockUser(isAd ? "sponsored" : id);
+    const randomCount = Math.floor(randomFn() * 16) + 10;
+    const comments = generateRandomComments(randomCount, randomFn);
+    const user = specificUserId ? createMockUser(specificUserId, randomFn) : createMockUser(isAd ? "sponsored" : id, randomFn);
 
-    // 좋아요 수 결정 (인기 포스팅은 1500개 이상으로 설정 가능하도록 범위 조정)
     const likes = (isPopular || isInfluencer) 
-      ? Math.floor(Math.random() * 2000) + 800 // 800 ~ 2800 범위
-      : Math.floor(Math.random() * 500) + 10;
+      ? Math.floor(randomFn() * 2000) + 800 
+      : Math.floor(randomFn() * 500) + 10;
 
-    // 팔로워 수 및 좋아요 수에 따른 등급 결정
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
     if (isInfluencer && user.followers) {
       if (user.followers >= 10000000) borderType = 'diamond';
@@ -337,7 +349,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       category,
       user,
       content,
-      location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
+      location: LOCATIONS[Math.floor(randomFn() * LOCATIONS.length)],
       lat,
       lng,
       likes,
@@ -346,8 +358,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       image: images[0],
       images,
       adImageIndex: 1,
-      isLiked: Math.random() > 0.5,
-      createdAt: new Date(Date.now() - Math.random() * 12 * 3600000),
+      isLiked: randomFn() > 0.5,
+      createdAt: new Date(Date.now() - randomFn() * 12 * 3600000),
       borderType
     };
   });

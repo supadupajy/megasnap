@@ -38,22 +38,8 @@ const Profile = () => {
 
     setIsDataLoading(true);
     
-    // 1. 즉시 가상 데이터 생성 (내 포스팅처럼 보이게 ID 설정)
-    const rawMock = createMockPosts(37.5665, 126.9780, 12);
-    const mockMine = rawMock.map((p, idx) => {
-      const isGif = idx < 4;
-      const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
-      return {
-        ...p,
-        isGif,
-        image,
-        user: {
-          id: authUser.id,
-          name: displayName,
-          avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
-        }
-      };
-    });
+    // 1. 결정론적 가상 데이터 생성 (authUser.id를 씨앗으로 사용)
+    const mockMine = createMockPosts(37.5665, 126.9780, 12, authUser.id);
 
     try {
       // 2. 실제 DB 포스팅 가져오기
@@ -95,9 +81,8 @@ const Profile = () => {
 
       setMyPosts(combined);
 
-      // 4. 저장된 포스팅 (Mock)
-      const saved = createMockPosts(37.5665, 126.9780, 12)
-        .filter(p => p.user.id !== authUser.id)
+      // 4. 저장된 포스팅 (결정론적 생성)
+      const saved = createMockPosts(37.5665, 126.9780, 12, `saved_${authUser.id}`)
         .map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
     } catch (err) {
