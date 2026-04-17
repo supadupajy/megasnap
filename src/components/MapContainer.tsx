@@ -21,7 +21,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
-  const isDragging = useRef(false); // 드래그 상태 추적용 ref
+  const isDragging = useRef(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,30 +64,23 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         setIsMapReady(true);
 
-        // 지도 이벤트 리스너 등록
-        kakao.maps.event.addListener(map, 'idle', updateMapData);
+        // 실시간 업데이트를 위해 bounds_changed 이벤트 사용
+        kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         
+        // 드래그 및 줌 상태 관리
         kakao.maps.event.addListener(map, 'dragstart', () => {
-          isDragging.current = true; // 드래그 시작
+          isDragging.current = true;
           hideActionPin();
         });
-
         kakao.maps.event.addListener(map, 'dragend', () => {
-          // 드래그 종료 후 아주 짧은 지연 시간을 두어 클릭 이벤트가 먼저 처리되지 않게 함
-          setTimeout(() => {
-            isDragging.current = false;
-          }, 50);
+          setTimeout(() => { isDragging.current = false; }, 50);
         });
-
         kakao.maps.event.addListener(map, 'zoom_start', () => {
           isDragging.current = true;
           hideActionPin();
         });
-
         kakao.maps.event.addListener(map, 'zoom_changed', () => {
-          setTimeout(() => {
-            isDragging.current = false;
-          }, 50);
+          setTimeout(() => { isDragging.current = false; }, 50);
         });
 
         // 롱프레스 구현
@@ -165,7 +158,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     `;
     content.onclick = (e) => {
       e.stopPropagation();
-      if (isDragging.current) return; // 드래그 중이면 무시
+      if (isDragging.current) return;
       onMapWriteClick({ lat, lng });
       hideActionPin();
     };
@@ -277,7 +270,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         
         content.onclick = (e) => {
           e.stopPropagation();
-          if (isDragging.current) return; // 드래그 중이면 클릭 무시
+          if (isDragging.current) return;
           onMarkerClick(post);
         };
 
