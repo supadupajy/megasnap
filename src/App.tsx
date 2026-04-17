@@ -28,19 +28,11 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-  return null;
-};
-
-// --- [수정] ProtectedRoute: 리다이렉트 로직 최적화 ---
+// --- [수정] ProtectedRoute: 로딩 중 리다이렉트 절대 금지 ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
 
-  // 1. 인증 로딩 중일 때는 아무것도 하지 않고 스피너만 유지
+  // 인증 정보를 확인 중일 때는 어떤 리다이렉트도 하지 않고 대기합니다.
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -49,7 +41,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // 2. 로딩이 끝났는데 세션이 없다면 그때 로그인으로 이동
+  // 로딩이 완전히 끝난 후 세션이 없을 때만 로그인으로 보냅니다.
   if (!session) {
     return <Navigate to="/login" replace />;
   }
@@ -60,12 +52,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, loading } = useAuth(); // loading 추가
+  const { session, loading } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
+  // 뒤로가기 및 앱 종료 로직
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       if (location.pathname === '/') {
@@ -79,7 +72,7 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  // 로딩 중일 때 전체 레이아웃 렌더링 방지 (깜빡임 및 루프 방지)
+  // [핵심] 인증 로딩 중에는 전체 Route 구성을 렌더링하지 않음으로써 충돌 방지
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -90,7 +83,6 @@ const AnimatedRoutes = () => {
 
   return (
     <div className="relative min-h-screen bg-white">
-      <ScrollToTop />
       {!hideLayout && session && <Header />}
       
       <main className="relative">
@@ -104,7 +96,7 @@ const AnimatedRoutes = () => {
             className="w-full"
           >
             <Routes location={location}>
-              {/* 로그인 페이지는 세션이 있을 때만 홈으로 리다이렉트 */}
+              {/* 로그인 상태에서 로그인 페이지 접근 시 홈으로 리다이렉트 */}
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
               
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -143,7 +135,7 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => { setShowSplash(false); }, 2000);
+    const timer = setTimeout(() => { setShowSplash(false); }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
