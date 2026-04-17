@@ -30,6 +30,7 @@ const MapContainer = ({
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  const selectionOverlayRef = useRef<any>(null);
   const lastDragEnd = useRef<number>(0);
   const animationRef = useRef<number | null>(null);
   
@@ -124,7 +125,6 @@ const MapContainer = ({
     const startLat = startPos.getLat();
     const startLng = startPos.getLng();
     
-    // 거리에 따른 유동적인 시간 설정 (최소 600ms, 최대 1200ms)
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
     const duration = Math.min(Math.max(dist * 5000, 600), 1200);
     const startTime = performance.now();
@@ -132,8 +132,6 @@ const MapContainer = ({
     const step = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Ease Out Cubic 이징 함수
       const easeProgress = 1 - Math.pow(1 - progress, 3);
       
       const currentLat = startLat + (targetLat - startLat) * easeProgress;
@@ -151,20 +149,49 @@ const MapContainer = ({
     animationRef.current = requestAnimationFrame(step);
   };
 
-  // 지도 중심 이동 감시
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const currentCenter = mapInstance.current.getCenter();
       const dist = Math.sqrt(Math.pow(center.lat - currentCenter.getLat(), 2) + Math.pow(center.lng - currentCenter.getLng(), 2));
-      
-      // 아주 미세한 차이가 아닐 때만 이동 애니메이션 실행
       if (dist > 0.00001) {
         animateMapTo(center.lat, center.lng);
       }
     }
   }, [center, isMapReady]);
 
-  // 마커 HTML 생성 함수
+  // 위치 선택 마커 업데이트
+  useEffect(() => {
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
+
+    if (selectionOverlayRef.current) {
+      selectionOverlayRef.current.setMap(null);
+      selectionOverlayRef.current = null;
+    }
+
+    if (selectionLocation) {
+      const content = document.createElement('div');
+      content.className = 'animate-marker-appear';
+      content.innerHTML = `
+        <div style="position: relative; width: 40px; height: 40px; transform: translate(-50%, -100%);">
+          <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; background: #f43f5e; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);"></div>
+          <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; background: white; border-radius: 50%; z-index: 1;"></div>
+          <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 50%; filter: blur(2px);"></div>
+        </div>
+      `;
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(selectionLocation.lat, selectionLocation.lng),
+        content: content,
+        yAnchor: 1,
+        zIndex: 2000
+      });
+
+      overlay.setMap(mapInstance.current);
+      selectionOverlayRef.current = overlay;
+    }
+  }, [selectionLocation, isMapReady]);
+
   const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
@@ -226,14 +253,12 @@ const MapContainer = ({
     `;
   };
 
-  // 마커 업데이트 로직
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거된 포스트 오버레이 삭제
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -245,16 +270,11 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-      
-      // 우선순위 계산
       const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
 
       if (!existingOverlay) {
-        // 새 마커 생성
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
-        
-        // 초기 HTML 설정
         content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
         if (isHighlighted) content.classList.add('highlighted');
 
@@ -268,31 +288,19 @@ const MapContainer = ({
           position: new kakao.maps.LatLng(post.lat, post.lng),
           content: content,
           yAnchor: 1,
-          zIndex: baseZIndex // 초기 zIndex 설정
+          zIndex: baseZIndex
         });
 
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        // 기존 마커 업데이트
         const content = existingOverlay.getContent();
-        
-        // 1. 지도 엔진 레벨에서 zIndex 강제 업데이트 (가장 중요)
         existingOverlay.setZIndex(baseZIndex);
-
         if (content instanceof HTMLElement) {
-          // 2. 하이라이트 클래스 토글 (CSS 트랜지션 트리거)
-          if (isHighlighted) {
-            content.classList.add('highlighted');
-          } else {
-            content.classList.remove('highlighted');
-          }
-
-          // 3. 내부 HTML 업데이트 (필요한 경우에만)
+          if (isHighlighted) content.classList.add('highlighted');
+          else content.classList.remove('highlighted');
           const newInnerHtml = getMarkerInnerHtml(post, isViewed, isHighlighted);
-          if (content.innerHTML !== newInnerHtml) {
-            content.innerHTML = newInnerHtml;
-          }
+          if (content.innerHTML !== newInnerHtml) content.innerHTML = newInnerHtml;
         }
       }
     });

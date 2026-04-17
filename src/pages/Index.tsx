@@ -110,7 +110,6 @@ const Index = () => {
 
       setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
       
-      // 지도 이동 애니메이션(최대 1.2초)이 끝난 후 핑 효과 시작
       const pingTimer = setTimeout(() => {
         setHighlightedPostId(incomingPost.id);
         setTimeout(() => setHighlightedPostId(null), 3000);
@@ -220,8 +219,6 @@ const Index = () => {
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
-    
-    // 지도 이동 애니메이션(최대 1.2초)이 끝난 후 핑 효과 시작
     setTimeout(() => {
       setHighlightedPostId(post.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
@@ -246,15 +243,12 @@ const Index = () => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });
     setFinalSelectedLocation(null); 
-    
-    // 지도 이동 애니메이션(최대 1.2초)이 끝난 후 핑 효과 시작
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
       setTimeout(() => setHighlightedPostId(null), 3000);
     }, 1500);
   };
 
-  // 위치 선택 모드 핸들러 - useCallback으로 메모리화하여 MapContainer에 안정적으로 전달
   const handleMapClick = useCallback((loc: { lat: number; lng: number }) => {
     if (isSelectingLocation) {
       setTempSelectedLocation(loc);
@@ -281,7 +275,6 @@ const Index = () => {
 
   const startLocationSelection = () => {
     setIsWriteOpen(false);
-    // Drawer가 완전히 닫히는 시간을 고려하여 지연 실행
     setTimeout(() => {
       setIsSelectingLocation(true);
     }, 500);
@@ -306,7 +299,6 @@ const Index = () => {
             selectionLocation={tempSelectedLocation}
           />
 
-          {/* 위치 선택 모드 UI */}
           <AnimatePresence>
             {isSelectingLocation && (
               <motion.div 
