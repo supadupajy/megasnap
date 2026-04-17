@@ -88,19 +88,6 @@ const Index = () => {
     }
   }, []);
 
-  // 초기 로드 시 DB 포스팅 가져오기
-  useEffect(() => {
-    const initLoad = async () => {
-      const realPosts = await fetchSupabasePosts();
-      setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
-        return [...uniqueReal, ...prev];
-      });
-    };
-    initLoad();
-  }, [fetchSupabasePosts]);
-
   useEffect(() => {
     mapCache.posts = allPosts;
   }, [allPosts]);
@@ -146,6 +133,7 @@ const Index = () => {
     }
   }, [location.state, blockedIds]);
 
+  // 지도가 준비되면 실제 데이터와 랜덤 데이터를 동시에 로드
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -156,6 +144,7 @@ const Index = () => {
     const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
     const loadPosts = async () => {
+      // 1. 랜덤 포스팅 생성
       const newMockPosts: Post[] = [];
       for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
         for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
@@ -169,8 +158,10 @@ const Index = () => {
         }
       }
 
+      // 2. 실제 DB 포스팅 로드
       const realPosts = await fetchSupabasePosts();
       
+      // 3. 두 데이터를 한 번에 상태에 반영 (동시성 확보)
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const uniqueNewMock = newMockPosts.filter(p => !existingIds.has(p.id));
@@ -195,7 +186,6 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       
-      // 본인 포스팅은 시간 필터와 상관없이 항상 보이도록 설정 (또는 시간 내)
       const isMine = authUser && post.user.id === authUser.id;
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       
