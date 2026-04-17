@@ -25,7 +25,8 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!nickname.trim()) {
+    const trimmedNickname = nickname.trim();
+    if (!trimmedNickname) {
       showError('닉네임을 입력해주세요.');
       return;
     }
@@ -37,33 +38,37 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
 
     setIsSubmitting(true);
     try {
-      // profiles 테이블에 닉네임 저장 (upsert 사용)
+      // profiles 테이블에 닉네임 저장 (upsert)
       const { error } = await supabase
         .from('profiles')
         .upsert({ 
           id: userId, 
-          nickname: nickname.trim(),
+          nickname: trimmedNickname,
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
       if (error) throw error;
 
       showSuccess('닉네임 설정이 완료되었습니다!');
-      // 약간의 지연을 주어 DB 반영 시간을 확보
-      setTimeout(() => {
-        onComplete(nickname.trim());
-        setIsSubmitting(false);
-      }, 500);
+      
+      // 즉시 완료 처리하여 UI 업데이트
+      onComplete(trimmedNickname);
     } catch (err: any) {
       console.error('Error saving nickname:', err);
-      showError(err.message || '닉네임 저장 중 오류가 발생했습니다. 테이블 생성 여부를 확인해주세요.');
+      showError(err.message || '닉네임 저장 중 오류가 발생했습니다.');
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl" onPointerDownOutside={(e) => e.preventDefault()}>
+      {/* [&>button]:hidden 클래스를 추가하여 기본 닫기(X) 버튼을 숨깁니다. */}
+      <DialogContent 
+        className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl [&>button]:hidden" 
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-gray-900 text-center">반가워요! 👋</DialogTitle>
           <DialogDescription className="text-center font-medium text-gray-500">
@@ -78,6 +83,7 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
             className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-lg font-bold"
             maxLength={15}
             disabled={isSubmitting}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           />
         </div>
         <DialogFooter>

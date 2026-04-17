@@ -62,13 +62,14 @@ const AnimatedRoutes = () => {
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
+  // 닉네임 설정 팝업 노출 로직
   useEffect(() => {
-    if (!loading && session && profile && !profile.nickname && !hideLayout) {
+    if (!loading && session && profile && !profile.nickname && !hideLayout && location.pathname !== '/login') {
       setShowNicknameDialog(true);
     } else {
       setShowNicknameDialog(false);
     }
-  }, [session, profile, hideLayout, loading]);
+  }, [session, profile, hideLayout, loading, location.pathname]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -140,9 +141,9 @@ const AnimatedRoutes = () => {
         <NicknameDialog 
           isOpen={showNicknameDialog} 
           userId={user.id} 
-          onComplete={() => {
+          onComplete={async () => {
             setShowNicknameDialog(false);
-            refreshProfile();
+            await refreshProfile();
           }} 
         />
       )}
