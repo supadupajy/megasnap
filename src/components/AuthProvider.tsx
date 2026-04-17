@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 
@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const initialized = useRef(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -34,36 +33,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // 강제 로딩 해제 타이머 (최후의 수단)
-    const fallbackTimer = setTimeout(() => {
-      if (!initialized.current) {
-        setLoading(false);
-        initialized.current = true;
-      }
-    }, 3000);
-
-    const initializeAuth = async () => {
+    // 초기 세션 가져오기
+    const initAuth = async () => {
       try {
-        // 1. 현재 세션 확인 (로컬 스토리지에서 복구)
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        if (initialSession?.user) {
           await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
-        console.error("Auth init error:", error);
+        console.error("Auth initialization error:", error);
       } finally {
         setLoading(false);
-        initialized.current = true;
-        clearTimeout(fallbackTimer);
       }
     };
 
-    initializeAuth();
+    initAuth();
 
-    // 2. 인증 상태 변화 감지 (로그인, 로그아웃, 토큰 갱신 등)
+    // 인증 상태 변화 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
@@ -74,15 +62,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           setProfile(null);
         }
-
         setLoading(false);
-        initialized.current = true;
       }
     );
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(fallbackTimer);
     };
   }, []);
 
@@ -97,12 +82,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setProfile(null);
   };
 
-  const value = React.useMemo(() => ({
-    session, user, profile, loading, refreshProfile, signOut
-  }), [session, user, profile, loading]);
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ session, user, profile, loading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

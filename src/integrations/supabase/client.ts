@@ -9,6 +9,5 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'chora-auth-token', // 명시적인 스토리지 키 사용
   }
 });
