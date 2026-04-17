@@ -55,7 +55,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, user, profile, refreshProfile, loading } = useAuth();
+  const { session, user, profile, loading } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
@@ -64,12 +64,15 @@ const AnimatedRoutes = () => {
 
   // 닉네임 설정 팝업 노출 로직
   useEffect(() => {
-    if (!loading && session && profile && !profile.nickname && !hideLayout && location.pathname !== '/login') {
+    // 로딩이 끝났고, 세션이 있으며, 프로필 정보는 로드되었으나 닉네임이 null인 경우에만 표시
+    const needsNickname = !loading && session && profile && profile.nickname === null && !hideLayout && location.pathname !== '/login';
+    
+    if (needsNickname) {
       setShowNicknameDialog(true);
     } else {
       setShowNicknameDialog(false);
     }
-  }, [session, profile, hideLayout, loading, location.pathname]);
+  }, [session, profile?.nickname, hideLayout, loading, location.pathname]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -141,9 +144,8 @@ const AnimatedRoutes = () => {
         <NicknameDialog 
           isOpen={showNicknameDialog} 
           userId={user.id} 
-          onComplete={async () => {
-            setShowNicknameDialog(false);
-            await refreshProfile();
+          onComplete={() => {
+            // 팝업을 수동으로 닫지 않고 profile.nickname 업데이트를 기다림
           }} 
         />
       )}

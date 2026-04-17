@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
+import { useAuth } from './AuthProvider';
 
 interface NicknameDialogProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface NicknameDialogProps {
 }
 
 const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => {
+  const { updateProfileState } = useAuth();
   const [nickname, setNickname] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,7 +40,6 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
 
     setIsSubmitting(true);
     try {
-      // profiles 테이블에 닉네임 저장 (upsert)
       const { error } = await supabase
         .from('profiles')
         .upsert({ 
@@ -49,9 +50,10 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
 
       if (error) throw error;
 
-      showSuccess('닉네임 설정이 완료되었습니다!');
+      // 컨텍스트 상태를 즉시 업데이트하여 팝업이 다시 뜨지 않도록 함
+      updateProfileState({ nickname: trimmedNickname });
       
-      // 즉시 완료 처리하여 UI 업데이트
+      showSuccess('닉네임 설정이 완료되었습니다!');
       onComplete(trimmedNickname);
     } catch (err: any) {
       console.error('Error saving nickname:', err);
@@ -63,7 +65,6 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      {/* [&>button]:hidden 클래스를 추가하여 기본 닫기(X) 버튼을 숨깁니다. */}
       <DialogContent 
         className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl [&>button]:hidden" 
         onPointerDownOutside={(e) => e.preventDefault()}
