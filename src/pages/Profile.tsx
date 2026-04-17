@@ -31,15 +31,16 @@ const Profile = () => {
   const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
 
   const loadData = useCallback(async () => {
-    if (!authUser) {
-      setIsDataLoading(false);
+    // 인증 정보가 아직 로딩 중이거나 사용자가 없으면 대기
+    if (authLoading || !authUser) {
+      if (!authLoading && !authUser) setIsDataLoading(false);
       return;
     }
 
     setIsDataLoading(true);
     
     try {
-      // 실제 DB 포스팅만 가져오기 (가상 데이터 mockMine 제거)
+      // 실제 DB 포스팅만 가져오기
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
@@ -48,9 +49,8 @@ const Profile = () => {
 
       if (error) throw error;
 
-      // 이미지가 확실히 있는 데이터만 필터링
       const realPosts = (realData || [])
-        .filter(p => p.image_url && p.image_url.startsWith('data:image') || p.image_url?.includes('http'))
+        .filter(p => p.image_url && (p.image_url.startsWith('data:image') || p.image_url?.includes('http')))
         .map(p => ({
           id: p.id,
           isAd: false,
@@ -76,7 +76,6 @@ const Profile = () => {
       
       setMyPosts(realPosts);
 
-      // 저장된 포스팅은 데모를 위해 유지하되, 에러 처리를 강화함
       const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${authUser.id}`)
         .map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
@@ -85,13 +84,11 @@ const Profile = () => {
     } finally {
       setIsDataLoading(false);
     }
-  }, [authUser, displayName, profile]);
+  }, [authLoading, authUser, displayName, profile]);
 
   useEffect(() => {
-    if (!authLoading) {
-      loadData();
-    }
-  }, [authLoading, loadData]);
+    loadData();
+  }, [loadData]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
@@ -123,7 +120,6 @@ const Profile = () => {
     }, 100);
   };
 
-  // 이미지 로드 실패 시 해당 포스팅을 상태에서 즉시 제거 (강제 삭제 효과)
   const handleImageError = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
@@ -133,6 +129,7 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  // 인증 로딩 중이거나 데이터 로딩 중일 때 로더 표시
   if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">

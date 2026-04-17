@@ -17,7 +17,7 @@ import { useAuth } from '@/components/AuthProvider';
 const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
-  const { loading: authLoading } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -30,7 +30,8 @@ const Popular = () => {
   }, [posts, blockedIds]);
 
   const loadInitialData = useCallback(async () => {
-    if (authLoading) return;
+    // 인증 정보가 아직 로딩 중이거나 사용자가 없으면 대기
+    if (authLoading || !authUser) return;
     
     setIsInitialLoading(true);
     
@@ -80,7 +81,7 @@ const Popular = () => {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [authLoading]);
+  }, [authLoading, authUser]);
 
   useEffect(() => {
     loadInitialData();
