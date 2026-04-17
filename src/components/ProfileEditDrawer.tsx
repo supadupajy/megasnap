@@ -29,7 +29,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
   useEffect(() => {
     if (isOpen && profile) {
       setNickname(profile.nickname || '');
-      setBio((profile as any).bio || '');
+      setBio(profile.bio || '');
       setAvatarUrl(profile.avatar_url);
     }
   }, [isOpen, profile]);
@@ -90,7 +90,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
       <DrawerContent className="h-[85vh] flex flex-col outline-none bg-white">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
-        <div className="px-6 flex flex-col flex-1 min-h-0">
+        <div className="px-8 flex flex-col flex-1 min-h-0">
           <div className="flex items-center justify-between mb-8 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
@@ -125,7 +125,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
 
             {/* Nickname Section */}
-            <div className="space-y-3">
+            <div className="space-y-3 px-2">
               <div className="flex items-center gap-2 px-1">
                 <Type className="w-4 h-4 text-gray-400" />
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임 변경</p>
@@ -140,7 +140,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
 
             {/* Bio Section */}
-            <div className="space-y-3">
+            <div className="space-y-3 px-2">
               <div className="flex items-center gap-2 px-1">
                 <AlignLeft className="w-4 h-4 text-gray-400" />
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내 소개</p>
@@ -156,7 +156,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
           </div>
 
-          <div className="py-6 bg-white shrink-0">
+          <div className="py-6 bg-white shrink-0 px-2">
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handleSave}
