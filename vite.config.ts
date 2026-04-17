@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig(() => ({
-  // Vercel 배포 시 루트 경로 설정을 명확히 합니다.
   base: "/",
   server: {
     host: "::",
@@ -14,12 +13,13 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force react to resolve to the same instance
+      "react": path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
   build: {
-    // 빌드 결과물이 생성될 폴더를 명시합니다.
     outDir: "dist",
-    // 청크 파일 크기 경고 제한을 조절합니다.
     chunkSizeWarningLimit: 1000,
   }
 }));
