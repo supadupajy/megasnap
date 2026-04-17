@@ -8,6 +8,7 @@ interface Profile {
   nickname: string | null;
   avatar_url: string | null;
   bio: string | null;
+  email: string | null;
 }
 
 interface AuthContextType {
@@ -40,21 +41,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('nickname, avatar_url, bio')
+        .select('nickname, avatar_url, bio, email')
         .eq('id', userId)
-        .maybeSingle(); // single() 대신 maybeSingle()을 사용하여 데이터가 없을 때 에러 방지
+        .maybeSingle();
 
       if (error) throw error;
       
       if (data) {
         setProfile(data);
       } else {
-        // 프로필 행 자체가 없는 경우
-        setProfile({ nickname: null, avatar_url: null, bio: null });
+        setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
       }
     } catch (err) {
       console.error('[Auth] Profile fetch error:', err);
-      setProfile({ nickname: null, avatar_url: null, bio: null });
+      setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
     }
   };
 
@@ -88,7 +88,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        // 세션이 생겼을 때만 프로필을 다시 가져옴
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await fetchProfile(currentSession.user.id);
         }
@@ -112,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateProfileState = (updates: Partial<Profile>) => {
-    setProfile(prev => prev ? { ...prev, ...updates } : { nickname: null, avatar_url: null, bio: null, ...updates });
+    setProfile(prev => prev ? { ...prev, ...updates } : { nickname: null, avatar_url: null, bio: null, email: null, ...updates });
   };
 
   const signOut = async () => {

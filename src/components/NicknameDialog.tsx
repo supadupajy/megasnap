@@ -22,7 +22,7 @@ interface NicknameDialogProps {
 }
 
 const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => {
-  const { updateProfileState } = useAuth();
+  const { user, updateProfileState } = useAuth();
   const [nickname, setNickname] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,7 +33,7 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
       return;
     }
 
-    if (!userId) {
+    if (!userId || !user) {
       showError('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
       return;
     }
@@ -45,13 +45,13 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
         .upsert({ 
           id: userId, 
           nickname: trimmedNickname,
+          email: user.email,
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
       if (error) throw error;
 
-      // 컨텍스트 상태를 즉시 업데이트하여 팝업이 다시 뜨지 않도록 함
-      updateProfileState({ nickname: trimmedNickname });
+      updateProfileState({ nickname: trimmedNickname, email: user.email });
       
       showSuccess('닉네임 설정이 완료되었습니다!');
       onComplete(trimmedNickname);
