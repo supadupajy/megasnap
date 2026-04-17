@@ -49,14 +49,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // 초기 세션 확인
+    // 초기 세션 확인 및 복구
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -67,15 +67,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initAuth();
 
-    // 인증 상태 변경 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 인증 상태 변경 실시간 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('Auth event:', event);
-      setSession(session);
-      setUser(session?.user ?? null);
       
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
         setProfile(null);
       }
       

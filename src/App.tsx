@@ -24,6 +24,7 @@ import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
 import NicknameDialog from "./components/NicknameDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,15 @@ const ScrollToTop = () => {
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
-  if (loading) return null;
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+  
   if (!session) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
@@ -45,7 +54,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, user, profile, refreshProfile } = useAuth();
+  const { session, user, profile, refreshProfile, loading } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
@@ -53,12 +62,12 @@ const AnimatedRoutes = () => {
   const hideLayout = ["/chat", "/splash", "/login", "/settings"].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
-    if (session && profile && !profile.nickname && !hideLayout) {
+    if (!loading && session && profile && !profile.nickname && !hideLayout) {
       setShowNicknameDialog(true);
     } else {
       setShowNicknameDialog(false);
     }
-  }, [session, profile, hideLayout]);
+  }, [session, profile, hideLayout, loading]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
