@@ -57,6 +57,7 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
+  const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
     if (supabasePosts.length > 0) {
@@ -72,11 +73,14 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  useEffect(() => {
-    if (mapData?.center) {
-      mapCache.lastCenter = mapData.center;
-    }
-  }, [mapData]);
+  // 지도 변경 이벤트 디바운스 처리 (깜빡임 방지)
+  const handleMapChange = useCallback((data: any) => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+    }, 150); // 150ms 지연으로 잦은 업데이트 방지
+  }, []);
 
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
@@ -288,7 +292,7 @@ const Index = () => {
             viewedPostIds={viewedIds}
             highlightedPostId={highlightedPostId}
             onMarkerClick={(p) => setSelectedPostId(p.id)}
-            onMapChange={setMapData}
+            onMapChange={handleMapChange}
             onMapClick={handleMapClick}
             center={mapCenter}
             selectionLocation={tempSelectedLocation}

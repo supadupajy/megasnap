@@ -32,7 +32,6 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const selectionMarkerRef = useRef<any>(null);
   
-  // 최신 onMapClick 콜백을 유지하기 위한 Ref
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
     onMapClickRef.current = onMapClick;
@@ -80,7 +79,6 @@ const MapContainer = ({
         kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
         kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; });
 
-        // 지도 클릭 이벤트 (Ref를 사용하여 최신 핸들러 호출)
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
           if (onMapClickRef.current) {
             const latLng = mouseEvent.latLng;
@@ -144,7 +142,7 @@ const MapContainer = ({
     }
   }, [center, isMapReady]);
 
-  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
+  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean, isNew: boolean = false) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
@@ -184,7 +182,7 @@ const MapContainer = ({
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
+      <div class="marker-container ${isNew ? 'animate-marker-appear' : ''}" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
@@ -213,6 +211,7 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
+    // 1. 화면에서 사라진 마커만 제거
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -220,17 +219,18 @@ const MapContainer = ({
       }
     });
 
+    // 2. 새로운 마커 추가 또는 기존 마커 업데이트
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-
       const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
+        // 새 마커 생성
         const content = document.createElement('div');
-        content.className = 'kakao-overlay animate-marker-appear';
+        content.className = 'kakao-overlay';
         content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
-        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted, true);
         
         content.onclick = (e) => {
           e.stopPropagation();
@@ -247,10 +247,15 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
+        // 기존 마커 업데이트 (깜빡임 방지: setMap(null) 호출 안 함)
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+          // 내용이 바뀌었을 때만 innerHTML 업데이트 (성능 최적화)
+          const newHtml = getMarkerHtml(post, isViewed, isHighlighted, false);
+          if (content.innerHTML !== newHtml) {
+            content.innerHTML = newHtml;
+          }
         }
       }
     });
