@@ -20,11 +20,8 @@ const Messages = () => {
   }, []);
 
   const handleBack = () => {
-    if (window.history.length > 1 && window.history.state?.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    // 사용자의 요청에 따라 항상 지도 화면('/')으로 이동
+    navigate('/');
   };
 
   const handleAvatarClick = (e: React.MouseEvent, userId: string) => {
