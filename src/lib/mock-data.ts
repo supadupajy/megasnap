@@ -1,6 +1,6 @@
 import { Post, User, Comment } from '@/types';
 
-// 결정론적 랜덤 함수 (씨앗 기반)
+// 결정론적 랜덤 함수 (씨앗 기반) - 1.0이 나오지 않도록 수정
 const seededRandom = (seed: string) => {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -9,7 +9,8 @@ const seededRandom = (seed: string) => {
   }
   return () => {
     hash = (hash * 16807) % 2147483647;
-    return (hash - 1) / 2147483646;
+    // 0 이상 1 미만의 값을 반환하도록 보장
+    return ((hash - 1) / 2147483646) * 0.999999999999999;
   };
 };
 
@@ -290,7 +291,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
     
-    let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)];
+    let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)] || "멋진 장소입니다! ✨";
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
 
@@ -306,10 +307,11 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       category = 'food';
     } else {
       const categoryRoll = randomFn();
-      if (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15) {
+      // content가 undefined일 경우를 대비해 안전하게 체크
+      if (content && (content.includes('사고') || content.includes('화재') || categoryRoll < 0.15)) {
         images = [ACCIDENT_IMAGES[Math.floor(randomFn() * ACCIDENT_IMAGES.length)], cokeAdImg];
         category = 'accident';
-      } else if (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35)) {
+      } else if (content && (content.includes('강아지') || content.includes('고양이') || (categoryRoll >= 0.15 && categoryRoll < 0.35))) {
         images = [ANIMAL_IMAGES[Math.floor(randomFn() * ANIMAL_IMAGES.length)], cokeAdImg];
         category = 'animal';
       } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
