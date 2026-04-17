@@ -27,7 +27,7 @@ const Chat = () => {
     const unsubscribe = chatStore.subscribe(() => {
       if (chatId) setRoom(chatStore.getRoom(chatId));
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, [chatId]);
 
   useEffect(() => {

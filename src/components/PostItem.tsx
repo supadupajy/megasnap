@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -60,15 +60,15 @@ const PostItem = ({
   user, 
   content, 
   location, 
-  likes, 
-  commentsCount = 0,
+  likes: initialLikes, 
+  commentsCount: initialCommentsCount = 0,
   comments: initialComments = [],
   image, 
   images = [],
   adImageIndex,
   lat,
   lng,
-  isLiked, 
+  isLiked: initialIsLiked, 
   isSaved: initialIsSaved,
   isAd, 
   isGif: initialIsGif, 
@@ -83,19 +83,119 @@ const PostItem = ({
   onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, profile } = useAuth();
   const { blockUser } = useBlockedUsers();
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
   const [localComments, setLocalComments] = useState<Comment[]>(initialComments || []);
   const [commentInput, setCommentInput] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [likesCount, setLikesCount] = useState(initialLikes);
+  const [isLiked, setIsLiked] = useState(initialIsLiked);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
+
+  // 초기 좋아요 상태 확인 (DB 연동 시)
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (!authUser || !id || id.length < 20) return;
+      const { data } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('post_id', id)
+        .eq('user_id', authUser.id)
+        .single();
+      
+      if (data) setIsLiked(true);
+    };
+    checkLikeStatus();
+  }, [authUser, id]);
+
+  // 댓글 실시간 로드
+  useEffect(() => {
+    const fetchComments = async () => {
+      if (!id || id.length < 20) return;
+      const { data } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('post_id', id)
+        .order('created_at', { ascending: true });
+      
+      if (data) {
+        const formatted = data.map(c => ({ user: c.user_name, text: c.content }));
+        setLocalComments(formatted);
+      }
+    };
+    if (showComments) fetchComments();
+  }, [id, showComments]);
+
+  const handleLikeToggleLocal = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    const prevLiked = isLiked;
+    const prevCount = likesCount;
+
+    // Optimistic UI Update
+    setIsLiked(!prevLiked);
+    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
+
+    try {
+      if (prevLiked) {
+        await supabase.from('likes').delete().eq('post_id', id).eq('user_id', authUser.id);
+        await supabase.rpc('decrement_likes', { post_id: id });
+      } else {
+        await supabase.from('likes').insert({ post_id: id, user_id: authUser.id });
+        await supabase.rpc('increment_likes', { post_id: id });
+      }
+    } catch (err) {
+      // Rollback on error
+      setIsLiked(prevLiked);
+      setLikesCount(prevCount);
+    }
+
+    if (onLikeToggle) onLikeToggle(e);
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!commentInput.trim() || !authUser) return;
+
+    setIsSubmittingComment(true);
+    const newCommentText = commentInput.trim();
+    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+
+    try {
+      const { error } = await supabase.from('comments').insert({
+        post_id: id,
+        user_id: authUser.id,
+        user_name: displayName,
+        user_avatar: profile?.avatar_url,
+        content: newCommentText
+      });
+
+      if (error) throw error;
+
+      setLocalComments([...localComments, { user: displayName, text: newCommentText }]);
+      setCommentInput('');
+      showSuccess('댓글이 등록되었습니다.');
+    } catch (err) {
+      showError('댓글 등록에 실패했습니다.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -119,14 +219,7 @@ const PostItem = ({
   const handleSaveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSaved(!isSaved);
-  };
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!commentInput.trim()) return;
-    setLocalComments([...localComments, { user: "Dyad_Explorer", text: commentInput }]);
-    setCommentInput('');
+    showSuccess(isSaved ? '저장이 취소되었습니다.' : '포스팅을 저장했습니다.');
   };
 
   const handleReport = (e: React.MouseEvent) => {
@@ -281,7 +374,7 @@ const PostItem = ({
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-4 pt-1.5">
-            <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(e); }}>
+            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
               <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
             <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button>
@@ -306,7 +399,7 @@ const PostItem = ({
         </div>
 
         <div className="space-y-1">
-          <p className="text-sm font-bold text-gray-500">좋아요 {likes.toLocaleString()}개</p>
+          <p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
@@ -316,8 +409,16 @@ const PostItem = ({
           </div>
 
           <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-            <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} />
-            <button type="submit" disabled={!commentInput.trim()} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
+            <Input 
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
+              value={commentInput} 
+              onChange={(e) => setCommentInput(e.target.value)}
+              disabled={isSubmittingComment}
+            />
+            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+              <Send className="w-4 h-4" />
+            </button>
           </form>
 
           {lastComment && (
@@ -331,6 +432,24 @@ const PostItem = ({
             <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
             {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
           </button>
+          
+          <AnimatePresence>
+            {showComments && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden space-y-2 mt-2"
+              >
+                {localComments.slice(0, -1).map((c, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                    <span className="text-sm text-gray-500">{c.text}</span>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

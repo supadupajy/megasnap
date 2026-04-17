@@ -16,7 +16,7 @@ const Messages = () => {
     const unsubscribe = chatStore.subscribe(() => {
       setRooms(chatStore.getRooms());
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   const handleBack = () => {
