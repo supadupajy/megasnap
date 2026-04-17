@@ -8,6 +8,7 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
+import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -18,13 +19,15 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { profile, user: authUser } = useAuth();
+  const { profile, user: authUser, refreshProfile } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
 
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
+  const bio = (profile as any)?.bio || "지도를 여행하는 탐험가 📍";
 
   const fetchMyRealPosts = useCallback(async () => {
     if (!authUser || !supabase) return [];
@@ -69,10 +72,8 @@ const Profile = () => {
     const loadData = async () => {
       if (!authUser) return;
 
-      // 1. 실제 DB 포스팅 로드
       const realPosts = await fetchMyRealPosts();
       
-      // 2. 랜덤 데이터 생성 (항상 12개 정도 추가하여 풍성하게 유지)
       const rawMock = createMockPosts(37.5665, 126.9780, 12);
       const mockMine = rawMock.map((p, idx) => {
         const isGif = idx < 4;
@@ -89,14 +90,12 @@ const Profile = () => {
         };
       });
 
-      // 실제 데이터와 랜덤 데이터를 합치고 최신순으로 정렬
       const combined = [...realPosts, ...mockMine].sort((a, b) => 
         b.createdAt.getTime() - a.createdAt.getTime()
       );
 
       setMyPosts(combined);
 
-      // 저장된 포스팅 (랜덤)
       const saved = createMockPosts(37.5665, 126.9780, 12)
         .filter(p => p.user.id !== authUser.id)
         .map(p => ({ ...p, isLiked: true }));
@@ -184,7 +183,7 @@ const Profile = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
-              <p className="text-sm text-gray-500 mb-4">지도를 여행하는 탐험가 📍</p>
+              <p className="text-sm text-gray-500 mb-4">{bio}</p>
               <div className="flex gap-4">
                 <div className="text-center">
                   <p className="font-bold text-gray-900">{myPosts.length}</p>
@@ -202,7 +201,10 @@ const Profile = () => {
             </div>
           </div>
 
-          <Button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">
+          <Button 
+            onClick={() => setIsEditOpen(true)}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8"
+          >
             프로필 편집
           </Button>
 
@@ -334,6 +336,11 @@ const Profile = () => {
 
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      <ProfileEditDrawer 
+        isOpen={isEditOpen} 
+        onClose={() => setIsEditOpen(false)} 
+        onUpdate={refreshProfile}
+      />
     </div>
   );
 };
