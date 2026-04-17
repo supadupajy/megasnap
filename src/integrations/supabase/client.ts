@@ -6,8 +6,9 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: true, // 세션을 로컬 스토리지에 저장하여 유지
-    autoRefreshToken: true, // 토큰 만료 전 자동으로 갱신
-    detectSessionInUrl: true // 이메일 링크 등을 통한 로그인 감지
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'chora-auth-token', // 명시적인 스토리지 키 사용
   }
 });

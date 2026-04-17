@@ -25,22 +25,24 @@ const Popular = () => {
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // 인증 확인 후 사용자가 없으면 로그인 페이지로 이동
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      navigate('/login', { replace: true });
+    }
+  }, [authLoading, authUser, navigate]);
+
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
   const loadInitialData = useCallback(async () => {
-    // 인증 정보가 아직 로딩 중이거나 사용자가 없으면 대기
     if (authLoading || !authUser) return;
     
     setIsInitialLoading(true);
-    
-    // 1. 즉시 가상 데이터 생성 (데이터 공백 방지)
-    const mockPosts = createMockPosts(37.5665, 126.9780, 20)
-      .sort((a, b) => b.likes - a.likes);
+    const mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
     
     try {
-      // 2. Supabase 데이터 가져오기
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -72,11 +74,10 @@ const Popular = () => {
         borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
       })) as Post[];
 
-      // 3. 실제 데이터와 가상 데이터 통합
       const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
       setPosts(combined);
     } catch (err) {
-      console.error('[Popular] DB Fetch Error, using mock only:', err);
+      console.error('[Popular] DB Fetch Error:', err);
       setPosts(mockPosts);
     } finally {
       setIsInitialLoading(false);
@@ -93,12 +94,8 @@ const Popular = () => {
     
     setTimeout(() => {
       const newPosts = createMockPosts(37.5665, 126.9780, 15)
-        .map(p => ({
-          ...p,
-          likes: Math.floor(Math.random() * 1000) + 500
-        }))
+        .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
         .sort((a, b) => b.likes - a.likes);
-        
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
@@ -113,11 +110,7 @@ const Popular = () => {
       },
       { threshold: 0.1 }
     );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [loadMorePosts, posts.length]);
   
@@ -125,11 +118,7 @@ const Popular = () => {
     setPosts(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likes: isLiked ? post.likes + 1 : post.likes - 1
-        };
+        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
     }));
@@ -144,12 +133,19 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px]">
         <StoryBar />
-        
         {isInitialLoading && posts.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
@@ -186,7 +182,6 @@ const Popular = () => {
             ))}
           </div>
         )}
-
         <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
           {isLoadingMore ? (
             <>
@@ -198,7 +193,6 @@ const Popular = () => {
           )}
         </div>
       </div>
-      
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>

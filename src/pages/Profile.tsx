@@ -27,20 +27,21 @@ const Profile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isDataLoading, setIsDataLoading] = useState(true);
 
+  // 인증 확인 후 사용자가 없으면 로그인 페이지로 이동
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      navigate('/login', { replace: true });
+    }
+  }, [authLoading, authUser, navigate]);
+
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
   const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
 
   const loadData = useCallback(async () => {
-    // 인증 정보가 아직 로딩 중이거나 사용자가 없으면 대기
-    if (authLoading || !authUser) {
-      if (!authLoading && !authUser) setIsDataLoading(false);
-      return;
-    }
+    if (authLoading || !authUser) return;
 
     setIsDataLoading(true);
-    
     try {
-      // 실제 DB 포스팅만 가져오기
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
@@ -75,9 +76,7 @@ const Profile = () => {
         })) as Post[];
       
       setMyPosts(realPosts);
-
-      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${authUser.id}`)
-        .map(p => ({ ...p, isLiked: true }));
+      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${authUser.id}`).map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
     } catch (err) {
       console.error('[Profile] Data Fetch Error:', err);
@@ -95,28 +94,17 @@ const Profile = () => {
     setter(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likes: isLiked ? post.likes + 1 : post.likes - 1
-        };
+        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
     }));
   }, []);
 
   const handleGridItemClick = (postId: string) => {
-    if (viewMode === 'gifs') {
-      setViewMode('gif-list');
-    } else {
-      setViewMode('list');
-    }
-    
+    setViewMode(viewMode === 'gifs' ? 'gif-list' : 'list');
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
@@ -129,7 +117,6 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 인증 로딩 중이거나 데이터 로딩 중일 때 로더 표시
   if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -141,7 +128,6 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
-
       <div className="pt-[88px]">
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
@@ -154,194 +140,56 @@ const Profile = () => {
                 <p className="text-xs text-gray-400 font-medium">나의 활동과 기록을 확인하세요</p>
               </div>
             </div>
-            <button 
-              onClick={() => navigate('/settings')}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
+            <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <Settings className="w-6 h-6 text-gray-400" />
             </button>
           </div>
         </div>
-
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
-                <img 
-                  src={profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`} 
-                  alt="profile" 
-                  className="w-full h-full rounded-full object-cover border-4 border-white"
-                  onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
-                />
+                <img src={profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
               </div>
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
               <p className="text-sm text-gray-500 mb-4">{bio}</p>
               <div className="flex gap-4">
-                <div className="text-center">
-                  <p className="font-bold text-gray-900">{myPosts.length}</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-gray-900">1.2k</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-gray-900">850</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
-                </div>
+                <div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div>
+                <div className="text-center"><p className="font-bold text-gray-900">1.2k</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div>
+                <div className="text-center"><p className="font-bold text-gray-900">850</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div>
               </div>
             </div>
           </div>
-
-          <Button 
-            onClick={() => setIsEditOpen(true)}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8"
-          >
-            프로필 편집
-          </Button>
-
+          <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
           <div className="flex border-b border-gray-100 mb-4">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} />
-            </button>
-            <button 
-              onClick={() => setViewMode('gifs')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} />
-            </button>
-            <button 
-              onClick={() => setViewMode('saved')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} />
-            </button>
+            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button>
+            <button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button>
+            <button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button>
           </div>
-
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
-                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
-                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                    <Bookmark className="w-4 h-4 fill-indigo-600" />
-                    저장된 포스팅
-                  </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
-                </div>
-                {savedPosts.map((post) => (
-                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                    <PostItem
-                      id={post.id}
-                      user={post.user}
-                      content={post.content}
-                      location={post.location}
-                      likes={post.likes}
-                      commentsCount={post.commentsCount}
-                      comments={post.comments}
-                      image={post.image}
-                      images={post.images}
-                      isLiked={post.isLiked}
-                      isAd={post.isAd}
-                      isGif={post.isGif}
-                      isInfluencer={post.isInfluencer}
-                      borderType={post.borderType}
-                      disablePulse={true}
-                      onLikeToggle={() => handleLikeToggle(post.id, true)}
-                      onImageError={handleImageError}
-                    />
-                  </div>
-                ))}
+                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Bookmark className="w-4 h-4 fill-indigo-600" />저장된 포스팅</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p></div>
+                {savedPosts.map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={handleImageError} /></div>))}
               </>
             ) : (
               <>
-                <div 
-                  onClick={() => navigate('/', { state: { filterUserId: 'me' } })}
-                  className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
-                >
-                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                    <Map className="w-4 h-4 fill-indigo-600" />
-                    지도에서 보기
-                  </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
-                </div>
-
+                <div onClick={() => navigate('/', { state: { filterUserId: 'me' } })} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
-                  <div className="flex flex-col">
-                    {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
-                      <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                        <PostItem
-                          id={post.id}
-                          user={post.user}
-                          content={post.content}
-                          location={post.location}
-                          likes={post.likes}
-                          commentsCount={post.commentsCount}
-                          comments={post.comments}
-                          image={post.image}
-                          images={post.images}
-                          isLiked={post.isLiked}
-                          isAd={post.isAd}
-                          isGif={post.isGif}
-                          isInfluencer={post.isInfluencer}
-                          borderType={post.borderType}
-                          disablePulse={true}
-                          onLikeToggle={() => handleLikeToggle(post.id, false)}
-                          onDelete={handlePostDelete}
-                          onImageError={handleImageError}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={handleImageError} /></div>))}</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1 px-6">
-                    {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
-                      <div 
-                        key={post.id} 
-                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                        onClick={() => handleGridItemClick(post.id)}
-                      >
-                        <img 
-                          src={post.image} 
-                          alt="" 
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
-                          onError={() => handleImageError(post.id)} 
-                        />
-                      </div>
-                    ))}
-                    {myPosts.length === 0 && !isDataLoading && (
-                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">
-                        아직 등록된 포스팅이 없습니다.
-                      </div>
-                    )}
-                  </div>
+                  <div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>
                 )}
               </>
             )}
           </div>
         </div>
       </div>
-
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-      <ProfileEditDrawer 
-        isOpen={isEditOpen} 
-        onClose={() => setIsEditOpen(false)} 
-        onUpdate={refreshProfile}
-      />
+      <ProfileEditDrawer isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onUpdate={refreshProfile} />
     </div>
   );
 };

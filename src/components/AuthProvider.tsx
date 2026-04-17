@@ -71,7 +71,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (err) {
       console.error('[Auth] 프로필 처리 중 오류:', err);
-      // 프로필 로드 실패 시에도 기본 정보는 세팅하여 무한 로딩 방지
       setProfile({
         nickname: email?.split('@')[0] || '탐험가',
         avatar_url: null,
@@ -84,11 +83,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
+    // 안전장치: 5초 후에도 로딩 중이면 강제로 로딩 종료
+    const timeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] 세션 복구 타임아웃 발생');
+        setLoading(false);
+      }
+    }, 5000);
+
     const initAuth = async () => {
       try {
-        // 저장된 세션 가져오기 시도
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
         if (error) throw error;
 
         if (mounted) {
@@ -98,10 +103,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await ensureProfile(initialSession.user.id, initialSession.user.email);
           }
           setLoading(false);
+          clearTimeout(timeoutId);
         }
       } catch (error) {
         console.error('[Auth] 세션 복구 오류:', error);
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(timeoutId);
+        }
       }
     };
 
@@ -113,7 +122,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await ensureProfile(currentSession.user.id, currentSession.user.email);
         }
@@ -129,6 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeoutId);
     };
   }, [ensureProfile]);
 
