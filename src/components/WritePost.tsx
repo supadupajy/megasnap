@@ -18,7 +18,7 @@ interface WritePostProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated?: (newPost: any) => void;
-  onStartLocationSelection?: () => void; // 위치 선택 시작 콜백
+  onStartLocationSelection?: () => void;
   initialLocation?: { lat: number; lng: number } | null;
 }
 
@@ -41,9 +41,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         const geocoder = new kakao.maps.services.Geocoder();
         
         geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
-          if (status === kakao.maps.services.Status.OK) {
+          if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
-            const cleanAddress = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
+            // 도로명 주소가 있으면 도로명, 없으면 지번 주소 사용
+            const roadAddr = result[0].road_address;
+            const cleanAddress = roadAddr 
+              ? `${roadAddr.region_1depth_name} ${roadAddr.region_2depth_name} ${roadAddr.region_3depth_name}`
+              : `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
             setAddress(cleanAddress);
           } else {
             setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);

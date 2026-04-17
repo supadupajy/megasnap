@@ -251,18 +251,17 @@ const Index = () => {
     }, 1000);
   };
 
-  // 위치 선택 모드 핸들러
-  const handleMapClick = (loc: { lat: number; lng: number }) => {
+  // 위치 선택 모드 핸들러 - useCallback으로 메모리화하여 MapContainer에 안정적으로 전달
+  const handleMapClick = useCallback((loc: { lat: number; lng: number }) => {
     if (isSelectingLocation) {
       setTempSelectedLocation(loc);
     }
-  };
+  }, [isSelectingLocation]);
 
   const confirmLocationSelection = () => {
     if (tempSelectedLocation) {
       setFinalSelectedLocation(tempSelectedLocation);
       setIsSelectingLocation(false);
-      // 약간의 지연을 주어 지도가 안정된 후 팝업을 엽니다.
       setTimeout(() => {
         setIsWriteOpen(true);
       }, 100);
@@ -279,10 +278,10 @@ const Index = () => {
 
   const startLocationSelection = () => {
     setIsWriteOpen(false);
-    // Drawer가 닫히는 애니메이션 시간을 고려하여 지연 실행
+    // Drawer가 완전히 닫히는 시간을 고려하여 지연 실행
     setTimeout(() => {
       setIsSelectingLocation(true);
-    }, 300);
+    }, 500);
   };
 
   return (
