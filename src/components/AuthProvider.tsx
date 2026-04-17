@@ -45,32 +45,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(data || { nickname: null, avatar_url: null });
     } catch (err) {
       console.error('Error fetching profile:', err);
+      setProfile({ nickname: null, avatar_url: null });
     }
   };
 
   useEffect(() => {
-    // 초기 세션 확인 및 복구
-    const initAuth = async () => {
+    let mounted = true;
+
+    // 1. 초기 세션 확인
+    const checkSession = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          await fetchProfile(initialSession.user.id);
+        if (mounted) {
+          if (initialSession) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+            await fetchProfile(initialSession.user.id);
+          }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Initial session check error:', error);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    initAuth();
+    checkSession();
 
-    // 인증 상태 변경 실시간 감지
+    // 2. 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log('Auth event:', event);
       
+      if (!mounted) return;
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
@@ -83,10 +90,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setProfile(null);
       }
       
+      // INITIAL_SESSION 이벤트 등에서도 로딩이 확실히 풀리도록 보장
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const refreshProfile = async () => {
@@ -94,7 +105,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   return (
