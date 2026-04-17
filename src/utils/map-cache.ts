@@ -7,5 +7,5 @@ export const mapCache = {
   posts: [] as Post[],
   populatedTiles: new Set<string>(),
   lastCenter: { lat: 37.5665, lng: 126.9780 } as { lat: number; lng: number },
-  lastZoom: 14
+  lastZoom: 6 // 카카오 지도 레벨에 맞춰 6으로 변경
 };

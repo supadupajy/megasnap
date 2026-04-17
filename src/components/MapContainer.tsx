@@ -39,7 +39,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       try {
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: 4 // 카카오 지도는 레벨이 낮을수록 확대됨
+          level: 6 // 카카오 지도는 레벨이 낮을수록 확대됨 (기존 4에서 6으로 변경)
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
