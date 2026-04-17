@@ -319,8 +319,8 @@ const Index = () => {
                     className="relative mb-12" // 핀의 끝점이 중앙에 오도록 보정
                   >
                     <div className="relative w-12 h-12">
-                      {/* 뾰족한 부분이 아래를 향하도록 수정: rounded-br-none + -rotate-45 */}
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-rose-500 rounded-full rounded-br-none -rotate-45 border-4 border-white shadow-2xl" />
+                      {/* 뾰족한 부분이 아래를 향하도록 수정: rounded-bl-none + rotate-45 */}
+                      <div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-bl-none rotate-45 border-4 border-white shadow-2xl" />
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
                     </div>
                     {/* 핀 아래 그림자 */}
