@@ -21,31 +21,41 @@ const Popular = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  
+
+  // ✅ Fix 1: false로 초기화
+  // authLoading이 끝나기 전엔 데이터 로딩 자체를 시작하지 않으므로
+  // true로 초기화하면 authLoading 중 loadInitialData가 조기 return할 때
+  // isInitialLoading이 영원히 true로 남아 무한 스피너 발생
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 안전장치: 3초 이상 로딩이 지속되는데 사용자가 없으면 로그인 페이지로 이동
+  // ✅ Fix 2: 타임아웃 제거 → authLoading 완료 후 redirect
+  // 기존: isInitialLoading && !authUser 조건으로 3초 후 강제 이동
+  // → 세션 복원이 3초 넘으면 로그인 페이지로 튕김
+  // 수정: authLoading이 끝난 뒤에만 authUser 유무 판단
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isInitialLoading && !authUser) {
-        console.warn('[Popular] Loading timeout - redirecting to login');
-        navigate('/login', { replace: true });
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [isInitialLoading, authUser, navigate]);
+    if (authLoading) return;
+    if (!authUser) {
+      navigate('/login', { replace: true });
+    }
+  }, [authLoading, authUser, navigate]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
   const loadInitialData = useCallback(async () => {
-    if (authLoading || !authUser) return;
-    
+    if (!authUser) return;
+
+    // ✅ Fix 3: authLoading 의존성 제거
+    // loadInitialData 실행 자체를 아래 useEffect에서 !authLoading && authUser 조건으로 제어하므로
+    // 함수 내부에서 authLoading을 다시 체크할 필요 없음
+    // authLoading이 의존성에 있으면 authLoading 변화마다 함수가 재생성되어 불필요한 재실행 유발
+
     setIsInitialLoading(true);
     const mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
-    
+
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -86,16 +96,22 @@ const Popular = () => {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [authLoading, authUser]);
+  }, [authUser]); // ✅ authLoading 제거
 
+  // ✅ Fix 4: authLoading 완료 후에만 데이터 로드
+  // 기존: loadInitialData 내부에서 authLoading 체크 후 return
+  // → isInitialLoading이 true인 채로 멈춰 무한 스피너 가능
+  // 수정: useEffect에서 조건부 실행으로 제어
   useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+    if (!authLoading && authUser) {
+      loadInitialData();
+    }
+  }, [authLoading, authUser, loadInitialData]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore || isInitialLoading) return;
     setIsLoadingMore(true);
-    
+
     setTimeout(() => {
       const newPosts = createMockPosts(37.5665, 126.9780, 15)
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
@@ -117,14 +133,12 @@ const Popular = () => {
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [loadMorePosts, posts.length]);
-  
+
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
-      if (post.id === postId) {
-        const isLiked = !post.isLiked;
-        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
-      }
-      return post;
+      if (post.id !== postId) return post;
+      const isLiked = !post.isLiked;
+      return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
     }));
   }, []);
 
@@ -137,13 +151,21 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (isInitialLoading && !authUser)) {
+  // ✅ Fix 5: 로딩 조건 분리
+  // - authLoading: 세션 복원 중 → 무조건 스피너
+  // - isInitialLoading && posts.length === 0: 첫 데이터 로드 중 → 스피너
+  // 기존 (isInitialLoading && !authUser) 조건은 세션 복원 완료 전엔 항상 true여서
+  // 로그인된 사용자도 스피너에 갇힐 수 있었음
+  if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
+
+  // ✅ Fix 6: authUser 없으면 null 반환 (useEffect가 redirect 처리)
+  if (!authUser) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
