@@ -109,7 +109,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
         // 지도의 다른 부분을 클릭했을 때만 핀 숨기기
         kakao.maps.event.addListener(map, 'click', () => {
-          // 롱프레스 직후의 클릭 이벤트는 무시 (핀이 바로 사라지는 것 방지)
           if (justLongPressed.current) {
             justLongPressed.current = false;
             return;
@@ -148,6 +147,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const content = document.createElement('div');
     content.className = 'kakao-overlay';
     content.style.cursor = 'pointer';
+    content.style.pointerEvents = 'auto'; // 클릭 가능하도록 명시
     content.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.3));">
         <div style="background: #4f46e5; color: white; padding: 10px 18px; border-radius: 24px; font-weight: 900; font-size: 15px; display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 2px solid rgba(255,255,255,0.2); transition: all 0.2s active:scale-95;">
@@ -158,12 +158,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       </div>
     `;
     
-    // 오버레이 클릭 시 글쓰기 팝업 호출
-    content.onclick = (e) => {
+    // addEventListener를 사용하여 더 확실하게 클릭 감지
+    content.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       onMapWriteClick({ lat, lng });
       hideActionPin();
-    };
+    });
 
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(lat, lng),
