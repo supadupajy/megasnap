@@ -37,10 +37,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    setLoading(true);
+  const ensureProfile = useCallback(async (userId: string, email: string | undefined) => {
     try {
-      console.log('[Auth] DB에서 프로필 조회 시작:', userId);
+      console.log('[Auth] 프로필 확인 및 자동 생성 시작:', userId);
+      
+      // 1. 기존 프로필 조회
       const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url, bio, email')
@@ -48,17 +49,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) throw error;
-      
-      if (data) {
-        console.log('[Auth] DB 프로필 확인됨:', data);
+
+      if (data && data.nickname) {
+        console.log('[Auth] 기존 닉네임 확인됨:', data.nickname);
         setProfile(data);
       } else {
-        console.log('[Auth] DB에 프로필 없음, 초기 상태 설정');
-        setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
+        // 2. 닉네임이 없으면 랜덤 생성 및 저장
+        const randomId = Math.random().toString(36).substring(2, 7);
+        const generatedNickname = `탐험가_${randomId}`;
+        
+        console.log('[Auth] 닉네임 자동 생성:', generatedNickname);
+        
+        const newProfile = {
+          id: userId,
+          nickname: generatedNickname,
+          email: email || null,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert(newProfile);
+
+        if (upsertError) throw upsertError;
+
+        setProfile({
+          nickname: generatedNickname,
+          avatar_url: data?.avatar_url || null,
+          bio: data?.bio || null,
+          email: email || null
+        });
       }
     } catch (err) {
-      console.error('[Auth] 프로필 조회 오류:', err);
-      setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
+      console.error('[Auth] 프로필 처리 중 오류:', err);
     } finally {
       setLoading(false);
     }
@@ -74,7 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (initialSession) {
             setSession(initialSession);
             setUser(initialSession.user);
-            await fetchProfile(initialSession.user.id);
+            await ensureProfile(initialSession.user.id, initialSession.user.email);
           } else {
             setLoading(false);
           }
@@ -90,15 +113,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
-      console.log('[Auth] 인증 상태 변경:', event);
-
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        // 로그인 또는 세션 갱신 시 프로필 다시 조회
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await fetchProfile(currentSession.user.id);
+          await ensureProfile(currentSession.user.id, currentSession.user.email);
         }
       } else {
         setSession(null);
@@ -112,10 +132,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [ensureProfile]);
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await ensureProfile(user.id, user.email);
   };
 
   const updateProfileState = (updates: Partial<Profile>) => {

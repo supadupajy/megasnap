@@ -23,7 +23,6 @@ import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
-import NicknameDialog from "./components/NicknameDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 
@@ -55,39 +54,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, user, profile, loading } = useAuth();
+  const { session, loading } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
-
-  // 닉네임 설정 팝업 노출 로직
-  useEffect(() => {
-    // 1. 로딩 중이거나 세션이 없으면 팝업을 띄우지 않음
-    if (loading || !session) {
-      setShowNicknameDialog(false);
-      return;
-    }
-
-    // 2. 프로필 정보가 로드되었을 때만 판단
-    if (profile) {
-      // 3. DB에서 가져온 nickname이 실제로 비어있는지(null 또는 '') 엄격하게 확인
-      const hasNickname = profile.nickname !== null && profile.nickname !== '';
-      
-      // 4. 닉네임이 없고, 레이아웃이 숨겨진 페이지가 아니며, 로그인 페이지가 아닐 때만 팝업 노출
-      const shouldShow = !hasNickname && !hideLayout && location.pathname !== '/login';
-      
-      console.log('[App] 닉네임 체크 결과:', { 
-        email: profile.email,
-        nickname: profile.nickname,
-        hasNickname,
-        shouldShow 
-      });
-
-      setShowNicknameDialog(shouldShow);
-    }
-  }, [session, profile, hideLayout, loading, location.pathname]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -154,16 +125,6 @@ const AnimatedRoutes = () => {
         onClose={() => setShowExitDialog(false)} 
         onConfirm={handleExitApp} 
       />
-
-      {user && (
-        <NicknameDialog 
-          isOpen={showNicknameDialog} 
-          userId={user.id} 
-          onComplete={() => {
-            // 팝업을 수동으로 닫지 않고 profile.nickname 업데이트를 기다림
-          }} 
-        />
-      )}
     </div>
   );
 };
