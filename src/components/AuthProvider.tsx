@@ -42,10 +42,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('nickname, avatar_url, bio')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // single() 대신 maybeSingle()을 사용하여 데이터가 없을 때 에러 방지
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setProfile(data || { nickname: null, avatar_url: null, bio: null });
+      if (error) throw error;
+      
+      if (data) {
+        setProfile(data);
+      } else {
+        // 프로필 행 자체가 없는 경우
+        setProfile({ nickname: null, avatar_url: null, bio: null });
+      }
     } catch (err) {
       console.error('[Auth] Profile fetch error:', err);
       setProfile({ nickname: null, avatar_url: null, bio: null });
@@ -55,30 +61,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const safetyTimer = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false);
-      }
-    }, 5000);
-
     const initAuth = async () => {
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         if (error) throw error;
 
-        if (mounted && initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          // 프로필 정보를 가져올 때까지 기다립니다.
-          await fetchProfile(initialSession.user.id);
+        if (mounted) {
+          if (initialSession) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+            await fetchProfile(initialSession.user.id);
+          }
+          setLoading(false);
         }
       } catch (error) {
         console.error('[Auth] Session check error:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-          clearTimeout(safetyTimer);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -90,8 +88,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        // 세션 변경 시에도 프로필 정보를 가져올 때까지 기다립니다.
-        await fetchProfile(currentSession.user.id);
+        // 세션이 생겼을 때만 프로필을 다시 가져옴
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await fetchProfile(currentSession.user.id);
+        }
       } else {
         setSession(null);
         setUser(null);
@@ -99,13 +99,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       setLoading(false);
-      clearTimeout(safetyTimer);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(safetyTimer);
     };
   }, []);
 
