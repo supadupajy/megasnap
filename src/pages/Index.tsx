@@ -21,10 +21,12 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -48,7 +50,6 @@ const Index = () => {
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
 
-  // Supabase에서 실제 포스팅 가져오기
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
     try {
@@ -86,6 +87,19 @@ const Index = () => {
       return [];
     }
   }, []);
+
+  // 초기 로드 시 DB 포스팅 가져오기
+  useEffect(() => {
+    const initLoad = async () => {
+      const realPosts = await fetchSupabasePosts();
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
+        return [...uniqueReal, ...prev];
+      });
+    };
+    initLoad();
+  }, [fetchSupabasePosts]);
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -155,7 +169,6 @@ const Index = () => {
         }
       }
 
-      // 실제 포스팅 데이터 가져오기
       const realPosts = await fetchSupabasePosts();
       
       setAllPosts(prev => {
@@ -181,13 +194,16 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
-      const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
+      
+      // 본인 포스팅은 시간 필터와 상관없이 항상 보이도록 설정 (또는 시간 내)
+      const isMine = authUser && post.user.id === authUser.id;
+      const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && post.user.id === 'me');
+                              (selectedCategories.includes('mine') && (post.user.id === 'me' || isMine));
 
       const isNotBlocked = !blockedIds.has(post.user.id);
       return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
@@ -211,7 +227,7 @@ const Index = () => {
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, displayedMarkers]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, displayedMarkers, authUser]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -279,7 +295,6 @@ const Index = () => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });
     
-    // 핑 효과 적용
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
       setTimeout(() => setHighlightedPostId(null), 3000);

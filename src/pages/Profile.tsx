@@ -12,6 +12,7 @@ import { createMockPosts, GIF_POOL } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -25,37 +26,80 @@ const Profile = () => {
 
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
 
-  useEffect(() => {
-    if (!authUser) return;
+  const fetchMyRealPosts = useCallback(async () => {
+    if (!authUser || !supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false });
 
-    const rawMine = createMockPosts(37.5665, 126.9780, 30);
-    
-    const mine = rawMine.map((p, idx) => {
-      const isGif = idx < 10;
-      const image = isGif 
-        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] 
-        : p.image;
+      if (error) throw error;
 
-      return {
-        ...p,
-        isGif,
-        image,
-        images: isGif ? [image, ...p.images.slice(1)] : p.images,
+      return (data || []).map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
         user: {
-          id: authUser.id, // 실제 사용자 ID 사용
-          name: displayName,
-          avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?u=me'
-        }
-      };
-    }).sort(() => Math.random() - 0.5);
+          id: p.user_id,
+          name: p.user_name,
+          avatar: p.user_avatar
+        },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: 'none'
+      })) as Post[];
+    } catch (err) {
+      console.error('Error fetching my posts:', err);
+      return [];
+    }
+  }, [authUser]);
 
-    setMyPosts(mine);
+  useEffect(() => {
+    const loadData = async () => {
+      if (!authUser) return;
 
-    const saved = createMockPosts(37.5665, 126.9780, 12)
-      .filter(p => p.user.id !== authUser.id)
-      .map(p => ({ ...p, isLiked: true }));
-    setSavedPosts(saved);
-  }, [displayName, profile, authUser]);
+      // 1. 실제 DB 포스팅 로드
+      const realPosts = await fetchMyRealPosts();
+      
+      // 2. 부족한 경우 랜덤 데이터로 채우기 (UI 풍성함을 위해)
+      const rawMock = createMockPosts(37.5665, 126.9780, Math.max(0, 15 - realPosts.length));
+      const mockMine = rawMock.map((p, idx) => {
+        const isGif = idx < 5;
+        const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
+        return {
+          ...p,
+          isGif,
+          image,
+          user: {
+            id: authUser.id,
+            name: displayName,
+            avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?u=me'
+          }
+        };
+      });
+
+      setMyPosts([...realPosts, ...mockMine]);
+
+      // 저장된 포스팅 (랜덤)
+      const saved = createMockPosts(37.5665, 126.9780, 12)
+        .filter(p => p.user.id !== authUser.id)
+        .map(p => ({ ...p, isLiked: true }));
+      setSavedPosts(saved);
+    };
+
+    loadData();
+  }, [displayName, profile, authUser, fetchMyRealPosts]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
