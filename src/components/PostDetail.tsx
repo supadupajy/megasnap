@@ -114,7 +114,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
-    navigate(`/profile/${post.user.id}`);
+    if (isMine) {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${post.user.id}`);
+    }
   };
 
   const handleReport = (e: React.MouseEvent) => {

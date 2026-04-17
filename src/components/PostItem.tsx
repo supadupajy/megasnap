@@ -107,7 +107,11 @@ const PostItem = ({
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/profile/${user.id}`);
+    if (isMine) {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${user.id}`);
+    }
   };
 
   const handleLocationClick = (e: React.MouseEvent) => {
