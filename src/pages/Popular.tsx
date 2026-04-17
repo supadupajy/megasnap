@@ -29,63 +29,75 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const fetchSupabasePosts = useCallback(async () => {
-    if (!supabase) return [];
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('likes', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-
-      return (data || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
-        },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
-    } catch (err) {
-      console.error('Error fetching posts:', err);
-      return [];
-    }
-  }, []);
-
   useEffect(() => {
+    let isMounted = true;
+
     const loadInitialData = async () => {
       if (authLoading) return;
       
-      setIsInitialLoading(true);
+      // 안전장치: 3초 후에는 무조건 로딩 종료
+      const timeoutId = setTimeout(() => {
+        if (isMounted && isInitialLoading) {
+          console.warn('[Popular] Loading timeout - forcing display');
+          setIsInitialLoading(false);
+        }
+      }, 3000);
+
       try {
-        const realPosts = await fetchSupabasePosts();
+        // 1. Supabase 데이터 가져오기 (타임아웃 고려)
+        const fetchPromise = supabase
+          .from('posts')
+          .select('*')
+          .order('likes', { ascending: false })
+          .limit(20);
+
+        const { data, error } = await fetchPromise;
+
+        const realPosts = (data || []).map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: {
+            id: p.user_id,
+            name: p.user_name,
+            avatar: p.user_avatar
+          },
+          content: p.content,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
+        })) as Post[];
+
+        // 2. Mock 데이터 생성
         const mockPosts = createMockPosts(37.5665, 126.9780, 20)
           .sort((a, b) => b.likes - a.likes);
         
-        setPosts([...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes));
+        if (isMounted) {
+          const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
+          setPosts(combined);
+        }
+      } catch (err) {
+        console.error('[Popular] Data load error:', err);
       } finally {
-        setIsInitialLoading(false);
+        clearTimeout(timeoutId);
+        if (isMounted) setIsInitialLoading(false);
       }
     };
     
     loadInitialData();
-  }, [fetchSupabasePosts, authLoading]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore || isInitialLoading) return;
@@ -95,7 +107,7 @@ const Popular = () => {
       const newPosts = createMockPosts(37.5665, 126.9780, 20)
         .map(p => ({
           ...p,
-          likes: Math.floor(Math.random() * 1000) + 1000 // 더 높은 좋아요 수 생성 유도
+          likes: Math.floor(Math.random() * 1000) + 1000
         }))
         .sort((a, b) => b.likes - a.likes);
         

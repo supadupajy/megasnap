@@ -30,85 +30,97 @@ const Profile = () => {
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
   const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
 
-  const loadData = useCallback(async () => {
-    if (!authUser) {
-      setIsDataLoading(false);
-      return;
-    }
-
-    setIsDataLoading(true);
-    try {
-      // 1. 실제 DB 포스팅 가져오기
-      const { data: realData, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      const realPosts = (realData || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name || displayName,
-          avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
-        },
-        content: p.content || '',
-        location: p.location_name || '알 수 없는 장소',
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url || FALLBACK_IMAGE,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: 'none'
-      })) as Post[];
-      
-      // 2. 추천 데이터 생성 (Mock)
-      const rawMock = createMockPosts(37.5665, 126.9780, 12);
-      const mockMine = rawMock.map((p, idx) => {
-        const isGif = idx < 4;
-        const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
-        return {
-          ...p,
-          isGif,
-          image,
-          user: {
-            id: authUser.id,
-            name: displayName,
-            avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
-          }
-        };
-      });
-
-      // 3. 데이터 통합 및 정렬
-      const combined = [...realPosts, ...mockMine].sort((a, b) => 
-        b.createdAt.getTime() - a.createdAt.getTime()
-      );
-
-      setMyPosts(combined);
-
-      // 4. 저장된 포스팅 (Mock)
-      const saved = createMockPosts(37.5665, 126.9780, 12)
-        .filter(p => p.user.id !== authUser.id)
-        .map(p => ({ ...p, isLiked: true }));
-      setSavedPosts(saved);
-    } catch (err) {
-      console.error('[Profile] Data load error:', err);
-    } finally {
-      setIsDataLoading(false);
-    }
-  }, [authUser, displayName, profile]);
-
   useEffect(() => {
-    if (!authLoading) {
-      loadData();
-    }
-  }, [authLoading, loadData]);
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (authLoading) return;
+      if (!authUser) {
+        if (isMounted) setIsDataLoading(false);
+        return;
+      }
+
+      // 안전장치: 3초 후에는 무조건 로딩 종료
+      const timeoutId = setTimeout(() => {
+        if (isMounted && isDataLoading) {
+          console.warn('[Profile] Loading timeout - forcing display');
+          setIsDataLoading(false);
+        }
+      }, 3000);
+
+      try {
+        // 1. 실제 DB 포스팅 가져오기
+        const { data: realData } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false });
+
+        const realPosts = (realData || []).map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: {
+            id: p.user_id,
+            name: p.user_name || displayName,
+            avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
+          },
+          content: p.content || '',
+          location: p.location_name || '알 수 없는 장소',
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url || FALLBACK_IMAGE,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: 'none'
+        })) as Post[];
+        
+        // 2. 추천 데이터 생성 (Mock)
+        const rawMock = createMockPosts(37.5665, 126.9780, 12);
+        const mockMine = rawMock.map((p, idx) => {
+          const isGif = idx < 4;
+          const image = isGif ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] : p.image;
+          return {
+            ...p,
+            isGif,
+            image,
+            user: {
+              id: authUser.id,
+              name: displayName,
+              avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
+            }
+          };
+        });
+
+        if (isMounted) {
+          const combined = [...realPosts, ...mockMine].sort((a, b) => 
+            b.createdAt.getTime() - a.createdAt.getTime()
+          );
+          setMyPosts(combined);
+
+          const saved = createMockPosts(37.5665, 126.9780, 12)
+            .filter(p => p.user.id !== authUser.id)
+            .map(p => ({ ...p, isLiked: true }));
+          setSavedPosts(saved);
+        }
+      } catch (err) {
+        console.error('[Profile] Data load error:', err);
+      } finally {
+        clearTimeout(timeoutId);
+        if (isMounted) setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, authUser, displayName, profile]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
@@ -149,7 +161,6 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 인증 로딩 중이거나, 데이터 로딩 중이면서 아직 게시물이 하나도 없을 때만 로더 표시
   if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
