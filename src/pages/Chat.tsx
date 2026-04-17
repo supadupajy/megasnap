@@ -1,85 +1,157 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, Send, MoreVertical, Phone, Video } from 'lucide-react';
+import { ChevronLeft, Send, MoreVertical, Phone, Video, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useKeyboard } from '@/hooks/use-keyboard';
-import { chatStore } from '@/utils/chat-store';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
+import { showError } from '@/utils/toast';
+
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+}
 
 const Chat = () => {
   const navigate = useNavigate();
-  const { chatId } = useParams();
+  const { chatId } = useParams(); // 상대방의 userId
+  const { user: authUser } = useAuth();
   const { keyboardHeight } = useKeyboard();
   
-  const [room, setRoom] = useState(chatStore.getRoom(chatId || ''));
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 상대방 프로필 정보 가져오기
   useEffect(() => {
-    if (chatId) {
-      chatStore.markAsRead(chatId);
-      setRoom(chatStore.getRoom(chatId));
-    }
-    
-    const unsubscribe = chatStore.subscribe(() => {
-      if (chatId) setRoom(chatStore.getRoom(chatId));
-    });
-    return () => { unsubscribe(); };
+    const fetchOtherUser = async () => {
+      if (!chatId) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('nickname, avatar_url')
+        .eq('id', chatId)
+        .single();
+      
+      if (!error && data) {
+        setOtherUser(data);
+      }
+    };
+    fetchOtherUser();
   }, [chatId]);
+
+  // 메시지 내역 가져오기 및 실시간 구독
+  useEffect(() => {
+    if (!authUser || !chatId) return;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+      } else {
+        setMessages(data || []);
+      }
+      setIsLoading(false);
+    };
+
+    fetchMessages();
+
+    // 실시간 구독 설정
+    const channel = supabase
+      .channel(`chat:${chatId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${chatId},receiver_id=eq.${authUser.id}`
+        },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new as Message]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUser, chatId]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [room?.messages, keyboardHeight]);
+  }, [messages, keyboardHeight]);
 
-  const handleBack = () => {
-    navigate('/messages');
-  };
+  const handleSend = async () => {
+    if (!inputValue.trim() || !authUser || !chatId) return;
 
-  const handleSend = () => {
-    if (!inputValue.trim() || !chatId) return;
-    chatStore.addMessage(chatId, inputValue.trim(), 'me');
+    const newMessage = {
+      sender_id: authUser.id,
+      receiver_id: chatId,
+      content: inputValue.trim(),
+    };
+
+    // 낙관적 업데이트 (UI에 즉시 반영)
+    const tempId = Math.random().toString();
+    const optimisticMsg: Message = {
+      id: tempId,
+      content: newMessage.content,
+      sender_id: authUser.id,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
-    
-    // 1초 후 자동 응답 (데모용)
-    setTimeout(() => {
-      if (chatId === 'travel_maker' || chatId === 'seoul_snap') {
-        chatStore.addMessage(chatId, "메시지 확인했습니다! 곧 답변 드릴게요. 😊", 'other');
-      }
-    }, 1500);
+
+    const { error } = await supabase.from('messages').insert([newMessage]);
+
+    if (error) {
+      showError('메시지 전송에 실패했습니다.');
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
+    }
   };
 
-  const handleAvatarClick = () => {
-    navigate(`/profile/${chatId}`);
-  };
-
-  if (!room) return null;
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <div className="flex items-center gap-2">
             <div 
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
-              onClick={handleAvatarClick}
+              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer"
+              onClick={() => navigate(`/profile/${chatId}`)}
             >
               <img 
-                src={room.user.avatar} 
+                src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} 
                 alt="user" 
                 className="w-full h-full rounded-full object-cover border-2 border-white" 
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black text-gray-900">{room.user.name}</span>
+              <span className="text-sm font-black text-gray-900">{otherUser?.nickname || '사용자'}</span>
               <span className="text-[10px] text-indigo-600 font-bold">현재 활동 중</span>
             </div>
           </div>
@@ -91,51 +163,48 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Chat Messages */}
       <div 
         ref={scrollRef}
         className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300"
         style={{ paddingBottom: keyboardHeight > 0 ? '20px' : '120px' }}
       >
-        <div className="flex justify-center my-6">
-          <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-4 py-1.5 rounded-full uppercase tracking-widest">
-            오늘
-          </span>
-        </div>
-
-        {room.messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={cn(
-              "flex flex-col max-w-[85%]",
-              msg.sender === 'me' ? "ml-auto items-end" : "mr-auto items-start"
-            )}
-          >
+        {messages.map((msg) => {
+          const isMe = msg.sender_id === authUser?.id;
+          const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          return (
             <div 
+              key={msg.id} 
               className={cn(
-                "px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm",
-                msg.sender === 'me' 
-                  ? "bg-indigo-600 text-white rounded-tr-none" 
-                  : "bg-gray-100 text-gray-800 rounded-tl-none"
+                "flex flex-col max-w-[85%]",
+                isMe ? "ml-auto items-end" : "mr-auto items-start"
               )}
             >
-              {msg.text}
+              <div 
+                className={cn(
+                  "px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm",
+                  isMe 
+                    ? "bg-indigo-600 text-white rounded-tr-none" 
+                    : "bg-gray-100 text-gray-800 rounded-tl-none"
+                )}
+              >
+                {msg.content}
+              </div>
+              <span className="text-[9px] text-gray-400 mt-1 px-1 font-bold">{time}</span>
             </div>
-            <span className="text-[9px] text-gray-400 mt-1 px-1 font-bold">{msg.time}</span>
-          </div>
-        ))}
+          );
+        })}
         
-        {room.messages.length === 0 && (
+        {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
               <Send className="w-8 h-8 text-indigo-600 opacity-20" />
             </div>
-            <p className="text-sm text-gray-400 font-bold">{room.user.name} 님에게<br/>첫 메시지를 보내보세요!</p>
+            <p className="text-sm text-gray-400 font-bold">대화를 시작해보세요!</p>
           </div>
         )}
       </div>
 
-      {/* Input Area */}
       <div 
         className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50"
         style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}
