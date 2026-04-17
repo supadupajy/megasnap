@@ -117,11 +117,11 @@ export const createMockUser = (id: string, randomFn: () => number = Math.random)
   const roll = randomFn();
   let followers = Math.floor(randomFn() * 5000) + 100;
   
-  // 인플루언서 확률 상향 및 등급별 팔로워 조정
-  if (roll > 0.95) {
+  // 인플루언서 확률 상향 (테스트를 위해 20%로 조정)
+  if (roll > 0.8) {
     const tierRoll = randomFn();
-    if (tierRoll > 0.9) followers = Math.floor(randomFn() * 5000000) + 10000000; // 다이아몬드 (10M+)
-    else if (tierRoll > 0.6) followers = Math.floor(randomFn() * 4000000) + 1000000; // 골드 (1M+)
+    if (tierRoll > 0.8) followers = Math.floor(randomFn() * 5000000) + 10000000; // 다이아몬드 (10M+)
+    else if (tierRoll > 0.5) followers = Math.floor(randomFn() * 4000000) + 1000000; // 골드 (1M+)
     else followers = Math.floor(randomFn() * 900000) + 100000; // 실버 (100k+)
   }
 
@@ -148,9 +148,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 인플루언서 확률 상향 (10% -> 15%)
-    const isInfluencer = specificUserId ? false : randomFn() > 0.85; 
-    const isPopular = specificUserId ? false : randomFn() > 0.92;
+    // 인플루언서 확률 상향
+    const isInfluencer = specificUserId ? false : randomFn() > 0.8; 
+    const isPopular = specificUserId ? false : randomFn() > 0.9;
     const isAd = !specificUserId && !isInfluencer && !isPopular && randomFn() > 0.92;
     const isGif = !isAd && randomFn() > 0.85; 
     

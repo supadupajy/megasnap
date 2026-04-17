@@ -56,7 +56,7 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 200; 
+  const MAX_MARKERS = 1000; // 표시 제한을 대폭 늘려 영역 내 마커가 사라지지 않도록 함
   const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
