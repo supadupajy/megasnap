@@ -20,15 +20,16 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabasePosts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
-import { Geolocation } from '@capacitor/geolocation';
-import { showError } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  
+  // React Query를 통한 데이터 페칭
+  const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -51,60 +52,18 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 80; 
-  const prevMarkersRef = useRef<Post[]>([]);
+  const MAX_MARKERS = 50; 
 
-  const fetchSupabasePosts = useCallback(async () => {
-    if (!supabase) return [];
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
-        },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
-    } catch (err) {
-      console.error('Error fetching posts:', err);
-      return [];
-    }
-  }, []);
-
+  // Supabase 포스트가 로드되면 전체 포스트 리스트에 병합
   useEffect(() => {
-    const initLoad = async () => {
-      const realPosts = await fetchSupabasePosts();
-      if (realPosts.length > 0) {
-        setAllPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
-          return [...uniqueReal, ...prev];
-        });
-      }
-    };
-    initLoad();
-  }, [fetchSupabasePosts]);
+    if (supabasePosts.length > 0) {
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueReal = supabasePosts.filter(p => !existingIds.has(p.id));
+        return [...uniqueReal, ...prev];
+      });
+    }
+  }, [supabasePosts]);
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -129,7 +88,12 @@ const Index = () => {
   }, [filteredAllPosts]);
 
   useEffect(() => {
-    if (location.state?.post) {
+    if (location.state?.filterUserId) {
+      const userId = location.state.filterUserId;
+      const finalUserId = userId === 'me' ? authUser?.id : userId;
+      setTargetUserId(finalUserId || null);
+      setSelectedCategories([userId === 'me' ? 'mine' : 'user_filter']);
+    } else if (location.state?.post) {
       const incomingPost = location.state.post;
       if (blockedIds.has(incomingPost.user.id)) return;
 
@@ -149,19 +113,7 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
-
-    // 프로필 페이지에서 넘어온 필터 처리
-    if (location.state?.filterUserId) {
-      const uid = location.state.filterUserId;
-      if (uid === 'me') {
-        setSelectedCategories(['mine']);
-        setTargetUserId(null);
-      } else {
-        setTargetUserId(uid);
-        setSelectedCategories(['user_filter']);
-      }
-    }
-  }, [location.state, blockedIds]);
+  }, [location.state, blockedIds, authUser]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -172,25 +124,24 @@ const Index = () => {
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
     const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
-    const newMockPosts: Post[] = [];
+    const newPosts: Post[] = [];
+    let tilesAdded = false;
+
     for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
       for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
         const tileKey = `${latIdx},${lngIdx}`;
         if (!mapCache.populatedTiles.has(tileKey)) {
           mapCache.populatedTiles.add(tileKey);
+          tilesAdded = true;
           const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
           const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-          newMockPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 6));
+          newPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
         }
       }
     }
 
-    if (newMockPosts.length > 0) {
-      setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueNewMock = newMockPosts.filter(p => !existingIds.has(p.id));
-        return [...prev, ...uniqueNewMock];
-      });
+    if (tilesAdded) {
+      setAllPosts(prev => [...prev, ...newPosts]);
     }
   }, [mapData]);
 
@@ -200,124 +151,57 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    const margin = 0.01;
-    const stickyMarkers = prevMarkersRef.current.filter(post => {
-      const isInExtendedBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
-                                 post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
-      if (!isInExtendedBounds) return false;
-      if (blockedIds.has(post.user.id)) return false;
-      
-      const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-      const matchesCategory = selectedCategories.includes('all') || 
-                              selectedCategories.includes(post.category || 'none') ||
-                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && isMine) ||
-                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
-      return matchesCategory;
-    });
-
-    const displayedIds = new Set(stickyMarkers.map(m => m.id));
-    const newCandidates = allPosts.filter(post => {
-      if (displayedIds.has(post.id)) return false;
-      
+    const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
-      if (!isWithinBounds) return false;
-      if (blockedIds.has(post.user.id)) return false;
-
-      const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-      const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
-      if (!isWithinTime) return false;
+      const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       
-      const matchesCategory = selectedCategories.includes('all') || 
-                              selectedCategories.includes(post.category || 'none') ||
-                              (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                              (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && isMine) ||
-                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
-      return matchesCategory;
-    });
+      const isMe = authUser && post.user.id === authUser.id;
+      const isTargetUser = post.user.id === targetUserId;
 
-    const remainingSlots = Math.max(0, MAX_MARKERS - stickyMarkers.length);
-    if (remainingSlots > 0 && newCandidates.length > 0) {
-      // 내 포스팅을 최우선적으로 추출
-      const myPool = newCandidates.filter(p => authUser && p.user.id === authUser.id);
-      const influencerPool = newCandidates.filter(p => p.isInfluencer && !myPool.some(m => m.id === p.id));
-      const popularPool = newCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer && !myPool.some(m => m.id === p.id));
-      const generalPool = newCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !myPool.some(m => m.id === p.id));
-
-      // 내 포스팅은 무조건 다 넣음 (슬롯 허용 범위 내)
-      const selectedMy = myPool.slice(0, remainingSlots);
-      const currentRemaining = remainingSlots - selectedMy.length;
-
-      const targetInf = Math.max(1, Math.round(currentRemaining * 0.02));
-      const targetPop = Math.max(2, Math.round(currentRemaining * 0.05));
-      const targetGen = currentRemaining - targetInf - targetPop;
-
-      const selected = [
-        ...selectedMy,
-        ...influencerPool.sort((a, b) => b.likes - a.likes).slice(0, targetInf),
-        ...popularPool.sort((a, b) => b.likes - a.likes).slice(0, targetPop),
-        ...generalPool.sort((a, b) => b.likes - a.likes).slice(0, targetGen)
-      ];
-
-      if (selected.length < remainingSlots) {
-        const currentSelectedIds = new Set(selected.map(s => s.id));
-        const extra = generalPool
-          .filter(p => !currentSelectedIds.has(p.id))
-          .sort((a, b) => b.likes - a.likes)
-          .slice(0, remainingSlots - selected.length);
-        selected.push(...extra);
+      let matchesCategory = false;
+      if (selectedCategories.includes('mine')) {
+        matchesCategory = !!isMe;
+      } else if (selectedCategories.includes('user_filter')) {
+        matchesCategory = !!isTargetUser;
+      } else if (selectedCategories.includes('all')) {
+        matchesCategory = true;
+      } else {
+        matchesCategory = selectedCategories.includes(post.category || 'none') ||
+                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
+                          (selectedCategories.includes('influencer') && post.isInfluencer);
       }
 
-      stickyMarkers.push(...selected);
-    }
+      const isNotBlocked = !blockedIds.has(post.user.id);
+      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
+    });
 
-    const finalMarkers = stickyMarkers.slice(0, MAX_MARKERS);
-    const nextIds = finalMarkers.map(m => m.id).sort().join(',');
-    const prevIds = prevMarkersRef.current.map(m => m.id).sort().join(',');
-    
-    if (nextIds !== prevIds) {
-      prevMarkersRef.current = finalMarkers;
-      setDisplayedMarkers(finalMarkers);
-    }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, targetUserId]);
+    const sorted = inBoundsCandidates.sort((a, b) => {
+      const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
+      const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
+      return scoreB - scoreA;
+    });
+
+    const combined = sorted.slice(0, MAX_MARKERS);
+    setDisplayedMarkers(combined);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser]);
 
   const handleLikeToggle = useCallback((postId: string) => {
-    const update = (prev: Post[]) => prev.map(post => {
+    setAllPosts(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
         return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
       }
       return post;
-    });
-    setAllPosts(update);
-  }, []);
-
-  const handlePostDelete = useCallback((postId: string) => {
-    setAllPosts(prev => prev.filter(p => p.id !== postId));
-    setSelectedPostId(null);
+    }));
   }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
-    prevMarkersRef.current = []; 
-    if (mapData?.bounds) {
-      const { sw, ne } = mapData.bounds;
-      const centerLat = (ne.lat + sw.lat) / 2;
-      const centerLng = (ne.lng + sw.lng) / 2;
-      
-      const realPosts = await fetchSupabasePosts();
-      const refreshedMockPosts = createMockPosts(centerLat, centerLng, 60);
-      
-      setAllPosts([...realPosts, ...refreshedMockPosts]);
-      setIsRefreshing(false);
-    } else {
-      setIsRefreshing(false);
-    }
-  }, [mapData, fetchSupabasePosts]);
+    await refetchSupabase();
+    setIsRefreshing(false);
+  }, [refetchSupabase]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
@@ -329,46 +213,8 @@ const Index = () => {
     }, 1000);
   }, []);
 
-  const handleCurrentLocation = async () => {
-    try {
-      const permissions = await Geolocation.checkPermissions();
-      if (permissions.location !== 'granted') {
-        const request = await Geolocation.requestPermissions();
-        if (request.location !== 'granted') {
-          showError('위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.');
-          return;
-        }
-      }
-
-      const coordinates = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000
-      });
-      
-      if (coordinates.coords) {
-        setMapCenter({ 
-          lat: coordinates.coords.latitude, 
-          lng: coordinates.coords.longitude 
-        });
-      }
-    } catch (error) {
-      console.error('Error getting location', error);
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: false,
-          timeout: 10000
-        });
-        if (coordinates.coords) {
-          setMapCenter({ 
-            lat: coordinates.coords.latitude, 
-            lng: coordinates.coords.longitude 
-          });
-          return;
-        }
-      } catch (fallbackError) {
-        showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
-      }
-    }
+  const handleCurrentLocation = () => {
+    setMapCenter({ lat: 37.5665, lng: 126.9780 });
   };
 
   const handlePlaceSelect = (place: any) => {
@@ -392,124 +238,124 @@ const Index = () => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      className="relative w-full h-[100dvh] overflow-hidden bg-gray-50"
-    >
-      <div className="absolute inset-0 z-0">
-        <MapContainer 
-          posts={displayedMarkers}
-          viewedPostIds={viewedIds}
-          highlightedPostId={highlightedPostId}
-          onMarkerClick={(p) => setSelectedPostId(p.id)}
-          onMapChange={setMapData}
-          onMapWriteClick={(loc) => {
-            setPendingLocation(loc);
-            setIsWriteOpen(true);
-          }} 
-          center={mapCenter}
-        />
+    <>
+      <motion.div 
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
+        className="relative w-full h-screen overflow-hidden bg-gray-50"
+      >
+        <div className="absolute inset-0 z-0">
+          <MapContainer 
+            posts={displayedMarkers}
+            viewedPostIds={viewedIds}
+            highlightedPostId={highlightedPostId}
+            onMarkerClick={(p) => setSelectedPostId(p.id)}
+            onMapChange={setMapData}
+            onMapWriteClick={(loc) => {
+              setPendingLocation(loc);
+              setIsWriteOpen(true);
+            }} 
+            center={mapCenter}
+          />
 
-        <AnimatePresence>
-          {isTrendingExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsTrendingExpanded(false)}
-              className="absolute inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
-            />
-          )}
-        </AnimatePresence>
+          <AnimatePresence>
+            {isTrendingExpanded && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsTrendingExpanded(false)}
+                className="fixed inset-0 z-30 bg-black/5 backdrop-blur-[1px]"
+              />
+            )}
+          </AnimatePresence>
 
-        <div className={cn(
-          "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
-          isTrendingExpanded ? "z-40" : "z-10"
-        )}>
-          <div className="w-full shrink-0 pointer-events-auto">
-            <TrendingPosts 
-              posts={trendingPosts}
-              isExpanded={isTrendingExpanded}
-              onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-              onPostClick={handleTrendingPostClick}
-            />
+          <div className={cn(
+            "absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300",
+            isTrendingExpanded ? "z-40" : "z-10"
+          )}>
+            <div className="w-full shrink-0 pointer-events-auto">
+              <TrendingPosts 
+                posts={trendingPosts}
+                isExpanded={isTrendingExpanded}
+                onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+                onPostClick={handleTrendingPostClick}
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
-          <button 
-            onClick={() => setIsCategoryOpen(true)}
-            className={cn(
-              "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
-              !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
-            )}
-          >
-            <Layers className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={() => setIsSearchOpen(true)}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-          >
-            <Search className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={handleCurrentLocation}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
-          >
-            <Navigation className="w-6 h-6 fill-white" />
-          </button>
-        </div>
-
-        <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
-          <button 
-            onClick={handleRefresh} 
-            disabled={isRefreshing} 
-            className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
-          >
-            <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
-            <span className="text-[9px] font-black mt-1">재검색</span>
-          </button>
-
-          <div className="relative">
-            {displayedMarkers.length > 0 && (
-              <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
-            )}
-            
+          <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2">
             <button 
-              onClick={handleViewAllClick} 
-              disabled={displayedMarkers.length === 0} 
+              onClick={() => setIsCategoryOpen(true)}
               className={cn(
-                "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative"
+                "w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500",
+                !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600"
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="shine-overlay absolute inset-0 pointer-events-none" />
-              <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-              <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+              <Layers className="w-6 h-6" />
             </button>
-            
-            {displayedMarkers.length > 0 && (
-              <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                {displayedMarkers.length}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <AnimatePresence>
-          {!isTrendingExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+            <button 
+              onClick={() => setIsSearchOpen(true)}
+              className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
             >
-              <TimeSlider value={timeValue} onChange={setTimeValue} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              <Search className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={handleCurrentLocation}
+              className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"
+            >
+              <Navigation className="w-6 h-6 fill-white" />
+            </button>
+          </div>
+
+          <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
+            <button 
+              onClick={handleRefresh} 
+              disabled={isRefreshing} 
+              className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
+            >
+              <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
+              <span className="text-[9px] font-black mt-1">재검색</span>
+            </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
+              
+              <button 
+                onClick={handleViewAllClick} 
+                disabled={displayedMarkers.length === 0} 
+                className={cn(
+                  "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative"
+                )}
+              >
+                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="shine-overlay absolute inset-0 pointer-events-none" />
+                <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
+                <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+              </button>
+              
+              {displayedMarkers.length > 0 && (
+                <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
+                  {displayedMarkers.length}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {!isTrendingExpanded && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TimeSlider value={timeValue} onChange={setTimeValue} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
 
       <CategoryMenu 
         isOpen={isCategoryOpen}
@@ -527,7 +373,6 @@ const Index = () => {
           onClose={() => setSelectedPostId(null)} 
           onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
-          onDelete={handlePostDelete}
           onLocationClick={(lat, lng) => {
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
             if (post) {
@@ -540,6 +385,7 @@ const Index = () => {
         />
       )}
       <PlaceSearch 
+        key={isSearchOpen ? 'open' : 'closed'}
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onSelect={handlePlaceSelect} 
@@ -555,9 +401,8 @@ const Index = () => {
         onClose={() => setIsPostListOpen(false)}
         initialPosts={displayedMarkers}
         mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
-        onDeletePost={handlePostDelete}
       />
-    </motion.div>
+    </>
   );
 };
 

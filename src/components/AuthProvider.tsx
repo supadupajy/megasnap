@@ -83,30 +83,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // 안전장치: 4초 후에도 로딩 중이면 강제로 로딩 종료 (페이지 리다이렉트 유도)
+    // 안전장치: 2초 후에도 로딩 중이면 강제로 로딩 종료 (사용자 경험 개선)
     const timeoutId = setTimeout(() => {
       if (mounted && loading) {
-        console.warn('[Auth] 세션 복구 타임아웃 - 로딩 강제 종료');
         setLoading(false);
       }
-    }, 4000);
+    }, 2000);
 
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        // getSession은 로컬 스토리지를 먼저 확인하므로 매우 빠름
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
 
         if (mounted) {
           if (initialSession) {
             setSession(initialSession);
             setUser(initialSession.user);
-            await ensureProfile(initialSession.user.id, initialSession.user.email);
+            // 프로필은 백그라운드에서 가져옴
+            ensureProfile(initialSession.user.id, initialSession.user.email);
           }
           setLoading(false);
           clearTimeout(timeoutId);
         }
       } catch (error) {
-        console.error('[Auth] 세션 복구 오류:', error);
         if (mounted) {
           setLoading(false);
           clearTimeout(timeoutId);
@@ -122,7 +121,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_IN') {
           await ensureProfile(currentSession.user.id, currentSession.user.email);
         }
         setLoading(false);
