@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { isGifUrl } from '@/lib/mock-data';
-import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 
 interface MapContainerProps {
@@ -11,173 +9,95 @@ interface MapContainerProps {
   highlightedPostId?: string | null;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
-  onMapWriteClick: (location?: { lat: number; lng: number }) => void;
+  onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
+  selectionLocation?: { lat: number; lng: number } | null;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
+const MapContainer = ({ 
+  posts, 
+  viewedPostIds, 
+  highlightedPostId, 
+  onMarkerClick, 
+  onMapChange, 
+  onMapClick,
+  center,
+  selectionLocation
+}: MapContainerProps) => {
   const { user: authUser } = useAuth();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const markersRef = useRef<Map<string, any>>(new Map());
-  const actionOverlayRef = useRef<any>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastShowTime = useRef<number>(0);
-  const isLongPressActive = useRef<boolean>(false);
+  const overlaysRef = useRef<Map<string, any>>(new Map());
+  const selectionMarkerRef = useRef<any>(null);
+  const lastDragEnd = useRef<number>(0);
   
+  const onMapClickRef = useRef(onMapClick);
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
+
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
-  const startPos = useRef<{ x: number, y: number } | null>(null);
-  const MOVE_THRESHOLD = 10;
-
-  const smoothMoveTo = (target: { lat: number, lng: number }) => {
-    if (!mapInstance.current) return;
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    const map = mapInstance.current;
-    const start = map.getCenter()!;
-    const startLat = start.lat();
-    const startLng = start.lng();
-    const duration = 800;
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const ease = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      const currentLat = startLat + (target.lat - startLat) * ease;
-      const currentLng = startLng + (target.lng - startLng) * ease;
-
-      map.setCenter({ lat: currentLat, lng: currentLng });
-
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        animationFrameRef.current = null;
-      }
-    };
-
-    animationFrameRef.current = requestAnimationFrame(animate);
-  };
+  const isDragging = useRef(false);
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
     const initMap = () => {
-      const google = (window as any).google;
-      if (typeof google === 'undefined' || !google.maps) return false;
+      const kakao = (window as any).kakao;
+      if (!kakao || !kakao.maps) return false;
 
       try {
-        const map = new google.maps.Map(mapElement.current!, {
-          center: center || { lat: 37.5665, lng: 126.9780 },
-          zoom: 14,
-          disableDefaultUI: true,
-          clickableIcons: false,
-          gestureHandling: 'greedy',
-          mapId: 'DEMO_MAP_ID',
-          styles: [
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
-          ]
-        });
+        const options = {
+          center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
+          level: 6
+        };
 
+        const map = new kakao.maps.Map(mapElement.current!, options);
         mapInstance.current = map;
-        setIsMapReady(true);
 
         const updateMapData = () => {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
-          if (bounds && currentCenter) {
-            const sw = bounds.getSouthWest();
-            const ne = bounds.getNorthEast();
-            onMapChange({
-              bounds: { sw: { lat: sw.lat(), lng: sw.lng() }, ne: { lat: ne.lat(), lng: ne.lng() } },
-              center: { lat: currentCenter.lat(), lng: currentCenter.lng() }
-            });
-          }
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          
+          onMapChange({
+            bounds: { 
+              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+              ne: { lat: ne.getLat(), lng: ne.getLng() } 
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() }
+          });
         };
 
-        map.addListener('bounds_changed', updateMapData);
-        map.addListener('idle', updateMapData);
+        updateMapData();
+        setIsMapReady(true);
 
-        map.addListener('dragstart', () => {
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-          }
-          isLongPressActive.current = false;
-          hideActionPin();
+        kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
+        kakao.maps.event.addListener(map, 'dragstart', () => { 
+          isDragging.current = true; 
+        });
+        kakao.maps.event.addListener(map, 'dragend', () => { 
+          isDragging.current = false; 
+          lastDragEnd.current = Date.now(); 
         });
 
-        map.addListener('zoom_changed', () => {
-          hideActionPin();
-        });
-
-        const handleStart = (e: any) => {
-          const point = e.pixel || (e.touches && { x: e.touches[0].clientX, y: e.touches[0].clientY });
-          if (!point) return;
+        kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
+          if (Date.now() - lastDragEnd.current < 200) return;
           
-          startPos.current = { x: point.x, y: point.y };
-          isLongPressActive.current = false;
-          
-          if (pressTimer.current) clearTimeout(pressTimer.current);
-          
-          pressTimer.current = setTimeout(() => {
-            const latLng = e.latLng;
-            if (latLng) {
-              isLongPressActive.current = true;
-              showActionPin(latLng.lat(), latLng.lng());
-              if (window.navigator.vibrate) window.navigator.vibrate(40);
-            }
-          }, 800);
-        };
-
-        const handleMove = (e: any) => {
-          if (!startPos.current) return;
-          const point = e.pixel || (e.touches && { x: e.touches[0].clientX, y: e.touches[0].clientY });
-          if (!point) return;
-
-          const dist = Math.sqrt(Math.pow(point.x - startPos.current.x, 2) + Math.pow(point.y - startPos.current.y, 2));
-          if (dist > MOVE_THRESHOLD) {
-            clearTimer();
+          if (onMapClickRef.current) {
+            const latLng = mouseEvent.latLng;
+            onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
           }
-        };
-
-        const clearTimer = () => {
-          if (pressTimer.current) {
-            clearTimeout(pressTimer.current);
-            pressTimer.current = null;
-          }
-          startPos.current = null;
-        };
-
-        map.addListener('mousedown', handleStart);
-        map.addListener('mousemove', handleMove);
-        map.addListener('mouseup', clearTimer);
-        map.addListener('dragstart', clearTimer);
-        
-        map.addListener('click', () => {
-          if (isLongPressActive.current) {
-            isLongPressActive.current = false;
-            return;
-          }
-          hideActionPin();
         });
 
         return true;
       } catch (e) {
-        setError("지도를 불러오는 중 오류가 발생했습니다.");
+        console.error('Kakao Map Init Error:', e);
+        setError("카카오 지도를 불러오는 중 오류가 발생했습니다.");
         return false;
       }
     };
@@ -189,71 +109,47 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return () => clearInterval(timer);
   }, []);
 
+  // 위치 선택용 마커 관리
   useEffect(() => {
-    if (isMapReady && mapInstance.current && center) {
-      const current = mapInstance.current.getCenter();
-      if (current && (Math.abs(current.lat() - center.lat) > 0.0001 || Math.abs(current.lng() - center.lng) > 0.0001)) {
-        smoothMoveTo(center);
-      }
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
+
+    if (selectionMarkerRef.current) {
+      selectionMarkerRef.current.setMap(null);
+      selectionMarkerRef.current = null;
     }
-  }, [center, isMapReady]);
 
-  const showActionPin = (lat: number, lng: number) => {
-    hideActionPin();
-    const google = (window as any).google;
-    if (!mapInstance.current || !google) return;
-
-    lastShowTime.current = Date.now();
-
-    const overlay = new google.maps.OverlayView();
-    overlay.onAdd = function() {
-      const div = document.createElement('div');
-      div.style.position = 'absolute';
-      div.style.cursor = 'pointer';
-      div.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%);">
-          <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            글쓰기
+    if (selectionLocation) {
+      const container = document.createElement('div');
+      container.style.cssText = 'pointer-events: none; z-index: 10000;';
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+          <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 50%; border: 3px solid white; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
-          <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          </div>
+          <div style="width: 4px; height: 8px; background: #4f46e5; margin-top: -2px;"></div>
         </div>
       `;
-      div.onclick = (e) => {
-        e.stopPropagation();
-        onMapWriteClick({ lat, lng });
-        hideActionPin();
-      };
-      this.getPanes()!.floatPane.appendChild(div);
-      (this as any).div = div;
-    };
-    overlay.draw = function() {
-      const projection = this.getProjection();
-      const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(lat, lng))!;
-      const div = (this as any).div;
-      if (div) {
-        div.style.left = position.x + 'px';
-        div.style.top = position.y + 'px';
-      }
-    };
-    overlay.onRemove = function() {
-      if ((this as any).div) {
-        (this as any).div.parentNode.removeChild((this as any).div);
-        (this as any).div = null;
-      }
-    };
-    overlay.setMap(mapInstance.current);
-    actionOverlayRef.current = overlay;
-  };
 
-  const hideActionPin = () => {
-    if (actionOverlayRef.current) {
-      actionOverlayRef.current.setMap(null);
-      actionOverlayRef.current = null;
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(selectionLocation.lat, selectionLocation.lng),
+        content: container,
+        yAnchor: 1,
+        zIndex: 10000
+      });
+
+      overlay.setMap(mapInstance.current);
+      selectionMarkerRef.current = overlay;
     }
-  };
+  }, [selectionLocation, isMapReady]);
+
+  useEffect(() => {
+    if (isMapReady && mapInstance.current && center) {
+      const kakao = (window as any).kakao;
+      const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+      mapInstance.current.panTo(moveLatLng);
+    }
+  }, [center, isMapReady]);
 
   const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
@@ -295,7 +191,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'};">
+      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
@@ -303,11 +199,11 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                       ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                      background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
+                      background-color: white; display: block !important;">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block !important;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
-                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+                   style="width: 100%; height: 100%; object-fit: cover; display: block !important; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${categoryIconHtml}
             </div>
@@ -319,106 +215,50 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   };
 
   useEffect(() => {
-    const google = (window as any).google;
-    if (!isMapReady || !mapInstance.current || !google) return;
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    markersRef.current.forEach((overlay, id) => {
+    overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
-        markersRef.current.delete(id);
+        overlaysRef.current.delete(id);
       }
     });
 
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-
-      const existingOverlay = markersRef.current.get(post.id);
+      const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
-        const markerOverlay = new google.maps.OverlayView();
-        markerOverlay.onAdd = function() {
-          const div = document.createElement('div');
-          div.style.position = 'absolute';
-          div.style.width = '56px';
-          div.style.height = '72px';
-          div.style.cursor = 'pointer';
-          div.classList.add('animate-marker-appear');
-          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          
-          let startX = 0;
-          let startY = 0;
-          const CLICK_THRESHOLD = 5;
-
-          const handleDown = (e: any) => {
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            startX = clientX;
-            startY = clientY;
-          };
-
-          const handleUp = (e: any) => {
-            const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
-            const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
-            
-            const diffX = Math.abs(clientX - startX);
-            const diffY = Math.abs(clientY - startY);
-
-            if (diffX < CLICK_THRESHOLD && diffY < CLICK_THRESHOLD) {
-              e.stopPropagation();
-              onMarkerClick(post);
-            }
-          };
-
-          div.addEventListener('mousedown', handleDown);
-          div.addEventListener('mouseup', handleUp);
-          div.addEventListener('touchstart', handleDown, { passive: true });
-          div.addEventListener('touchend', handleUp);
-
-          div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
-          this.getPanes()!.overlayMouseTarget.appendChild(div);
-          (this as any).div = div;
+        const content = document.createElement('div');
+        content.className = 'kakao-overlay';
+        content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
+        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+        
+        content.onclick = (e) => {
+          e.stopPropagation();
+          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return;
+          onMarkerClick(post);
         };
-        markerOverlay.draw = function() {
-          const projection = this.getProjection();
-          const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(post.lat, post.lng))!;
-          const div = (this as any).div;
-          if (div) {
-            div.style.left = position.x + 'px';
-            div.style.top = position.y + 'px';
-          }
-        };
-        markerOverlay.onRemove = function() {
-          if ((this as any).div) {
-            (this as any).div.parentNode.removeChild((this as any).div);
-            (this as any).div = null;
-          }
-        };
-        markerOverlay.setMap(mapInstance.current);
-        markersRef.current.set(post.id, markerOverlay);
+
+        const overlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(post.lat, post.lng),
+          content: content,
+          yAnchor: 1
+        });
+
+        overlay.setMap(mapInstance.current);
+        overlaysRef.current.set(post.id, overlay);
       } else {
-        const div = (existingOverlay as any).div;
-        if (div) {
-          const container = div.querySelector('.marker-container') as HTMLElement;
-          if (container) {
-            container.style.transform = `translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}`;
-            div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-            
-            let ping = container.querySelector('.marker-highlight-ping');
-            if (isHighlighted && !ping) {
-              const p = document.createElement('div');
-              p.className = 'marker-highlight-ping';
-              container.prepend(p);
-            } else if (!isHighlighted && ping) {
-              ping.remove();
-            }
-
-            const img = container.querySelector('img');
-            if (img) {
-              img.style.filter = isViewed ? 'grayscale(1) brightness(0.7)' : '';
-            }
+        const content = existingOverlay.getContent();
+        if (content instanceof HTMLElement) {
+          content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
+          const newHtml = getMarkerHtml(post, isViewed, isHighlighted);
+          if (content.innerHTML !== newHtml) {
+            content.innerHTML = newHtml;
           }
         }
       }
@@ -427,11 +267,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   return (
     <div className="w-full h-full relative bg-gray-100">
-      <div ref={mapElement} className="w-full h-full" />
+      <div ref={mapElement} className="w-full h-full" style={{ pointerEvents: 'auto' }} />
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm z-[100] p-6 text-center">
           <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-red-100 max-w-xs">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-8 h-8 text-red-500" /></div>
             <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
             <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">{error}</p>
           </div>

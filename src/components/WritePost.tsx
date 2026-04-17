@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2 } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -10,7 +10,6 @@ import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -18,10 +17,11 @@ interface WritePostProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated?: (newPost: any) => void;
-  initialLocation?: { lat: number; lng: number };
+  onStartLocationSelection?: () => void;
+  initialLocation?: { lat: number; lng: number } | null;
 }
 
-const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePostProps) => {
+const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
   const { user: authUser, profile } = useAuth();
   const [content, setContent] = useState('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -32,38 +32,28 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
-    const google = (window as any).google;
+    const kakao = (window as any).kakao;
     if (isOpen) {
-      if (initialLocation && google) {
+      if (initialLocation && kakao && kakao.maps.services) {
         setIsLoadingAddress(true);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results: any, status: any) => {
-            if (status === "OK" && results && results[0]) {
-              // 주소 컴포넌트에서 필요한 부분만 추출 (예: 서울특별시 강남구 역삼동)
-              const components = results[0].address_components;
-              let city = '';
-              let district = '';
-              let neighborhood = '';
-              
-              for (const component of components) {
-                if (component.types.includes('administrative_area_level_1')) city = component.long_name;
-                if (component.types.includes('sublocality_level_1')) district = component.long_name;
-                if (component.types.includes('sublocality_level_2')) neighborhood = component.long_name;
-              }
-              
-              const cleanAddress = [city, district, neighborhood].filter(Boolean).join(' ');
-              setAddress(cleanAddress || results[0].formatted_address);
-            } else {
-              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-            }
-            setIsLoadingAddress(false);
+        const geocoder = new kakao.maps.services.Geocoder();
+        
+        geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            const addr = result[0].address;
+            const roadAddr = result[0].road_address;
+            // 도로명 주소가 있으면 도로명, 없으면 지번 주소 사용 (시/군/구 동 단위로 포맷팅)
+            const cleanAddress = roadAddr 
+              ? `${roadAddr.region_1depth_name} ${roadAddr.region_2depth_name} ${roadAddr.region_3depth_name}`
+              : `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
+            setAddress(cleanAddress);
+          } else {
+            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
-        );
+          setIsLoadingAddress(false);
+        });
       } else if (!initialLocation) {
-        // 기본 위치 주소 (예시)
-        setAddress('서울특별시 중구 세종대로 110');
+        setAddress('위치를 선택해주세요');
         setIsLoadingAddress(false);
       }
     } else {
@@ -105,18 +95,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       return;
     }
 
-    setIsSubmitting(true);
+    if (!initialLocation) {
+      showError('장소를 선택해주세요.');
+      return;
+    }
 
-    const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
-    const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
+    setIsSubmitting(true);
 
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
     const postData = {
       content: content,
       location_name: address,
-      latitude: lat,
-      longitude: lng,
+      latitude: initialLocation.lat,
+      longitude: initialLocation.lng,
       image_url: capturedImage,
       user_id: authUser.id,
       user_name: displayName,
@@ -145,8 +137,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
         },
         content: content,
         location: address,
-        lat,
-        lng,
+        lat: initialLocation.lat,
+        lng: initialLocation.lng,
         likes: 0,
         commentsCount: 0,
         comments: [],
@@ -172,6 +164,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
 
       if (onPostCreated) onPostCreated(newPost);
       showSuccess('새로운 추억이 등록되었습니다! ✨');
+      
+      setContent('');
+      setCapturedImage(null);
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -182,113 +177,115 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   };
 
   return (
-    <>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[30]"
-          />
-        )}
-      </AnimatePresence>
+    <Drawer 
+      open={isOpen} 
+      onOpenChange={(open) => !open && onClose()}
+      modal={true}
+    >
+      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
+        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        
+        <div className="px-6 flex flex-col flex-1 min-h-0">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <span className="text-indigo-600">✨</span>
+              새 게시물 작성
+            </h2>
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+              <X className="w-5 h-5 text-gray-400" />
+            </Button>
+          </div>
 
-      <Drawer 
-        open={isOpen} 
-        onOpenChange={(open) => !open && onClose()}
-        modal={false}
-      >
-        <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[40] shadow-2xl">
-          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
-          
-          <div className="px-6 flex flex-col flex-1 min-h-0">
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                새 게시물 작성
-              </h2>
-              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full close-popup-btn">
-                <X className="w-5 h-5 text-gray-400" />
-              </Button>
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
+            {/* 사진 촬영 영역 */}
+            <div 
+              onClick={takePhoto}
+              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
+            >
+              {capturedImage ? (
+                <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
+              ) : (
+                <>
+                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Camera className="w-7 h-7 text-indigo-600" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-gray-900">사진 촬영하기</p>
+                    <p className="text-xs text-gray-400 mt-1">지금 이 순간을 캡처하세요</p>
+                  </div>
+                </>
+              )}
+              {(isTakingPhoto || isSubmitting) && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-              {/* Photo Section */}
-              <div 
-                onClick={takePhoto}
-                className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
-              >
-                {capturedImage ? (
-                  <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-                ) : (
-                  <>
-                    <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Camera className="w-7 h-7 text-indigo-600" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-gray-900">사진 촬영하기</p>
-                      <p className="text-xs text-gray-400 mt-1">지금 이 순간을 캡처하세요</p>
-                    </div>
-                  </>
-                )}
-                {(isTakingPhoto || isSubmitting) && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
+            {/* 위치 선택 영역 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                <button 
+                  onClick={onStartLocationSelection}
+                  className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline"
+                >
+                  <MapIcon className="w-3 h-3" />
+                  지도에서 위치 선택
+                </button>
               </div>
-
-              {/* Location Section */}
-              <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+              
+              <div 
+                onClick={onStartLocationSelection}
+                className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-indigo-600 font-black uppercase tracking-wider">선택한 위치</p>
                   {isLoadingAddress ? (
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2">
                       <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
                       <span className="text-xs text-gray-400">주소를 불러오는 중...</span>
                     </div>
                   ) : (
-                    <p className="text-sm font-bold text-gray-800 truncate">{address || '위치 정보 없음'}</p>
+                    <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
+                      {address || '위치를 선택해주세요'}
+                    </p>
                   )}
                 </div>
               </div>
-
-              {/* Content Section */}
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-                <Textarea 
-                  placeholder="이 장소에서의 추억을 기록해보세요..."
-                  className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
-              </div>
             </div>
 
-            {/* Submit Button */}
-            <div 
-              className={cn(
-                "py-4 bg-white shrink-0 transition-all duration-300",
-                isKeyboardOpen ? "pb-2" : "pb-[120px]"
-              )}
-            >
-              <Button 
-                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
-                onClick={handlePost}
-                disabled={!content || isTakingPhoto || isLoadingAddress || isSubmitting}
-              >
-                {isSubmitting ? '저장 중...' : '지도에 등록하기'}
-              </Button>
+            {/* 내용 입력 영역 */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+              <Textarea 
+                placeholder="이 장소에서의 추억을 기록해보세요..."
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
-    </>
+
+          <div 
+            className={cn(
+              "py-4 bg-white shrink-0 transition-all duration-300",
+              isKeyboardOpen ? "pb-2" : "pb-[120px]"
+            )}
+          >
+            <Button 
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              onClick={handlePost}
+              disabled={!content || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+            >
+              {isSubmitting ? '저장 중...' : '지도에 등록하기'}
+            </Button>
+          </div>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 };
 

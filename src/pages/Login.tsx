@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Mail, Lock, Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { Camera, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,11 +19,15 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  // 저장된 이메일 불러오기
+  // 컴포넌트 마운트 시 저장된 이메일과 체크박스 상태 불러오기
   useEffect(() => {
-    const savedEmail = localStorage.getItem('remembered_email');
+    const savedEmail = localStorage.getItem('chora_remembered_email');
+    const savedPref = localStorage.getItem('chora_remember_me_pref');
+    
     if (savedEmail) {
       setEmail(savedEmail);
+    }
+    if (savedPref === 'true') {
       setRememberMe(true);
     }
   }, []);
@@ -51,15 +55,16 @@ const Login = () => {
         });
         if (error) throw error;
 
-        // 로그인 정보 저장 처리
+        // 로그인 성공 시 정보 저장 처리
         if (rememberMe) {
-          localStorage.setItem('remembered_email', email);
+          localStorage.setItem('chora_remembered_email', email);
+          localStorage.setItem('chora_remember_me_pref', 'true');
         } else {
-          localStorage.removeItem('remembered_email');
+          localStorage.removeItem('chora_remembered_email');
+          localStorage.setItem('chora_remember_me_pref', 'false');
         }
 
-        // 로그인 성공 알림 제거됨
-        navigate('/');
+        navigate('/', { replace: true });
       }
     } catch (err: any) {
       console.error('Auth error:', err);
@@ -76,7 +81,6 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-[400px] space-y-8"
       >
-        {/* Logo Section */}
         <div className="flex flex-col items-center gap-4">
           <motion.div 
             whileHover={{ scale: 1.05 }}
@@ -95,7 +99,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Form Section */}
         <div className="bg-white p-8 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
           <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
@@ -145,11 +148,6 @@ const Login = () => {
                   로그인 정보 저장하기
                 </label>
               </div>
-              {!isSignUp && (
-                <button type="button" className="text-xs font-bold text-indigo-600 hover:underline">
-                  비밀번호 찾기
-                </button>
-              )}
             </div>
 
             <Button 
@@ -178,7 +176,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Footer Info */}
         <div className="text-center space-y-4">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
             By continuing, you agree to Chora's<br />
