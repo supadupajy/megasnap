@@ -64,8 +64,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         setIsMapReady(true);
 
+        // 실시간 업데이트를 위해 bounds_changed 이벤트 사용
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         
+        // 드래그 및 줌 상태 관리
         kakao.maps.event.addListener(map, 'dragstart', () => {
           isDragging.current = true;
           hideActionPin();
@@ -111,7 +113,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           if (pressTimer.current) clearTimeout(pressTimer.current);
         });
 
-        // 지도 클릭 시 액션 핀 숨기기 (단, 오버레이 클릭 시에는 전파 차단 필요)
         kakao.maps.event.addListener(map, 'click', () => hideActionPin());
 
         return true;
@@ -144,39 +145,28 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const content = document.createElement('div');
     content.className = 'kakao-overlay';
-    // z-index를 명시적으로 높게 설정
-    content.style.zIndex = '2000';
-    
     content.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%); cursor: pointer;">
-        <div id="map-write-btn" style="background: #4f46e5; color: white; padding: 10px 20px; border-radius: 20px; font-weight: 800; font-size: 15px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5); display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 2px solid white;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          여기에 글쓰기
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%);">
+        <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          글쓰기
         </div>
-        <div style="width: 12px; height: 12px; background: #4f46e5; transform: rotate(45deg); margin-top: -14px; border-right: 2px solid white; border-bottom: 2px solid white; box-shadow: 5px 5px 10px rgba(0,0,0,0.1);"></div>
+        <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        </div>
       </div>
     `;
-
-    // DOM에 추가된 후 이벤트 리스너 직접 등록 (더 확실한 클릭 감지)
-    setTimeout(() => {
-      const btn = document.getElementById('map-write-btn');
-      if (btn) {
-        const handleClick = (e: MouseEvent | TouchEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onMapWriteClick({ lat, lng });
-          hideActionPin();
-        };
-        btn.addEventListener('click', handleClick);
-        btn.addEventListener('touchstart', handleClick);
-      }
-    }, 0);
+    content.onclick = (e) => {
+      e.stopPropagation();
+      if (isDragging.current) return;
+      onMapWriteClick({ lat, lng });
+      hideActionPin();
+    };
 
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(lat, lng),
       content: content,
-      yAnchor: 1,
-      clickable: true // 클릭 가능하도록 설정
+      yAnchor: 1
     });
 
     overlay.setMap(mapInstance.current);
@@ -287,8 +277,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(post.lat, post.lng),
           content: content,
-          yAnchor: 1,
-          clickable: true
+          yAnchor: 1
         });
 
         overlay.setMap(mapInstance.current);
