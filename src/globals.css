@@ -150,3 +150,23 @@
   background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
   transform: skewX(-25deg); animation: shine-sweep 4s infinite; z-index: 20;
 }
+
+/* Marker Highlight Ping Animation */
+@keyframes marker-ping {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.marker-highlight-ping {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  background: rgba(34, 211, 238, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: -1;
+  animation: marker-ping 1.5s ease-out infinite;
+}
