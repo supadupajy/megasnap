@@ -25,12 +25,16 @@ const Popular = () => {
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 인증 확인 후 사용자가 없으면 로그인 페이지로 이동
+  // 안전장치: 3초 이상 로딩이 지속되는데 사용자가 없으면 로그인 페이지로 이동
   useEffect(() => {
-    if (!authLoading && !authUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [authLoading, authUser, navigate]);
+    const timer = setTimeout(() => {
+      if (isInitialLoading && !authUser) {
+        console.warn('[Popular] Loading timeout - redirecting to login');
+        navigate('/login', { replace: true });
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isInitialLoading, authUser, navigate]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
@@ -133,7 +137,7 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading) {
+  if (authLoading || (isInitialLoading && !authUser)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />

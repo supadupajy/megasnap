@@ -38,9 +38,19 @@ const ScrollToTop = () => {
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // 인증 확인이 5초 이상 걸리면 강제로 로그인 페이지로 이동
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setTimedOut(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
   
-  // 인증 확인 중일 때만 로더 표시
-  if (loading) {
+  if (loading && !timedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -48,14 +58,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session || timedOut) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, loading } = useAuth();
+  const { session } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
@@ -143,7 +153,6 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // 스플래시 화면을 2초로 단축하여 더 빠른 진입 유도
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2000);

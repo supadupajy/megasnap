@@ -27,12 +27,16 @@ const Profile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // 인증 확인 후 사용자가 없으면 로그인 페이지로 이동
+  // 안전장치: 3초 이상 로딩이 지속되는데 사용자가 없으면 로그인 페이지로 이동
   useEffect(() => {
-    if (!authLoading && !authUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [authLoading, authUser, navigate]);
+    const timer = setTimeout(() => {
+      if (isDataLoading && !authUser) {
+        console.warn('[Profile] Loading timeout - redirecting to login');
+        navigate('/login', { replace: true });
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isDataLoading, authUser, navigate]);
 
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
   const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
@@ -117,7 +121,7 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (isDataLoading && myPosts.length === 0)) {
+  if (authLoading || (isDataLoading && !authUser)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
