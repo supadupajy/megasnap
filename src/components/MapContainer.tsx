@@ -9,9 +9,9 @@ interface MapContainerProps {
   highlightedPostId?: string | null;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
-  onMapClick?: (location: { lat: number; lng: number }) => void; // 지도 클릭 콜백 추가
+  onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
-  selectionLocation?: { lat: number; lng: number } | null; // 선택 중인 위치 표시용
+  selectionLocation?: { lat: number; lng: number } | null;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
@@ -32,9 +32,14 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const selectionMarkerRef = useRef<any>(null);
   
+  // 최신 onMapClick 콜백을 유지하기 위한 Ref
+  const onMapClickRef = useRef(onMapClick);
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
+
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -72,20 +77,14 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        
-        kakao.maps.event.addListener(map, 'dragstart', () => {
-          isDragging.current = true;
-        });
-        
-        kakao.maps.event.addListener(map, 'dragend', () => {
-          isDragging.current = false;
-        });
+        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
+        kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; });
 
-        // 지도 클릭 이벤트 (위치 선택 모드에서 사용)
+        // 지도 클릭 이벤트 (Ref를 사용하여 최신 핸들러 호출)
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-          if (onMapClick) {
+          if (onMapClickRef.current) {
             const latLng = mouseEvent.latLng;
-            onMapClick({ lat: latLng.getLat(), lng: latLng.getLng() });
+            onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
           }
         });
 
@@ -104,7 +103,6 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 선택 중인 위치 마커 표시
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
