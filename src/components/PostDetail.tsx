@@ -108,8 +108,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isGif = isGifUrl(images[currentImageIndex]);
   const category = post.category || 'none';
 
-  // 실제 Supabase 사용자 ID와 비교하여 본인 확인
-  const isMine = authUser && post.user.id === authUser.id;
+  // 본인 확인 로직: 실제 ID 일치 또는 테스트용 'me' ID 확인
+  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -131,12 +131,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', post.id);
-
-      if (error) throw error;
+      // 실제 DB에서 삭제 시도 (ID가 UUID인 경우에만 작동)
+      if (post.id.length > 20) {
+        const { error } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', post.id);
+        if (error) throw error;
+      }
 
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(post.id);

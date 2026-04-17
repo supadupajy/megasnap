@@ -96,8 +96,8 @@ const PostItem = ({
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
 
-  // 실제 Supabase 사용자 ID와 비교하여 본인 확인
-  const isMine = authUser && user.id === authUser.id;
+  // 본인 확인 로직: 실제 ID 일치 또는 테스트용 'me' ID 확인
+  const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -143,12 +143,14 @@ const PostItem = ({
 
   const confirmDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      // 실제 DB에서 삭제 시도 (ID가 UUID인 경우에만 작동)
+      if (id.length > 20) { // 대략적인 UUID 길이 체크
+        const { error } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      }
 
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(id);

@@ -26,6 +26,8 @@ const Profile = () => {
   const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
 
   useEffect(() => {
+    if (!authUser) return;
+
     const rawMine = createMockPosts(37.5665, 126.9780, 30);
     
     const mine = rawMine.map((p, idx) => {
@@ -40,7 +42,7 @@ const Profile = () => {
         image,
         images: isGif ? [image, ...p.images.slice(1)] : p.images,
         user: {
-          id: 'me',
+          id: authUser.id, // 실제 사용자 ID 사용
           name: displayName,
           avatar: profile?.avatar_url || 'https://i.pravatar.cc/150?u=me'
         }
@@ -50,10 +52,10 @@ const Profile = () => {
     setMyPosts(mine);
 
     const saved = createMockPosts(37.5665, 126.9780, 12)
-      .filter(p => p.user.id !== 'me')
+      .filter(p => p.user.id !== authUser.id)
       .map(p => ({ ...p, isLiked: true }));
     setSavedPosts(saved);
-  }, [displayName, profile]);
+  }, [displayName, profile, authUser]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
