@@ -181,22 +181,19 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 화면에 표시할 마커 필터링 (스티키 로직 + 비율 고정)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 1. 현재 화면에 이미 있는 마커들 중 유효한 것들 유지 (스티키)
-    const margin = 0.01; // 화면 밖으로 조금 나가도 유지
+    const margin = 0.01;
     const stickyMarkers = prevMarkersRef.current.filter(post => {
       const isInExtendedBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
                                  post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
       if (!isInExtendedBounds) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // 카테고리 필터 확인
       const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
@@ -206,7 +203,6 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 2. 새로운 후보들 필터링 (현재 화면 내에 있고 아직 표시되지 않은 것들)
     const displayedIds = new Set(stickyMarkers.map(m => m.id));
     const newCandidates = allPosts.filter(post => {
       if (displayedIds.has(post.id)) return false;
@@ -228,24 +224,29 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 3. 부족한 슬롯 채우기 (비율 유지: 일반 93%, 인기 5%, 인플루언서 2%)
     const remainingSlots = Math.max(0, MAX_MARKERS - stickyMarkers.length);
     if (remainingSlots > 0 && newCandidates.length > 0) {
-      const influencerPool = newCandidates.filter(p => p.isInfluencer);
-      const popularPool = newCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer);
-      const generalPool = newCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular');
+      // 내 포스팅을 최우선적으로 추출
+      const myPool = newCandidates.filter(p => authUser && p.user.id === authUser.id);
+      const influencerPool = newCandidates.filter(p => p.isInfluencer && !myPool.some(m => m.id === p.id));
+      const popularPool = newCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer && !myPool.some(m => m.id === p.id));
+      const generalPool = newCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !myPool.some(m => m.id === p.id));
 
-      const targetInf = Math.max(1, Math.round(remainingSlots * 0.02));
-      const targetPop = Math.max(2, Math.round(remainingSlots * 0.05));
-      const targetGen = remainingSlots - targetInf - targetPop;
+      // 내 포스팅은 무조건 다 넣음 (슬롯 허용 범위 내)
+      const selectedMy = myPool.slice(0, remainingSlots);
+      const currentRemaining = remainingSlots - selectedMy.length;
+
+      const targetInf = Math.max(1, Math.round(currentRemaining * 0.02));
+      const targetPop = Math.max(2, Math.round(currentRemaining * 0.05));
+      const targetGen = currentRemaining - targetInf - targetPop;
 
       const selected = [
+        ...selectedMy,
         ...influencerPool.sort((a, b) => b.likes - a.likes).slice(0, targetInf),
         ...popularPool.sort((a, b) => b.likes - a.likes).slice(0, targetPop),
         ...generalPool.sort((a, b) => b.likes - a.likes).slice(0, targetGen)
       ];
 
-      // 만약 특정 풀이 부족해서 슬롯이 남으면 일반 풀에서 더 채움
       if (selected.length < remainingSlots) {
         const currentSelectedIds = new Set(selected.map(s => s.id));
         const extra = generalPool
@@ -258,7 +259,6 @@ const Index = () => {
       stickyMarkers.push(...selected);
     }
 
-    // 4. 최종 업데이트
     const finalMarkers = stickyMarkers.slice(0, MAX_MARKERS);
     const nextIds = finalMarkers.map(m => m.id).sort().join(',');
     const prevIds = prevMarkersRef.current.map(m => m.id).sort().join(',');
@@ -288,7 +288,7 @@ const Index = () => {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
-    prevMarkersRef.current = []; // 리프레시 시에는 스티키 초기화
+    prevMarkersRef.current = []; 
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       const centerLat = (ne.lat + sw.lat) / 2;
