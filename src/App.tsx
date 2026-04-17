@@ -31,6 +31,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
 
+  // 인증 로딩 중에는 최소한의 스피너만 표시
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -68,7 +69,8 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  if (loading) {
+  // 전역 로딩 상태 처리 (인증 확인 중일 때만)
+  if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
