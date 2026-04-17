@@ -32,34 +32,22 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
-    const google = (window as any).google;
+    const kakao = (window as any).kakao;
     if (isOpen) {
-      if (initialLocation && google) {
+      if (initialLocation && kakao && kakao.maps.services) {
         setIsLoadingAddress(true);
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
-          (results: any, status: any) => {
-            if (status === "OK" && results && results[0]) {
-              const components = results[0].address_components;
-              let city = '';
-              let district = '';
-              let neighborhood = '';
-              
-              for (const component of components) {
-                if (component.types.includes('administrative_area_level_1')) city = component.long_name;
-                if (component.types.includes('sublocality_level_1')) district = component.long_name;
-                if (component.types.includes('sublocality_level_2')) neighborhood = component.long_name;
-              }
-              
-              const cleanAddress = [city, district, neighborhood].filter(Boolean).join(' ');
-              setAddress(cleanAddress || results[0].formatted_address);
-            } else {
-              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-            }
-            setIsLoadingAddress(false);
+        const geocoder = new kakao.maps.services.Geocoder();
+        
+        geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const addr = result[0].address;
+            const cleanAddress = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
+            setAddress(cleanAddress);
+          } else {
+            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
-        );
+          setIsLoadingAddress(false);
+        });
       } else if (!initialLocation) {
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
@@ -107,7 +95,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     const lat = initialLocation?.lat || (37.5665 + (Math.random() - 0.5) * 0.01);
     const lng = initialLocation?.lng || (126.9780 + (Math.random() - 0.5) * 0.01);
 
-    // 실제 닉네임 사용 (없으면 이메일 앞자리)
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
     const postData = {

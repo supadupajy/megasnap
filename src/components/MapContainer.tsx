@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { isGifUrl } from '@/lib/mock-data';
-import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 
 interface MapContainerProps {
@@ -21,11 +19,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const { user: authUser } = useAuth();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const markersRef = useRef<Map<string, any>>(new Map());
+  const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastShowTime = useRef<number>(0);
-  const isLongPressActive = useRef<boolean>(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,150 +29,80 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const startPos = useRef<{ x: number, y: number } | null>(null);
   const MOVE_THRESHOLD = 10;
 
-  const smoothMoveTo = (target: { lat: number, lng: number }) => {
-    if (!mapInstance.current) return;
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    const map = mapInstance.current;
-    const start = map.getCenter()!;
-    const startLat = start.lat();
-    const startLng = start.lng();
-    const duration = 800;
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const ease = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      const currentLat = startLat + (target.lat - startLat) * ease;
-      const currentLng = startLng + (target.lng - startLng) * ease;
-
-      map.setCenter({ lat: currentLat, lng: currentLng });
-
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        animationFrameRef.current = null;
-      }
-    };
-
-    animationFrameRef.current = requestAnimationFrame(animate);
-  };
-
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
     const initMap = () => {
-      const google = (window as any).google;
-      if (typeof google === 'undefined' || !google.maps) return false;
+      const kakao = (window as any).kakao;
+      if (!kakao || !kakao.maps) return false;
 
       try {
-        const map = new google.maps.Map(mapElement.current!, {
-          center: center || { lat: 37.5665, lng: 126.9780 },
-          zoom: 14,
-          disableDefaultUI: true,
-          clickableIcons: false,
-          gestureHandling: 'greedy',
-          mapId: 'DEMO_MAP_ID',
-          styles: [
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] }
-          ]
-        });
+        const options = {
+          center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
+          level: 4 // 카카오 지도는 레벨이 낮을수록 확대됨
+        };
 
+        const map = new kakao.maps.Map(mapElement.current!, options);
         mapInstance.current = map;
         setIsMapReady(true);
 
+        // 지도 이벤트 리스너
         const updateMapData = () => {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
-          if (bounds && currentCenter) {
-            const sw = bounds.getSouthWest();
-            const ne = bounds.getNorthEast();
-            onMapChange({
-              bounds: { sw: { lat: sw.lat(), lng: sw.lng() }, ne: { lat: ne.lat(), lng: ne.lng() } },
-              center: { lat: currentCenter.lat(), lng: currentCenter.lng() }
-            });
-          }
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          
+          onMapChange({
+            bounds: { 
+              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+              ne: { lat: ne.getLat(), lng: ne.getLng() } 
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() }
+          });
         };
 
-        map.addListener('bounds_changed', updateMapData);
-        map.addListener('idle', updateMapData);
+        kakao.maps.event.addListener(map, 'idle', updateMapData);
+        kakao.maps.event.addListener(map, 'dragstart', () => hideActionPin());
+        kakao.maps.event.addListener(map, 'zoom_start', () => hideActionPin());
 
-        map.addListener('dragstart', () => {
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-          }
-          isLongPressActive.current = false;
-          hideActionPin();
-        });
-
-        map.addListener('zoom_changed', () => {
-          hideActionPin();
-        });
-
+        // 롱프레스 구현 (카카오 지도는 mousedown/touchstart 활용)
         const handleStart = (e: any) => {
-          const point = e.pixel || (e.touches && { x: e.touches[0].clientX, y: e.touches[0].clientY });
-          if (!point) return;
-          
-          startPos.current = { x: point.x, y: point.y };
-          isLongPressActive.current = false;
+          const point = { x: e.offsetX || e.pageX, y: e.offsetY || e.pageY };
+          startPos.current = point;
           
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
+            // 카카오 지도의 좌표 변환
             const latLng = e.latLng;
             if (latLng) {
-              isLongPressActive.current = true;
-              showActionPin(latLng.lat(), latLng.lng());
+              showActionPin(latLng.getLat(), latLng.getLng());
               if (window.navigator.vibrate) window.navigator.vibrate(40);
             }
           }, 800);
         };
 
-        const handleMove = (e: any) => {
+        kakao.maps.event.addListener(map, 'mousedown', handleStart);
+        kakao.maps.event.addListener(map, 'mousemove', (e: any) => {
           if (!startPos.current) return;
-          const point = e.pixel || (e.touches && { x: e.touches[0].clientX, y: e.touches[0].clientY });
-          if (!point) return;
-
+          const point = { x: e.offsetX || e.pageX, y: e.offsetY || e.pageY };
           const dist = Math.sqrt(Math.pow(point.x - startPos.current.x, 2) + Math.pow(point.y - startPos.current.y, 2));
           if (dist > MOVE_THRESHOLD) {
-            clearTimer();
+            if (pressTimer.current) clearTimeout(pressTimer.current);
           }
-        };
-
-        const clearTimer = () => {
-          if (pressTimer.current) {
-            clearTimeout(pressTimer.current);
-            pressTimer.current = null;
-          }
-          startPos.current = null;
-        };
-
-        map.addListener('mousedown', handleStart);
-        map.addListener('mousemove', handleMove);
-        map.addListener('mouseup', clearTimer);
-        map.addListener('dragstart', clearTimer);
-        
-        map.addListener('click', () => {
-          if (isLongPressActive.current) {
-            isLongPressActive.current = false;
-            return;
-          }
-          hideActionPin();
         });
+        
+        kakao.maps.event.addListener(map, 'mouseup', () => {
+          if (pressTimer.current) clearTimeout(pressTimer.current);
+        });
+
+        kakao.maps.event.addListener(map, 'click', () => hideActionPin());
 
         return true;
       } catch (e) {
-        setError("지도를 불러오는 중 오류가 발생했습니다.");
+        console.error('Kakao Map Init Error:', e);
+        setError("카카오 지도를 불러오는 중 오류가 발생했습니다.");
         return false;
       }
     };
@@ -189,61 +114,45 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return () => clearInterval(timer);
   }, []);
 
+  // 중심점 변경 시 이동
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      const current = mapInstance.current.getCenter();
-      if (current && (Math.abs(current.lat() - center.lat) > 0.0001 || Math.abs(current.lng() - center.lng) > 0.0001)) {
-        smoothMoveTo(center);
-      }
+      const kakao = (window as any).kakao;
+      const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+      mapInstance.current.panTo(moveLatLng);
     }
   }, [center, isMapReady]);
 
   const showActionPin = (lat: number, lng: number) => {
     hideActionPin();
-    const google = (window as any).google;
-    if (!mapInstance.current || !google) return;
+    const kakao = (window as any).kakao;
+    if (!mapInstance.current || !kakao) return;
 
-    lastShowTime.current = Date.now();
-
-    const overlay = new google.maps.OverlayView();
-    overlay.onAdd = function() {
-      const div = document.createElement('div');
-      div.style.position = 'absolute';
-      div.style.cursor = 'pointer';
-      div.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%);">
-          <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            글쓰기
-          </div>
-          <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          </div>
+    const content = document.createElement('div');
+    content.className = 'kakao-overlay';
+    content.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%);">
+        <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          글쓰기
         </div>
-      `;
-      div.onclick = (e) => {
-        e.stopPropagation();
-        onMapWriteClick({ lat, lng });
-        hideActionPin();
-      };
-      this.getPanes()!.floatPane.appendChild(div);
-      (this as any).div = div;
+        <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        </div>
+      </div>
+    `;
+    content.onclick = (e) => {
+      e.stopPropagation();
+      onMapWriteClick({ lat, lng });
+      hideActionPin();
     };
-    overlay.draw = function() {
-      const projection = this.getProjection();
-      const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(lat, lng))!;
-      const div = (this as any).div;
-      if (div) {
-        div.style.left = position.x + 'px';
-        div.style.top = position.y + 'px';
-      }
-    };
-    overlay.onRemove = function() {
-      if ((this as any).div) {
-        (this as any).div.parentNode.removeChild((this as any).div);
-        (this as any).div = null;
-      }
-    };
+
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(lat, lng),
+      content: content,
+      yAnchor: 1
+    });
+
     overlay.setMap(mapInstance.current);
     actionOverlayRef.current = overlay;
   };
@@ -319,107 +228,51 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   };
 
   useEffect(() => {
-    const google = (window as any).google;
-    if (!isMapReady || !mapInstance.current || !google) return;
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    markersRef.current.forEach((overlay, id) => {
+    // 제거된 포스트 오버레이 삭제
+    overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
-        markersRef.current.delete(id);
+        overlaysRef.current.delete(id);
       }
     });
 
+    // 포스트 마커 업데이트 및 생성
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
 
-      const existingOverlay = markersRef.current.get(post.id);
+      const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
-        const markerOverlay = new google.maps.OverlayView();
-        markerOverlay.onAdd = function() {
-          const div = document.createElement('div');
-          div.style.position = 'absolute';
-          div.style.width = '56px';
-          div.style.height = '72px';
-          div.style.cursor = 'pointer';
-          div.classList.add('animate-marker-appear');
-          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          
-          let startX = 0;
-          let startY = 0;
-          const CLICK_THRESHOLD = 5;
-
-          const handleDown = (e: any) => {
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            startX = clientX;
-            startY = clientY;
-          };
-
-          const handleUp = (e: any) => {
-            const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
-            const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
-            
-            const diffX = Math.abs(clientX - startX);
-            const diffY = Math.abs(clientY - startY);
-
-            if (diffX < CLICK_THRESHOLD && diffY < CLICK_THRESHOLD) {
-              e.stopPropagation();
-              onMarkerClick(post);
-            }
-          };
-
-          div.addEventListener('mousedown', handleDown);
-          div.addEventListener('mouseup', handleUp);
-          div.addEventListener('touchstart', handleDown, { passive: true });
-          div.addEventListener('touchend', handleUp);
-
-          div.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
-          this.getPanes()!.overlayMouseTarget.appendChild(div);
-          (this as any).div = div;
+        const content = document.createElement('div');
+        content.className = 'kakao-overlay animate-marker-appear';
+        content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
+        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+        
+        content.onclick = (e) => {
+          e.stopPropagation();
+          onMarkerClick(post);
         };
-        markerOverlay.draw = function() {
-          const projection = this.getProjection();
-          const position = projection.fromLatLngToDivPixel(new google.maps.LatLng(post.lat, post.lng))!;
-          const div = (this as any).div;
-          if (div) {
-            div.style.left = position.x + 'px';
-            div.style.top = position.y + 'px';
-          }
-        };
-        markerOverlay.onRemove = function() {
-          if ((this as any).div) {
-            (this as any).div.parentNode.removeChild((this as any).div);
-            (this as any).div = null;
-          }
-        };
-        markerOverlay.setMap(mapInstance.current);
-        markersRef.current.set(post.id, markerOverlay);
+
+        const overlay = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(post.lat, post.lng),
+          content: content,
+          yAnchor: 1
+        });
+
+        overlay.setMap(mapInstance.current);
+        overlaysRef.current.set(post.id, overlay);
       } else {
-        const div = (existingOverlay as any).div;
-        if (div) {
-          const container = div.querySelector('.marker-container') as HTMLElement;
-          if (container) {
-            container.style.transform = `translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}`;
-            div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-            
-            let ping = container.querySelector('.marker-highlight-ping');
-            if (isHighlighted && !ping) {
-              const p = document.createElement('div');
-              p.className = 'marker-highlight-ping';
-              container.prepend(p);
-            } else if (!isHighlighted && ping) {
-              ping.remove();
-            }
-
-            const img = container.querySelector('img');
-            if (img) {
-              img.style.filter = isViewed ? 'grayscale(1) brightness(0.7)' : '';
-            }
-          }
+        // 기존 오버레이 업데이트
+        const content = existingOverlay.getContent();
+        if (content instanceof HTMLElement) {
+          content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
+          content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         }
       }
     });
@@ -431,7 +284,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 backdrop-blur-sm z-[100] p-6 text-center">
           <div className="bg-white p-8 rounded-[32px] shadow-2xl border border-red-100 max-w-xs">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-8 h-8 text-red-500" /></div>
             <h3 className="text-lg font-black text-gray-900 mb-2">지도 로드 실패</h3>
             <p className="text-sm text-gray-500 font-medium leading-relaxed break-keep mb-6">{error}</p>
           </div>
