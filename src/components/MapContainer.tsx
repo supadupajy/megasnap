@@ -110,7 +110,6 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 커스텀 부드러운 이동 함수
   const animateMapTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
     if (!map) return;
@@ -225,6 +224,7 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
+    // 1. 화면에서 사라진 마커 제거
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -232,17 +232,20 @@ const MapContainer = ({
       }
     });
 
+    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
 
+      const newInnerHtml = getMarkerInnerHtml(post, isViewed, isHighlighted);
+
       if (!existingOverlay) {
+        // 새 마커 생성
         const content = document.createElement('div');
-        content.className = 'marker-container kakao-overlay';
-        content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
-        if (isHighlighted) content.classList.add('highlighted');
+        content.className = 'marker-container kakao-overlay animate-marker-appear'; // 등장 애니메이션 추가
+        content.innerHTML = newInnerHtml;
 
         content.onclick = (e) => {
           e.stopPropagation();
@@ -260,13 +263,19 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
+        // 기존 마커 업데이트
         const content = existingOverlay.getContent();
         existingOverlay.setZIndex(baseZIndex);
+        
         if (content instanceof HTMLElement) {
+          // 하이라이트 클래스 토글
           if (isHighlighted) content.classList.add('highlighted');
           else content.classList.remove('highlighted');
-          const newInnerHtml = getMarkerInnerHtml(post, isViewed, isHighlighted);
-          if (content.innerHTML !== newInnerHtml) content.innerHTML = newInnerHtml;
+          
+          // 내용이 실제로 바뀌었을 때만 innerHTML 업데이트 (깜빡임 방지 핵심)
+          if (content.innerHTML !== newInnerHtml) {
+            content.innerHTML = newInnerHtml;
+          }
         }
       }
     });
