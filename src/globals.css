@@ -73,6 +73,14 @@
   }
 }
 
+/* My Post Indigo Border */
+.my-post-border-container {
+  position: relative;
+  padding: 4px;
+  border-radius: 1.25rem;
+  background-color: #4f46e5; /* Indigo 600 */
+}
+
 /* HOT Red Gradient Border */
 .popular-border-container {
   position: relative;

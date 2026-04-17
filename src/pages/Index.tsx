@@ -197,6 +197,8 @@ const Index = () => {
       if (blockedIds.has(post.user.id)) return false;
 
       const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+      
+      // 본인 포스팅은 시간 필터 무시하고 항상 표시
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
       
@@ -225,8 +227,10 @@ const Index = () => {
     const sortedNewCandidates = newCandidates.sort((a, b) => {
       const isMineA = authUser && (a.user.id === authUser.id || a.user.id === 'me');
       const isMineB = authUser && (b.user.id === authUser.id || b.user.id === 'me');
-      const scoreA = (isMineA ? 5000 : 0) + (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
-      const scoreB = (isMineB ? 5000 : 0) + (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
+      
+      // 본인 포스팅에 압도적인 우선순위 부여 (10000점)
+      const scoreA = (isMineA ? 10000 : 0) + (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
+      const scoreB = (isMineB ? 10000 : 0) + (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
