@@ -48,21 +48,30 @@ const Login = () => {
               }
             }}
             providers={[]}
+            // 세션은 기본적으로 로그아웃 전까지 유지됩니다.
+            // 로그인 실패 시 메시지를 한국어로 설정합니다.
             localization={{
               variables: {
                 sign_in: {
                   email_label: '이메일',
                   password_label: '비밀번호',
                   button_label: '로그인',
+                  loading_button_label: '로그인 중...',
+                  email_input_placeholder: '이메일 주소를 입력하세요',
+                  password_input_placeholder: '비밀번호를 입력하세요',
                 },
                 sign_up: {
                   email_label: '이메일',
                   password_label: '비밀번호',
                   button_label: '회원가입',
+                  loading_button_label: '가입 중...',
                 }
               }
             }}
           />
+          <p className="text-[10px] text-center text-gray-400 mt-4 font-medium">
+            로그인 정보가 틀리면 상단에 오류 메시지가 표시됩니다.
+          </p>
         </div>
       </motion.div>
     </div>
