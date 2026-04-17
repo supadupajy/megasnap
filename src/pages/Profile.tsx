@@ -106,7 +106,10 @@ const Profile = () => {
                 <p className="text-xs text-gray-400 font-medium">나의 활동과 기록을 확인하세요</p>
               </div>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <button 
+              onClick={() => navigate('/settings')}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
               <Settings className="w-6 h-6 text-gray-400" />
             </button>
           </div>
