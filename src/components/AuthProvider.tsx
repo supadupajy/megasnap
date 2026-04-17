@@ -38,8 +38,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
+    setLoading(true);
     try {
-      console.log('[Auth] Fetching profile for:', userId);
+      console.log('[Auth] DB에서 프로필 조회 시작:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url, bio, email')
@@ -49,15 +50,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       if (data) {
-        console.log('[Auth] Profile found in DB:', data);
+        console.log('[Auth] DB 프로필 확인됨:', data);
         setProfile(data);
       } else {
-        console.log('[Auth] No profile found in DB, setting empty state');
+        console.log('[Auth] DB에 프로필 없음, 초기 상태 설정');
         setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
       }
     } catch (err) {
-      console.error('[Auth] Profile fetch error:', err);
+      console.error('[Auth] 프로필 조회 오류:', err);
       setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -72,11 +75,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setSession(initialSession);
             setUser(initialSession.user);
             await fetchProfile(initialSession.user.id);
+          } else {
+            setLoading(false);
           }
-          setLoading(false);
         }
       } catch (error) {
-        console.error('[Auth] Init error:', error);
+        console.error('[Auth] 초기 인증 오류:', error);
         if (mounted) setLoading(false);
       }
     };
@@ -86,17 +90,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
-      console.log('[Auth] Auth state changed:', event);
+      console.log('[Auth] 인증 상태 변경:', event);
 
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        // 세션이 생겼을 때 프로필이 없거나 이벤트가 발생하면 다시 조회
+        // 로그인 또는 세션 갱신 시 프로필 다시 조회
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setLoading(true);
           await fetchProfile(currentSession.user.id);
-          setLoading(false);
         }
       } else {
         setSession(null);
