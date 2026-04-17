@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, MapPin } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -78,8 +78,13 @@ const Index = () => {
     debounceTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
+      
+      // 위치 선택 모드일 때 지도의 중심 좌표를 실시간으로 tempSelectedLocation에 반영
+      if (isSelectingLocation) {
+        setTempSelectedLocation(data.center);
+      }
     }, 30); 
-  }, []);
+  }, [isSelectingLocation]);
 
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
@@ -250,10 +255,8 @@ const Index = () => {
   };
 
   const handleMapClick = useCallback((loc: { lat: number; lng: number }) => {
-    if (isSelectingLocation) {
-      setTempSelectedLocation(loc);
-    }
-  }, [isSelectingLocation]);
+    // 이제 클릭으로 위치를 선택하지 않으므로 로직 제거
+  }, []);
 
   const confirmLocationSelection = () => {
     if (tempSelectedLocation) {
@@ -277,6 +280,12 @@ const Index = () => {
     setIsWriteOpen(false);
     setTimeout(() => {
       setIsSelectingLocation(true);
+      // 진입 시 현재 지도의 중심점을 초기 선택 위치로 설정
+      if (mapData?.center) {
+        setTempSelectedLocation(mapData.center);
+      } else {
+        setTempSelectedLocation(mapCache.lastCenter);
+      }
     }, 500);
   };
 
@@ -296,41 +305,59 @@ const Index = () => {
             onMapChange={handleMapChange}
             onMapClick={handleMapClick}
             center={mapCenter}
-            selectionLocation={tempSelectedLocation}
           />
 
+          {/* 위치 선택 모드 전용 중앙 고정 핀 UI */}
           <AnimatePresence>
             {isSelectingLocation && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="fixed bottom-32 left-0 right-0 px-6 z-[100] flex flex-col gap-4"
-              >
-                <div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
-                    <p className="text-sm font-black text-gray-900">지도에서 포스팅 위치를 선택하세요</p>
-                  </div>
-                  
-                  <div className="flex w-full gap-3">
-                    <Button 
-                      onClick={cancelLocationSelection}
-                      variant="secondary"
-                      className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"
-                    >
-                      <X className="w-4 h-4 mr-2" /> 취소
-                    </Button>
-                    <Button 
-                      onClick={confirmLocationSelection}
-                      disabled={!tempSelectedLocation}
-                      className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100"
-                    >
-                      <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
-                    </Button>
-                  </div>
+              <>
+                {/* 중앙 고정 핀 */}
+                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-[50]">
+                  <motion.div 
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="relative mb-10" // 핀의 끝점이 중앙에 오도록 보정
+                  >
+                    <div className="relative w-12 h-12">
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-rose-500 rounded-full rounded-bl-none rotate-45 border-4 border-white shadow-2xl" />
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
+                    </div>
+                    {/* 핀 아래 그림자 */}
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
+                  </motion.div>
                 </div>
-              </motion.div>
+
+                {/* 하단 컨트롤 바 */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="fixed bottom-32 left-0 right-0 px-6 z-[100] flex flex-col gap-4"
+                >
+                  <div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
+                      <p className="text-sm font-black text-gray-900">지도를 움직여 위치를 맞추세요</p>
+                    </div>
+                    
+                    <div className="flex w-full gap-3">
+                      <Button 
+                        onClick={cancelLocationSelection}
+                        variant="secondary"
+                        className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"
+                      >
+                        <X className="w-4 h-4 mr-2" /> 취소
+                      </Button>
+                      <Button 
+                        onClick={confirmLocationSelection}
+                        className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+                      >
+                        <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
 

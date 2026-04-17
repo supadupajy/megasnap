@@ -30,7 +30,6 @@ const MapContainer = ({
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
-  const selectionOverlayRef = useRef<any>(null);
   const lastDragEnd = useRef<number>(0);
   const animationRef = useRef<number | null>(null);
   
@@ -158,39 +157,6 @@ const MapContainer = ({
       }
     }
   }, [center, isMapReady]);
-
-  // 위치 선택 마커 업데이트
-  useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao) return;
-
-    if (selectionOverlayRef.current) {
-      selectionOverlayRef.current.setMap(null);
-      selectionOverlayRef.current = null;
-    }
-
-    if (selectionLocation) {
-      const content = document.createElement('div');
-      content.className = 'animate-marker-appear';
-      content.innerHTML = `
-        <div style="position: relative; width: 40px; height: 40px; transform: translate(-50%, -100%);">
-          <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; background: #f43f5e; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);"></div>
-          <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; background: white; border-radius: 50%; z-index: 1;"></div>
-          <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 50%; filter: blur(2px);"></div>
-        </div>
-      `;
-
-      const overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(selectionLocation.lat, selectionLocation.lng),
-        content: content,
-        yAnchor: 1,
-        zIndex: 2000
-      });
-
-      overlay.setMap(mapInstance.current);
-      selectionOverlayRef.current = overlay;
-    }
-  }, [selectionLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
