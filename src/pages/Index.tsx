@@ -50,13 +50,13 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 위치 선택 모드 관련 상태
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 60; // 요청에 따라 최대 마커 수를 60개로 조정
+  const TILE_BUFFER = 2; // 현재 영역 밖의 타일을 2개 더 미리 로드하여 돌발 생성 방지
+  const MAX_MARKERS = 100; 
   const debounceTimer = useRef<any>(null);
 
   useEffect(() => {
@@ -73,7 +73,6 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 지도 변경 이벤트 디바운스 시간을 30ms로 유지하여 실시간성 확보
   const handleMapChange = useCallback((data: any) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -126,10 +125,11 @@ const Index = () => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
     
-    const startLat = Math.floor((sw.lat - TILE_SIZE) / TILE_SIZE);
-    const endLat = Math.ceil((ne.lat + TILE_SIZE) / TILE_SIZE);
-    const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
-    const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
+    // 버퍼를 적용하여 화면 밖의 데이터를 미리 생성
+    const startLat = Math.floor((sw.lat - (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
+    const endLat = Math.ceil((ne.lat + (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
+    const startLng = Math.floor((sw.lng - (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
+    const endLng = Math.ceil((ne.lng + (TILE_SIZE * TILE_BUFFER)) / TILE_SIZE);
 
     const newPosts: Post[] = [];
     let tilesAdded = false;
@@ -158,7 +158,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 1. 현재 지도 영역 내에 있는 모든 후보 마커 필터링
     const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -187,24 +186,18 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 2. 마커 유지 로직 (Sticky Logic)
-    // 이미 표시되고 있는 마커들 중 여전히 영역 내에 있는 것들을 찾음
+    // Sticky Logic: 이미 표시 중인 마커는 영역 내에 있다면 최우선 유지
     const currentDisplayedIds = new Set(displayedMarkers.map(m => m.id));
     const stillInBounds = inBoundsCandidates.filter(m => currentDisplayedIds.has(m.id));
-    
-    // 새로 영역에 들어온 마커들
     const newlyInBounds = inBoundsCandidates.filter(m => !currentDisplayedIds.has(m.id));
     
-    // 새로 들어온 마커들을 우선순위(인플루언서 > 인기 > 좋아요)에 따라 정렬
     newlyInBounds.sort((a, b) => {
       const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
       const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
-    // 3. 최종 표시 목록 구성 (기존 유지 마커 + 빈 자리에 새 마커 채우기)
     const combined = [...stillInBounds, ...newlyInBounds].slice(0, MAX_MARKERS);
-    
     setDisplayedMarkers(combined);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser]);
 
@@ -252,7 +245,7 @@ const Index = () => {
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-    setFinalSelectedLocation(null); // 위치 초기화
+    setFinalSelectedLocation(null); 
     
     setTimeout(() => {
       setHighlightedPostId(newPost.id);
@@ -260,7 +253,6 @@ const Index = () => {
     }, 1000);
   };
 
-  // 위치 선택 모드 핸들러
   const handleMapClick = (loc: { lat: number; lng: number }) => {
     if (isSelectingLocation) {
       setTempSelectedLocation(loc);
@@ -271,7 +263,6 @@ const Index = () => {
     if (tempSelectedLocation) {
       setFinalSelectedLocation(tempSelectedLocation);
       setIsSelectingLocation(false);
-      // 약간의 지연을 주어 지도가 안정된 후 팝업을 엽니다.
       setTimeout(() => {
         setIsWriteOpen(true);
       }, 100);
@@ -288,7 +279,6 @@ const Index = () => {
 
   const startLocationSelection = () => {
     setIsWriteOpen(false);
-    // Drawer가 닫히는 애니메이션 시간을 고려하여 지연 실행
     setTimeout(() => {
       setIsSelectingLocation(true);
     }, 300);
@@ -313,7 +303,6 @@ const Index = () => {
             selectionLocation={tempSelectedLocation}
           />
 
-          {/* 위치 선택 모드 UI */}
           <AnimatePresence>
             {isSelectingLocation && (
               <motion.div 

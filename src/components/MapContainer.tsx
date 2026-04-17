@@ -82,11 +82,10 @@ const MapContainer = ({
         });
         kakao.maps.event.addListener(map, 'dragend', () => { 
           isDragging.current = false; 
-          lastDragEnd.current = Date.now(); // 드래그 종료 시점 기록
+          lastDragEnd.current = Date.now(); 
         });
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-          // 드래그 직후(200ms 이내) 발생하는 클릭은 무시
           if (Date.now() - lastDragEnd.current < 200) return;
           
           if (onMapClickRef.current) {
@@ -123,7 +122,7 @@ const MapContainer = ({
       const container = document.createElement('div');
       container.style.cssText = 'pointer-events: none; z-index: 10000;';
       container.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); animation: marker-appear 0.3s ease-out;">
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
           <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 50%; border: 3px solid white; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           </div>
@@ -151,7 +150,7 @@ const MapContainer = ({
     }
   }, [center, isMapReady]);
 
-  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean, isNew: boolean = false) => {
+  const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
@@ -191,7 +190,7 @@ const MapContainer = ({
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container ${isNew ? 'animate-marker-appear' : ''}" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
+      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
@@ -236,11 +235,10 @@ const MapContainer = ({
         const content = document.createElement('div');
         content.className = 'kakao-overlay';
         content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
-        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted, true);
+        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         
         content.onclick = (e) => {
           e.stopPropagation();
-          // 드래그 중이거나 드래그 직후(200ms 이내)라면 클릭 무시
           if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return;
           onMarkerClick(post);
         };
@@ -257,7 +255,7 @@ const MapContainer = ({
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          const newHtml = getMarkerHtml(post, isViewed, isHighlighted, false);
+          const newHtml = getMarkerHtml(post, isViewed, isHighlighted);
           if (content.innerHTML !== newHtml) {
             content.innerHTML = newHtml;
           }
