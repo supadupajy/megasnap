@@ -121,7 +121,7 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (isDataLoading && !authUser)) {
+  if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
