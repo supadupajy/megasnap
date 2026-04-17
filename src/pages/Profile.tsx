@@ -131,11 +131,11 @@ const Profile = () => {
     }, 100);
   };
 
-  // 이미지 로드 실패 시 해당 포스팅을 목록에서 제거
-  const handleImageError = (postId: string, isSaved: boolean) => {
-    const setter = isSaved ? setSavedPosts : setMyPosts;
-    setter(prev => prev.filter(p => p.id !== postId));
-  };
+  // 이미지 로드 실패 시 해당 포스팅을 목록에서 즉시 제거 (그리드/리스트 공통)
+  const handleImageError = useCallback((postId: string) => {
+    setMyPosts(prev => prev.filter(p => p.id !== postId));
+    setSavedPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
 
   const handlePostDelete = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
@@ -272,6 +272,7 @@ const Profile = () => {
                       borderType={post.borderType}
                       disablePulse={true}
                       onLikeToggle={() => handleLikeToggle(post.id, true)}
+                      onImageError={handleImageError}
                     />
                   </div>
                 ))}
@@ -311,6 +312,7 @@ const Profile = () => {
                           disablePulse={true}
                           onLikeToggle={() => handleLikeToggle(post.id, false)}
                           onDelete={handlePostDelete}
+                          onImageError={handleImageError}
                         />
                       </div>
                     ))}
@@ -327,7 +329,7 @@ const Profile = () => {
                           src={post.image} 
                           alt="" 
                           className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
-                          onError={() => handleImageError(post.id, false)} 
+                          onError={() => handleImageError(post.id)} 
                         />
                       </div>
                     ))}

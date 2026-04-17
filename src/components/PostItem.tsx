@@ -50,6 +50,7 @@ interface PostItemProps {
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
+  onImageError?: (postId: string) => void; // 이미지 에러 콜백 추가
   onClick?: () => void;
 }
 
@@ -80,6 +81,7 @@ const PostItem = ({
   onLikeToggle,
   onLocationClick,
   onDelete,
+  onImageError,
   onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
@@ -99,10 +101,20 @@ const PostItem = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const displayImages = images.length > 0 ? images : [image];
-  const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
-  // 초기 좋아요 상태 확인 (DB 연동 시)
+  // 이미지 로드 실패 시 처리
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (onImageError) {
+      // 부모에게 에러를 알려서 게시물을 삭제하도록 함
+      onImageError(id);
+    } else {
+      // 콜백이 없으면 폴백 이미지 표시
+      (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+    }
+  };
+
+  // 초기 좋아요 상태 확인
   useEffect(() => {
     const checkLikeStatus = async () => {
       if (!authUser || !id || id.length < 20) return;
@@ -146,7 +158,6 @@ const PostItem = ({
     const prevLiked = isLiked;
     const prevCount = likesCount;
 
-    // Optimistic UI Update
     setIsLiked(!prevLiked);
     setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
@@ -159,7 +170,6 @@ const PostItem = ({
         await supabase.rpc('increment_likes', { post_id: id });
       }
     } catch (err) {
-      // Rollback on error
       setIsLiked(prevLiked);
       setLikesCount(prevCount);
     }
@@ -249,11 +259,6 @@ const PostItem = ({
     }
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = FALLBACK_IMAGE;
-  };
-
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
     let Icon = null;
@@ -305,7 +310,7 @@ const PostItem = ({
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={handleImageError} />
+            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
