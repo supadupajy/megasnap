@@ -9,23 +9,32 @@ interface MapContainerProps {
   highlightedPostId?: string | null;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
-  onMapWriteClick: (location?: { lat: number; lng: number }) => void;
+  onMapClick?: (location: { lat: number; lng: number }) => void; // 지도 클릭 콜백 추가
   center?: { lat: number; lng: number };
+  selectionLocation?: { lat: number; lng: number } | null; // 선택 중인 위치 표시용
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
-const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, onMapChange, onMapWriteClick, center }: MapContainerProps) => {
+const MapContainer = ({ 
+  posts, 
+  viewedPostIds, 
+  highlightedPostId, 
+  onMarkerClick, 
+  onMapChange, 
+  onMapClick,
+  center,
+  selectionLocation
+}: MapContainerProps) => {
   const { user: authUser } = useAuth();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
-  const actionOverlayRef = useRef<any>(null);
+  const selectionMarkerRef = useRef<any>(null);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -66,36 +75,18 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         
         kakao.maps.event.addListener(map, 'dragstart', () => {
           isDragging.current = true;
-          if (pressTimer.current) clearTimeout(pressTimer.current);
         });
         
         kakao.maps.event.addListener(map, 'dragend', () => {
           isDragging.current = false;
         });
 
-        kakao.maps.event.addListener(map, 'mousedown', (mouseEvent: any) => {
-          if (pressTimer.current) clearTimeout(pressTimer.current);
-          
-          pressTimer.current = setTimeout(() => {
-            if (!isDragging.current) {
-              const latLng = mouseEvent.latLng;
-              showActionPin(latLng.getLat(), latLng.getLng());
-              if (window.navigator.vibrate) window.navigator.vibrate(50);
-            }
-          }, 800);
-        });
-
-        kakao.maps.event.addListener(map, 'mousemove', () => {
-          if (pressTimer.current) clearTimeout(pressTimer.current);
-        });
-
-        kakao.maps.event.addListener(map, 'mouseup', () => {
-          if (pressTimer.current) clearTimeout(pressTimer.current);
-        });
-
-        // 지도 클릭 시 핀 숨기기 (단, 핀 자체 클릭 시에는 전파 중단 필요)
-        kakao.maps.event.addListener(map, 'click', () => {
-          hideActionPin();
+        // 지도 클릭 이벤트 (위치 선택 모드에서 사용)
+        kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
+          if (onMapClick) {
+            const latLng = mouseEvent.latLng;
+            onMapClick({ lat: latLng.getLat(), lng: latLng.getLng() });
+          }
         });
 
         return true;
@@ -113,6 +104,40 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     return () => clearInterval(timer);
   }, []);
 
+  // 선택 중인 위치 마커 표시
+  useEffect(() => {
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
+
+    if (selectionMarkerRef.current) {
+      selectionMarkerRef.current.setMap(null);
+      selectionMarkerRef.current = null;
+    }
+
+    if (selectionLocation) {
+      const container = document.createElement('div');
+      container.style.cssText = 'pointer-events: none; z-index: 10000;';
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); animation: marker-appear 0.3s ease-out;">
+          <div style="width: 40px; height: 40px; background: #4f46e5; border-radius: 50%; border: 3px solid white; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          </div>
+          <div style="width: 4px; height: 8px; background: #4f46e5; margin-top: -2px;"></div>
+        </div>
+      `;
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(selectionLocation.lat, selectionLocation.lng),
+        content: container,
+        yAnchor: 1,
+        zIndex: 10000
+      });
+
+      overlay.setMap(mapInstance.current);
+      selectionMarkerRef.current = overlay;
+    }
+  }, [selectionLocation, isMapReady]);
+
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
@@ -120,60 +145,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       mapInstance.current.panTo(moveLatLng);
     }
   }, [center, isMapReady]);
-
-  const showActionPin = (lat: number, lng: number) => {
-    hideActionPin();
-    const kakao = (window as any).kakao;
-    if (!mapInstance.current || !kakao) return;
-
-    const container = document.createElement('div');
-    // pointer-events: auto를 명시하고 z-index를 최상위로 설정
-    container.style.cssText = 'cursor: pointer; pointer-events: auto !important; z-index: 999999; position: relative;';
-    
-    const inner = document.createElement('div');
-    inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%); filter: drop-shadow(0 12px 24px rgba(79, 70, 229, 0.5)); animation: marker-appear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;';
-    inner.innerHTML = `
-        <div style="background: #4f46e5; color: white; padding: 14px 24px; border-radius: 32px; font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 10px; white-space: nowrap; border: 3px solid white; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          여기서 글쓰기
-        </div>
-        <div style="width: 16px; height: 16px; background: #4f46e5; transform: rotate(45deg); margin-top: -12px; border-right: 3px solid white; border-bottom: 3px solid white;"></div>
-    `;
-    
-    container.appendChild(inner);
-
-    // 클릭 이벤트 핸들러
-    const handleAction = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation(); // 지도 클릭 이벤트로 전파되는 것을 방지
-      
-      // 약간의 지연을 주어 상태 변화가 확실히 일어나도록 함
-      setTimeout(() => {
-        onMapWriteClick({ lat, lng });
-        hideActionPin();
-      }, 50);
-    };
-
-    container.addEventListener('click', handleAction);
-    container.addEventListener('touchstart', handleAction);
-
-    const overlay = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(lat, lng),
-      content: container,
-      yAnchor: 1,
-      zIndex: 999999
-    });
-
-    overlay.setMap(mapInstance.current);
-    actionOverlayRef.current = overlay;
-  };
-
-  const hideActionPin = () => {
-    if (actionOverlayRef.current) {
-      actionOverlayRef.current.setMap(null);
-      actionOverlayRef.current = null;
-    }
-  };
 
   const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
