@@ -14,6 +14,7 @@ import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
+import FriendList from "./pages/FriendList";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -59,7 +60,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showNicknameDialog, setShowNicknameDialog] = useState(false);
   
-  const hideLayout = ["/chat", "/splash", "/login", "/settings"].some(path => location.pathname.startsWith(path));
+  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
     if (!loading && session && profile && !profile.nickname && !hideLayout) {
@@ -113,6 +114,7 @@ const AnimatedRoutes = () => {
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

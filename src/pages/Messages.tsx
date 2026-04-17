@@ -46,7 +46,10 @@ const Messages = () => {
           </button>
           <h1 className="font-black text-lg text-gray-900">Direct Message</h1>
         </div>
-        <button className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+        <button 
+          onClick={() => navigate('/friends')}
+          className="p-1 hover:bg-gray-50 rounded-full transition-colors"
+        >
           <Edit className="w-6 h-6 text-indigo-600" />
         </button>
       </header>
