@@ -21,28 +21,24 @@ const Profile = () => {
   const navigate = useNavigate();
   const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
   
-  // 데이터 로딩 상태 관리
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  
-  // 핵심: 데이터 로딩 완료 여부를 추적하는 상태
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+  
   const fetchInProgress = useRef(false);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
-  // 데이터 로드 함수
   const loadProfileData = useCallback(async (uid: string) => {
     if (fetchInProgress.current) return;
     fetchInProgress.current = true;
 
     try {
-      // 1. 내 포스트 가져오기
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
@@ -75,8 +71,6 @@ const Profile = () => {
       })) as Post[];
       
       setMyPosts(formattedPosts);
-
-      // 2. 저장된 포스트 (Mock)
       const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${uid}`).map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
     } catch (err) {
@@ -87,18 +81,14 @@ const Profile = () => {
     }
   }, [displayName, avatarUrl]);
 
-  // 인증 상태 및 데이터 로드 트리거
   useEffect(() => {
-    // 인증 확인 중이면 대기
     if (authLoading) return;
 
-    // 인증 확인이 끝났는데 사용자가 없으면 로그인으로 이동
     if (!authUser) {
       navigate('/login', { replace: true });
       return;
     }
 
-    // 사용자가 있고 아직 데이터를 불러오지 않았다면 로드
     if (!isInitialLoadDone && !fetchInProgress.current) {
       loadProfileData(authUser.id);
     }
@@ -132,7 +122,6 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 로딩 화면 조건: 인증 확인 중이거나, 첫 데이터 로딩이 완료되지 않았을 때
   if (authLoading || !isInitialLoadDone) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">

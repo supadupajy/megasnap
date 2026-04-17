@@ -28,11 +28,9 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// --- [수정] ProtectedRoute: 로딩 중 리다이렉트 절대 금지 ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
 
-  // 인증 정보를 확인 중일 때는 어떤 리다이렉트도 하지 않고 대기합니다.
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -41,7 +39,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // 로딩이 완전히 끝난 후 세션이 없을 때만 로그인으로 보냅니다.
   if (!session) {
     return <Navigate to="/login" replace />;
   }
@@ -58,7 +55,6 @@ const AnimatedRoutes = () => {
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
-  // 뒤로가기 및 앱 종료 로직
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       if (location.pathname === '/') {
@@ -72,7 +68,6 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  // [핵심] 인증 로딩 중에는 전체 Route 구성을 렌더링하지 않음으로써 충돌 방지
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -96,9 +91,7 @@ const AnimatedRoutes = () => {
             className="w-full"
           >
             <Routes location={location}>
-              {/* 로그인 상태에서 로그인 페이지 접근 시 홈으로 리다이렉트 */}
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-              
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />

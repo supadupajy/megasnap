@@ -35,14 +35,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // [강제 해제] 3초 후에도 앱이 안 뜨면 무조건 loading을 풉니다.
+    // [강제 해제] 2.5초 후에도 앱이 안 뜨면 무조건 loading을 풉니다.
     const fallbackTimer = setTimeout(() => {
       if (!initialized.current) {
         console.warn("⚠️ 인증 확인이 지연되어 강제로 로딩을 해제합니다.");
         setLoading(false);
         initialized.current = true;
       }
-    }, 3000);
+    }, 2500);
 
     const initializeAuth = async () => {
       try {
@@ -58,7 +58,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Auth init error:", error);
       } finally {
-        // 정상적으로 확인이 끝났을 때
         if (!initialized.current) {
           setLoading(false);
           initialized.current = true;
@@ -71,8 +70,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("🔐 Auth Event:", event);
-        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -82,7 +79,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setProfile(null);
         }
 
-        // 어떤 이벤트가 발생하든 인증 상태 체크 시도가 있었다면 로딩을 해제
         if (!initialized.current) {
           setLoading(false);
           initialized.current = true;
