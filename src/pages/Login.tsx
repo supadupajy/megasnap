@@ -1,94 +1,188 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera } from 'lucide-react';
+import { Camera, Mail, Lock, Loader2, Eye, EyeOff, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { showError, showSuccess } from '@/utils/toast';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  // 에러 메시지를 실시간으로 감시하여 변경하는 로직
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          // Supabase Auth UI의 에러 메시지 클래스 선택
-          const messages = document.querySelectorAll('.supabase-auth-ui_ui-message');
-          messages.forEach((msg) => {
-            if (msg.textContent === 'missing email or phone') {
-              msg.textContent = 'invalid email';
-            }
-          });
-        }
-      });
-    });
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+  // 저장된 이메일 불러오기
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('remembered_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
   }, []);
 
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      showError('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        showSuccess('회원가입이 완료되었습니다. 이메일을 확인해주세요!');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+
+        // 로그인 정보 저장 처리
+        if (rememberMe) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+
+        showSuccess('반갑습니다! 탐험을 시작합니다.');
+        navigate('/');
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      showError(err.message || '인증에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-[400px] space-y-8"
       >
+        {/* Logo Section */}
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-indigo-600 rounded-[22px] flex items-center justify-center shadow-xl shadow-indigo-100">
-            <Camera className="w-8 h-8 text-white" strokeWidth={2.5} />
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-100"
+          >
+            <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
+          </motion.div>
           <div className="text-center">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter italic">
+            <h1 className="text-4xl font-black text-gray-900 tracking-tighter italic">
               Cho<span className="text-indigo-600">ra</span>
             </h1>
-            <p className="text-xs font-bold text-gray-400 mt-1 tracking-widest uppercase">
+            <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
               Be here. Be seen.
             </p>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[32px] shadow-2xl shadow-gray-100 border border-gray-50">
-          <Auth
-            supabaseClient={supabase}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#4f46e5',
-                    brandAccent: '#4338ca',
-                  },
-                  radii: {
-                    borderRadiusButton: '16px',
-                    inputBorderRadius: '16px',
-                  }
-                }
-              }
-            }}
-            providers={[]}
-            localization={{
-              variables: {
-                sign_in: {
-                  email_label: '이메일',
-                  password_label: '비밀번호',
-                  button_label: '로그인',
-                  loading_button_label: '로그인 중...',
-                  email_input_placeholder: '이메일 주소를 입력하세요',
-                  password_input_placeholder: '비밀번호를 입력하세요',
-                },
-                sign_up: {
-                  email_label: '이메일',
-                  password_label: '비밀번호',
-                  button_label: '회원가입',
-                  loading_button_label: '가입 중...',
-                }
-              }
-            }}
-          />
-          <p className="text-[10px] text-center text-gray-400 mt-4 font-medium">
-            로그인 정보가 틀리면 상단에 오류 메시지가 표시됩니다.
+        {/* Form Section */}
+        <div className="bg-white p-8 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
+          <form onSubmit={handleAuth} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">이메일 주소</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input 
+                  type="email"
+                  placeholder="example@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-14 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">비밀번호</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input 
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 pl-12 pr-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="remember" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  className="w-5 h-5 rounded-lg border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                />
+                <label htmlFor="remember" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
+                  로그인 정보 저장하기
+                </label>
+              </div>
+              {!isSignUp && (
+                <button type="button" className="text-xs font-bold text-indigo-600 hover:underline">
+                  비밀번호 찾기
+                </button>
+              )}
+            </div>
+
+            <Button 
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+            >
+              {isLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                isSignUp ? '회원가입' : '로그인'
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-50 text-center">
+            <p className="text-sm text-gray-500 font-medium">
+              {isSignUp ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}
+              <button 
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="ml-2 text-indigo-600 font-black hover:underline"
+              >
+                {isSignUp ? '로그인하기' : '회원가입하기'}
+              </button>
+            </p>
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="text-center space-y-4">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+            By continuing, you agree to Chora's<br />
+            <span className="text-gray-600">Terms of Service</span> and <span className="text-gray-600">Privacy Policy</span>
           </p>
         </div>
       </motion.div>
