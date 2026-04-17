@@ -22,6 +22,8 @@ import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { Geolocation } from '@capacitor/geolocation';
+import { showError } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
@@ -289,8 +291,24 @@ const Index = () => {
     }, 1000);
   }, []);
 
-  const handleCurrentLocation = () => {
-    setMapCenter({ lat: 37.5665, lng: 126.9780 });
+  const handleCurrentLocation = async () => {
+    try {
+      const coordinates = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true
+      });
+      
+      if (coordinates.coords) {
+        setMapCenter({ 
+          lat: coordinates.coords.latitude, 
+          lng: coordinates.coords.longitude 
+        });
+      }
+    } catch (error) {
+      console.error('Error getting location', error);
+      showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
+      // 실패 시 기본 위치로 이동 (서울시청)
+      setMapCenter({ lat: 37.5665, lng: 126.9780 });
+    }
   };
 
   const handlePlaceSelect = (place: any) => {
