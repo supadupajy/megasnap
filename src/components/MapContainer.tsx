@@ -62,12 +62,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         setIsMapReady(true);
 
-        // --- 카카오 지도 공식 이벤트 리스너 사용 ---
-        
-        // 1. 지도 영역 변화 감지
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         
-        // 2. 드래그 상태 관리
         kakao.maps.event.addListener(map, 'dragstart', () => {
           isDragging.current = true;
           if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -77,7 +73,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           isDragging.current = false;
         });
 
-        // 3. 롱프레스 구현 (mousedown/touchstart 대용)
         kakao.maps.event.addListener(map, 'mousedown', (mouseEvent: any) => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
@@ -87,19 +82,18 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               showActionPin(latLng.getLat(), latLng.getLng());
               if (window.navigator.vibrate) window.navigator.vibrate(50);
             }
-          }, 800); // 0.8초 유지 시 롱프레스
+          }, 800);
         });
 
-        // 4. 이동 시 타이머 취소
         kakao.maps.event.addListener(map, 'mousemove', () => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
         });
 
-        // 5. 클릭/마우스업 시 타이머 취소 및 핀 숨기기
         kakao.maps.event.addListener(map, 'mouseup', () => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
         });
 
+        // 지도 클릭 시 핀 숨기기 (단, 핀 자체 클릭 시에는 전파 중단 필요)
         kakao.maps.event.addListener(map, 'click', () => {
           hideActionPin();
         });
@@ -133,7 +127,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     if (!mapInstance.current || !kakao) return;
 
     const container = document.createElement('div');
-    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 10000; position: relative; display: block !important;';
+    // pointer-events: auto를 명시하고 z-index를 최상위로 설정
+    container.style.cssText = 'cursor: pointer; pointer-events: auto !important; z-index: 999999; position: relative;';
     
     const inner = document.createElement('div');
     inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%); filter: drop-shadow(0 12px 24px rgba(79, 70, 229, 0.5)); animation: marker-appear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;';
@@ -147,11 +142,16 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     
     container.appendChild(inner);
 
+    // 클릭 이벤트 핸들러
     const handleAction = (e: Event) => {
       e.preventDefault();
-      e.stopPropagation();
-      onMapWriteClick({ lat, lng });
-      hideActionPin();
+      e.stopPropagation(); // 지도 클릭 이벤트로 전파되는 것을 방지
+      
+      // 약간의 지연을 주어 상태 변화가 확실히 일어나도록 함
+      setTimeout(() => {
+        onMapWriteClick({ lat, lng });
+        hideActionPin();
+      }, 50);
     };
 
     container.addEventListener('click', handleAction);
@@ -161,7 +161,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       position: new kakao.maps.LatLng(lat, lng),
       content: container,
       yAnchor: 1,
-      zIndex: 10000
+      zIndex: 999999
     });
 
     overlay.setMap(mapInstance.current);

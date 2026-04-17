@@ -174,7 +174,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[30]"
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[1000]"
           />
         )}
       </AnimatePresence>
@@ -182,18 +182,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       <Drawer 
         open={isOpen} 
         onOpenChange={(open) => !open && onClose()}
-        modal={false}
+        modal={true}
       >
-        <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[40] shadow-2xl">
+        <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
           
           <div className="px-6 flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between mb-4 shrink-0">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
+                <span className="text-indigo-600">✨</span>
                 새 게시물 작성
               </h2>
-              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full close-popup-btn">
+              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
                 <X className="w-5 h-5 text-gray-400" />
               </Button>
             </div>
