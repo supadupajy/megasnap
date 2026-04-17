@@ -8,6 +8,7 @@ interface AuthContextType {
   profile: any | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,8 +18,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // 초기화 완료 여부를 체크하는 Ref
   const initialized = useRef(false);
 
   const fetchProfile = async (userId: string) => {
@@ -35,21 +34,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // [강제 해제] 2.5초 후에도 앱이 안 뜨면 무조건 loading을 풉니다.
+    // 강제 로딩 해제 타이머 (최후의 수단)
     const fallbackTimer = setTimeout(() => {
       if (!initialized.current) {
-        console.warn("⚠️ 인증 확인이 지연되어 강제로 로딩을 해제합니다.");
         setLoading(false);
         initialized.current = true;
       }
-    }, 2500);
+    }, 3000);
 
     const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        // 1. 현재 세션 확인 (로컬 스토리지에서 복구)
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (error) throw error;
-
         if (initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
@@ -58,16 +55,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Auth init error:", error);
       } finally {
-        if (!initialized.current) {
-          setLoading(false);
-          initialized.current = true;
-          clearTimeout(fallbackTimer);
-        }
+        setLoading(false);
+        initialized.current = true;
+        clearTimeout(fallbackTimer);
       }
     };
 
     initializeAuth();
 
+    // 2. 인증 상태 변화 감지 (로그인, 로그아웃, 토큰 갱신 등)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
@@ -79,11 +75,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setProfile(null);
         }
 
-        if (!initialized.current) {
-          setLoading(false);
-          initialized.current = true;
-          clearTimeout(fallbackTimer);
-        }
+        setLoading(false);
+        initialized.current = true;
       }
     );
 
@@ -97,8 +90,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user?.id) await fetchProfile(user.id);
   };
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+  };
+
   const value = React.useMemo(() => ({
-    session, user, profile, loading, refreshProfile
+    session, user, profile, loading, refreshProfile, signOut
   }), [session, user, profile, loading]);
 
   return (
@@ -110,6 +110,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) throw new Error("useAuth error");
+  if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };

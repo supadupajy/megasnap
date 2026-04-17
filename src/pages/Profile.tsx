@@ -27,19 +27,19 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   
-  // 로딩 상태를 false로 시작하여 조건부로 활성화
   const [isDataLoading, setIsDataLoading] = useState(false);
-  const hasFetched = useRef(false);
+  const lastFetchedId = useRef<string | null>(null);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
   const loadProfileData = useCallback(async (uid: string) => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
+    // 이미 해당 유저의 데이터를 불러왔다면 중복 실행 방지
+    if (lastFetchedId.current === uid) return;
+    lastFetchedId.current = uid;
+    
     setIsDataLoading(true);
-
     try {
       const { data: realData, error } = await supabase
         .from('posts')
@@ -77,13 +77,14 @@ const Profile = () => {
       setSavedPosts(saved);
     } catch (err) {
       console.error('[Profile] Data load error:', err);
+      lastFetchedId.current = null; // 에러 시 재시도 가능하게 초기화
     } finally {
       setIsDataLoading(false);
     }
   }, [displayName, avatarUrl]);
 
   useEffect(() => {
-    // 인증 로딩이 끝나고 사용자가 확인되면 데이터 로드 시작
+    // 인증 로딩이 끝나고 유저 정보가 있을 때만 데이터 로드
     if (!authLoading && authUser?.id) {
       loadProfileData(authUser.id);
     }
@@ -117,8 +118,8 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 로딩 화면: 인증 확인 중이거나 실제 데이터를 불러오는 중일 때만 표시
-  if (authLoading || (isDataLoading && myPosts.length === 0)) {
+  // 인증 로딩 중이거나, 유저가 있는데 아직 데이터를 한 번도 안 불러왔을 때만 로더 표시
+  if (authLoading || (authUser && isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
