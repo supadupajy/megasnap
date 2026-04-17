@@ -44,6 +44,7 @@ const Index = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(12);
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
@@ -148,6 +149,18 @@ const Index = () => {
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
     }
+
+    // 프로필 페이지에서 넘어온 필터 처리
+    if (location.state?.filterUserId) {
+      const uid = location.state.filterUserId;
+      if (uid === 'me') {
+        setSelectedCategories(['mine']);
+        setTargetUserId(null);
+      } else {
+        setTargetUserId(uid);
+        setSelectedCategories(['user_filter']);
+      }
+    }
   }, [location.state, blockedIds]);
 
   useEffect(() => {
@@ -199,7 +212,8 @@ const Index = () => {
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && isMine);
+                              (selectedCategories.includes('mine') && isMine) ||
+                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
       return matchesCategory;
     });
 
@@ -220,7 +234,8 @@ const Index = () => {
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
-                              (selectedCategories.includes('mine') && isMine);
+                              (selectedCategories.includes('mine') && isMine) ||
+                              (selectedCategories.includes('user_filter') && post.user.id === targetUserId);
       return matchesCategory;
     });
 
@@ -267,7 +282,7 @@ const Index = () => {
       prevMarkersRef.current = finalMarkers;
       setDisplayedMarkers(finalMarkers);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, targetUserId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -501,6 +516,7 @@ const Index = () => {
         selectedCategories={selectedCategories}
         onSelect={setSelectedCategories}
         onClose={() => setIsCategoryOpen(false)}
+        targetUserId={targetUserId}
       />
 
       {selectedPostId && (
