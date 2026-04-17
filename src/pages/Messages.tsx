@@ -76,7 +76,7 @@ const Messages = () => {
                 className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
               >
                 <div 
-                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-indigo-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform shadow-sm"
+                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform shadow-sm"
                   onClick={(e) => handleAvatarClick(e, room.id)}
                 >
                   <img 

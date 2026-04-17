@@ -69,7 +69,7 @@ const Chat = () => {
           </button>
           <div className="flex items-center gap-2">
             <div 
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-indigo-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform"
               onClick={handleAvatarClick}
             >
               <img 
