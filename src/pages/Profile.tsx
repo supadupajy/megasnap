@@ -26,18 +26,19 @@ const Profile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   
-  const fetchInProgress = useRef(false);
+  // 로딩 상태를 false로 시작
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const hasLoaded = useRef(false);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
   const loadProfileData = useCallback(async (uid: string) => {
-    if (fetchInProgress.current) return;
-    fetchInProgress.current = true;
-
+    if (hasLoaded.current) return;
+    
+    setIsInitialLoading(true);
     try {
       const { data: realData, error } = await supabase
         .from('posts')
@@ -73,26 +74,23 @@ const Profile = () => {
       setMyPosts(formattedPosts);
       const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${uid}`).map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
+      hasLoaded.current = true;
     } catch (err) {
       console.error('[Profile] Data load error:', err);
     } finally {
-      setIsInitialLoadDone(true);
-      fetchInProgress.current = false;
+      setIsInitialLoading(false);
     }
   }, [displayName, avatarUrl]);
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!authUser) {
-      navigate('/login', { replace: true });
-      return;
+    if (!authLoading) {
+      if (authUser) {
+        loadProfileData(authUser.id);
+      } else {
+        navigate('/login', { replace: true });
+      }
     }
-
-    if (!isInitialLoadDone && !fetchInProgress.current) {
-      loadProfileData(authUser.id);
-    }
-  }, [authLoading, authUser, isInitialLoadDone, loadProfileData, navigate]);
+  }, [authLoading, authUser, loadProfileData, navigate]);
 
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
@@ -122,7 +120,8 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || !isInitialLoadDone) {
+  // 로딩 조건 최적화
+  if (authLoading || (isInitialLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -132,6 +131,8 @@ const Profile = () => {
       </div>
     );
   }
+
+  if (!authUser) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -197,7 +198,7 @@ const Profile = () => {
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
                   <div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && isInitialLoadDone && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>
+                  <div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && hasLoaded.current && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>
                 )}
               </>
             )}
