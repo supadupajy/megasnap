@@ -29,12 +29,21 @@ const FriendList = () => {
     navigate(`/chat/${user.id}`);
   };
 
+  const handleBack = () => {
+    // 이전 히스토리가 있으면 뒤로가기, 없으면 DM 페이지로 이동
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/messages');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pb-10">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={handleBack} 
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
