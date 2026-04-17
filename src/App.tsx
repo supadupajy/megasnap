@@ -64,24 +64,32 @@ const AnimatedRoutes = () => {
 
   // 닉네임 설정 팝업 노출 로직
   useEffect(() => {
-    // 1. 로딩 중이 아니고
-    // 2. 세션(로그인)이 있고
-    // 3. 프로필 정보가 로드되었는데
-    // 4. 닉네임이 null이거나 빈 문자열인 경우에만 표시
+    // 로딩 중이 아닐 때만 판단
+    if (loading) return;
+
+    // 1. 세션(로그인)이 있고
+    // 2. 프로필 정보가 로드되었는데
+    // 3. 닉네임이 null이거나 빈 문자열인 경우에만 표시
     const needsNickname = 
-      !loading && 
       session && 
       profile && 
       (profile.nickname === null || profile.nickname === '') && 
       !hideLayout && 
       location.pathname !== '/login';
     
+    console.log('[App] Needs nickname check:', { 
+      hasSession: !!session, 
+      hasProfile: !!profile, 
+      nickname: profile?.nickname,
+      needsNickname 
+    });
+
     if (needsNickname) {
       setShowNicknameDialog(true);
     } else {
       setShowNicknameDialog(false);
     }
-  }, [session, profile?.nickname, hideLayout, loading, location.pathname]);
+  }, [session, profile, hideLayout, loading, location.pathname]);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {

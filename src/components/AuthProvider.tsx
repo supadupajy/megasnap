@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('[Auth] Fetching profile for:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url, bio, email')
@@ -48,9 +49,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       if (data) {
+        console.log('[Auth] Profile found:', data);
         setProfile(data);
       } else {
-        // 프로필이 없는 경우 기본값 설정
+        console.log('[Auth] No profile found, setting defaults');
         setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
       }
     } catch (err) {
@@ -84,11 +86,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
+      console.log('[Auth] Auth state changed:', event);
+
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        // 로그인이나 토큰 갱신 시 프로필 다시 가져오기
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           await fetchProfile(currentSession.user.id);
         }
       } else {
