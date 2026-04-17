@@ -22,7 +22,8 @@ interface DeleteConfirmDialogProps {
 const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialogProps) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
+      {/* z-[200]을 추가하여 상세 페이지(z-100)보다 위에 오도록 설정 */}
+      <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl z-[200]">
         <AlertDialogHeader className="space-y-3">
           <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
             <Trash2 className="w-6 h-6 text-red-500" />
@@ -37,13 +38,19 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
           <AlertDialogCancel 
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0"
           >
             취소
           </AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onConfirm}
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirm();
+            }}
             className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0"
           >
             삭제
