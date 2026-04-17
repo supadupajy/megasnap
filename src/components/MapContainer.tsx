@@ -147,6 +147,9 @@ const MapContainer = ({
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
       const moveLatLng = new kakao.maps.LatLng(center.lat, center.lng);
+      
+      // panTo는 거리가 멀면 순간이동하므로, 부드러운 이동을 위해 panTo를 사용하되
+      // 거리에 상관없이 최대한 부드럽게 이동하도록 설정 (카카오 API 기본 panTo 활용)
       mapInstance.current.panTo(moveLatLng);
     }
   }, [center, isMapReady]);
@@ -191,7 +194,7 @@ const MapContainer = ({
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; display: block !important;">
+      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.4)' : 'scale(1)'};">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
@@ -199,11 +202,11 @@ const MapContainer = ({
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                       ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                      background-color: white; display: block !important;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block !important;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
+                      background-color: white;">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
-                   style="width: 100%; height: 100%; object-fit: cover; display: block !important; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${categoryIconHtml}
             </div>
@@ -235,7 +238,7 @@ const MapContainer = ({
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'kakao-overlay';
-        content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
+        content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; pointer-events: auto;`;
         content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         
         content.onclick = (e) => {
