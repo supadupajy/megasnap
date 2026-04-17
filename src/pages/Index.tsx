@@ -180,7 +180,7 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 화면에 표시할 마커 필터링
+  // 화면에 표시할 마커 필터링 (비율 고정 로직 적용)
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -211,19 +211,30 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 2. 본인 포스팅과 일반 포스팅 분리하여 우선순위 처리
-    const myPostsInBounds = inBoundsCandidates.filter(p => authUser && (p.user.id === authUser.id || p.user.id === 'me'));
-    const otherPostsInBounds = inBoundsCandidates.filter(p => !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
+    // 2. 버킷 분류
+    const myPosts = inBoundsCandidates.filter(p => authUser && (p.user.id === authUser.id || p.user.id === 'me'));
+    const influencerPosts = inBoundsCandidates.filter(p => p.isInfluencer && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
+    const popularPosts = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
+    const generalPosts = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !(authUser && (p.user.id === authUser.id || p.user.id === 'me')));
 
-    // 3. 일반 포스팅 정렬 (인플루언서, 인기, 광고 순)
-    const sortedOthers = otherPostsInBounds.sort((a, b) => {
-      const scoreA = (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
-      const scoreB = (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
-      return scoreB - scoreA;
-    });
+    // 3. 비율 계산 (내 포스팅 제외한 나머지 슬롯에 대해 적용)
+    const remainingSlots = Math.max(0, MAX_MARKERS - myPosts.length);
+    
+    // 목표 개수 (93% 일반, 5% 인기, 2% 인플루언서)
+    const targetInfluencerCount = Math.max(1, Math.round(remainingSlots * 0.02));
+    const targetPopularCount = Math.max(2, Math.round(remainingSlots * 0.05));
+    const targetGeneralCount = remainingSlots - targetInfluencerCount - targetPopularCount;
 
-    // 4. 본인 포스팅을 무조건 앞에 두고 나머지를 채움
-    const combined = [...myPostsInBounds, ...sortedOthers].slice(0, MAX_MARKERS);
+    // 4. 각 버킷에서 포스팅 추출 (좋아요 순)
+    const selectedInfluencers = influencerPosts.sort((a, b) => b.likes - a.likes).slice(0, targetInfluencerCount);
+    const selectedPopulars = popularPosts.sort((a, b) => b.likes - a.likes).slice(0, targetPopularCount);
+    
+    // 부족한 슬롯 계산 (인기나 인플루언서가 부족할 경우 일반으로 채움)
+    const actualRemainingForGeneral = remainingSlots - selectedInfluencers.length - selectedPopulars.length;
+    const selectedGenerals = generalPosts.sort((a, b) => b.likes - a.likes).slice(0, actualRemainingForGeneral);
+
+    // 5. 최종 결합
+    const combined = [...myPosts, ...selectedInfluencers, ...selectedPopulars, ...selectedGenerals];
     
     const nextIds = combined.map(m => m.id).sort().join(',');
     const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
