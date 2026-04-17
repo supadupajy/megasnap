@@ -36,21 +36,12 @@ const ScrollToTop = () => {
   return null;
 };
 
+// --- [수정] ProtectedRoute: 리다이렉트 로직 최적화 ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
-  const [timedOut, setTimedOut] = useState(false);
 
-  // 인증 확인이 5초 이상 걸리면 강제로 로그인 페이지로 이동
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setTimedOut(true);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-  
-  if (loading && !timedOut) {
+  // 1. 인증 로딩 중일 때는 아무것도 하지 않고 스피너만 유지
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -58,14 +49,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  if (!session || timedOut) return <Navigate to="/login" replace />;
+  // 2. 로딩이 끝났는데 세션이 없다면 그때 로그인으로 이동
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  
   return <>{children}</>;
 };
 
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, loading } = useAuth(); // loading 추가
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
@@ -73,50 +68,45 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      const openPopup = document.querySelector('[role="dialog"], [data-vaul-drawer], .close-popup-btn');
-      if (openPopup) {
-        const closeBtn = document.querySelector('.close-popup-btn') as HTMLElement;
-        if (closeBtn) {
-          closeBtn.click();
-          return;
-        }
-      }
       if (location.pathname === '/') {
         setShowExitDialog(true);
+      } else if (canGoBack) {
+        window.history.back();
       } else {
-        if (canGoBack) {
-          window.history.back();
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       }
     });
-    return () => {
-      backButtonListener.then(l => l.remove());
-    };
+    return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  const handleExitApp = () => {
-    CapApp.exitApp();
-  };
-  
+  // 로딩 중일 때 전체 레이아웃 렌더링 방지 (깜빡임 및 루프 방지)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-white">
       <ScrollToTop />
       {!hideLayout && session && <Header />}
       
       <main className="relative">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait">
           <motion.div 
             key={location.pathname}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             className="w-full"
           >
             <Routes location={location}>
+              {/* 로그인 페이지는 세션이 있을 때만 홈으로 리다이렉트 */}
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+              
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
@@ -143,7 +133,7 @@ const AnimatedRoutes = () => {
       <ExitDialog 
         isOpen={showExitDialog} 
         onClose={() => setShowExitDialog(false)} 
-        onConfirm={handleExitApp} 
+        onConfirm={() => CapApp.exitApp()} 
       />
     </div>
   );
@@ -153,9 +143,7 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000);
+    const timer = setTimeout(() => { setShowSplash(false); }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
