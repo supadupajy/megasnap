@@ -1,170 +1,124 @@
-"use client";
-
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Profile {
-  nickname: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  email: string | null;
-}
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: Profile | null;
+  profile: any | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
-  updateProfileState: (updates: Partial<Profile>) => void;
-  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  profile: null,
-  loading: true,
-  refreshProfile: async () => {},
-  updateProfileState: () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true); // 1. 무조건 true로 시작
+  
+  // 무한 호출 방지를 위한 Ref
+  const isInitializing = useRef(true);
 
-  const ensureProfile = useCallback(async (userId: string, email: string | undefined) => {
+  const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('nickname, avatar_url, bio, email')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data && data.nickname) {
-        setProfile(data);
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      
+      if (error) {
+        console.warn("프로필을 찾을 수 없습니다:", error.message);
+        setProfile(null);
       } else {
-        const randomId = Math.random().toString(36).substring(2, 7);
-        const generatedNickname = `탐험가_${randomId}`;
-        
-        const newProfile = {
-          id: userId,
-          nickname: generatedNickname,
-          email: email || null,
-          updated_at: new Date().toISOString()
-        };
-
-        await supabase.from('profiles').upsert(newProfile);
-
-        setProfile({
-          nickname: generatedNickname,
-          avatar_url: data?.avatar_url || null,
-          bio: data?.bio || null,
-          email: email || null
-        });
+        setProfile(data);
       }
     } catch (err) {
-      console.error('[Auth] 프로필 처리 중 오류:', err);
-      setProfile({
-        nickname: email?.split('@')[0] || '탐험가',
-        avatar_url: null,
-        bio: null,
-        email: email || null
-      });
+      console.error("프로필 로드 중 예외 발생:", err);
     }
-  }, []);
+  };
 
   useEffect(() => {
     let mounted = true;
 
-    // 안전장치: 2초 후에도 로딩 중이면 강제로 로딩 종료 (사용자 경험 개선)
-    const timeoutId = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false);
-      }
-    }, 2000);
-
-    const initAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        // getSession은 로컬 스토리지를 먼저 확인하므로 매우 빠름
+        // 현재 세션 가져오기
         const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
 
-        if (mounted) {
-          if (initialSession) {
-            setSession(initialSession);
-            setUser(initialSession.user);
-            // 프로필은 백그라운드에서 가져옴
-            ensureProfile(initialSession.user.id, initialSession.user.email);
-          }
-          setLoading(false);
-          clearTimeout(timeoutId);
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
+        console.error("인증 초기화 에러:", error);
+      } finally {
         if (mounted) {
           setLoading(false);
-          clearTimeout(timeoutId);
+          isInitializing.current = false;
         }
       }
     };
 
-    initAuth();
+    initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (!mounted) return;
+    // 상태 변경 리스너
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        if (!mounted) return;
 
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-        if (event === 'SIGNED_IN') {
-          await ensureProfile(currentSession.user.id, currentSession.user.email);
+        console.log(`🔐 Auth Event: ${event}`);
+
+        // 초기화 중에는 onAuthStateChange의 중복 처리를 방지
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          if (currentSession?.user) await fetchProfile(currentSession.user.id);
+          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
-      } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
       }
-    });
+    );
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeoutId);
     };
-  }, [ensureProfile]);
+  }, []);
 
   const refreshProfile = async () => {
-    if (user) await ensureProfile(user.id, user.email);
+    if (user?.id) await fetchProfile(user.id);
   };
 
-  const updateProfileState = (updates: Partial<Profile>) => {
-    setProfile(prev => prev ? { ...prev, ...updates } : null);
-  };
-
-  const signOut = async () => {
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-    } finally {
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
-    }
-  };
+  // 컨텍스트 값 메모이제이션 (불필요한 리렌더링 방지)
+  const value = React.useMemo(() => ({
+    session,
+    user,
+    profile,
+    loading,
+    refreshProfile
+  }), [session, user, profile, loading]);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, refreshProfile, updateProfileState, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth는 AuthProvider 내에서 사용되어야 합니다.");
+  }
+  return context;
+};
