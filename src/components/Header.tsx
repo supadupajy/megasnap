@@ -16,30 +16,46 @@ const Header = () => {
     if (!authUser) return;
 
     const fetchUnreadCount = async () => {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id)
-        .eq('is_read', false);
-      
-      if (!error) setUnreadCount(count || 0);
+      try {
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', authUser.id)
+          .eq('is_read', false);
+        
+        if (!error) setUnreadCount(count || 0);
+      } catch (err) {
+        console.error('[Header] Failed to fetch unread count:', err);
+      }
     };
 
     fetchUnreadCount();
 
-    // 실시간 알림 구독
-    const channel = supabase
-      .channel('header_notifications')
+    // 채널 이름을 고유하게 설정하여 충돌 방지
+    const channelName = `header_notifs_${authUser.id}`;
+    const channel = supabase.channel(channelName);
+
+    channel
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${authUser.id}` },
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `user_id=eq.${authUser.id}` 
+        },
         () => {
           fetchUnreadCount();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Header] Realtime subscribed');
+        }
+      });
 
     return () => {
+      // 채널 구독 해제 및 제거
       supabase.removeChannel(channel);
     };
   }, [authUser]);
