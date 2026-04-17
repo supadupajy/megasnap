@@ -11,7 +11,7 @@ import StoryBar from '@/components/StoryBar';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -22,12 +22,10 @@ const Popular = () => {
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 차단된 사용자를 제외한 포스트 목록
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  // Supabase에서 실제 데이터 가져오기
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
     try {
@@ -67,7 +65,6 @@ const Popular = () => {
     }
   }, []);
 
-  // 초기 데이터 로드
   useEffect(() => {
     const loadInitialData = async () => {
       const realPosts = await fetchSupabasePosts();
@@ -80,7 +77,6 @@ const Popular = () => {
     loadInitialData();
   }, [fetchSupabasePosts]);
 
-  // 추가 데이터 로드 함수
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore) return;
     setIsLoadingMore(true);
@@ -98,7 +94,6 @@ const Popular = () => {
     }, 800);
   }, [isLoadingMore]);
 
-  // Intersection Observer 설정
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {

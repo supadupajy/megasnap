@@ -11,7 +11,7 @@ import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -84,7 +84,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
     }
 
     if (!supabase) {
-      showError('Supabase 설정이 완료되지 않았습니다. 연동 버튼을 클릭해주세요.');
+      showError('Supabase 설정이 완료되지 않았습니다.');
       return;
     }
 
@@ -155,7 +155,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
-      showError('저장 중 오류가 발생했습니다. Supabase 설정을 확인해주세요.');
+      showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }

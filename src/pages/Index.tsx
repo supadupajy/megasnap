@@ -20,7 +20,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
@@ -48,7 +48,6 @@ const Index = () => {
   const TILE_SIZE = 0.02;
   const MAX_MARKERS = 50; 
 
-  // Supabase에서 실제 데이터 가져오기
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
     try {
@@ -143,14 +142,11 @@ const Index = () => {
 
     const loadPosts = async () => {
       const newMockPosts: Post[] = [];
-      let tilesAdded = false;
-
       for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
         for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
           const tileKey = `${latIdx},${lngIdx}`;
           if (!mapCache.populatedTiles.has(tileKey)) {
             mapCache.populatedTiles.add(tileKey);
-            tilesAdded = true;
             const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
             const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
             newMockPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
@@ -158,7 +154,6 @@ const Index = () => {
         }
       }
 
-      // 실제 데이터와 목 데이터를 합침
       const realPosts = await fetchSupabasePosts();
       
       setAllPosts(prev => {
