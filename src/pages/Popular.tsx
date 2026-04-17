@@ -12,13 +12,16 @@ import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
+  const { loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -67,18 +70,25 @@ const Popular = () => {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const realPosts = await fetchSupabasePosts();
-      const mockPosts = createMockPosts(37.5665, 126.9780, 20)
-        .sort((a, b) => b.likes - a.likes);
+      if (authLoading) return;
       
-      setPosts([...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes));
+      setIsInitialLoading(true);
+      try {
+        const realPosts = await fetchSupabasePosts();
+        const mockPosts = createMockPosts(37.5665, 126.9780, 20)
+          .sort((a, b) => b.likes - a.likes);
+        
+        setPosts([...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes));
+      } finally {
+        setIsInitialLoading(false);
+      }
     };
     
     loadInitialData();
-  }, [fetchSupabasePosts]);
+  }, [fetchSupabasePosts, authLoading]);
 
   const loadMorePosts = useCallback(() => {
-    if (isLoadingMore) return;
+    if (isLoadingMore || isInitialLoading) return;
     setIsLoadingMore(true);
     
     setTimeout(() => {
@@ -92,7 +102,7 @@ const Popular = () => {
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
-  }, [isLoadingMore]);
+  }, [isLoadingMore, isInitialLoading]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -139,35 +149,43 @@ const Popular = () => {
       <Header />
       <div className="pt-[88px]">
         <StoryBar />
-        <div className="flex flex-col">
-          {filteredPosts.map((post) => (
-            <PostItem
-              key={post.id}
-              id={post.id}
-              user={post.user}
-              content={post.content}
-              location={post.location}
-              likes={post.likes}
-              commentsCount={post.commentsCount}
-              comments={post.comments}
-              image={post.image}
-              images={post.images}
-              adImageIndex={post.adImageIndex}
-              lat={post.lat}
-              lng={post.lng}
-              isLiked={post.isLiked}
-              isAd={post.isAd}
-              isGif={post.isGif}
-              isInfluencer={post.isInfluencer}
-              category={post.category}
-              borderType={post.borderType}
-              disablePulse={true}
-              onLikeToggle={() => handleLikeToggle(post.id)}
-              onLocationClick={handleLocationClick}
-              onDelete={handlePostDelete}
-            />
-          ))}
-        </div>
+        
+        {isInitialLoading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-4">
+            <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+            <p className="text-sm font-bold text-gray-400">인기 포스팅을 불러오는 중...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {filteredPosts.map((post) => (
+              <PostItem
+                key={post.id}
+                id={post.id}
+                user={post.user}
+                content={post.content}
+                location={post.location}
+                likes={post.likes}
+                commentsCount={post.commentsCount}
+                comments={post.comments}
+                image={post.image}
+                images={post.images}
+                adImageIndex={post.adImageIndex}
+                lat={post.lat}
+                lng={post.lng}
+                isLiked={post.isLiked}
+                isAd={post.isAd}
+                isGif={post.isGif}
+                isInfluencer={post.isInfluencer}
+                category={post.category}
+                borderType={post.borderType}
+                disablePulse={true}
+                onLikeToggle={() => handleLikeToggle(post.id)}
+                onLocationClick={handleLocationClick}
+                onDelete={handlePostDelete}
+              />
+            ))}
+          </div>
+        )}
 
         <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
           {isLoadingMore ? (
@@ -176,7 +194,7 @@ const Popular = () => {
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">인기 포스팅을 더 불러오는 중...</p>
             </>
           ) : (
-            <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+            !isInitialLoading && <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
           )}
         </div>
       </div>
