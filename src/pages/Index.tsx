@@ -48,7 +48,7 @@ const Index = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 50; 
+  const MAX_MARKERS = 60; 
 
   const fetchSupabasePosts = useCallback(async () => {
     if (!supabase) return [];
@@ -87,6 +87,21 @@ const Index = () => {
       return [];
     }
   }, []);
+
+  // 초기 데이터 로드 (Supabase)
+  useEffect(() => {
+    const initLoad = async () => {
+      const realPosts = await fetchSupabasePosts();
+      if (realPosts.length > 0) {
+        setAllPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
+          return [...uniqueReal, ...prev];
+        });
+      }
+    };
+    initLoad();
+  }, [fetchSupabasePosts]);
 
   useEffect(() => {
     mapCache.posts = allPosts;
@@ -133,7 +148,7 @@ const Index = () => {
     }
   }, [location.state, blockedIds]);
 
-  // 지도가 준비되면 실제 데이터와 랜덤 데이터를 동시에 로드
+  // 지도 영역에 따른 랜덤 포스팅 생성
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -143,38 +158,29 @@ const Index = () => {
     const startLng = Math.floor((sw.lng - TILE_SIZE) / TILE_SIZE);
     const endLng = Math.ceil((ne.lng + TILE_SIZE) / TILE_SIZE);
 
-    const loadPosts = async () => {
-      // 1. 랜덤 포스팅 생성
-      const newMockPosts: Post[] = [];
-      for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
-        for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
-          const tileKey = `${latIdx},${lngIdx}`;
-          if (!mapCache.populatedTiles.has(tileKey)) {
-            mapCache.populatedTiles.add(tileKey);
-            const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
-            const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-            newMockPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 8));
-          }
+    const newMockPosts: Post[] = [];
+    for (let latIdx = startLat; latIdx <= endLat; latIdx++) {
+      for (let lngIdx = startLng; lngIdx <= endLng; lngIdx++) {
+        const tileKey = `${latIdx},${lngIdx}`;
+        if (!mapCache.populatedTiles.has(tileKey)) {
+          mapCache.populatedTiles.add(tileKey);
+          const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
+          const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
+          newMockPosts.push(...createMockPosts(tileCenterLat, tileCenterLng, 6));
         }
       }
+    }
 
-      // 2. 실제 DB 포스팅 로드
-      const realPosts = await fetchSupabasePosts();
-      
-      // 3. 두 데이터를 한 번에 상태에 반영 (동시성 확보)
+    if (newMockPosts.length > 0) {
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const uniqueNewMock = newMockPosts.filter(p => !existingIds.has(p.id));
-        const uniqueReal = realPosts.filter(p => !existingIds.has(p.id));
-        
-        if (uniqueNewMock.length === 0 && uniqueReal.length === 0) return prev;
-        return [...prev, ...uniqueReal, ...uniqueNewMock];
+        return [...prev, ...uniqueNewMock];
       });
-    };
+    }
+  }, [mapData]);
 
-    loadPosts();
-  }, [mapData, fetchSupabasePosts]);
-
+  // 화면에 표시할 마커 필터링
   useEffect(() => {
     if (!mapData?.bounds) return;
     const { sw, ne } = mapData.bounds;
@@ -183,41 +189,47 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
     const inBoundsCandidates = allPosts.filter(post => {
-      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
-                             post.lng >= sw.lng && post.lng <= ne.lng;
+      // 1. 영역 체크 (약간의 여유분 포함)
+      const margin = 0.005;
+      const isWithinBounds = post.lat >= sw.lat - margin && post.lat <= ne.lat + margin &&
+                             post.lng >= sw.lng - margin && post.lng <= ne.lng + margin;
+      if (!isWithinBounds) return false;
       
+      // 2. 차단 유저 체크
+      if (blockedIds.has(post.user.id)) return false;
+
+      // 3. 시간 필터 (광고나 내 포스팅은 항상 표시)
       const isMine = authUser && post.user.id === authUser.id;
       const isWithinTime = post.isAd || isMine || (now - post.createdAt.getTime()) <= timeLimitMs;
+      if (!isWithinTime) return false;
       
+      // 4. 카테고리 필터
       const matchesCategory = selectedCategories.includes('all') || 
                               selectedCategories.includes(post.category || 'none') ||
                               (selectedCategories.includes('hot') && post.borderType === 'popular') ||
                               (selectedCategories.includes('influencer') && post.isInfluencer) ||
                               (selectedCategories.includes('mine') && (post.user.id === 'me' || isMine));
 
-      const isNotBlocked = !blockedIds.has(post.user.id);
-      return isWithinBounds && isWithinTime && matchesCategory && isNotBlocked;
+      return matchesCategory;
     });
 
-    const currentlyDisplayedIds = new Set(displayedMarkers.map(m => m.id));
-    const stickyMarkers = inBoundsCandidates.filter(m => currentlyDisplayedIds.has(m.id));
-    
-    const newCandidates = inBoundsCandidates.filter(m => !currentlyDisplayedIds.has(m.id));
-    const sortedNewCandidates = newCandidates.sort((a, b) => {
-      const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
-      const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
+    // 중요도 순으로 정렬하여 상위 마커만 표시
+    const sorted = inBoundsCandidates.sort((a, b) => {
+      const scoreA = (a.isInfluencer ? 2000 : 0) + (a.borderType === 'popular' ? 1000 : 0) + (a.isAd ? 500 : 0) + a.likes;
+      const scoreB = (b.isInfluencer ? 2000 : 0) + (b.borderType === 'popular' ? 1000 : 0) + (b.isAd ? 500 : 0) + b.likes;
       return scoreB - scoreA;
     });
 
-    const combined = [...stickyMarkers, ...sortedNewCandidates].slice(0, MAX_MARKERS);
+    const combined = sorted.slice(0, MAX_MARKERS);
     
+    // ID 리스트가 변경되었을 때만 상태 업데이트 (무한 루프 방지)
     const nextIds = combined.map(m => m.id).sort().join(',');
     const prevIds = displayedMarkers.map(m => m.id).sort().join(',');
     
     if (nextIds !== prevIds) {
       setDisplayedMarkers(combined);
     }
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, displayedMarkers, authUser]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const update = (prev: Post[]) => prev.map(post => {
@@ -228,13 +240,10 @@ const Index = () => {
       return post;
     });
     setAllPosts(update);
-    setDisplayedMarkers(update);
   }, []);
 
   const handlePostDelete = useCallback((postId: string) => {
-    const update = (prev: Post[]) => prev.filter(p => p.id !== postId);
-    setAllPosts(update);
-    setDisplayedMarkers(update);
+    setAllPosts(prev => prev.filter(p => p.id !== postId));
     setSelectedPostId(null);
   }, []);
 
@@ -247,10 +256,9 @@ const Index = () => {
       const centerLng = (ne.lng + sw.lng) / 2;
       
       const realPosts = await fetchSupabasePosts();
-      const refreshedMockPosts = createMockPosts(centerLat, centerLng, 80);
+      const refreshedMockPosts = createMockPosts(centerLat, centerLng, 60);
       
       setAllPosts([...realPosts, ...refreshedMockPosts]);
-      setDisplayedMarkers([]); 
       setIsRefreshing(false);
     } else {
       setIsRefreshing(false);
