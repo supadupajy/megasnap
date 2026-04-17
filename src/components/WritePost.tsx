@@ -42,7 +42,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
             const roadAddr = result[0].road_address;
-            // 도로명 주소가 있으면 도로명, 없으면 지번 주소 사용 (시/군/구 동 단위로 포맷팅)
             const cleanAddress = roadAddr 
               ? `${roadAddr.region_1depth_name} ${roadAddr.region_2depth_name} ${roadAddr.region_3depth_name}`
               : `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
@@ -57,7 +56,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         setIsLoadingAddress(false);
       }
     } else {
-      // 닫힐 때 초기화
       setAddress('');
       setIsLoadingAddress(false);
       setContent('');
@@ -81,6 +79,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       console.error('Camera error:', error);
     } finally {
       setIsTakingPhoto(false);
+    }
+  };
+
+  const handleStartLocationSelection = () => {
+    // 1. 먼저 현재 창을 닫습니다.
+    onClose();
+    // 2. 부모에게 위치 선택 모드 시작을 알립니다.
+    if (onStartLocationSelection) {
+      onStartLocationSelection();
     }
   };
 
@@ -148,7 +155,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         borderType: 'none'
       };
 
-      // 축하 효과
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
@@ -197,7 +203,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-            {/* 사진 촬영 영역 */}
             <div 
               onClick={takePhoto}
               className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
@@ -222,12 +227,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               )}
             </div>
 
-            {/* 위치 선택 영역 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                 <button 
-                  onClick={onStartLocationSelection}
+                  onClick={handleStartLocationSelection}
                   className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline"
                 >
                   <MapIcon className="w-3 h-3" />
@@ -236,7 +240,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               </div>
               
               <div 
-                onClick={onStartLocationSelection}
+                onClick={handleStartLocationSelection}
                 className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group"
               >
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
@@ -257,7 +261,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               </div>
             </div>
 
-            {/* 내용 입력 영역 */}
             <div className="space-y-2">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 

@@ -20,8 +20,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
-import BottomNav from "./components/BottomNav";
-import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
@@ -31,7 +29,6 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
 
-  // 인증 로딩 중에는 최소한의 스피너만 표시
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -51,7 +48,6 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
@@ -69,7 +65,6 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  // 전역 로딩 상태 처리 (인증 확인 중일 때만)
   if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -109,13 +104,6 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
-
-      {!hideLayout && session && (
-        <>
-          <BottomNav onWriteClick={() => setIsWriteOpen(prev => !prev)} />
-          <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-        </>
-      )}
 
       <ExitDialog 
         isOpen={showExitDialog} 

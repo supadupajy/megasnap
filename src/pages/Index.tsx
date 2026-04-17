@@ -483,6 +483,11 @@ const Index = () => {
         initialPosts={displayedMarkers}
         mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
       />
+      
+      {/* Index 페이지 전용 BottomNav 추가 */}
+      {!isSelectingLocation && (
+        <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
+      )}
     </>
   );
 };
