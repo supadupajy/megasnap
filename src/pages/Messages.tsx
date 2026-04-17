@@ -1,39 +1,23 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import BottomNav from '@/components/BottomNav';
-
-const MESSAGES = [
-  {
-    id: 'travel_maker',
-    user: { name: 'travel_maker' },
-    lastMessage: '오! 감사합니다. 바로 가봐야겠네요!',
-    time: '12분',
-    unread: true
-  },
-  {
-    id: 'seoul_snap',
-    user: { name: 'seoul_snap' },
-    lastMessage: '사진 너무 잘 찍으시네요! 👍',
-    time: '2시간',
-    unread: false
-  },
-  {
-    id: 'explorer_kim',
-    user: { name: 'explorer_kim' },
-    lastMessage: '다음에 같이 출사 가요!',
-    time: '1일',
-    unread: false
-  }
-];
+import { chatStore, ChatRoom } from '@/utils/chat-store';
 
 const Messages = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [rooms, setRooms] = useState<ChatRoom[]>(chatStore.getRooms());
+
+  useEffect(() => {
+    const unsubscribe = chatStore.subscribe(() => {
+      setRooms(chatStore.getRooms());
+    });
+    return unsubscribe;
+  }, []);
 
   const handleBack = () => {
     if (window.history.length > 1 && window.history.state?.idx > 0) {
@@ -43,10 +27,15 @@ const Messages = () => {
     }
   };
 
-  const handleAvatarClick = (e: React.MouseEvent, userName: string) => {
-    e.stopPropagation(); // 채팅방 이동 이벤트 방지
-    navigate(`/profile/${userName}`);
+  const handleAvatarClick = (e: React.MouseEvent, userId: string) => {
+    e.stopPropagation();
+    navigate(`/profile/${userId}`);
   };
+
+  const filteredRooms = rooms.filter(room => 
+    room.user.name.toLowerCase().includes(query.toLowerCase()) ||
+    room.lastMessage.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -55,10 +44,10 @@ const Messages = () => {
           <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
-          <h1 className="font-bold text-lg text-gray-900">Direct Message</h1>
+          <h1 className="font-black text-lg text-gray-900">Direct Message</h1>
         </div>
         <button className="p-1 hover:bg-gray-50 rounded-full transition-colors">
-          <Edit className="w-6 h-6 text-gray-800" />
+          <Edit className="w-6 h-6 text-indigo-600" />
         </button>
       </header>
 
@@ -66,52 +55,60 @@ const Messages = () => {
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input 
-            placeholder="검색" 
-            className="pl-10 h-10 bg-gray-100 border-none rounded-xl focus-visible:ring-0"
+            placeholder="대화 상대 또는 메시지 검색" 
+            className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-gray-900">메시지</h2>
-            <button className="text-sm font-bold text-blue-500">요청</button>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest">최근 메시지</h2>
+            <button className="text-xs font-bold text-indigo-600">요청</button>
           </div>
 
-          <div className="space-y-5">
-            {MESSAGES.map((msg) => (
+          <div className="space-y-1">
+            {filteredRooms.map((room) => (
               <div 
-                key={msg.id} 
-                onClick={() => navigate(`/chat/${msg.id}`)}
-                className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity"
+                key={room.id} 
+                onClick={() => navigate(`/chat/${room.id}`)}
+                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
               >
                 <div 
-                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-green-500 shrink-0 cursor-pointer active:scale-95 transition-transform"
-                  onClick={(e) => handleAvatarClick(e, msg.user.name)}
+                  className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-indigo-400 to-indigo-600 shrink-0 cursor-pointer active:scale-95 transition-transform shadow-sm"
+                  onClick={(e) => handleAvatarClick(e, room.id)}
                 >
                   <img 
-                    src={`https://i.pravatar.cc/150?u=${msg.user.name}`} 
-                    alt={msg.user.name} 
+                    src={room.user.avatar} 
+                    alt={room.user.name} 
                     className="w-full h-full rounded-full object-cover border-2 border-white" 
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${msg.unread ? 'font-bold text-gray-900' : 'text-gray-900'}`}>
-                    {msg.user.name}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <p className={`text-sm truncate ${msg.unread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
-                      {msg.lastMessage}
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-sm ${room.unread ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>
+                      {room.user.name}
                     </p>
-                    <span className="text-xs text-gray-400 shrink-0">· {msg.time}</span>
+                    <span className="text-[10px] text-gray-400 font-medium">{room.time}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-xs truncate flex-1 ${room.unread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                      {room.lastMessage || '대화를 시작해보세요!'}
+                    </p>
+                    {room.unread && (
+                      <div className="w-2 h-2 bg-indigo-600 rounded-full shadow-sm shadow-indigo-200" />
+                    )}
                   </div>
                 </div>
-                {msg.unread && (
-                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                )}
               </div>
             ))}
+            
+            {filteredRooms.length === 0 && (
+              <div className="py-20 text-center">
+                <p className="text-sm text-gray-400 font-medium">대화 내역이 없습니다.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

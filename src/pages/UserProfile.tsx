@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
+import { chatStore } from '@/utils/chat-store';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -104,6 +105,8 @@ const UserProfile = () => {
   };
 
   const handleMessageClick = () => {
+    // 채팅방 생성 또는 기존 방 가져오기
+    chatStore.getOrCreateRoom(user.id, user.nickname || user.name, user.avatar);
     navigate(`/chat/${user.id}`);
   };
 
@@ -170,7 +173,7 @@ const UserProfile = () => {
           {/* Profile Info */}
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-indigo-600">
                 <img 
                   src={user.avatar} 
                   alt="profile" 
