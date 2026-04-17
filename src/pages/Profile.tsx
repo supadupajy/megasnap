@@ -27,8 +27,8 @@ const Profile = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   
-  // 데이터 로딩 상태 (초기값 true로 설정하여 깜빡임 방지)
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  // 로딩 상태를 false로 시작하여 조건부로 활성화
+  const [isDataLoading, setIsDataLoading] = useState(false);
   const hasFetched = useRef(false);
 
   const userId = authUser?.id;
@@ -117,8 +117,8 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 로딩 화면: 인증 확인 중이거나 데이터 로딩 중일 때
-  if (authLoading || isDataLoading) {
+  // 로딩 화면: 인증 확인 중이거나 실제 데이터를 불러오는 중일 때만 표시
+  if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
