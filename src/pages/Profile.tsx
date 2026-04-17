@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Settings, Grid, Bookmark, User as UserIcon, Loader2, ImageOff } from 'lucide-react';
+import { Settings, Grid, Bookmark, User as UserIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -15,12 +15,11 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop";
-
 const Profile = () => {
   const navigate = useNavigate();
   const { profile, user, loading: authLoading, refreshProfile } = useAuth();
   
+  // 1. 상태 관리
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'saved'>('grid');
@@ -28,32 +27,23 @@ const Profile = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // 무한 루프 및 중복 호출 방지 락
+  // 2. [핵심] 무한 루프 방지용 물리적 락 (Ref)
   const fetchLock = useRef(false);
   const initialized = useRef(false);
 
+  // 3. 사용자 정보 메모이제이션
   const userId = user?.id;
   const displayName = useMemo(() => profile?.nickname || user?.email?.split('@')[0] || '탐험가', [profile, user]);
-  const avatarUrl = useMemo(() => profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`, [profile, userId]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
-  // 1. 이미지 URL 정규화 함수
-  const getImageUrl = (path: string) => {
-    if (!path) return FALLBACK_IMAGE;
-    if (path.startsWith('http')) return path; // 이미 풀 경로인 경우
-    
-    // Storage 버킷에서 Public URL 추출 (버킷명 'post-images' 확인 필요)
-    const { data } = supabase.storage.from('post-images').getPublicUrl(path);
-    return data?.publicUrl || FALLBACK_IMAGE;
-  };
-
-  // 2. 데이터 로드 로직
+  // 4. 데이터 로드 함수
   const loadProfileData = useCallback(async (uid: string) => {
     if (fetchLock.current || initialized.current) return;
     fetchLock.current = true;
 
-    try {
-      console.log("📡 [Profile] 데이터 및 이미지 경로 로딩...");
+    console.log("📡 [Profile] 데이터 로딩 시작...");
 
+    try {
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -67,8 +57,8 @@ const Profile = () => {
           id: p.id,
           user: { id: p.user_id, name: displayName, avatar: avatarUrl },
           content: p.content || '',
-          location: p.location_name || '장소 정보 없음',
-          image: getImageUrl(p.image_url || p.image), // 이미지 URL 조립
+          location: p.location_name || '알 수 없는 장소',
+          image: p.image_url || p.image || "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800",
           likes: Number(p.likes || 0),
           isLiked: false,
           createdAt: new Date(p.created_at),
@@ -82,8 +72,10 @@ const Profile = () => {
         setMyPosts(formattedPosts);
       }
 
+      // 저장된 게시물 (Mock)
       setSavedPosts(createMockPosts(37.5665, 126.9780, 6, `saved_${uid}`).map(p => ({ ...p, isLiked: true })));
-      initialized.current = true;
+      
+      initialized.current = true; // 로드 성공 기록
     } catch (err) {
       console.error("❌ [Profile] 로드 에러:", err);
     } finally {
@@ -92,7 +84,7 @@ const Profile = () => {
     }
   }, [displayName, avatarUrl]);
 
-  // 3. 실행 트리거
+  // 5. 인증 상태에 따른 트리거
   useEffect(() => {
     if (authLoading) return;
 
@@ -106,6 +98,10 @@ const Profile = () => {
     }
   }, [authLoading, userId, loadProfileData, navigate]);
 
+  // 6. UI 핸들러
+  const handleGridItemClick = () => setViewMode('list');
+
+  // --- 로딩 UI ---
   if (authLoading || (!dataLoaded && !initialized.current)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -119,29 +115,26 @@ const Profile = () => {
       <Header />
       
       <div className="pt-[88px]">
+        {/* 상단 프로필 영역 */}
         <div className="px-6 py-8">
-          {/* 프로필 정보 */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
               <img 
                 src={avatarUrl} 
+                alt="profile" 
                 className="w-full h-full rounded-full object-cover border-4 border-white" 
-                alt="profile"
-                onError={(e) => (e.currentTarget.src = "https://via.placeholder.com/150")}
               />
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-xl font-black text-gray-900">{displayName}</h2>
-                <button onClick={() => navigate('/settings')} className="p-1">
-                  <Settings className="w-6 h-6 text-gray-400" />
-                </button>
+                <button onClick={() => navigate('/settings')}><Settings className="w-6 h-6 text-gray-400" /></button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">{profile?.bio || "나의 소중한 기록들 📍"}</p>
+              <p className="text-sm text-gray-500 mb-4">{profile?.bio || "세상을 탐험하는 중 📍"}</p>
               <div className="flex gap-6">
-                <div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 font-black">POSTS</p></div>
-                <div className="text-center"><p className="font-bold">0</p><p className="text-[10px] text-gray-400 font-black">FOLLOWERS</p></div>
-                <div className="text-center"><p className="font-bold">0</p><p className="text-[10px] text-gray-400 font-black">FOLLOWING</p></div>
+                <div className="text-center"><p className="font-bold">{myPosts.length}</p><p className="text-[10px] text-gray-400 font-black">POSTS</p></div>
+                <div className="text-center"><p className="font-bold">1.2k</p><p className="text-[10px] text-gray-400 font-black">FOLLOWERS</p></div>
+                <div className="text-center"><p className="font-bold">850</p><p className="text-[10px] text-gray-400 font-black">FOLLOWING</p></div>
               </div>
             </div>
           </div>
@@ -153,28 +146,26 @@ const Profile = () => {
             프로필 편집
           </Button>
 
-          {/* 뷰 모드 탭 */}
-          <div className="flex border-b border-gray-100 mb-6">
+          {/* 탭 네비게이션 */}
+          <div className="flex border-b border-gray-100 mb-4">
             <button 
               onClick={() => setViewMode('grid')} 
-              className={cn("flex-1 py-3 flex justify-center transition-all", viewMode !== 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}
+              className={cn("flex-1 py-3 flex justify-center", viewMode !== 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}
             >
               <Grid className="w-6 h-6" />
             </button>
             <button 
               onClick={() => setViewMode('saved')} 
-              className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}
+              className={cn("flex-1 py-3 flex justify-center", viewMode === 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}
             >
               <Bookmark className="w-6 h-6" />
             </button>
           </div>
 
-          {/* 콘텐츠 리스트 */}
+          {/* 콘텐츠 렌더링 */}
           <div className="flex flex-col">
             {viewMode === 'saved' ? (
-              <div className="space-y-4">
-                {savedPosts.map(post => <PostItem key={post.id} {...post} />)}
-              </div>
+              savedPosts.map(post => <PostItem key={post.id} {...post} />)
             ) : (
               <>
                 {viewMode === 'grid' ? (
@@ -182,30 +173,18 @@ const Profile = () => {
                     {myPosts.map(post => (
                       <div 
                         key={post.id} 
-                        className="aspect-square bg-gray-100 overflow-hidden cursor-pointer relative group" 
-                        onClick={() => setViewMode('list')}
+                        className="aspect-square bg-gray-100 overflow-hidden cursor-pointer" 
+                        onClick={handleGridItemClick}
                       >
-                        <img 
-                          src={post.image} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                          alt=""
-                          onError={(e) => {
-                            e.currentTarget.src = FALLBACK_IMAGE;
-                          }}
-                        />
+                        <img src={post.image} className="w-full h-full object-cover" alt="" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {myPosts.map(post => <PostItem key={post.id} {...post} />)}
-                  </div>
+                  myPosts.map(post => <PostItem key={post.id} {...post} />)
                 )}
                 {dataLoaded && myPosts.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                    <ImageOff className="w-12 h-12 mb-2 opacity-20" />
-                    <p className="font-medium">작성된 게시글이 없습니다.</p>
-                  </div>
+                  <div className="text-center py-20 text-gray-400 font-medium">작성된 게시글이 없습니다.</div>
                 )}
               </>
             )}
