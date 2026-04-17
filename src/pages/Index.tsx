@@ -316,14 +316,15 @@ const Index = () => {
                   <motion.div 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="relative mb-10" // 핀의 끝점이 중앙에 오도록 보정
+                    className="relative mb-12" // 핀의 끝점이 중앙에 오도록 보정
                   >
                     <div className="relative w-12 h-12">
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-rose-500 rounded-full rounded-bl-none rotate-45 border-4 border-white shadow-2xl" />
+                      {/* 뾰족한 부분이 아래를 향하도록 수정: rounded-br-none + -rotate-45 */}
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-rose-500 rounded-full rounded-br-none -rotate-45 border-4 border-white shadow-2xl" />
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
                     </div>
                     {/* 핀 아래 그림자 */}
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
                   </motion.div>
                 </div>
 

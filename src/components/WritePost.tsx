@@ -41,11 +41,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
-            const roadAddr = result[0].road_address;
-            const cleanAddress = roadAddr 
-              ? `${roadAddr.region_1depth_name} ${roadAddr.region_2depth_name} ${roadAddr.region_3depth_name}`
-              : `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
-            setAddress(cleanAddress);
+            // 시, 구, 동 정보를 조합하여 표시
+            const city = addr.region_1depth_name || '';
+            const district = addr.region_2depth_name || '';
+            const neighborhood = addr.region_3depth_name || '';
+            
+            const cleanAddress = `${city} ${district} ${neighborhood}`.trim();
+            setAddress(cleanAddress || '알 수 없는 장소');
           } else {
             setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
