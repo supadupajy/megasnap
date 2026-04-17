@@ -26,18 +26,12 @@ import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
 
+  // 인증 로딩 중에는 최소한의 스피너만 표시
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -63,25 +57,19 @@ const AnimatedRoutes = () => {
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
-    const initBackButton = async () => {
-      const backButtonListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
-        if (location.pathname === '/') {
-          setShowExitDialog(true);
-        } else if (canGoBack) {
-          window.history.back();
-        } else {
-          navigate('/');
-        }
-      });
-      return backButtonListener;
-    };
-
-    const listenerPromise = initBackButton();
-    return () => { 
-      listenerPromise.then(l => l.remove()); 
-    };
+    const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (location.pathname === '/') {
+        setShowExitDialog(true);
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        navigate('/');
+      }
+    });
+    return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
+  // 전역 로딩 상태 처리 (인증 확인 중일 때만)
   if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
