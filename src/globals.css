@@ -49,17 +49,6 @@
   }
 }
 
-/* Leaflet Custom Styles */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  background: #f3f4f6 !important;
-}
-
-.leaflet-control-attribution {
-  display: none !important;
-}
-
 /* Moving Gradient Border Animation */
 @property --angle {
   syntax: '<angle>';
@@ -73,7 +62,7 @@
   }
 }
 
-/* My Post Indigo Animated Gradient Border */
+/* My Post Indigo */
 .my-post-border-container {
   position: relative;
   padding: 4px;
@@ -83,7 +72,7 @@
   box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
 }
 
-/* HOT Red Gradient Border */
+/* HOT Red */
 .popular-border-container {
   position: relative;
   padding: 4px;
@@ -92,16 +81,37 @@
   animation: rotate-border 1.5s linear infinite;
 }
 
-/* Influencer Gold Gradient Border */
-.influencer-border-container {
+/* Silver Influencer (100k - 999k) */
+.silver-border-container {
+  position: relative;
+  padding: 4px;
+  border-radius: 1.25rem;
+  background-image: conic-gradient(from var(--angle), #94a3b8, #f1f5f9, #94a3b8, #f1f5f9, #94a3b8);
+  animation: rotate-border 3s linear infinite;
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
+}
+
+/* Gold Influencer (1M - 5M) */
+.gold-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
 }
 
-/* AD Blue Gradient Border with Glow */
+/* Diamond Influencer (10M+) */
+.diamond-border-container {
+  position: relative;
+  padding: 4px;
+  border-radius: 1.25rem;
+  background-image: conic-gradient(from var(--angle), #22d3ee, #ffffff, #22d3ee, #ffffff, #22d3ee);
+  animation: rotate-border 1s linear infinite;
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
+}
+
+/* AD Blue */
 .ad-border-container {
   position: relative;
   padding: 4px;
@@ -111,124 +121,32 @@
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
 
-/* Ad Breathing Animation */
+/* Animations */
 @keyframes ad-breathing {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.4)); }
   50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.7)); }
 }
+.animate-ad-breathing { animation: ad-breathing 3s ease-in-out infinite; }
 
-.animate-ad-breathing {
-  animation: ad-breathing 3s ease-in-out infinite;
-}
-
-/* Pulse Animation for HOT Posts */
-@keyframes hot-pulse {
-  0%, 100% { 
-    transform: scale(1); 
-  }
-  50% { 
-    transform: scale(1.06); 
-  }
-}
-
-/* Floating Animation */
 @keyframes marker-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
+.animate-marker-float { animation: marker-float 3s ease-in-out infinite; }
 
-.animate-marker-float {
-  animation: marker-float 3s ease-in-out infinite;
-}
-
-/* Marker Appear Animation */
 @keyframes marker-appear {
-  from {
-    opacity: 0;
-    transform: scale(0.5) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
+.animate-marker-appear { animation: marker-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
-.animate-marker-appear {
-  animation: marker-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* Shine Sweep Animation */
 @keyframes shine-sweep {
   0% { left: -100%; }
   20% { left: 100%; }
   100% { left: 100%; }
 }
-
-/* Marker Highlight Ping Animation - Improved for smoothness */
-@keyframes marker-ping {
-  0% {
-    transform: translate(-50%, -50%) scale(0.3);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(6.5);
-    opacity: 0;
-  }
-}
-
-.marker-highlight-ping {
-  position: absolute;
-  top: 28px; 
-  left: 28px;
-  width: 40px;
-  height: 40px;
-  background: rgba(34, 211, 238, 0.5);
-  box-shadow: 0 0 35px 12px rgba(34, 211, 238, 0.3);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: -1;
-  transform: translate(-50%, -50%);
-  animation: marker-ping 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) 2 forwards;
-}
-
-/* Marker Container Transition */
-.marker-container {
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Button Small Ping Animation */
-@keyframes button-ping-small {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.4);
-    opacity: 0;
-  }
-}
-
-.animate-ping-small {
-  animation: button-ping-small 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
 .shine-overlay::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transform: skewX(-25deg);
-  animation: shine-sweep 4s infinite;
-  z-index: 20;
+  content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-25deg); animation: shine-sweep 4s infinite; z-index: 20;
 }

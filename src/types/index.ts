@@ -36,5 +36,5 @@ export interface Post {
   isLiked: boolean;
   isSaved?: boolean;
   createdAt: Date;
-  borderType?: 'popular' | 'silver' | 'gold' | 'none';
+  borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
 }

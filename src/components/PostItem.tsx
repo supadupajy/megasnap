@@ -26,6 +26,7 @@ interface PostItemProps {
     id: string;
     name: string;
     avatar: string;
+    followers?: number;
   };
   content: string;
   location: string;
@@ -44,7 +45,7 @@ interface PostItemProps {
   isInfluencer?: boolean;
   isViewed?: boolean;
   category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
-  borderType?: 'popular' | 'silver' | 'gold' | 'none';
+  borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
   disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
@@ -92,11 +93,8 @@ const PostItem = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const isPopular = !isAd && borderType === 'popular';
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
-
-  // 본인 확인 로직: 실제 ID 일치 또는 테스트용 'me' ID 확인
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -107,11 +105,8 @@ const PostItem = ({
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isMine) {
-      navigate('/profile');
-    } else {
-      navigate(`/profile/${user.id}`);
-    }
+    if (isMine) navigate('/profile');
+    else navigate(`/profile/${user.id}`);
   };
 
   const handleLocationClick = (e: React.MouseEvent) => {
@@ -147,15 +142,10 @@ const PostItem = ({
 
   const confirmDelete = async () => {
     try {
-      // 실제 DB에서 삭제 시도 (ID가 UUID인 경우에만 작동)
-      if (id.length > 20) { // 대략적인 UUID 길이 체크
-        const { error } = await supabase
-          .from('posts')
-          .delete()
-          .eq('id', id);
+      if (id.length > 20) {
+        const { error } = await supabase.from('posts').delete().eq('id', id);
         if (error) throw error;
       }
-
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(id);
     } catch (err) {
@@ -183,7 +173,6 @@ const PostItem = ({
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
     if (!Icon) return null;
-
     return (
       <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
         <Icon className="w-3.5 h-3.5" />
@@ -192,14 +181,30 @@ const PostItem = ({
     );
   };
 
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+  const getBorderClass = () => {
+    if (isMine) return 'my-post-border-container';
+    if (isAd) return 'ad-border-container';
+    if (borderType === 'popular') return 'popular-border-container';
+    if (borderType === 'diamond') return 'diamond-border-container';
+    if (borderType === 'gold') return 'gold-border-container';
+    if (borderType === 'silver') return 'silver-border-container';
+    return '';
+  };
+
+  const getBadge = () => {
+    if (borderType === 'diamond') return <div className="absolute top-4 left-4 z-20 bg-cyan-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/20"><Star className="w-3.5 h-3.5 fill-black" />DIAMOND</div>;
+    if (borderType === 'gold') return <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />GOLD</div>;
+    if (borderType === 'silver') return <div className="absolute top-4 left-4 z-20 bg-slate-400 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Star className="w-3.5 h-3.5 fill-white" />SILVER</div>;
+    if (borderType === 'popular') return <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>;
+    return null;
+  };
 
   return (
     <div 
       onClick={onClick}
       className={cn(
         "bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
-        (isInfluencer || (isPopular && !disablePulse)) && "animate-influencer-float"
+        (borderType !== 'none' && !disablePulse) && "animate-influencer-float"
       )}
     >
       <div className="flex items-center justify-between px-4 py-3">
@@ -227,26 +232,17 @@ const PostItem = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
             {isMine ? (
-              <DropdownMenuItem 
-                onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }}
-                className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-              >
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                 <Trash2 className="w-4 h-4 text-red-600" />
                 <span className="text-sm font-bold text-red-600">삭제하기</span>
               </DropdownMenuItem>
             ) : (
               <>
-                <DropdownMenuItem 
-                  onClick={handleReport}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
-                >
+                <DropdownMenuItem onClick={handleReport} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
                   <AlertCircle className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-bold text-gray-700">신고</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleBlock}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                >
+                <DropdownMenuItem onClick={handleBlock} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                   <Ban className="w-4 h-4 text-red-600" />
                   <span className="text-sm font-bold text-red-600">차단</span>
                 </DropdownMenuItem>
@@ -257,11 +253,8 @@ const PostItem = ({
       </div>
 
       <div className="px-4">
-        <div className={cn(
-          "relative aspect-square w-full rounded-2xl transition-all duration-500",
-          isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
-        )}>
-          <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", isInfluencer && "shine-overlay")}>
+        <div className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
+          <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", (borderType !== 'none' || isAd) && "shine-overlay")}>
             <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
               {displayImages.map((img, idx) => (
                 <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
@@ -278,11 +271,7 @@ const PostItem = ({
               </div>
             )}
           </div>
-          {isInfluencer ? (
-            <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />INFLUENCER</div>
-          ) : isPopular && (
-            <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
-          )}
+          {getBadge()}
           {isGif && !isAd && <div className="absolute top-4 left-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
         </div>
       </div>
@@ -343,11 +332,7 @@ const PostItem = ({
         </div>
       </div>
 
-      <DeleteConfirmDialog 
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
+      <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </div>
   );
 };

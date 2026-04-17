@@ -1,6 +1,6 @@
 import { Post, User, Comment } from '@/types';
 
-// 카테고리별 고화질 이미지 풀 (크기 확장)
+// ... (기존 이미지 풀 및 유틸리티 함수 유지)
 const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
@@ -232,10 +232,21 @@ const CONTENT_POOL = [
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길', '홍대입구', '여의도 한강공원'];
 
 export const createMockUser = (id: string): User => {
-  // 'me'인 경우 전체 ID인 'Dyad_Explorer'를 사용
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
   let nickname = `Explorer_${finalId}`;
   if (id === 'me') nickname = 'Dyad_Explorer';
+
+  // 인플루언서 등급 테스트를 위해 랜덤하게 높은 팔로워 수 할당
+  const roll = Math.random();
+  let followers = Math.floor(Math.random() * 5000) + 100;
+  
+  if (roll > 0.98) {
+    followers = Math.floor(Math.random() * 5000000) + 10000000; // 10M+ (Diamond)
+  } else if (roll > 0.95) {
+    followers = Math.floor(Math.random() * 4000000) + 1000000; // 1M - 5M (Gold)
+  } else if (roll > 0.9) {
+    followers = Math.floor(Math.random() * 800000) + 100000; // 100k - 900k (Silver)
+  }
 
   return {
     id: finalId,
@@ -243,7 +254,7 @@ export const createMockUser = (id: string): User => {
     nickname: nickname,
     avatar: `https://i.pravatar.cc/150?u=${finalId}`,
     bio: "여행과 사진을 사랑하는 탐험가입니다. 📍",
-    followers: Math.floor(Math.random() * 5000) + 100,
+    followers,
     following: Math.floor(Math.random() * 1000) + 50,
     postsCount: Math.floor(Math.random() * 100) + 5,
     isFollowing: Math.random() > 0.8
@@ -257,7 +268,7 @@ export const getUserById = (id: string): User => {
 export const createMockPosts = (centerLat: number, centerLng: number, count: number = 15, specificUserId?: string): Post[] => {
   return Array.from({ length: count }).map((_, i) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const isInfluencer = specificUserId ? false : Math.random() > 0.98;
+    const isInfluencer = specificUserId ? false : Math.random() > 0.9; // 인플루언서 비율 증가
     const isPopular = specificUserId ? false : Math.random() > 0.95;
     const isAd = !specificUserId && !isInfluencer && !isPopular && Math.random() > 0.92;
     const isGif = !isAd && Math.random() > 0.85; 
@@ -301,6 +312,17 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const randomCount = Math.floor(Math.random() * 16) + 10;
     const comments = generateRandomComments(randomCount);
+    const user = specificUserId ? createMockUser(specificUserId) : createMockUser(isAd ? "sponsored" : id);
+
+    // 팔로워 수에 따른 등급 결정
+    let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
+    if (isPopular) {
+      borderType = 'popular';
+    } else if (isInfluencer && user.followers) {
+      if (user.followers >= 10000000) borderType = 'diamond';
+      else if (user.followers >= 1000000) borderType = 'gold';
+      else if (user.followers >= 100000) borderType = 'silver';
+    }
 
     return {
       id,
@@ -308,7 +330,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       isGif,
       isInfluencer,
       category,
-      user: specificUserId ? createMockUser(specificUserId) : createMockUser(isAd ? "sponsored" : id),
+      user,
       content,
       location: LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)],
       lat,
@@ -321,7 +343,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       adImageIndex: 1,
       isLiked: Math.random() > 0.5,
       createdAt: new Date(Date.now() - Math.random() * 12 * 3600000),
-      borderType: isPopular ? 'popular' : 'none'
+      borderType
     };
   });
 };

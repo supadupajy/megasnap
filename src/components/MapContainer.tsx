@@ -257,13 +257,31 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
   const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
-    const isPopular = !isAd && post.borderType === 'popular';
-    const isInfluencer = !isAd && post.isInfluencer;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const isGif = isGifUrl(post.image);
     const category = post.category || 'none';
+    const borderType = post.borderType || 'none';
 
-    let pinColor = isMine ? '#4f46e5' : (isInfluencer ? '#fbbf24' : (isPopular ? '#ef4444' : (isAd ? '#3b82f6' : '')));
+    let pinColor = '';
+    let labelText = '';
+    let labelBg = '';
+    let labelColor = 'white';
+    let borderClass = '';
+
+    if (isMine) {
+      pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container';
+    } else if (isAd) {
+      pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container';
+    } else if (borderType === 'popular') {
+      pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container';
+    } else if (borderType === 'diamond') {
+      pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; borderClass = 'diamond-border-container';
+    } else if (borderType === 'gold') {
+      pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; borderClass = 'gold-border-container';
+    } else if (borderType === 'silver') {
+      pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container';
+    }
+
     let categoryIconHtml = '';
     if (category !== 'none') {
       let iconSvg = '', bgColor = '';
@@ -274,22 +292,20 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
     }
 
-    const labelHtml = isMine ? `<div style="width: 56px; background: #4f46e5; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">MY</div>` : (isInfluencer ? `<div style="width: 56px; background: #fbbf24; color: black; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: -0.02em; margin-bottom: -14px; position: relative; z-index: 1;">INFLUENCER</div>` : (isPopular ? `<div style="width: 56px; background: #ef4444; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">HOT</div>` : (isAd ? `<div style="width: 56px; background: #3b82f6; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">AD</div>` : '')));
-    
-    const borderContainerClass = isMine ? 'my-post-border-container' : (isInfluencer ? 'influencer-border-container' : (isPopular ? 'popular-border-container' : (isAd ? 'ad-border-container' : '')));
-    const animationClass = isAd ? 'animate-ad-breathing' : ((isInfluencer || isPopular) ? 'animate-marker-float' : '');
+    const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
+    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
       <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'};">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
         <div class="${animationClass}">
           ${labelHtml}
-          <div class="${borderContainerClass}"
+          <div class="${borderClass || ''}"
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                      ${(isPopular || isInfluencer || isAd || isMine) ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
+                      ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                       background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(isInfluencer || isAd) ? 'shine-overlay' : ''}">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
                    style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
@@ -332,7 +348,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           div.style.height = '72px';
           div.style.cursor = 'pointer';
           div.classList.add('animate-marker-appear');
-          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+          div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
           
           let startX = 0;
           let startY = 0;
@@ -389,11 +405,9 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         if (div) {
           const container = div.querySelector('.marker-container') as HTMLElement;
           if (container) {
-            // 1. 크기 변화 트랜지션 적용
             container.style.transform = `translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}`;
-            div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType === 'popular' ? '400' : '300'));
+            div.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
             
-            // 2. 핑(Ping) 효과 처리
             let ping = container.querySelector('.marker-highlight-ping');
             if (isHighlighted && !ping) {
               const p = document.createElement('div');
@@ -403,7 +417,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
               ping.remove();
             }
 
-            // 3. 읽음 상태(Grayscale) 처리
             const img = container.querySelector('img');
             if (img) {
               img.style.filter = isViewed ? 'grayscale(1) brightness(0.7)' : '';
