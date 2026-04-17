@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Settings, Grid, Bookmark, User as UserIcon, Play, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -20,48 +20,51 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 const Profile = () => {
   const navigate = useNavigate();
   const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
+  
+  // 상태 관리
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
-
-  // ✅ Fix 1: false로 초기화 — authLoading 중엔 데이터 로딩 자체를 시작 안 하므로
   const [isDataLoading, setIsDataLoading] = useState(false);
 
-  // ✅ Fix 2: authLoading이 끝난 뒤에만 로그인 여부 판단
-  // 기존 코드는 isDataLoading이 true인 상태에서 authUser가 없으면
-  // 세션 복원 중임에도 3초 후 강제 로그인 이동 → 무한로딩 또는 튕김 발생
+  // --- [중요] 무한 루프 방지를 위한 원시값 추출 ---
+  const userId = authUser?.id;
+  const userEmail = authUser?.email;
+  const profileNickname = profile?.nickname;
+  const profileAvatar = profile?.avatar_url;
+  const profileBio = profile?.bio;
+
+  // 1. 표시용 변수 메모이제이션 (성능 및 일관성)
+  const displayName = useMemo(() => {
+    return profileNickname || userEmail?.split('@')[0] || '탐험가';
+  }, [profileNickname, userEmail]);
+
+  const bio = useMemo(() => {
+    return profileBio || "지도를 여행하는 탐험가 📍";
+  }, [profileBio]);
+
+  // 2. 인증 체크: 로그인 안 되어 있으면 이동
   useEffect(() => {
-    if (authLoading) return; // 세션 복원 중이면 아무것도 하지 않음
-    if (!authUser) {
+    if (!authLoading && !userId) {
       navigate('/login', { replace: true });
     }
-  }, [authLoading, authUser, navigate]);
+  }, [authLoading, userId, navigate]);
 
-  // ✅ Fix 3: displayName을 컴포넌트 레벨에서 계산 (loadData 의존성 배열에서 제거)
-  // 기존 코드는 displayName이 useCallback 의존성 배열에 포함되어
-  // 매 렌더마다 새 문자열 참조가 생기면서 loadData가 재생성 → 무한 useEffect 트리거
-  const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-  const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
-
+  // 3. 데이터 로드 함수
   const loadData = useCallback(async () => {
-    if (!authUser) return;
+    if (!userId) return;
 
     setIsDataLoading(true);
     try {
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('user_id', authUser.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      // ✅ Fix 4: loadData 내부에서 displayName을 직접 계산
-      // 클로저 캡처 시점의 profile/authUser를 사용하되,
-      // 외부 displayName 변수를 의존성으로 참조하지 않음
-      const resolvedName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
       const realPosts = (realData || [])
         .filter(p => p.image_url && (
@@ -74,8 +77,8 @@ const Profile = () => {
           isInfluencer: false,
           user: {
             id: p.user_id,
-            name: p.user_name || resolvedName,
-            avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
+            name: p.user_name || displayName,
+            avatar: p.user_avatar || profileAvatar || `https://i.pravatar.cc/150?u=${p.user_id}`
           },
           content: p.content || '',
           location: p.location_name || '알 수 없는 장소',
@@ -92,7 +95,8 @@ const Profile = () => {
 
       setMyPosts(realPosts);
 
-      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${authUser.id}`)
+      // 저장된 포스트 (Mock 데이터)
+      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${userId}`)
         .map(p => ({ ...p, isLiked: true }));
       setSavedPosts(saved);
     } catch (err) {
@@ -100,20 +104,17 @@ const Profile = () => {
     } finally {
       setIsDataLoading(false);
     }
-  // ✅ Fix 5: authLoading, displayName 의존성 제거
-  // - authLoading: loadData 실행 자체를 아래 useEffect에서 조건부로 제어하므로 불필요
-  // - displayName: 함수 내부에서 직접 계산하므로 외부 참조 불필요
-  }, [authUser, profile]);
+    // 의존성에 객체 대신 원시값들을 넣어야 무한 루프가 생기지 않습니다.
+  }, [userId, displayName, profileAvatar]);
 
-  // ✅ Fix 6: authLoading이 완료된 후, authUser가 있을 때만 데이터 로드
-  // 기존 코드는 loadData 자체에서 authLoading 체크 후 return하는 구조여서
-  // isDataLoading이 true인 채로 멈춰 무한 스피너 발생 가능
+  // 4. 컴포넌트 마운트 및 ID 변경 시 데이터 로드
   useEffect(() => {
-    if (!authLoading && authUser) {
+    if (!authLoading && userId) {
       loadData();
     }
-  }, [authLoading, authUser, loadData]);
+  }, [authLoading, userId, loadData]);
 
+  // 핸들러 함수들
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
     setter(prev => prev.map(post => {
@@ -140,10 +141,7 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // ✅ Fix 7: 로딩 조건 분리
-  // - authLoading: 세션 복원 중 → 무조건 스피너
-  // - isDataLoading && myPosts.length === 0: 첫 데이터 로드 중 → 스피너
-  // - authUser가 없고 authLoading도 끝났으면 → useEffect가 redirect 처리하므로 null 반환
+  // 로딩 상태 처리
   if (authLoading || (isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -152,12 +150,13 @@ const Profile = () => {
     );
   }
 
-  if (!authUser) return null;
+  if (!userId) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px]">
+        {/* 프로필 헤더 */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -183,7 +182,7 @@ const Profile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img
-                  src={profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`}
+                  src={profileAvatar || `https://i.pravatar.cc/150?u=${userId}`}
                   alt="profile"
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                   onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
@@ -217,6 +216,7 @@ const Profile = () => {
             프로필 편집
           </Button>
 
+          {/* 탭 네비게이션 */}
           <div className="flex border-b border-gray-100 mb-4">
             <button
               onClick={() => setViewMode('grid')}
@@ -244,6 +244,7 @@ const Profile = () => {
             </button>
           </div>
 
+          {/* 포스트 리스트 영역 */}
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
@@ -256,20 +257,7 @@ const Profile = () => {
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                     <PostItem
-                      id={post.id}
-                      user={post.user}
-                      content={post.content}
-                      location={post.location}
-                      likes={post.likes}
-                      commentsCount={post.commentsCount}
-                      comments={post.comments}
-                      image={post.image}
-                      images={post.images}
-                      isLiked={post.isLiked}
-                      isAd={post.isAd}
-                      isGif={post.isGif}
-                      isInfluencer={post.isInfluencer}
-                      borderType={post.borderType}
+                      {...post}
                       disablePulse={true}
                       onLikeToggle={() => handleLikeToggle(post.id, true)}
                       onImageError={handleImageError}
@@ -294,20 +282,7 @@ const Profile = () => {
                     {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                       <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                         <PostItem
-                          id={post.id}
-                          user={post.user}
-                          content={post.content}
-                          location={post.location}
-                          likes={post.likes}
-                          commentsCount={post.commentsCount}
-                          comments={post.comments}
-                          image={post.image}
-                          images={post.images}
-                          isLiked={post.isLiked}
-                          isAd={post.isAd}
-                          isGif={post.isGif}
-                          isInfluencer={post.isInfluencer}
-                          borderType={post.borderType}
+                          {...post}
                           disablePulse={true}
                           onLikeToggle={() => handleLikeToggle(post.id, false)}
                           onDelete={handlePostDelete}
