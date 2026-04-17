@@ -22,14 +22,13 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
   const isDragging = useRef(false);
-  const justLongPressed = useRef(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const startPos = useRef<{ x: number, y: number } | null>(null);
-  const MOVE_THRESHOLD = 15; // 이동 임계값 상향
+  const MOVE_THRESHOLD = 10;
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
@@ -76,51 +75,45 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           setTimeout(() => { isDragging.current = false; }, 50);
         });
 
-        // 롱프레스 핸들러
+        // 롱프레스 감지 로직
         const handleStart = (e: any) => {
-          const point = { x: e.offsetX || (e.touches ? e.touches[0].pageX : e.pageX), y: e.offsetY || (e.touches ? e.touches[0].pageY : e.pageY) };
+          const point = { 
+            x: e.point ? e.point.x : (e.touches ? e.touches[0].pageX : e.pageX), 
+            y: e.point ? e.point.y : (e.touches ? e.touches[0].pageY : e.pageY) 
+          };
           startPos.current = point;
-          justLongPressed.current = false;
           
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
+            if (isDragging.current) return;
             const latLng = e.latLng;
             if (latLng) {
               showActionPin(latLng.getLat(), latLng.getLng());
-              justLongPressed.current = true;
-              if (window.navigator.vibrate) window.navigator.vibrate(40);
+              if (window.navigator.vibrate) window.navigator.vibrate(50);
             }
-          }, 700); // 0.7초로 단축
+          }, 800);
         };
 
-        // 마우스 및 터치 이벤트 등록
         kakao.maps.event.addListener(map, 'mousedown', handleStart);
         kakao.maps.event.addListener(map, 'touchstart', handleStart);
 
         kakao.maps.event.addListener(map, 'mousemove', (e: any) => {
           if (!startPos.current) return;
-          const point = { x: e.offsetX || e.pageX, y: e.offsetY || e.pageY };
+          const point = { x: e.point ? e.point.x : e.pageX, y: e.point ? e.point.y : e.pageY };
           const dist = Math.sqrt(Math.pow(point.x - startPos.current.x, 2) + Math.pow(point.y - startPos.current.y, 2));
           if (dist > MOVE_THRESHOLD) {
             if (pressTimer.current) clearTimeout(pressTimer.current);
           }
         });
-        
+
         const handleEnd = () => {
           if (pressTimer.current) clearTimeout(pressTimer.current);
         };
 
         kakao.maps.event.addListener(map, 'mouseup', handleEnd);
         kakao.maps.event.addListener(map, 'touchend', handleEnd);
-
-        kakao.maps.event.addListener(map, 'click', () => {
-          if (justLongPressed.current) {
-            justLongPressed.current = false;
-            return;
-          }
-          hideActionPin();
-        });
+        kakao.maps.event.addListener(map, 'click', () => hideActionPin());
 
         return true;
       } catch (e) {
@@ -151,10 +144,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     if (!mapInstance.current || !kakao) return;
 
     const container = document.createElement('div');
-    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 9999; position: relative;';
+    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 9999;';
     
     const inner = document.createElement('div');
-    inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 25px rgba(79, 70, 229, 0.5));';
+    inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.4));';
     inner.innerHTML = `
         <div style="background: #4f46e5; color: white; padding: 12px 20px; border-radius: 28px; font-weight: 900; font-size: 16px; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 2.5px solid white; box-shadow: 0 8px 16px rgba(0,0,0,0.2);">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -165,16 +158,16 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     
     container.appendChild(inner);
 
-    // 클릭 이벤트 바인딩 강화
-    const handleClick = (e: any) => {
-      e.preventDefault();
-      e.stopPropagation();
+    // 클릭 이벤트 바인딩
+    const onPinClick = (e: any) => {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
       onMapWriteClick({ lat, lng });
       hideActionPin();
     };
 
-    container.addEventListener('click', handleClick);
-    container.addEventListener('touchstart', handleClick);
+    container.addEventListener('click', onPinClick);
+    container.addEventListener('touchstart', onPinClick);
 
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(lat, lng),
