@@ -199,6 +199,7 @@ const MapContainer = ({
         // 새 마커 생성
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
+        // 강조된 마커는 z-index 1000으로 최상단 배치
         content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; pointer-events: auto;`;
         
         // 초기 HTML 설정
@@ -223,7 +224,7 @@ const MapContainer = ({
         // 기존 마커 업데이트 (DOM 요소를 유지하여 CSS 트랜지션 보장)
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
-          // z-index 업데이트
+          // 강조 여부에 따라 z-index 실시간 업데이트 (최상단 레이어 보장)
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
           
           // 하이라이트 클래스 토글 (CSS 트랜지션 트리거)
