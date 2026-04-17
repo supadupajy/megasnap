@@ -90,6 +90,10 @@ const Profile = () => {
     target.src = FALLBACK_IMAGE;
   };
 
+  const handlePostDelete = useCallback((postId: string) => {
+    setMyPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -248,6 +252,7 @@ const Profile = () => {
                           borderType={post.borderType}
                           disablePulse={true}
                           onLikeToggle={() => handleLikeToggle(post.id, false)}
+                          onDelete={handlePostDelete}
                         />
                       </div>
                     ))}

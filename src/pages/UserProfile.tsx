@@ -115,6 +115,10 @@ const UserProfile = () => {
     showError(`${user.nickname} 님을 차단했습니다.`);
   };
 
+  const handlePostDelete = useCallback((postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -142,7 +146,7 @@ const UserProfile = () => {
                   <MoreVertical className="w-6 h-6 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md">
+              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
                 <DropdownMenuItem 
                   onClick={handleReport}
                   className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
@@ -326,6 +330,7 @@ const UserProfile = () => {
                           borderType={post.borderType}
                           disablePulse={true}
                           onLikeToggle={() => handleLikeToggle(post.id, false)}
+                          onDelete={handlePostDelete}
                         />
                       </div>
                     ))}

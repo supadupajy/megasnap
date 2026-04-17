@@ -11,7 +11,21 @@ import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ObservedPostItem = ({ post, onVisible, isViewed, onLikeToggle, onLocationClick }: { post: Post, onVisible: (id: string) => void, isViewed: boolean, onLikeToggle: (id: string) => void, onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void }) => {
+const ObservedPostItem = ({ 
+  post, 
+  onVisible, 
+  isViewed, 
+  onLikeToggle, 
+  onLocationClick,
+  onDelete 
+}: { 
+  post: Post, 
+  onVisible: (id: string) => void, 
+  isViewed: boolean, 
+  onLikeToggle: (id: string) => void, 
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
+  onDelete: (id: string) => void
+}) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +56,7 @@ const ObservedPostItem = ({ post, onVisible, isViewed, onLikeToggle, onLocationC
         isViewed={isViewed} 
         onLikeToggle={() => onLikeToggle(post.id)}
         onLocationClick={onLocationClick}
+        onDelete={onDelete}
       />
     </div>
   );
@@ -52,9 +67,10 @@ interface PostListOverlayProps {
   onClose: () => void;
   initialPosts: Post[];
   mapCenter: { lat: number; lng: number };
+  onDeletePost?: (id: string) => void;
 }
 
-const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListOverlayProps) => {
+const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePost }: PostListOverlayProps) => {
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -120,6 +136,11 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
     navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts, onClose]);
 
+  const handleLocalDelete = (id: string) => {
+    setPosts(prev => prev.filter(p => p.id !== id));
+    if (onDeletePost) onDeletePost(id);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -157,6 +178,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter }: PostListO
                     isViewed={viewedIds.has(post.id)}
                     onLikeToggle={handleLikeToggle}
                     onLocationClick={handleLocationClick}
+                    onDelete={handleLocalDelete}
                   />
                 ))}
                 

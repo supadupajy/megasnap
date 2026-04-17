@@ -130,6 +130,10 @@ const Popular = () => {
     navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
 
+  const handlePostDelete = useCallback((postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
+
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
@@ -138,6 +142,7 @@ const Popular = () => {
         <div className="flex flex-col">
           {filteredPosts.map((post) => (
             <PostItem
+              key={post.id}
               id={post.id}
               user={post.user}
               content={post.content}
@@ -159,6 +164,7 @@ const Popular = () => {
               disablePulse={true}
               onLikeToggle={() => handleLikeToggle(post.id)}
               onLocationClick={handleLocationClick}
+              onDelete={handlePostDelete}
             />
           ))}
         </div>

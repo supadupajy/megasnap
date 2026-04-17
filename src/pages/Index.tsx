@@ -446,6 +446,7 @@ const Index = () => {
         onClose={() => setIsPostListOpen(false)}
         initialPosts={displayedMarkers}
         mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
+        onDeletePost={handlePostDelete}
       />
     </motion.div>
   );
