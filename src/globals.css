@@ -73,12 +73,14 @@
   }
 }
 
-/* My Post Indigo Border */
+/* My Post Indigo Animated Gradient Border */
 .my-post-border-container {
   position: relative;
   padding: 4px;
   border-radius: 1.25rem;
-  background-color: #4f46e5; /* Indigo 600 */
+  background-image: conic-gradient(from var(--angle), #4f46e5, #818cf8, #4f46e5, #818cf8, #4f46e5);
+  animation: rotate-border 2s linear infinite;
+  box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
 }
 
 /* HOT Red Gradient Border */
