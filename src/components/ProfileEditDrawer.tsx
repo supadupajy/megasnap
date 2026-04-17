@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, User, Sparkles, Loader2, Type, AlignLeft } from 'lucide-react';
+import { Camera, User, Sparkles, Loader2, Type, AlignLeft, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,17 +88,24 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[85vh] flex flex-col outline-none bg-white">
+      <DrawerContent className="h-[90vh] flex flex-col outline-none bg-white rounded-t-[40px]">
+        {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
         <div className="px-8 flex flex-col flex-1 min-h-0">
-          <div className="flex items-center justify-center mb-8 shrink-0">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8 shrink-0">
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+              <X className="w-6 h-6 text-gray-400" />
+            </Button>
+            <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               프로필 편집
             </h2>
+            <div className="w-10" /> {/* Spacer for centering */}
           </div>
 
+          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pb-10">
             {/* Avatar Section */}
             <div className="flex flex-col items-center gap-4">
@@ -122,20 +129,20 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
                   {isTakingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">프로필 사진 변경</p>
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">프로필 사진 변경</p>
             </div>
 
             {/* Nickname Section */}
             <div className="space-y-3 px-2">
               <div className="flex items-center gap-2 px-1">
                 <Type className="w-4 h-4 text-gray-400" />
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임 변경</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임</p>
               </div>
               <Input 
                 placeholder="새로운 닉네임을 입력하세요"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold"
+                className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold shadow-inner"
                 maxLength={15}
               />
             </div>
@@ -150,25 +157,31 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
                 placeholder="나를 표현하는 한 줄 소개를 적어보세요"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="min-h-[120px] rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-medium resize-none p-4"
+                className="min-h-[120px] rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-medium resize-none p-4 shadow-inner"
                 maxLength={100}
               />
               <p className="text-right text-[10px] text-gray-400 font-bold">{bio.length}/100</p>
             </div>
           </div>
 
-          <div className="py-6 bg-white shrink-0 px-2">
+          {/* Fixed Bottom Button Area */}
+          <div className="py-8 bg-white shrink-0 border-t border-gray-50">
             <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              className="w-full h-16 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[24px] text-lg font-black shadow-2xl shadow-indigo-200 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               onClick={handleSave}
               disabled={isSubmitting || isTakingPhoto}
             >
               {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
                   저장 중...
-                </div>
-              ) : '변경사항 저장하기'}
+                </>
+              ) : (
+                <>
+                  <Check className="w-6 h-6 stroke-[3px]" />
+                  변경사항 저장하기
+                </>
+              )}
             </Button>
           </div>
         </div>
