@@ -194,6 +194,7 @@ const Profile = () => {
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                     <PostItem
+                      id={post.id}
                       user={post.user}
                       content={post.content}
                       location={post.location}
@@ -231,6 +232,7 @@ const Profile = () => {
                     {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                       <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                         <PostItem
+                          id={post.id}
                           user={post.user}
                           content={post.content}
                           location={post.location}

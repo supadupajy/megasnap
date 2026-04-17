@@ -223,6 +223,13 @@ const Index = () => {
     setDisplayedMarkers(update);
   }, []);
 
+  const handlePostDelete = useCallback((postId: string) => {
+    const update = (prev: Post[]) => prev.filter(p => p.id !== postId);
+    setAllPosts(update);
+    setDisplayedMarkers(update);
+    setSelectedPostId(null);
+  }, []);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
@@ -411,6 +418,7 @@ const Index = () => {
           onClose={() => setSelectedPostId(null)} 
           onViewPost={markAsViewed}
           onLikeToggle={handleLikeToggle}
+          onDelete={handlePostDelete}
           onLocationClick={(lat, lng) => {
             const post = allPosts.find(p => p.lat === lat && p.lng === lng);
             if (post) {

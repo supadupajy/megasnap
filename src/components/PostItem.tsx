@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Play, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
+import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PostItemProps {
+  id: string;
   user: {
     id: string;
     name: string;
@@ -44,12 +47,14 @@ interface PostItemProps {
   disablePulse?: boolean;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete?: (postId: string) => void;
   onClick?: () => void;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
 const PostItem = ({ 
+  id,
   user, 
   content, 
   location, 
@@ -72,9 +77,11 @@ const PostItem = ({
   disablePulse = false,
   onLikeToggle,
   onLocationClick,
+  onDelete,
   onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
@@ -86,6 +93,9 @@ const PostItem = ({
   const isPopular = !isAd && borderType === 'popular';
   const displayImages = images.length > 0 ? images : [image];
   const isGif = initialIsGif || isGifUrl(displayImages[currentImageIndex]);
+
+  // 본인 포스팅 여부 확인
+  const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -127,6 +137,26 @@ const PostItem = ({
     e.stopPropagation();
     blockUser(user.id);
     showError(`${user.name} 님을 차단했습니다.`);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('정말로 이 포스팅을 삭제하시겠습니까?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      showSuccess('포스팅이 삭제되었습니다.');
+      if (onDelete) onDelete(id);
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      showError('삭제 중 오류가 발생했습니다.');
+    }
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -189,20 +219,32 @@ const PostItem = ({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
-            <DropdownMenuItem 
-              onClick={handleReport}
-              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
-            >
-              <AlertCircle className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-bold text-gray-700">신고</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={handleBlock}
-              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-            >
-              <Ban className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-bold text-red-600">차단</span>
-            </DropdownMenuItem>
+            {isMine ? (
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-bold text-red-600">삭제하기</span>
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuItem 
+                  onClick={handleReport}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
+                >
+                  <AlertCircle className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">신고</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleBlock}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+                >
+                  <Ban className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-bold text-red-600">차단</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

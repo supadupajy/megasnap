@@ -138,7 +138,7 @@ const Popular = () => {
         <div className="flex flex-col">
           {filteredPosts.map((post) => (
             <PostItem
-              key={post.id}
+              id={post.id}
               user={post.user}
               content={post.content}
               location={post.location}

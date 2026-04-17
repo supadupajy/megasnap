@@ -30,31 +30,40 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
       return;
     }
 
+    if (!userId) {
+      showError('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // profiles 테이블에 닉네임 저장 (upsert 사용)
       const { error } = await supabase
         .from('profiles')
         .upsert({ 
           id: userId, 
           nickname: nickname.trim(),
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'id' });
 
       if (error) throw error;
 
       showSuccess('닉네임 설정이 완료되었습니다!');
-      onComplete(nickname.trim());
-    } catch (err) {
+      // 약간의 지연을 주어 DB 반영 시간을 확보
+      setTimeout(() => {
+        onComplete(nickname.trim());
+        setIsSubmitting(false);
+      }, 500);
+    } catch (err: any) {
       console.error('Error saving nickname:', err);
-      showError('닉네임 저장 중 오류가 발생했습니다.');
-    } finally {
+      showError(err.message || '닉네임 저장 중 오류가 발생했습니다. 테이블 생성 여부를 확인해주세요.');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={isOpen}>
-      <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-gray-900 text-center">반가워요! 👋</DialogTitle>
           <DialogDescription className="text-center font-medium text-gray-500">
@@ -68,6 +77,7 @@ const NicknameDialog = ({ isOpen, userId, onComplete }: NicknameDialogProps) => 
             onChange={(e) => setNickname(e.target.value)}
             className="h-14 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-lg font-bold"
             maxLength={15}
+            disabled={isSubmitting}
           />
         </div>
         <DialogFooter>
