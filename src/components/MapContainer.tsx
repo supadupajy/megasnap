@@ -22,13 +22,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
   const isDragging = useRef(false);
+  const justLongPressed = useRef(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const startPos = useRef<{ x: number, y: number } | null>(null);
-  const MOVE_THRESHOLD = 10;
+  const MOVE_THRESHOLD = 15; // 이동 임계값 상향
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
@@ -77,23 +78,23 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
         // 롱프레스 핸들러
         const handleStart = (e: any) => {
-          const point = { 
-            x: e.offsetX || (e.touches ? e.touches[0].pageX : e.pageX), 
-            y: e.offsetY || (e.touches ? e.touches[0].pageY : e.pageY) 
-          };
+          const point = { x: e.offsetX || (e.touches ? e.touches[0].pageX : e.pageX), y: e.offsetY || (e.touches ? e.touches[0].pageY : e.pageY) };
           startPos.current = point;
+          justLongPressed.current = false;
           
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
           pressTimer.current = setTimeout(() => {
             const latLng = e.latLng;
-            if (latLng && !isDragging.current) {
+            if (latLng) {
               showActionPin(latLng.getLat(), latLng.getLng());
+              justLongPressed.current = true;
               if (window.navigator.vibrate) window.navigator.vibrate(40);
             }
-          }, 750);
+          }, 700); // 0.7초로 단축
         };
 
+        // 마우스 및 터치 이벤트 등록
         kakao.maps.event.addListener(map, 'mousedown', handleStart);
         kakao.maps.event.addListener(map, 'touchstart', handleStart);
 
@@ -114,6 +115,10 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         kakao.maps.event.addListener(map, 'touchend', handleEnd);
 
         kakao.maps.event.addListener(map, 'click', () => {
+          if (justLongPressed.current) {
+            justLongPressed.current = false;
+            return;
+          }
           hideActionPin();
         });
 
@@ -151,15 +156,16 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const inner = document.createElement('div');
     inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 25px rgba(79, 70, 229, 0.5));';
     inner.innerHTML = `
-        <div style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 32px; font-weight: 900; font-size: 16px; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 3px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
+        <div style="background: #4f46e5; color: white; padding: 12px 20px; border-radius: 28px; font-weight: 900; font-size: 16px; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 2.5px solid white; box-shadow: 0 8px 16px rgba(0,0,0,0.2);">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           여기서 글쓰기
         </div>
-        <div style="width: 16px; height: 16px; background: #4f46e5; transform: rotate(45deg); margin-top: -11px; border-right: 3px solid white; border-bottom: 3px solid white;"></div>
+        <div style="width: 14px; height: 14px; background: #4f46e5; transform: rotate(45deg); margin-top: -10px; border-right: 2.5px solid white; border-bottom: 2.5px solid white;"></div>
     `;
     
     container.appendChild(inner);
 
+    // 클릭 이벤트 바인딩 강화
     const handleClick = (e: any) => {
       e.preventDefault();
       e.stopPropagation();
@@ -228,15 +234,15 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      <div class="marker-wrapper" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important; pointer-events: none;">
+      <div class="marker-container" style="position: relative; width: 56px; height: 72px; transform: translate(-50%, -100%) ${isHighlighted ? 'scale(1.3)' : 'scale(1)'}; opacity: 1 !important; visibility: visible !important;">
         ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-        <div class="${animationClass}" style="pointer-events: none;">
+        <div class="${animationClass}">
           ${labelHtml}
-          <div class="marker-hit-area ${borderClass || ''}"
+          <div class="${borderClass || ''}"
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
                       ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
-                      overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                      background-color: white; pointer-events: auto;">
+                      overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                      background-color: white;">
             <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
               <img src="${post.image}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
@@ -257,7 +263,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 제거된 포스트 오버레이 삭제
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -272,30 +277,21 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
-        const container = document.createElement('div');
-        container.className = 'kakao-overlay animate-marker-appear';
-        container.style.cssText = 'position: absolute; opacity: 1 !important; visibility: visible !important;';
-        container.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-        container.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
+        const content = document.createElement('div');
+        content.className = 'kakao-overlay animate-marker-appear';
+        content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
+        content.style.opacity = '1';
+        content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
         
-        // 마커 내부의 실제 클릭 영역(이미지 부분)에만 이벤트 바인딩
-        const hitArea = container.querySelector('.marker-hit-area');
-        if (hitArea) {
-          kakao.maps.event.addDomListener(hitArea, 'click', (e: any) => {
-            if (e.preventDefault) e.preventDefault();
-            if (e.stopPropagation) e.stopPropagation();
-            if (isDragging.current) return;
-            onMarkerClick(post);
-          });
-          
-          kakao.maps.event.addDomListener(hitArea, 'touchstart', (e: any) => {
-            if (e.stopPropagation) e.stopPropagation();
-          });
-        }
+        content.onclick = (e) => {
+          e.stopPropagation();
+          if (isDragging.current) return;
+          onMarkerClick(post);
+        };
 
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(post.lat, post.lng),
-          content: container,
+          content: content,
           yAnchor: 1
         });
 
@@ -306,17 +302,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         if (content instanceof HTMLElement) {
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
           content.innerHTML = getMarkerHtml(post, isViewed, isHighlighted);
-          
-          // 업데이트된 HTML에서도 이벤트 바인딩 다시 확인
-          const hitArea = content.querySelector('.marker-hit-area');
-          if (hitArea) {
-            kakao.maps.event.addDomListener(hitArea, 'click', (e: any) => {
-              if (e.preventDefault) e.preventDefault();
-              if (e.stopPropagation) e.stopPropagation();
-              if (isDragging.current) return;
-              onMarkerClick(post);
-            });
-          }
         }
       }
     });
