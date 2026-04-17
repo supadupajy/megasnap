@@ -31,6 +31,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const selectionMarkerRef = useRef<any>(null);
+  const lastDragEnd = useRef<number>(0);
   
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -76,10 +77,18 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
-        kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; });
+        kakao.maps.event.addListener(map, 'dragstart', () => { 
+          isDragging.current = true; 
+        });
+        kakao.maps.event.addListener(map, 'dragend', () => { 
+          isDragging.current = false; 
+          lastDragEnd.current = Date.now(); // 드래그 종료 시점 기록
+        });
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
+          // 드래그 직후(200ms 이내) 발생하는 클릭은 무시
+          if (Date.now() - lastDragEnd.current < 200) return;
+          
           if (onMapClickRef.current) {
             const latLng = mouseEvent.latLng;
             onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
@@ -211,7 +220,6 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 1. 화면에서 사라진 마커만 제거
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -219,14 +227,12 @@ const MapContainer = ({
       }
     });
 
-    // 2. 새로운 마커 추가 또는 기존 마커 업데이트
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       if (!existingOverlay) {
-        // 새 마커 생성
         const content = document.createElement('div');
         content.className = 'kakao-overlay';
         content.style.cssText = `z-index: ${isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'))}; opacity: 1 !important; visibility: visible !important; display: block !important; pointer-events: auto;`;
@@ -234,7 +240,8 @@ const MapContainer = ({
         
         content.onclick = (e) => {
           e.stopPropagation();
-          if (isDragging.current) return;
+          // 드래그 중이거나 드래그 직후(200ms 이내)라면 클릭 무시
+          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return;
           onMarkerClick(post);
         };
 
@@ -247,11 +254,9 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        // 기존 마커 업데이트 (깜빡임 방지: setMap(null) 호출 안 함)
         const content = existingOverlay.getContent();
         if (content instanceof HTMLElement) {
           content.style.zIndex = isHighlighted ? '1000' : (post.isAd ? '500' : (post.borderType !== 'none' ? '400' : '300'));
-          // 내용이 바뀌었을 때만 innerHTML 업데이트 (성능 최적화)
           const newHtml = getMarkerHtml(post, isViewed, isHighlighted, false);
           if (content.innerHTML !== newHtml) {
             content.innerHTML = newHtml;
