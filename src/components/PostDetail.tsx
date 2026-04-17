@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, Play, AlertCircle, Ban, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -105,7 +105,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
-  const isGif = isGifUrl(images[currentImageIndex]);
   const category = post.category || 'none';
 
   // 본인 확인 로직: 실제 ID 일치 또는 테스트용 'me' ID 확인
@@ -153,6 +152,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     } finally {
       setIsDeleteDialogOpen(false);
     }
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = FALLBACK_IMAGE;
   };
 
   const renderCategoryBadge = () => {
@@ -300,7 +304,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       ) : isPopular && (
                         <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
                       )}
-                      {isGif && !isAd && <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md text-white p-1.5 rounded-full shadow-lg border border-white/20"><Play className="w-3 h-3 fill-white" /></div>}
                     </div>
                   </div>
                   

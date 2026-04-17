@@ -258,7 +258,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const getMarkerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-    const isGif = isGifUrl(post.image);
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
 
@@ -310,7 +309,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
                    onerror="this.src='${FALLBACK_IMAGE}'"
                    style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-              ${isGif ? `<div style="position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.4); color: white; width: 16px; height: 16px; border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
               ${categoryIconHtml}
             </div>
           </div>

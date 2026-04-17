@@ -333,11 +333,6 @@ const Profile = () => {
                         onClick={() => handleGridItemClick(post.id)}
                       >
                         <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
-                        {post.isGif && (
-                          <div className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5">
-                            <Play className="w-2.5 h-2.5 text-white fill-white" />
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
