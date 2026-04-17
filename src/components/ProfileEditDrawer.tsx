@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, User, X, Sparkles, Loader2, Type, AlignLeft } from 'lucide-react';
+import { Camera, User, Sparkles, Loader2, Type, AlignLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -92,14 +92,11 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
         <div className="px-8 flex flex-col flex-1 min-h-0">
-          <div className="flex items-center justify-between mb-8 shrink-0">
+          <div className="flex items-center justify-center mb-8 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               프로필 편집
             </h2>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-              <X className="w-5 h-5 text-gray-400" />
-            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pb-10">
@@ -108,7 +105,6 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
               <div className="relative group">
                 <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
                   <Avatar className="w-full h-full border-4 border-white">
-                    {/* 현재 적용된 이미지 또는 기본 이미지를 표시 */}
                     <AvatarImage 
                       src={avatarUrl || `https://i.pravatar.cc/150?u=${user?.id || 'me'}`} 
                       className="object-cover" 
