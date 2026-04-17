@@ -1,36 +1,63 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Search, UserPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, Search, UserPlus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MOCK_USERS } from '@/lib/mock-data';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
 
 const FriendList = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredFriends = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return MOCK_USERS;
-    return MOCK_USERS.filter(u => 
-      u.nickname?.toLowerCase().includes(query) || 
-      u.name.toLowerCase().includes(query) || 
-      u.id.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  useEffect(() => {
+    const searchUsers = async () => {
+      // 검색어가 너무 짧으면 검색하지 않음 (최소 1자 이상)
+      if (!searchQuery.trim()) {
+        setUsers([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_url, bio')
+          .or(`nickname.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
+          .neq('id', authUser?.id) // 본인은 제외
+          .limit(20);
+
+        if (error) throw error;
+        setUsers(data || []);
+      } catch (err) {
+        console.error('User search error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // 디바운스 처리 (300ms)
+    const timer = setTimeout(() => {
+      searchUsers();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, authUser]);
 
   const handleStartChat = (user: any) => {
     // 채팅방 생성 또는 기존 방 가져오기
-    chatStore.getOrCreateRoom(user.id, user.nickname || user.name, user.avatar);
+    chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
     // 채팅창으로 이동
     navigate(`/chat/${user.id}`);
   };
 
   const handleBack = () => {
-    // 이전 히스토리가 있으면 뒤로가기, 없으면 DM 페이지로 이동
     if (window.history.length > 1 && window.history.state?.idx > 0) {
       navigate(-1);
     } else {
@@ -57,19 +84,28 @@ const FriendList = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
-              placeholder="이름 또는 아이디 검색" 
-              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600"
+              placeholder="닉네임 또는 아이디 검색" 
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
             />
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Friend List */}
+        {/* User List */}
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">추천 친구</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+            {searchQuery ? '검색 결과' : '검색어를 입력하세요'}
+          </p>
+          
           <div className="space-y-1">
-            {filteredFriends.map((user) => (
+            {users.map((user) => (
               <div 
                 key={user.id} 
                 onClick={() => handleStartChat(user)}
@@ -77,16 +113,18 @@ const FriendList = () => {
               >
                 <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
                   <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                    <AvatarImage src={user.avatar} />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
+                      {user.nickname?.[0] || '?'}
+                    </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-gray-900 truncate">{user.nickname}</span>
-                    <span className="text-[10px] text-gray-400">@{user.id}</span>
+                    <span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span>
+                    <span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}...</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{user.bio}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.bio || '안녕하세요! Chora 탐험가입니다.'}</p>
                 </div>
                 <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center">
                   <UserPlus className="w-4 h-4 text-indigo-600" />
@@ -94,9 +132,18 @@ const FriendList = () => {
               </div>
             ))}
             
-            {filteredFriends.length === 0 && (
-              <div className="py-20 text-center text-gray-400 font-medium">
-                검색 결과가 없습니다.
+            {searchQuery && !isLoading && users.length === 0 && (
+              <div className="py-20 text-center flex flex-col items-center gap-2">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                  <Search className="w-8 h-8 text-gray-200" />
+                </div>
+                <p className="text-sm text-gray-400 font-bold">검색 결과가 없습니다.</p>
+              </div>
+            )}
+
+            {!searchQuery && (
+              <div className="py-20 text-center flex flex-col items-center gap-2">
+                <p className="text-sm text-gray-400 font-bold">친구의 닉네임을 검색하여<br/>대화를 시작해보세요!</p>
               </div>
             )}
           </div>
