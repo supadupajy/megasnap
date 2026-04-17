@@ -29,85 +29,72 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadInitialData = async () => {
-      if (authLoading) return;
-      
-      // 안전장치: 3초 후에는 무조건 로딩 종료
-      const timeoutId = setTimeout(() => {
-        if (isMounted && isInitialLoading) {
-          console.warn('[Popular] Loading timeout - forcing display');
-          setIsInitialLoading(false);
-        }
-      }, 3000);
-
-      try {
-        // 1. Supabase 데이터 가져오기 (타임아웃 고려)
-        const fetchPromise = supabase
-          .from('posts')
-          .select('*')
-          .order('likes', { ascending: false })
-          .limit(20);
-
-        const { data, error } = await fetchPromise;
-
-        const realPosts = (data || []).map(p => ({
-          id: p.id,
-          isAd: false,
-          isGif: false,
-          isInfluencer: false,
-          user: {
-            id: p.user_id,
-            name: p.user_name,
-            avatar: p.user_avatar
-          },
-          content: p.content,
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: Number(p.likes),
-          commentsCount: 0,
-          comments: [],
-          image: p.image_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: Number(p.likes) >= 1500 ? 'popular' : 'none'
-        })) as Post[];
-
-        // 2. Mock 데이터 생성
-        const mockPosts = createMockPosts(37.5665, 126.9780, 20)
-          .sort((a, b) => b.likes - a.likes);
-        
-        if (isMounted) {
-          const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
-          setPosts(combined);
-        }
-      } catch (err) {
-        console.error('[Popular] Data load error:', err);
-      } finally {
-        clearTimeout(timeoutId);
-        if (isMounted) setIsInitialLoading(false);
-      }
-    };
+  const loadInitialData = useCallback(async () => {
+    if (authLoading) return;
     
-    loadInitialData();
+    setIsInitialLoading(true);
+    
+    // 1. 즉시 가상 데이터 생성 (데이터 공백 방지)
+    const mockPosts = createMockPosts(37.5665, 126.9780, 20)
+      .sort((a, b) => b.likes - a.likes);
+    
+    try {
+      // 2. Supabase 데이터 가져오기
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('likes', { ascending: false })
+        .limit(20);
 
-    return () => {
-      isMounted = false;
-    };
+      if (error) throw error;
+
+      const realPosts = (data || []).map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: {
+          id: p.user_id,
+          name: p.user_name,
+          avatar: p.user_avatar
+        },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes || 0),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+      })) as Post[];
+
+      // 3. 실제 데이터와 가상 데이터 통합
+      const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
+      setPosts(combined);
+    } catch (err) {
+      console.error('[Popular] DB Fetch Error, using mock only:', err);
+      setPosts(mockPosts);
+    } finally {
+      setIsInitialLoading(false);
+    }
   }, [authLoading]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore || isInitialLoading) return;
     setIsLoadingMore(true);
     
     setTimeout(() => {
-      const newPosts = createMockPosts(37.5665, 126.9780, 20)
+      const newPosts = createMockPosts(37.5665, 126.9780, 15)
         .map(p => ({
           ...p,
-          likes: Math.floor(Math.random() * 1000) + 1000
+          likes: Math.floor(Math.random() * 1000) + 500
         }))
         .sort((a, b) => b.likes - a.likes);
         
@@ -162,7 +149,7 @@ const Popular = () => {
       <div className="pt-[88px]">
         <StoryBar />
         
-        {isInitialLoading ? (
+        {isInitialLoading && posts.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
             <p className="text-sm font-bold text-gray-400">인기 포스팅을 불러오는 중...</p>
