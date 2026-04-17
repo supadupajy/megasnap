@@ -64,22 +64,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         updateMapData();
         setIsMapReady(true);
 
-        // 실시간 업데이트를 위해 bounds_changed 이벤트 사용
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         
-        // 드래그 및 줌 상태 관리
         kakao.maps.event.addListener(map, 'dragstart', () => {
           isDragging.current = true;
-          hideActionPin();
+          // 드래그 시작 시에는 핀을 숨기지 않고 유지 (사용자 요청: 다른 곳 클릭 시에만 삭제)
         });
+        
         kakao.maps.event.addListener(map, 'dragend', () => {
-          setTimeout(() => { isDragging.current = false; }, 50);
-        });
-        kakao.maps.event.addListener(map, 'zoom_start', () => {
-          isDragging.current = true;
-          hideActionPin();
-        });
-        kakao.maps.event.addListener(map, 'zoom_changed', () => {
           setTimeout(() => { isDragging.current = false; }, 50);
         });
 
@@ -113,6 +105,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
           if (pressTimer.current) clearTimeout(pressTimer.current);
         });
 
+        // 지도의 다른 부분을 클릭했을 때만 핀 숨기기
         kakao.maps.event.addListener(map, 'click', () => hideActionPin());
 
         return true;
@@ -145,17 +138,17 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const content = document.createElement('div');
     content.className = 'kakao-overlay';
+    // "+ 글쓰기" 문구 적용 및 디자인 강화
     content.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translate(-50%, -100%);">
-        <div style="background: #4f46e5; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.3));">
+        <div style="background: #4f46e5; color: white; padding: 10px 18px; border-radius: 24px; font-weight: 900; font-size: 15px; display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 2px solid rgba(255,255,255,0.2); transition: all 0.2s active:scale-95;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           글쓰기
         </div>
-        <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 2px solid #4f46e5;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        </div>
+        <div style="width: 12px; height: 12px; background: #4f46e5; transform: rotate(45deg); margin-top: -8px; border-right: 2px solid rgba(255,255,255,0.2); border-bottom: 2px solid rgba(255,255,255,0.2);"></div>
       </div>
     `;
+    
     content.onclick = (e) => {
       e.stopPropagation();
       if (isDragging.current) return;
@@ -166,7 +159,8 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(lat, lng),
       content: content,
-      yAnchor: 1
+      yAnchor: 1,
+      zIndex: 2000 // 마커들보다 위에 표시
     });
 
     overlay.setMap(mapInstance.current);
