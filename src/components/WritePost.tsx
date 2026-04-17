@@ -32,16 +32,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const { isKeyboardOpen } = useKeyboard();
 
   useEffect(() => {
-    const fetchAddress = () => {
-      const google = (window as any).google;
-      if (isOpen && initialLocation && google?.maps?.Geocoder) {
+    const google = (window as any).google;
+    if (isOpen) {
+      if (initialLocation && google) {
         setIsLoadingAddress(true);
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode(
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
           (results: any, status: any) => {
             if (status === "OK" && results && results[0]) {
-              // 주소 컴포넌트에서 시/군/구/동 추출
+              // 주소 컴포넌트에서 필요한 부분만 추출 (예: 서울특별시 강남구 역삼동)
               const components = results[0].address_components;
               let city = '';
               let district = '';
@@ -54,22 +54,25 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
               }
               
               const cleanAddress = [city, district, neighborhood].filter(Boolean).join(' ');
-              // 만약 추출된 주소가 너무 짧으면 전체 주소 사용
-              setAddress(cleanAddress.length > 5 ? cleanAddress : results[0].formatted_address);
+              setAddress(cleanAddress || results[0].formatted_address);
             } else {
-              console.warn('Geocoding failed:', status);
-              setAddress('알 수 없는 장소');
+              setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
             setIsLoadingAddress(false);
           }
         );
-      } else if (isOpen && !initialLocation) {
+      } else if (!initialLocation) {
+        // 기본 위치 주소 (예시)
         setAddress('서울특별시 중구 세종대로 110');
         setIsLoadingAddress(false);
       }
-    };
-
-    fetchAddress();
+    } else {
+      // 닫힐 때 초기화
+      setAddress('');
+      setIsLoadingAddress(false);
+      setContent('');
+      setCapturedImage(null);
+    }
   }, [isOpen, initialLocation]);
 
   const takePhoto = async () => {
