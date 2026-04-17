@@ -22,6 +22,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const actionOverlayRef = useRef<any>(null);
   const isDragging = useRef(false);
+  const justLongPressed = useRef(false);
   
   const [isMapReady, setIsMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +69,6 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         
         kakao.maps.event.addListener(map, 'dragstart', () => {
           isDragging.current = true;
-          // 드래그 시작 시에는 핀을 숨기지 않고 유지 (사용자 요청: 다른 곳 클릭 시에만 삭제)
         });
         
         kakao.maps.event.addListener(map, 'dragend', () => {
@@ -79,6 +79,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         const handleStart = (e: any) => {
           const point = { x: e.offsetX || e.pageX, y: e.offsetY || e.pageY };
           startPos.current = point;
+          justLongPressed.current = false;
           
           if (pressTimer.current) clearTimeout(pressTimer.current);
           
@@ -86,6 +87,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
             const latLng = e.latLng;
             if (latLng) {
               showActionPin(latLng.getLat(), latLng.getLng());
+              justLongPressed.current = true;
               if (window.navigator.vibrate) window.navigator.vibrate(40);
             }
           }, 800);
@@ -106,7 +108,14 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
         });
 
         // 지도의 다른 부분을 클릭했을 때만 핀 숨기기
-        kakao.maps.event.addListener(map, 'click', () => hideActionPin());
+        kakao.maps.event.addListener(map, 'click', () => {
+          // 롱프레스 직후의 클릭 이벤트는 무시 (핀이 바로 사라지는 것 방지)
+          if (justLongPressed.current) {
+            justLongPressed.current = false;
+            return;
+          }
+          hideActionPin();
+        });
 
         return true;
       } catch (e) {
@@ -138,7 +147,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
 
     const content = document.createElement('div');
     content.className = 'kakao-overlay';
-    // "+ 글쓰기" 문구 적용 및 디자인 강화
+    content.style.cursor = 'pointer';
     content.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.3));">
         <div style="background: #4f46e5; color: white; padding: 10px 18px; border-radius: 24px; font-weight: 900; font-size: 15px; display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 2px solid rgba(255,255,255,0.2); transition: all 0.2s active:scale-95;">
@@ -149,9 +158,9 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       </div>
     `;
     
+    // 오버레이 클릭 시 글쓰기 팝업 호출
     content.onclick = (e) => {
       e.stopPropagation();
-      if (isDragging.current) return;
       onMapWriteClick({ lat, lng });
       hideActionPin();
     };
@@ -160,7 +169,7 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
       position: new kakao.maps.LatLng(lat, lng),
       content: content,
       yAnchor: 1,
-      zIndex: 2000 // 마커들보다 위에 표시
+      zIndex: 2000
     });
 
     overlay.setMap(mapInstance.current);
