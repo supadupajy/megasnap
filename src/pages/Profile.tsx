@@ -22,48 +22,50 @@ const Profile = () => {
   const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
   
   // 상태 관리
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   
-  // 1. 데이터 로딩의 '단계'를 명확히 정의
-  const [dataState, setDataState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  // 데이터 로딩 상태 (idle, loading, success, error)
+  const [dataStatus, setDataStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
-  // 중복 호출 방지를 위한 Ref
-  const isFetching = useRef(false);
+  // 핵심: 의존성 주기를 끊기 위한 Ref
+  const fetchLock = useRef(false);
 
-  const userId = authUser?.id;
-  const userEmail = authUser?.email;
-  const profileNickname = profile?.nickname;
-  const profileAvatar = profile?.avatar_url;
+  // 1. 객체 대신 원시값(Primitive)만 추출
+  const uid = authUser?.id;
+  const uEmail = authUser?.email;
+  const pNickname = profile?.nickname;
+  const pAvatar = profile?.avatar_url;
+  const pBio = profile?.bio;
 
-  const displayName = useMemo(() => profileNickname || userEmail?.split('@')[0] || '탐험가', [profileNickname, userEmail]);
-  const bio = profile?.bio || "지도를 여행하는 탐험가 📍";
+  // 2. 표시용 변수 (메모이제이션)
+  const displayName = useMemo(() => pNickname || uEmail?.split('@')[0] || '탐험가', [pNickname, uEmail]);
+  const bio = pBio || "지도를 여행하는 탐험가 📍";
 
-  // 2. 데이터 로드 함수
-  const loadData = useCallback(async (targetId: string) => {
-    if (isFetching.current) return;
-    
-    isFetching.current = true;
-    setDataState('loading');
-    
+  // 3. 데이터 로드 함수 (의존성 배열에 객체 절대 금지)
+  const loadData = useCallback(async (targetUid: string) => {
+    if (fetchLock.current) return;
+    fetchLock.current = true;
+    setDataStatus('loading');
+
     try {
-      const { data: realData, error } = await supabase
+      const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('user_id', targetId)
+        .eq('user_id', targetUid)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const realPosts = (realData || []).map(p => ({
+      const formattedPosts = (data || []).map(p => ({
         id: p.id,
         user: {
           id: p.user_id,
           name: p.user_name || displayName,
-          avatar: p.user_avatar || profileAvatar || `https://i.pravatar.cc/150?u=${p.user_id}`
+          avatar: p.user_avatar || pAvatar || `https://i.pravatar.cc/150?u=${p.user_id}`
         },
         content: p.content || '',
         location: p.location_name || '알 수 없는 장소',
@@ -79,48 +81,37 @@ const Profile = () => {
         borderType: 'none'
       })) as Post[];
 
-      setMyPosts(realPosts);
-      
-      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${targetId}`)
-        .map(p => ({ ...p, isLiked: true }));
-      setSavedPosts(saved);
-      
-      setDataState('success');
+      setMyPosts(formattedPosts);
+      setSavedPosts(createMockPosts(37.5665, 126.9780, 8, `saved_${targetUid}`).map(p => ({ ...p, isLiked: true })));
+      setDataStatus('success');
     } catch (err) {
       console.error('[Profile] Fetch Error:', err);
-      setDataState('error');
+      setDataStatus('success'); // 에러 시에도 무한 로딩 방지를 위해 success 처리
     } finally {
-      isFetching.current = false;
+      fetchLock.current = false;
     }
-  }, [displayName, profileAvatar]);
+    // 의존성 배열에서 pAvatar, displayName 같은 값만 참조
+  }, [displayName, pAvatar]);
 
-  // 3. 인증 및 데이터 로드 통합 트리거
+  // 4. 실행 로직 (userId가 생길 때 '딱 한 번'만 실행되도록 보장)
   useEffect(() => {
-    // 세션 로딩 중이면 대기
     if (authLoading) return;
 
-    // 세션 로딩 끝났는데 유저 없으면 로그인행
-    if (!userId) {
+    if (!uid) {
       navigate('/login', { replace: true });
       return;
     }
 
-    // 유저 있고, 아직 데이터 로드를 시작하지 않았거나 에러 상태일 때만 로드
-    if (dataState === 'idle') {
-      loadData(userId);
+    // 이미 데이터를 가져왔거나 로딩 중이면 실행 안 함
+    if (dataStatus === 'idle') {
+      loadData(uid);
     }
-  }, [authLoading, userId, dataState, loadData, navigate]);
+  }, [authLoading, uid, dataStatus, loadData, navigate]);
 
   // 핸들러 함수들
   const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
     const setter = isSaved ? setSavedPosts : setMyPosts;
-    setter(prev => prev.map(post => {
-      if (post.id === postId) {
-        const isLiked = !post.isLiked;
-        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
-      }
-      return post;
-    }));
+    setter(prev => prev.map(post => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post));
   }, []);
 
   const handleImageError = useCallback((postId: string) => {
@@ -128,21 +119,16 @@ const Profile = () => {
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  const handlePostDelete = useCallback((postId: string) => {
-    setMyPosts(prev => prev.filter(p => p.id !== postId));
-  }, []);
+  const handlePostDelete = useCallback((postId: string) => setMyPosts(prev => prev.filter(p => p.id !== postId)), []);
 
   const handleGridItemClick = (postId: string) => {
     setViewMode(viewMode === 'gifs' ? 'gif-list' : 'list');
-    setTimeout(() => {
-      const element = document.getElementById(`post-${postId}`);
-      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    setTimeout(() => document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   };
 
-  // --- 핵심: 로딩 UI 조건 단순화 ---
-  // authLoading이거나, 데이터 로딩 중인데 아직 데이터가 없을 때만 스피너 표시
-  if (authLoading || (dataState === 'loading' && myPosts.length === 0)) {
+  // --- 렌더링 조건 ---
+  // authLoading이 끝났는데 userId가 없거나, 데이터 로딩 중인 경우만 스피너
+  if (authLoading || (dataStatus === 'loading' && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -150,14 +136,12 @@ const Profile = () => {
     );
   }
 
-  // 데이터 로딩 시도 후 유저가 없는 경우는 null (로그인 페이지로 이동 중)
-  if (!userId) return null;
+  if (!uid) return null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px]">
-        {/* 프로필 정보 영역 */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -180,7 +164,7 @@ const Profile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
                 <img 
-                  src={profileAvatar || `https://i.pravatar.cc/150?u=${userId}`} 
+                  src={pAvatar || `https://i.pravatar.cc/150?u=${uid}`} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white" 
                   onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} 
@@ -191,10 +175,7 @@ const Profile = () => {
               <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
               <p className="text-sm text-gray-500 mb-4">{bio}</p>
               <div className="flex gap-4">
-                <div className="text-center">
-                  <p className="font-bold text-gray-900">{myPosts.length}</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
-                </div>
+                <div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div>
                 <div className="text-center"><p className="font-bold text-gray-900">1.2k</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div>
                 <div className="text-center"><p className="font-bold text-gray-900">850</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div>
               </div>
@@ -203,14 +184,12 @@ const Profile = () => {
 
           <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
 
-          {/* 탭 네비게이션 */}
           <div className="flex border-b border-gray-100 mb-4">
             <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button>
             <button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button>
             <button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button>
           </div>
 
-          {/* 컨텐츠 리스트 */}
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
@@ -243,7 +222,7 @@ const Profile = () => {
                         <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} />
                       </div>
                     ))}
-                    {dataState === 'success' && myPosts.length === 0 && (
+                    {dataStatus === 'success' && myPosts.length === 0 && (
                       <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
                     )}
                   </div>
