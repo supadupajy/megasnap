@@ -69,7 +69,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (mounted && initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
-          fetchProfile(initialSession.user.id);
+          // 프로필 정보를 가져올 때까지 기다립니다.
+          await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
         console.error('[Auth] Session check error:', error);
@@ -89,7 +90,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        fetchProfile(currentSession.user.id);
+        // 세션 변경 시에도 프로필 정보를 가져올 때까지 기다립니다.
+        await fetchProfile(currentSession.user.id);
       } else {
         setSession(null);
         setUser(null);
