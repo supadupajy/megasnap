@@ -39,7 +39,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
           { location: { lat: initialLocation.lat, lng: initialLocation.lng } },
           (results: any, status: any) => {
             if (status === "OK" && results && results[0]) {
-              setAddress(results[0].formatted_address);
+              // 주소 컴포넌트에서 시, 구, 동 추출
+              const components = results[0].address_components;
+              let city = '';
+              let district = '';
+              let neighborhood = '';
+              
+              for (const component of components) {
+                if (component.types.includes('administrative_area_level_1')) city = component.long_name;
+                if (component.types.includes('sublocality_level_1')) district = component.long_name;
+                if (component.types.includes('sublocality_level_2')) neighborhood = component.long_name;
+              }
+              
+              const cleanAddress = [city, district, neighborhood].filter(Boolean).join(' ');
+              setAddress(cleanAddress || results[0].formatted_address);
             } else {
               setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
             }
@@ -80,11 +93,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
   const handlePost = async () => {
     if (!capturedImage) {
       showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
-      return;
-    }
-
-    if (!supabase) {
-      showError('Supabase 설정이 완료되지 않았습니다.');
       return;
     }
 
@@ -151,7 +159,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, initialLocation }: WritePos
       }, 250);
 
       if (onPostCreated) onPostCreated(newPost);
-      showSuccess('새로운 추억이 Supabase에 안전하게 저장되었습니다! ✨');
+      showSuccess('새로운 추억이 등록되었습니다! ✨');
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
