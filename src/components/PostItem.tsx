@@ -199,6 +199,8 @@ const PostItem = ({
     return null;
   };
 
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+
   return (
     <div 
       onClick={onClick}
