@@ -144,31 +144,33 @@ const MapContainer = ({ posts, viewedPostIds, highlightedPostId, onMarkerClick, 
     const kakao = (window as any).kakao;
     if (!mapInstance.current || !kakao) return;
 
-    const content = document.createElement('div');
-    content.className = 'kakao-overlay';
-    content.style.cursor = 'pointer';
-    content.style.pointerEvents = 'auto'; // 클릭 가능하도록 명시
-    content.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.3));">
+    const container = document.createElement('div');
+    container.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 2000;';
+    
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translate(-50%, -100%); filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.3));';
+    inner.innerHTML = `
         <div style="background: #4f46e5; color: white; padding: 10px 18px; border-radius: 24px; font-weight: 900; font-size: 15px; display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 2px solid rgba(255,255,255,0.2); transition: all 0.2s active:scale-95;">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           글쓰기
         </div>
         <div style="width: 12px; height: 12px; background: #4f46e5; transform: rotate(45deg); margin-top: -8px; border-right: 2px solid rgba(255,255,255,0.2); border-bottom: 2px solid rgba(255,255,255,0.2);"></div>
-      </div>
     `;
     
-    // addEventListener를 사용하여 더 확실하게 클릭 감지
-    content.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    container.appendChild(inner);
+
+    // addDomListener를 사용하여 클릭 이벤트를 확실하게 캡처
+    kakao.maps.event.addDomListener(container, 'click', (e: any) => {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      
       onMapWriteClick({ lat, lng });
       hideActionPin();
     });
 
     const overlay = new kakao.maps.CustomOverlay({
       position: new kakao.maps.LatLng(lat, lng),
-      content: content,
+      content: container,
       yAnchor: 1,
       zIndex: 2000
     });
