@@ -38,11 +38,11 @@ const Profile = () => {
 
     setIsDataLoading(true);
     
-    // 1. 결정론적 가상 데이터 생성 (authUser.id를 씨앗으로 사용)
+    // 1. 결정론적 가상 데이터 생성
     const mockMine = createMockPosts(37.5665, 126.9780, 12, authUser.id);
 
     try {
-      // 2. 실제 DB 포스팅 가져오기
+      // 2. 실제 DB 포스팅 가져오기 (이미지가 있는 것만 필터링)
       const { data: realData, error } = await supabase
         .from('posts')
         .select('*')
@@ -51,28 +51,30 @@ const Profile = () => {
 
       if (error) throw error;
 
-      const realPosts = (realData || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name || displayName,
-          avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
-        },
-        content: p.content || '',
-        location: p.location_name || '알 수 없는 장소',
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url || FALLBACK_IMAGE,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: 'none'
-      })) as Post[];
+      const realPosts = (realData || [])
+        .filter(p => p.image_url && p.image_url.trim() !== '') // 이미지가 없는 게시물 제외
+        .map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: {
+            id: p.user_id,
+            name: p.user_name || displayName,
+            avatar: p.user_avatar || profile?.avatar_url || `https://i.pravatar.cc/150?u=${p.user_id}`
+          },
+          content: p.content || '',
+          location: p.location_name || '알 수 없는 장소',
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: 'none'
+        })) as Post[];
       
       // 3. 데이터 통합 및 정렬
       const combined = [...realPosts, ...mockMine].sort((a, b) => 
