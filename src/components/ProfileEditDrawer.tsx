@@ -26,6 +26,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
 
+  // 팝업이 열릴 때 현재 프로필 정보를 상태에 반영
   useEffect(() => {
     if (isOpen && profile) {
       setNickname(profile.nickname || '');
@@ -107,7 +108,11 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
               <div className="relative group">
                 <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
                   <Avatar className="w-full h-full border-4 border-white">
-                    <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+                    {/* 현재 적용된 이미지 또는 기본 이미지를 표시 */}
+                    <AvatarImage 
+                      src={avatarUrl || `https://i.pravatar.cc/150?u=${user?.id || 'me'}`} 
+                      className="object-cover" 
+                    />
                     <AvatarFallback className="bg-gray-100">
                       <User className="w-12 h-12 text-gray-300" />
                     </AvatarFallback>
