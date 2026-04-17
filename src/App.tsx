@@ -64,30 +64,27 @@ const AnimatedRoutes = () => {
 
   // 닉네임 설정 팝업 노출 로직
   useEffect(() => {
-    // 로딩 중이 아닐 때만 판단
-    if (loading) return;
-
-    // 1. 세션(로그인)이 있고
-    // 2. 프로필 정보가 로드되었는데
-    // 3. 닉네임이 null이거나 빈 문자열인 경우에만 표시
-    const needsNickname = 
-      session && 
-      profile && 
-      (profile.nickname === null || profile.nickname === '') && 
-      !hideLayout && 
-      location.pathname !== '/login';
-    
-    console.log('[App] Needs nickname check:', { 
-      hasSession: !!session, 
-      hasProfile: !!profile, 
-      nickname: profile?.nickname,
-      needsNickname 
-    });
-
-    if (needsNickname) {
-      setShowNicknameDialog(true);
-    } else {
+    // 로딩 중이거나 세션이 없으면 판단 유보
+    if (loading || !session) {
       setShowNicknameDialog(false);
+      return;
+    }
+
+    // 프로필 정보가 로드되었을 때만 판단
+    if (profile) {
+      // 닉네임이 명시적으로 null이거나 빈 문자열인 경우에만 표시
+      const needsNickname = 
+        (profile.nickname === null || profile.nickname === '') && 
+        !hideLayout && 
+        location.pathname !== '/login';
+      
+      console.log('[App] Nickname check:', { 
+        email: profile.email,
+        nickname: profile.nickname,
+        needsNickname 
+      });
+
+      setShowNicknameDialog(needsNickname);
     }
   }, [session, profile, hideLayout, loading, location.pathname]);
 

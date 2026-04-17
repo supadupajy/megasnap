@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       console.log('[Auth] Fetching profile for:', userId);
       const { data, error } = await supabase
@@ -49,17 +49,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       if (data) {
-        console.log('[Auth] Profile found:', data);
+        console.log('[Auth] Profile found in DB:', data);
         setProfile(data);
       } else {
-        console.log('[Auth] No profile found, setting defaults');
+        console.log('[Auth] No profile found in DB, setting empty state');
         setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
       }
     } catch (err) {
       console.error('[Auth] Profile fetch error:', err);
       setProfile({ nickname: null, avatar_url: null, bio: null, email: null });
     }
-  };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -91,22 +91,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        
+        // 세션이 생겼을 때 프로필이 없거나 이벤트가 발생하면 다시 조회
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setLoading(true);
           await fetchProfile(currentSession.user.id);
+          setLoading(false);
         }
       } else {
         setSession(null);
         setUser(null);
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
