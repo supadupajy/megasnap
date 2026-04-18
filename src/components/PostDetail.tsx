@@ -113,11 +113,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 150;
     const velocityThreshold = 500;
     
-    // 아래로 던지거나, 옆으로 강하게 밀었을 때 닫기
+    // 던지는 속도나 거리가 임계값을 넘으면 닫기
     if (
-      info.offset.y > threshold || 
-      info.velocity.y > velocityThreshold ||
-      Math.abs(info.offset.x) > threshold * 1.5
+      Math.abs(info.offset.y) > threshold || 
+      Math.abs(info.velocity.y) > velocityThreshold ||
+      Math.abs(info.offset.x) > threshold * 1.5 ||
+      Math.abs(info.velocity.x) > velocityThreshold
     ) {
       onClose();
     }
@@ -238,10 +239,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             initial={{ opacity: 0, scale: 0.9, y: 100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ 
-              y: 1000, 
+              x: dragX.get() * 5, // 던진 방향으로 더 멀리 날아감
+              y: dragY.get() * 5 + (dragY.get() >= 0 ? 1000 : -1000), 
               opacity: 0, 
               scale: 0.5, 
-              transition: { duration: 0.4, ease: "circIn" } 
+              rotate: dragX.get() / 2,
+              transition: { duration: 0.5, ease: "circIn" } 
             }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-grab active:cursor-grabbing"

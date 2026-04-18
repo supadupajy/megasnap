@@ -517,25 +517,29 @@ const Index = () => {
         targetUserId={targetUserId}
       />
 
-      {selectedPostId && (
-        <PostDetail 
-          posts={displayedMarkers} 
-          initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
-          isOpen={true} 
-          onClose={() => setSelectedPostId(null)} 
-          onViewPost={markAsViewed}
-          onLikeToggle={handleLikeToggle}
-          onLocationClick={(lat, lng) => {
-            const post = allPosts.find(p => p.lat === lat && p.lng === lng);
-            if (post) {
-              setHighlightedPostId(post.id);
-              setTimeout(() => setHighlightedPostId(null), 3000);
-            }
-            setMapCenter({ lat, lng });
-            setSelectedPostId(null);
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {selectedPostId && (
+          <PostDetail 
+            key="post-detail-modal"
+            posts={displayedMarkers} 
+            initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
+            isOpen={true} 
+            onClose={() => setSelectedPostId(null)} 
+            onViewPost={markAsViewed}
+            onLikeToggle={handleLikeToggle}
+            onLocationClick={(lat, lng) => {
+              const post = allPosts.find(p => p.lat === lat && p.lng === lng);
+              if (post) {
+                setHighlightedPostId(post.id);
+                setTimeout(() => setHighlightedPostId(null), 3000);
+              }
+              setMapCenter({ lat, lng });
+              setSelectedPostId(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <PlaceSearch 
         key={isSearchOpen ? 'open' : 'closed'}
         isOpen={isSearchOpen} 
