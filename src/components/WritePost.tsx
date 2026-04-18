@@ -26,6 +26,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
@@ -81,6 +82,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       if (image.dataUrl) {
         postDraftStore.set({ image: image.dataUrl });
         setVideoUrl(null);
+        setVideoFile(null);
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -96,6 +98,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         showError('동영상 용량은 50MB를 초과할 수 없습니다.');
         return;
       }
+      setVideoFile(file);
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       postDraftStore.set({ image: null });
@@ -119,24 +122,44 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     }
 
     setIsSubmitting(true);
-
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
-    const postData = {
-      content: draft.content,
-      location_name: address,
-      latitude: initialLocation.lat,
-      longitude: initialLocation.lng,
-      image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop',
-      video_url: videoUrl,
-      user_id: authUser.id,
-      user_name: displayName,
-      user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
-      likes: 0,
-      created_at: new Date().toISOString()
-    };
-
     try {
+      let finalVideoUrl = null;
+
+      // 동영상 파일이 있는 경우 Storage에 업로드
+      if (videoFile) {
+        const fileExt = videoFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${authUser.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('post-videos')
+          .upload(filePath, videoFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('post-videos')
+          .getPublicUrl(filePath);
+        
+        finalVideoUrl = publicUrl;
+      }
+
+      const postData = {
+        content: draft.content,
+        location_name: address,
+        latitude: initialLocation.lat,
+        longitude: initialLocation.lng,
+        image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop',
+        video_url: finalVideoUrl,
+        user_id: authUser.id,
+        user_name: displayName,
+        user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
+        likes: 0,
+        created_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('posts')
         .insert([postData])
@@ -162,7 +185,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         commentsCount: 0,
         comments: [],
         image: postData.image_url,
-        videoUrl: videoUrl,
+        videoUrl: finalVideoUrl,
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none'
@@ -173,10 +196,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       
       postDraftStore.clear();
       setVideoUrl(null);
+      setVideoFile(null);
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
-      showError('저장 중 오류가 발생했습니다.');
+      showError('저장 중 오류가 발생했습니다. 동영상 용량이나 네트워크를 확인해주세요.');
     } finally {
       setIsSubmitting(false);
     }
@@ -235,7 +259,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                     <video src={videoUrl!} className="w-full h-full object-contain" controls />
                   )}
                   <button 
-                    onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); }}
+                    onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); }}
                     className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
                   >
                     <X className="w-4 h-4" />
