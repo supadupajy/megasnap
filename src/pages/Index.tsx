@@ -23,6 +23,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSupabasePosts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
+import { Geolocation } from '@capacitor/geolocation';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 
 const Index = () => {
   const location = useLocation();
@@ -220,7 +222,6 @@ const Index = () => {
     
     const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
 
-    // 특수 마커 비율 조정 (각 2%, 2%, 1%)
     const countInfluencer = Math.max(1, Math.floor(displayCount * 0.02));
     const countPopular = Math.max(1, Math.floor(displayCount * 0.02));
     const countAd = Math.max(1, Math.floor(displayCount * 0.01));
@@ -264,8 +265,23 @@ const Index = () => {
     }, 1500);
   }, []);
 
-  const handleCurrentLocation = () => {
-    setMapCenter({ lat: 37.5665, lng: 126.9780 });
+  const handleCurrentLocation = async () => {
+    const toastId = showLoading('현재 위치를 찾는 중...');
+    try {
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+      
+      const { latitude, longitude } = position.coords;
+      setMapCenter({ lat: latitude, lng: longitude });
+      dismissToast(toastId);
+      showSuccess('현재 위치로 이동했습니다.');
+    } catch (err: any) {
+      dismissToast(toastId);
+      console.error('Geolocation error:', err);
+      showError('위치 정보를 가져올 수 없습니다. 권한 설정을 확인해주세요.');
+    }
   };
 
   const handlePlaceSelect = (place: any) => {
