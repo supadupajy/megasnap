@@ -1,4 +1,5 @@
 import { Post, User, Comment } from '@/types';
+import { getYoutubeThumbnail } from './utils';
 
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -226,7 +227,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.8; // 20% 확률로 유튜브 링크 포함
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.8; 
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
@@ -266,6 +267,13 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       }
     }
 
+    // 유튜브 링크가 있다면 썸네일을 기본 이미지로 설정
+    let finalImage = images[0];
+    if (youtubeUrl) {
+      const thumb = getYoutubeThumbnail(youtubeUrl);
+      if (thumb) finalImage = thumb;
+    }
+
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
     
@@ -300,7 +308,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       likes,
       commentsCount: comments.length,
       comments: comments,
-      image: images[0],
+      image: finalImage,
       images,
       adImageIndex: 1,
       isLiked: randomFn() > 0.5,

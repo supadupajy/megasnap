@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
@@ -103,12 +103,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const post = posts[currentIndex];
   if (!post) return null;
 
-  const images = post.images || [post.image];
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
-  const videoUrl = post.videoUrl;
+  
+  const youtubeId = getYoutubeId(post.youtubeUrl || '');
+  const youtubeThumb = getYoutubeThumbnail(post.youtubeUrl || '');
+  
+  // 유튜브 썸네일이 있으면 이미지 목록 맨 앞에 추가
+  const displayImages = youtubeThumb 
+    ? [youtubeThumb, ...(post.images?.length ? post.images : [post.image])]
+    : (post.images?.length ? post.images : [post.image]);
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
@@ -241,25 +247,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
                     )}>
                       <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-                        {videoUrl && isPlayingVideo ? (
-                          <video 
-                            src={videoUrl} 
-                            className="w-full h-full object-cover" 
-                            controls 
-                            autoPlay 
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                        {isPlayingVideo ? (
+                          youtubeId ? (
+                            <iframe
+                              className="w-full h-full"
+                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
+                              title="YouTube video player"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            ></iframe>
+                          ) : (
+                            <video 
+                              src={post.videoUrl} 
+                              className="w-full h-full object-cover" 
+                              controls 
+                              autoPlay 
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )
                         ) : (
                           <div className="relative w-full h-full">
                             <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                              {images.map((img: string, idx: number) => (
+                              {displayImages.map((img: string, idx: number) => (
                                 <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                                   <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                                   {idx === post.adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
                                 </div>
                               ))}
                             </div>
-                            {videoUrl && (
+                            {(post.videoUrl || youtubeId) && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
                                 className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
@@ -269,9 +286,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 </div>
                               </button>
                             )}
-                            {images.length > 1 && !videoUrl && (
+                            {displayImages.length > 1 && !(post.videoUrl || youtubeId) && (
                               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
-                                {images.map((_: any, idx: number) => (
+                                {displayImages.map((_: any, idx: number) => (
                                   <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
                                 ))}
                               </div>
