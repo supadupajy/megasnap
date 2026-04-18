@@ -217,13 +217,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
         <div 
           className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto"
+          onClick={onClose}
         >
           <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
 
           <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
             <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
               <div className="flex flex-col">
-                <div className="flex items-center justify-between px-4 py-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-4 py-4 shrink-0">
                   <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                     <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
                       <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
@@ -241,8 +242,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                   
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <button className="text-gray-400 p-1 outline-none">
                         <MoreHorizontal className="w-5 h-5" />
                       </button>
                     </DropdownMenuTrigger>
