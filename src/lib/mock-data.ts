@@ -13,95 +13,41 @@ const seededRandom = (seed: string) => {
   };
 };
 
+// 카테고리별 20개씩, 총 100개의 고유 이미지
 const ACCIDENT_IMAGES = [
-  "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
-  "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
-  "https://images.unsplash.com/photo-1566241440091-ec10df8db2e1",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8",
-  "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8",
-  "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2",
-  "https://images.unsplash.com/photo-1574610758891-5b809b6e6e2e",
-  "https://images.unsplash.com/photo-1506015391300-4802dc74de2e",
-  "https://images.unsplash.com/photo-1518527989017-5baca7a58d3c",
-  "https://images.unsplash.com/photo-1599412227383-b7d4751c8765",
-  "https://images.unsplash.com/photo-1578496479914-7ef3b0193be3",
-  "https://images.unsplash.com/photo-1590102426319-c7526718cd70",
-  "https://images.unsplash.com/photo-1517055727180-d1a9761c546a",
-  "https://images.unsplash.com/photo-1503376780353-7e6692767b70",
-  "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+  "1597328290883-50c5787b7c7e", "1580273916550-e323be2ae537", "1566241440091-ec10df8db2e1", "1494976388531-d1058494cdd8", "1516733725897-1aa73b87c8e8",
+  "1549317661-bd32c8ce0db2", "1574610758891-5b809b6e6e2e", "1506015391300-4802dc74de2e", "1518527989017-5baca7a58d3c", "1599412227383-b7d4751c8765",
+  "1578496479914-7ef3b0193be3", "1590102426319-c7526718cd70", "1517055727180-d1a9761c546a", "1503376780353-7e6692767b70", "1541899481282-d53bffe3c35d",
+  "1450101499163-c8848c66ca85", "1506719040632-7d588830c6a6", "1515569067071-ec3b51335dd0", "1533106497176-45ae19e68ba2", "1504215636907-fe1e63f29066"
+].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 
 const AD_FOOD_IMAGES = [
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445",
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
-  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543",
-  "https://images.unsplash.com/photo-1484723088339-0b2833a2595d",
-  "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5855",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
-  "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
-  "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
-  "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
-  "https://images.unsplash.com/photo-1493770348161-369560ae357d",
-  "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0",
-  "https://images.unsplash.com/photo-1498837167922-ddd27525d352"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+  "1504674900247-0877df9cc836", "1567620905732-2d1ec7bb7445", "1565299624946-b28f40a0ae38", "1482049016688-2d3e1b311543", "1484723088339-0b2833a2595d",
+  "1540189549336-e6e99c3679fe", "1476514525535-07fb3b4ae5f1", "1473093226795-af9932fe5855", "1512621776951-a57141f2eefd", "1467003909585-2f8a72700288",
+  "1555939594-58d7cb561ad1", "1565958011703-44f9829ba187", "1493770348161-369560ae357d", "1504754524776-8f4f37790ca0", "1498837167922-ddd27525d352",
+  "1513104890138-7c749659a591", "1432139555190-58524dae6a55", "1546069901-ba9599a7e63c", "1565299507177-b0ac66763828", "1567306301408-9b74779a11af"
+].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 
 const ANIMAL_IMAGES = [
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9",
-  "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba",
-  "https://images.unsplash.com/photo-1543466835-00a7907e9de1",
-  "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8",
-  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e",
-  "https://images.unsplash.com/photo-1474511320721-9a53616e108a",
-  "https://images.unsplash.com/photo-1530281700549-e82e7bf110d6",
-  "https://images.unsplash.com/photo-1552053831-71594a27632d",
-  "https://images.unsplash.com/photo-1518791841217-8f162f1e1131",
-  "https://images.unsplash.com/photo-1548199973-03cce0bbc87b",
-  "https://images.unsplash.com/photo-1561037404-61cd46aa615b",
-  "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7",
-  "https://images.unsplash.com/photo-1533738363-b7f9aef128ce",
-  "https://images.unsplash.com/photo-1519052537078-e6302a4968d4",
-  "https://images.unsplash.com/photo-1507146426996-ef05306b995a"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+  "1517841905240-472988babdf9", "1514888286974-6c03e2ca1dba", "1543466835-00a7907e9de1", "1537151608828-ea2b11777ee8", "1583511655857-d19b40a7a54e",
+  "1474511320721-9a53616e108a", "1530281700549-e82e7bf110d6", "1552053831-71594a27632d", "1518791841217-8f162f1e1131", "1548199973-03cce0bbc87b",
+  "1561037404-61cd46aa615b", "1516734212186-a967f81ad0d7", "1533738363-b7f9aef128ce", "1519052537078-e6302a4968d4", "1507146426996-ef05306b995a",
+  "1535268647677-300dbf3d78d1", "1544568100-847a948585b9", "1425082661705-1834bfd09dca", "1513245543132-31f507417b26", "1516222338250-863216ce01ea"
+].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 
 const PLACE_IMAGES = [
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-  "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716",
-  "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff",
-  "https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5",
-  "https://images.unsplash.com/photo-1505144808419-1957a94ca61e",
-  "https://images.unsplash.com/photo-1475924156734-496f6acc671e",
-  "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+  "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b",
+  "1472214103451-9374bd1c798e", "1469474968028-56623f02e42e", "1447752875215-b2761acb3c5d", "1433086966358-54859d0ed716", "1501854140801-50d01698950b",
+  "1426604966848-d7adac402bff", "1418065460487-3e41a6c84dc5", "1505144808419-1957a94ca61e", "1475924156734-496f6acc671e", "1465146344425-f00d5f5c8f07",
+  "1433838552652-f9a46b332c40", "1506744038136-46273834b3fb", "1470770841072-f978cf4d019e", "1511884642898-4c92249e20b6", "1434725039720-aaad6dd32dfe"
+].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 
 const GENERAL_POOL = [
-  "https://images.unsplash.com/photo-1433086966358-54859d0ed716",
-  "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-  "https://images.unsplash.com/photo-1505144808419-1957a94ca61e",
-  "https://images.unsplash.com/photo-1475924156734-496f6acc671e",
-  "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07",
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-  "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
-  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
-  "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d",
-  "https://images.unsplash.com/photo-1426604966848-d7adac402bff",
-  "https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5"
-].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
+  "1493246507139-91e8fad9978e", "1500382017468-9049fed747ef", "1475113548554-5a36f1f523d6", "1518173946687-a4c8892bbd9f", "1502082553048-f009c37129b9",
+  "1439853949127-fa647821eba0", "1508739773434-c26b3d09e071", "1414235077428-338989a2e8c0", "1490730141103-6cac27aaab94", "1519681393784-d120267933ba",
+  "1536431311719-398b6704d4cc", "1501183638710-841dd1904471", "1506260408121-e353d10b87c7", "1431794062232-2a99a5441867", "1445262102387-5fbb30a5e59d",
+  "1472396961693-142e6e269027", "1510784722466-f2aa9c52fed6", "1446776811953-b23d57bd21aa", "1501854140801-50d01698950b", "1469474968028-56623f02e42e"
+].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 
 export const GIF_POOL = [
   "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f",
@@ -172,26 +118,25 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-// 임베드가 확실히 허용되는 글로벌 공식 뮤직비디오 ID 리스트
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
-  "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
-  "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
-  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson - Uptown Funk
-  "https://www.youtube.com/watch?v=hT_nvWreIhg", // OneRepublic - Counting Stars
-  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
-  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
-  "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
-  "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
-  "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
-  "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
-  "https://www.youtube.com/watch?v=7wtfhZwyrcc", // Imagine Dragons - Believer
-  "https://www.youtube.com/watch?v=YykjpeuMNEk", // Coldplay - Hymn For The Weekend
-  "https://www.youtube.com/watch?v=u31qwQUeGuM", // The Weeknd - Save Your Tears
-  "https://www.youtube.com/watch?v=TUVcZfQe-Kw", // Dua Lipa - Levitating
-  "https://www.youtube.com/watch?v=DyDfgMOUjCI", // Billie Eilish - bad guy
-  "https://www.youtube.com/watch?v=RlPNh_PB6Ww", // Olivia Rodrigo - vampire
-  "https://www.youtube.com/watch?v=fRh_vgS2dFE"  // Justin Bieber - Peaches
+  "https://www.youtube.com/watch?v=9bZkp7q19f0",
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0",
+  "https://www.youtube.com/watch?v=hT_nvWreIhg",
+  "https://www.youtube.com/watch?v=nfWlot6h_JM",
+  "https://www.youtube.com/watch?v=kffacxfA7G4",
+  "https://www.youtube.com/watch?v=CevxZvSJLk8",
+  "https://www.youtube.com/watch?v=09R8_2nJtjg",
+  "https://www.youtube.com/watch?v=YQHsXMglC9A",
+  "https://www.youtube.com/watch?v=2vjPBrBU-TM",
+  "https://www.youtube.com/watch?v=7wtfhZwyrcc",
+  "https://www.youtube.com/watch?v=YykjpeuMNEk",
+  "https://www.youtube.com/watch?v=u31qwQUeGuM",
+  "https://www.youtube.com/watch?v=TUVcZfQe-Kw",
+  "https://www.youtube.com/watch?v=DyDfgMOUjCI",
+  "https://www.youtube.com/watch?v=RlPNh_PB6Ww",
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE"
 ];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
@@ -309,7 +254,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       borderType = 'popular';
     }
 
-    // 시간 범위를 48시간으로 확장하여 필터링 효과를 확실히 함
     const createdAt = new Date(Date.now() - randomFn() * 48 * 3600000);
 
     return {

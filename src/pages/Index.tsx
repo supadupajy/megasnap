@@ -63,10 +63,24 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  const TILE_SIZE = 0.05; // DB 부하를 줄이기 위해 타일 크기 조정
+  const TILE_SIZE = 0.05; 
   const throttleTimer = useRef<any>(null);
-  const processedStateRef = useRef<string | null>(null);
   const isSyncing = useRef(false);
+  const hasGlobalSeeded = useRef(false);
+
+  // 대한민국 주요 거점 도시 좌표
+  const KOREA_HUBS = [
+    { name: '서울', lat: 37.5665, lng: 126.9780 },
+    { name: '부산', lat: 35.1796, lng: 129.0756 },
+    { name: '인천', lat: 37.4563, lng: 126.7052 },
+    { name: '대구', lat: 35.8714, lng: 128.6014 },
+    { name: '대전', lat: 36.3504, lng: 127.3845 },
+    { name: '광주', lat: 35.1595, lng: 126.8526 },
+    { name: '울산', lat: 35.5384, lng: 129.3114 },
+    { name: '제주', lat: 33.4996, lng: 126.5312 },
+    { name: '강릉', lat: 37.7519, lng: 128.8761 },
+    { name: '전주', lat: 35.8242, lng: 127.1480 }
+  ];
 
   // 1. 지도 변경 핸들러
   const handleMapChange = useCallback((data: any) => {
@@ -87,7 +101,51 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 2. Supabase 데이터 동기화 및 Seeding 로직
+  // 2. 전역 데이터 시딩 (최초 1회 전국 100개 생성)
+  const seedGlobalData = useCallback(async () => {
+    if (hasGlobalSeeded.current) return;
+    hasGlobalSeeded.current = true;
+
+    try {
+      const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+      
+      if (count === 0) {
+        const toastId = showLoading('전국 지도를 탐험할 준비를 하고 있습니다...');
+        let allMockData: any[] = [];
+        
+        // 각 허브 도시별로 10개씩 생성 (총 100개)
+        KOREA_HUBS.forEach(hub => {
+          const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
+          const insertData = mockPosts.map(p => ({
+            content: p.content,
+            location_name: `${hub.name} 주변`,
+            latitude: p.lat,
+            longitude: p.lng,
+            image_url: p.image,
+            user_id: p.user.id,
+            user_name: p.user.name,
+            user_avatar: p.user.avatar,
+            likes: p.likes,
+            category: p.category,
+            border_type: p.borderType,
+            is_gif: p.isGif,
+            is_influencer: p.isInfluencer,
+            youtube_url: p.youtubeUrl,
+            created_at: p.createdAt.toISOString()
+          }));
+          allMockData = [...allMockData, ...insertData];
+        });
+
+        const { error } = await supabase.from('posts').insert(allMockData);
+        dismissToast(toastId);
+        if (!error) showSuccess('대한민국 전역에 100개의 새로운 추억이 등록되었습니다! 🇰🇷');
+      }
+    } catch (err) {
+      console.error('[Global Seed] Error:', err);
+    }
+  }, []);
+
+  // 3. Supabase 데이터 동기화
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
     
@@ -95,10 +153,8 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
 
     try {
-      // 현재 영역의 포스팅을 DB에서 가져옴
       const dbPosts = await fetchPostsInBounds(sw, ne);
       
-      // 메모리 상태 업데이트
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
@@ -107,21 +163,14 @@ const Index = () => {
         return combined;
       });
 
-      // 데이터가 너무 적으면 해당 타일에 Seeding 수행
+      // 타일 기반 추가 시딩 (데이터가 너무 적을 때만)
       const latIdx = Math.floor(mapData.center.lat / TILE_SIZE);
       const lngIdx = Math.floor(mapData.center.lng / TILE_SIZE);
       const tileKey = `${latIdx},${lngIdx}`;
 
-      if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 5) {
+      if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 3) {
         mapCache.populatedTiles.add(tileKey);
-        
-        const tileCenterLat = (latIdx + 0.5) * TILE_SIZE;
-        const tileCenterLng = (lngIdx + 0.5) * TILE_SIZE;
-        
-        // 가상 데이터 생성
-        const mockData = createMockPosts(tileCenterLat, tileCenterLng, 12);
-        
-        // Supabase에 저장
+        const mockData = createMockPosts(mapData.center.lat, mapData.center.lng, 8);
         const insertData = mockData.map(p => ({
           content: p.content,
           location_name: p.location,
@@ -139,36 +188,7 @@ const Index = () => {
           youtube_url: p.youtubeUrl,
           created_at: p.createdAt.toISOString()
         }));
-
-        const { data: savedData, error } = await supabase
-          .from('posts')
-          .insert(insertData)
-          .select();
-
-        if (!error && savedData) {
-          const formattedSaved = savedData.map(p => ({
-            id: p.id,
-            isAd: false,
-            isGif: p.is_gif,
-            isInfluencer: p.is_influencer,
-            user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-            content: p.content,
-            location: p.location_name,
-            lat: p.latitude,
-            lng: p.longitude,
-            likes: p.likes,
-            commentsCount: 0,
-            comments: [],
-            image: p.image_url,
-            youtubeUrl: p.youtube_url,
-            category: p.category,
-            isLiked: false,
-            createdAt: new Date(p.created_at),
-            borderType: p.border_type
-          })) as Post[];
-
-          setAllPosts(prev => [...prev, ...formattedSaved]);
-        }
+        await supabase.from('posts').insert(insertData);
       }
     } catch (err) {
       console.error('[Sync] Error:', err);
@@ -178,10 +198,14 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => {
+    if (authUser) seedGlobalData();
+  }, [authUser, seedGlobalData]);
+
+  useEffect(() => {
     syncPostsWithSupabase();
   }, [mapData, syncPostsWithSupabase]);
 
-  // 3. 필터링 및 마커 표시 로직
+  // 4. 필터링 및 마커 표시 로직
   useEffect(() => {
     if (!mapData?.bounds) return;
     
@@ -240,7 +264,6 @@ const Index = () => {
     setDisplayedMarkers(finalMarkers);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts, highlightedPostId]);
 
-  // 나머지 핸들러들 (기존과 동일)
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
       if (post.id === postId) {
