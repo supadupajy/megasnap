@@ -33,7 +33,7 @@ const Popular = () => {
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`, [profile, authUser]);
 
   const filteredPosts = useMemo(() => {
-    return posts.filter(p => !blockedIds.has(p.user.id));
+    return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
   const fetchServerPosts = useCallback(async () => {
@@ -87,14 +87,10 @@ const Popular = () => {
   }, [authUser, displayName, avatarUrl]);
 
   useEffect(() => {
-    if (!authLoading) {
-      if (authUser) {
-        fetchServerPosts();
-      } else {
-        navigate('/login', { replace: true });
-      }
+    if (!authLoading && authUser) {
+      fetchServerPosts();
     }
-  }, [authLoading, authUser, fetchServerPosts, navigate]);
+  }, [authLoading, authUser, fetchServerPosts]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore) return;
@@ -145,14 +141,6 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <Header />
@@ -187,12 +175,17 @@ const Popular = () => {
               onDelete={handlePostDelete}
             />
           ))}
+          {filteredPosts.length === 0 && !isInitialLoading && (
+            <div className="py-20 text-center text-gray-400 font-medium">
+              표시할 포스팅이 없습니다.
+            </div>
+          )}
         </div>
         <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-          {isLoadingMore ? (
+          {isLoadingMore || (isInitialLoading && posts.length === 0) ? (
             <>
               <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">인기 포스팅을 더 불러오는 중...</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">포스팅을 불러오는 중...</p>
             </>
           ) : (
             posts.length > 0 && <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
