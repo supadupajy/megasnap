@@ -150,7 +150,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         location_name: address,
         latitude: initialLocation.lat,
         longitude: initialLocation.lng,
-        image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop',
+        image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
         video_url: finalVideoUrl,
         user_id: authUser.id,
         user_name: displayName,
@@ -207,10 +207,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={true}>
-      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+      <DrawerContent 
+        className={cn(
+          "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
+          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh]"
+        )}
+      >
+        {!isKeyboardOpen && (
+          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        )}
         
-        <div className="px-10 flex flex-col flex-1 min-h-0">
+        <div className={cn("px-10 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
           <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <span className="text-indigo-600">✨</span>

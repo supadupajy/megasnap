@@ -3,6 +3,15 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.example.chorasnap"
     compileSdk rootProject.ext.compileSdkVersion
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def appName = "Chora"
+            def buildType = variant.buildType.name
+            def versionName = variant.versionName
+
+            outputFileName = "${appName}_${buildType}_v${versionName}.apk"
+        }
+    }
     defaultConfig {
         applicationId "com.example.chorasnap"
         minSdkVersion rootProject.ext.minSdkVersion

@@ -30,7 +30,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<any>(null);
   
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
+  const { isKeyboardOpen } = useKeyboard();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
   const geocoderService = useRef<any>(null);
@@ -56,7 +56,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     const kakao = (window as any).kakao;
 
     try {
-      // 초기 검색 (주소 + 장소)
       const addressPromise = new Promise<Place[]>((resolve) => {
         geocoderService.current.addressSearch(keyword, (data: any, status: any) => {
           if (status === kakao.maps.services.Status.OK) {
@@ -115,7 +114,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     }
   }, []);
 
-  // 추가 페이지 로드 전용 함수
   const loadNextPage = useCallback(() => {
     if (!pagination?.hasNextPage || isSearching.current) return;
     
@@ -149,7 +147,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     }, { page: pagination.current + 1, size: 15 });
   }, [pagination, query]);
 
-  // 입력값 변경 시 디바운스 검색
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim() && query !== lastQuery.current) {
@@ -164,7 +161,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
-  // 무한 스크롤 감지
   useEffect(() => {
     if (!pagination?.hasNextPage || isLoading) return;
 
@@ -183,13 +179,15 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
       <DrawerContent 
         className={cn(
           "flex flex-col outline-none bg-white rounded-t-[40px] z-[1001] transition-all duration-300",
-          isKeyboardOpen ? "h-[95vh]" : "h-[85vh]"
+          isKeyboardOpen ? "h-full rounded-t-none" : "h-[85vh]"
         )}
-        style={{ paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : '0px' }}
       >
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        {/* 키보드가 열렸을 때는 핸들 바를 숨겨 공간 확보 */}
+        {!isKeyboardOpen && (
+          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        )}
         
-        <div className="px-8 flex flex-col flex-1 overflow-hidden">
+        <div className={cn("px-8 flex flex-col flex-1 overflow-hidden", isKeyboardOpen && "pt-12")}>
           <div className="flex items-center justify-between mb-6 shrink-0">
             <h2 className="text-xl font-black text-gray-900">장소 및 주소 검색</h2>
             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
