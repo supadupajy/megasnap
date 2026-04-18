@@ -297,7 +297,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         youtubeId ? (
                           <iframe
                             className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
+                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1`}
                             title="YouTube video player"
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -307,7 +307,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <video 
                             src={post.videoUrl} 
                             className="w-full h-full object-cover" 
-                            controls={false}
+                            controls={true}
                             autoPlay 
                             playsInline
                             loop
