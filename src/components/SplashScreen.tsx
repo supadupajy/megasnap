@@ -24,29 +24,28 @@ const SplashScreen = () => {
           className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-600 blur-3xl rounded-full"
         />
 
-        <div className="relative flex flex-col items-center gap-6 w-full">
-          {/* Optimized Logo Image */}
+        <div className="relative flex flex-col items-center gap-4 w-full">
+          {/* New Logo Image */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ 
               type: "spring",
-              stiffness: 200,
-              damping: 25,
+              stiffness: 260,
+              damping: 20,
               delay: 0.2
             }}
-            className="w-64 h-auto flex items-center justify-center"
+            className="w-48 h-48 flex items-center justify-center"
           >
             <img 
               src="dyad-media://media/megasnap/.dyad/media/8117eca2306b91604379b7286150de8e.png" 
               alt="Chora Logo" 
-              className="w-full h-auto object-contain"
-              style={{ imageRendering: 'auto' }}
+              className="w-full h-full object-contain"
             />
           </motion.div>
 
           {/* Tagline */}
-          <div className="flex flex-col items-center -mt-2">
+          <div className="flex flex-col items-center -mt-4">
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -57,12 +56,12 @@ const SplashScreen = () => {
             </motion.p>
           </div>
 
-          {/* BMW Ad Image */}
+          {/* BMW Ad Image (Keeping for premium feel) */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2, duration: 1 }}
-            className="mt-10 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group"
+            className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group"
           >
             <img 
               src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" 
