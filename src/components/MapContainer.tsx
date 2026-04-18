@@ -13,6 +13,7 @@ interface MapContainerProps {
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
   selectionLocation?: { lat: number; lng: number } | null;
+  searchResultLocation?: { lat: number; lng: number } | null;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
@@ -25,12 +26,14 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  selectionLocation
+  selectionLocation,
+  searchResultLocation
 }: MapContainerProps) => {
   const { user: authUser } = useAuth();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  const searchOverlayRef = useRef<any>(null);
   const lastDragEnd = useRef<number>(0);
   const isProgrammaticMove = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
@@ -146,7 +149,6 @@ const MapContainer = ({
       } else {
         isProgrammaticMove.current = false;
         animationFrameRef.current = null;
-        // 최종 위치에서 데이터 갱신
         const bounds = map.getBounds();
         onMapChange({
           bounds: { sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } },
@@ -167,6 +169,41 @@ const MapContainer = ({
       if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
     }
   }, [center, isMapReady]);
+
+  // 검색 결과 마커 관리
+  useEffect(() => {
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao) return;
+
+    if (searchOverlayRef.current) {
+      searchOverlayRef.current.setMap(null);
+      searchOverlayRef.current = null;
+    }
+
+    if (searchResultLocation) {
+      const content = document.createElement('div');
+      content.className = 'search-result-marker-container';
+      content.innerHTML = `
+        <div class="relative">
+          <div class="search-marker-ping"></div>
+          <div class="relative w-12 h-12">
+            <div class="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl"></div>
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10"></div>
+          </div>
+        </div>
+      `;
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
+        content: content,
+        yAnchor: 1,
+        zIndex: 11000 // 일반 마커보다 위에 표시
+      });
+
+      overlay.setMap(mapInstance.current);
+      searchOverlayRef.current = overlay;
+    }
+  }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
@@ -214,7 +251,6 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // 강조된 마커는 zIndex를 가장 높게 설정 (10000)
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = currentLevel === 7 ? 0.5 : (currentLevel === 8 ? 0.25 : 1);

@@ -59,10 +59,11 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(24); 
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 위치 선택 모드 관련 상태
+  // 위치 선택 및 검색 결과 마커 관련 상태
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
   const throttleTimer = useRef<any>(null);
@@ -200,7 +201,6 @@ const Index = () => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
 
-      // 강조된 포스팅은 모든 필터를 무시하고 무조건 후보에 포함
       if (post.id === highlightedPostId) return true;
 
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
@@ -246,7 +246,6 @@ const Index = () => {
       finalMarkers = survivors.sort(stableSort).slice(0, displayCount);
     }
 
-    // 강조된 포스팅이 최종 리스트에 없다면 강제로 추가 (필터링 우회 보장)
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) {
@@ -303,6 +302,14 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => {
     setMapCenter({ lat: place.lat, lng: place.lng });
+    setSearchResultLocation({ lat: place.lat, lng: place.lng });
+  };
+
+  const handleMapClick = () => {
+    // 지도 클릭 시 검색 결과 마커 제거
+    if (searchResultLocation) {
+      setSearchResultLocation(null);
+    }
   };
 
   const handleViewAllClick = () => {
@@ -366,7 +373,9 @@ const Index = () => {
             highlightedPostId={highlightedPostId}
             onMarkerClick={(p) => setSelectedPostId(p.id)}
             onMapChange={handleMapChange}
+            onMapClick={handleMapClick}
             center={mapCenter}
+            searchResultLocation={searchResultLocation}
           />
 
           <AnimatePresence>
