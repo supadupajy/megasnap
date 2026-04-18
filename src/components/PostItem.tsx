@@ -50,7 +50,7 @@ interface PostItemProps {
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
-  onImageError?: (postId: string) => void; // 이미지 에러 콜백 추가
+  onImageError?: (postId: string) => void;
   onClick?: () => void;
 }
 
@@ -103,18 +103,14 @@ const PostItem = ({
   const displayImages = images.length > 0 ? images : [image];
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
-  // 이미지 로드 실패 시 처리
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (onImageError) {
-      // 부모에게 에러를 알려서 게시물을 삭제하도록 함
       onImageError(id);
     } else {
-      // 콜백이 없으면 폴백 이미지 표시
       (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
     }
   };
 
-  // 초기 좋아요 상태 확인
   useEffect(() => {
     const checkLikeStatus = async () => {
       if (!authUser || !id || id.length < 20) return;
@@ -130,7 +126,6 @@ const PostItem = ({
     checkLikeStatus();
   }, [authUser, id]);
 
-  // 댓글 실시간 로드
   useEffect(() => {
     const fetchComments = async () => {
       if (!id || id.length < 20) return;
@@ -354,7 +349,7 @@ const PostItem = ({
 
       <div className="px-4">
         <div className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
-          <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", (borderType !== 'none' || isAd) && "shine-overlay")}>
+          <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
             <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
               {displayImages.map((img, idx) => (
                 <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">

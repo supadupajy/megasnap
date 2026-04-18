@@ -107,7 +107,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
 
-  // 본인 확인 로직: 실제 ID 일치 또는 테스트용 'me' ID 확인
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -134,7 +133,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      // 실제 DB에서 삭제 시도 (ID가 UUID인 경우에만 작동)
       if (post.id.length > 20) {
         const { error } = await supabase
           .from('posts')
@@ -221,7 +219,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                 <div className="flex flex-col">
-                  {/* Header - Stop propagation to allow profile clicks */}
                   <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
@@ -276,13 +273,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </DropdownMenu>
                   </div>
                   
-                  {/* Image Area - Clicking here will close the popup (bubbles to motion.div) */}
                   <div className="px-4">
                     <div className={cn(
                       "relative aspect-square w-full rounded-2xl transition-all duration-500", 
                       isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
                     )}>
-                      <div className={cn("w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10", isInfluencer && "shine-overlay")}>
+                      <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
                         <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
                           {images.map((img: string, idx: number) => (
                             <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
@@ -307,7 +303,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
-                  {/* Action Area - Stop propagation to allow interactions */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-4 pt-1.5">
