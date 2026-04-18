@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2 } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Database } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -92,72 +92,89 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 데이터 시딩 로직 (20명의 가상 저자 버전)
+  // 데이터 시딩 로직 (강력한 버전)
   const seedGlobalData = useCallback(async (force = false) => {
-    if (!authUser || (hasGlobalSeeded.current && !force)) return;
+    if (!authUser) return;
+    if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
+    const toastId = showLoading('데이터베이스를 초기화하고 있습니다...');
+    console.log('[Seed] Starting data seeding process...');
+
     try {
-      // 1. 내 프로필이 있는지 먼저 확인 및 생성
-      if (!profile) {
-        await refreshProfile();
+      // 1. 프로필 강제 생성/확인
+      const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+      const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
+
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: authUser.id,
+        nickname: displayName,
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString()
+      });
+
+      if (profileError) {
+        console.error('[Seed] Profile Upsert Error:', profileError);
+        throw new Error(`프로필 생성 실패: ${profileError.message}`);
       }
 
-      const { count, error: countError } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-      if (countError) throw countError;
-      
-      if (count === 0 || force) {
-        const toastId = showLoading('전국 지도를 탐험할 준비를 하고 있습니다 (100개 생성 중)...');
-        
-        // 20명의 가상 저자 정보 생성
-        const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
-          name: `Explorer_${i + 1}`,
-          avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
-        }));
-
-        let allMockData: any[] = [];
-        
-        KOREA_HUBS.forEach(hub => {
-          const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-          const insertData = mockPosts.map((p, idx) => {
-            // 20명의 저자 중 한 명을 랜덤하게 배정
-            const author = virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)];
-            
-            return {
-              content: p.content,
-              location_name: `${hub.name} 주변`,
-              latitude: p.lat,
-              longitude: p.lng,
-              image_url: p.image,
-              user_id: authUser.id, // 실제 DB 제약조건 통과를 위해 내 ID 사용
-              user_name: author.name, // 표시 이름은 가상 저자
-              user_avatar: author.avatar, // 표시 아바타는 가상 저자
-              likes: p.likes,
-              category: p.category,
-              border_type: p.borderType,
-              is_gif: p.isGif,
-              is_influencer: p.isInfluencer,
-              youtube_url: p.youtubeUrl,
-              created_at: p.createdAt.toISOString()
-            };
-          });
-          allMockData = [...allMockData, ...insertData];
-        });
-
-        const { error: insertError } = await supabase.from('posts').insert(allMockData);
-        dismissToast(toastId);
-        
-        if (insertError) {
-          console.error('[Global Seed] Insert Error:', insertError);
-          showError(`데이터 생성 실패: ${insertError.message}`);
-        } else {
-          showSuccess('대한민국 전역에 100개의 새로운 추억이 등록되었습니다! 🇰🇷');
-          syncPostsWithSupabase();
+      // 2. 기존 데이터 확인 (강제 모드가 아닐 때만)
+      if (!force) {
+        const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+        if (count && count > 0) {
+          console.log(`[Seed] Already have ${count} posts. Skipping.`);
+          dismissToast(toastId);
+          return;
         }
       }
+
+      // 3. 100개 데이터 생성
+      const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
+        name: `Explorer_${i + 1}`,
+        avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
+      }));
+
+      let allMockData: any[] = [];
+      KOREA_HUBS.forEach(hub => {
+        const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
+        const insertData = mockPosts.map(p => {
+          const author = virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)];
+          return {
+            content: p.content,
+            location_name: `${hub.name} 주변`,
+            latitude: p.lat,
+            longitude: p.lng,
+            image_url: p.image,
+            user_id: authUser.id,
+            user_name: author.name,
+            user_avatar: author.avatar,
+            likes: p.likes,
+            category: p.category,
+            border_type: p.borderType,
+            is_gif: p.isGif,
+            is_influencer: p.isInfluencer,
+            youtube_url: p.youtubeUrl,
+            created_at: p.createdAt.toISOString()
+          };
+        });
+        allMockData = [...allMockData, ...insertData];
+      });
+
+      // 4. 20개씩 끊어서 삽입 (안정성)
+      for (let i = 0; i < allMockData.length; i += 20) {
+        const chunk = allMockData.slice(i, i + 20);
+        const { error: insertError } = await supabase.from('posts').insert(chunk);
+        if (insertError) throw insertError;
+        console.log(`[Seed] Inserted chunk ${i/20 + 1}/5`);
+      }
+
+      dismissToast(toastId);
+      showSuccess('전국 100개의 테스트 데이터가 생성되었습니다! 🇰🇷');
+      syncPostsWithSupabase();
     } catch (err: any) {
-      console.error('[Global Seed] Error:', err);
-      showError('데이터베이스 연결 상태를 확인해주세요.');
+      console.error('[Seed] Critical Error:', err);
+      dismissToast(toastId);
+      showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
     }
   }, [authUser, profile, refreshProfile]);
 
@@ -175,40 +192,12 @@ const Index = () => {
         mapCache.posts = combined;
         return combined;
       });
-
-      const latIdx = Math.floor(mapData.center.lat / TILE_SIZE);
-      const lngIdx = Math.floor(mapData.center.lng / TILE_SIZE);
-      const tileKey = `${latIdx},${lngIdx}`;
-
-      if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 3 && authUser) {
-        mapCache.populatedTiles.add(tileKey);
-        const mockData = createMockPosts(mapData.center.lat, mapData.center.lng, 8);
-        
-        const insertData = mockData.map(p => ({
-          content: p.content,
-          location_name: p.location,
-          latitude: p.lat,
-          longitude: p.lng,
-          image_url: p.image,
-          user_id: authUser.id,
-          user_name: `Explorer_${Math.floor(Math.random() * 20) + 1}`,
-          user_avatar: `https://i.pravatar.cc/150?u=bot_${Math.floor(Math.random() * 20) + 1}`,
-          likes: p.likes,
-          category: p.category,
-          border_type: p.borderType,
-          is_gif: p.isGif,
-          is_influencer: p.isInfluencer,
-          youtube_url: p.youtubeUrl,
-          created_at: p.createdAt.toISOString()
-        }));
-        await supabase.from('posts').insert(insertData);
-      }
     } catch (err) {
       console.error('[Sync] Error:', err);
     } finally {
       isSyncing.current = false;
     }
-  }, [mapData, authUser]);
+  }, [mapData]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
@@ -267,11 +256,13 @@ const Index = () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
     setAllPosts([]);
-    // 새로고침 시 데이터가 없다면 강제 시딩 시도
-    await seedGlobalData(true);
     await syncPostsWithSupabase();
     setIsRefreshing(false);
-  }, [syncPostsWithSupabase, seedGlobalData]);
+  }, [syncPostsWithSupabase]);
+
+  const handleForceSeed = () => {
+    seedGlobalData(true);
+  };
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
@@ -409,6 +400,17 @@ const Index = () => {
                 </div>
               </div>
               <AnimatePresence>{!isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}><TimeSlider value={timeValue} onChange={setTimeValue} /></motion.div>}</AnimatePresence>
+              
+              {/* 데이터 강제 초기화 버튼 (디버깅용) */}
+              <div className="absolute bottom-4 right-4 z-20">
+                <button 
+                  onClick={handleForceSeed}
+                  className="flex items-center gap-2 px-3 py-2 bg-black/20 backdrop-blur-md text-white/60 rounded-xl text-[10px] font-bold hover:bg-black/40 transition-all"
+                >
+                  <Database className="w-3 h-3" />
+                  데이터 초기화
+                </button>
+              </div>
             </>
           )}
         </div>
