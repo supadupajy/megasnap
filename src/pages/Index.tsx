@@ -117,53 +117,53 @@ const Index = () => {
     if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
-    const toastId = showLoading('데이터베이스를 초기화하고 있습니다...');
+    const toastId = showLoading('가상 계정 및 데이터를 생성하고 있습니다...');
     
     try {
-      const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-      const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
-
-      // 1. 프로필 생성
+      // 1. 내 프로필 생성
       await supabase.from('profiles').upsert({
         id: authUser.id,
-        nickname: displayName,
-        avatar_url: avatarUrl,
+        nickname: profile?.nickname || authUser.email?.split('@')[0] || '탐험가',
+        avatar_url: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         updated_at: new Date().toISOString()
       });
 
-      if (!force) {
-        const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-        if (count && count > 0) {
-          dismissToast(toastId);
-          return;
-        }
-      }
-
-      // 2. 데이터 생성 (DB에 확실히 존재하는 필드만 사용)
-      const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
-        name: `Explorer_${i + 1}`,
-        avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
+      // 2. 가상 유저 20명 생성
+      const virtualUsers = Array.from({ length: 20 }).map((_, i) => ({
+        id: `virtual_user_${i + 1}_${Math.random().toString(36).substr(2, 5)}`,
+        nickname: `Explorer_${i + 1}`,
+        avatar_url: `https://i.pravatar.cc/150?u=bot_${i + 1}`,
+        bio: `Chora와 함께 지도를 탐험하는 ${i + 1}번째 멤버입니다. 📍`,
+        updated_at: new Date().toISOString()
       }));
 
+      const { error: vUserError } = await supabase.from('profiles').upsert(virtualUsers);
+      if (vUserError) throw new Error(`가상 계정 생성 실패: ${vUserError.message}`);
+
+      // 3. 포스팅 데이터 생성 및 분배
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
         const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-        const insertData = mockPosts.map(p => ({
-          content: p.content,
-          location_name: `${hub.name} 주변`,
-          latitude: p.lat,
-          longitude: p.lng,
-          image_url: p.image,
-          user_id: authUser.id,
-          user_name: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].name,
-          user_avatar: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].avatar,
-          likes: p.likes,
-          created_at: p.createdAt.toISOString()
-        }));
+        const insertData = mockPosts.map(p => {
+          // 가상 유저 중 한 명을 랜덤하게 선택
+          const randomUser = virtualUsers[Math.floor(Math.random() * virtualUsers.length)];
+          return {
+            content: p.content,
+            location_name: `${hub.name} 주변`,
+            latitude: p.lat,
+            longitude: p.lng,
+            image_url: p.image,
+            user_id: randomUser.id, // 가상 유저 ID 할당
+            user_name: randomUser.nickname,
+            user_avatar: randomUser.avatar_url,
+            likes: p.likes,
+            created_at: p.createdAt.toISOString()
+          };
+        });
         allMockData = [...allMockData, ...insertData];
       });
 
-      // 3. 데이터 삽입
+      // 4. 데이터 삽입
       for (let i = 0; i < allMockData.length; i += 10) {
         const chunk = allMockData.slice(i, i + 10);
         const { error: insertError } = await supabase.from('posts').insert(chunk);
@@ -171,7 +171,7 @@ const Index = () => {
       }
 
       dismissToast(toastId);
-      showSuccess('전국 100개의 테스트 데이터가 생성되었습니다! 🇰🇷');
+      showSuccess('20개의 가상 계정과 100개의 포스팅이 생성되었습니다! 🇰🇷');
       syncPostsWithSupabase();
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
