@@ -33,6 +33,7 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const lastDragEnd = useRef<number>(0);
   const isProgrammaticMove = useRef<boolean>(false);
+  const animationFrameRef = useRef<number | null>(null);
   
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -62,7 +63,6 @@ const MapContainer = ({
         mapInstance.current = map;
 
         const updateMapData = () => {
-          // 프로그래밍 방식으로 이동 중일 때는 외부 상태 업데이트를 잠시 멈춤 (애니메이션 끊김 방지)
           if (isProgrammaticMove.current) return;
 
           const bounds = map.getBounds();
@@ -87,18 +87,16 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
+        kakao.maps.event.addListener(map, 'dragstart', () => { 
+          isDragging.current = true; 
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            isProgrammaticMove.current = false;
+          }
+        });
         kakao.maps.event.addListener(map, 'dragend', () => { 
           isDragging.current = false; 
           lastDragEnd.current = Date.now(); 
-        });
-
-        // 이동 애니메이션이 끝났을 때 상태 동기화
-        kakao.maps.event.addListener(map, 'idle', () => {
-          if (isProgrammaticMove.current) {
-            isProgrammaticMove.current = false;
-            updateMapData();
-          }
         });
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -123,30 +121,74 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 외부에서 center 값이 변경될 때 지도 이동 (panTo 사용)
+  // 먼 거리도 부드럽게 이동시키기 위한 커스텀 애니메이션 함수
+  const smoothMoveTo = (targetLat: number, targetLng: number) => {
+    const map = mapInstance.current;
+    const kakao = (window as any).kakao;
+    if (!map || !kakao) return;
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    const startCenter = map.getCenter();
+    const startLat = startCenter.getLat();
+    const startLng = startCenter.getLng();
+    
+    // 이동 거리에 따른 가변 시간 설정 (최소 800ms, 최대 1500ms)
+    const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
+    const duration = Math.min(Math.max(dist * 500, 800), 1500);
+    const startTime = performance.now();
+
+    isProgrammaticMove.current = true;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // easeInOutCubic: 부드러운 가속 및 감속
+      const ease = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      const currentLat = startLat + (targetLat - startLat) * ease;
+      const currentLng = startLng + (targetLng - startLng) * ease;
+
+      map.setCenter(new kakao.maps.LatLng(currentLat, currentLng));
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        isProgrammaticMove.current = false;
+        animationFrameRef.current = null;
+        
+        // 이동 완료 후 최종 상태 업데이트
+        const bounds = map.getBounds();
+        const finalCenter = map.getCenter();
+        onMapChange({
+          bounds: { 
+            sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
+            ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
+          },
+          center: { lat: finalCenter.getLat(), lng: finalCenter.getLng() },
+          level: map.getLevel()
+        });
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+  };
+
+  // 외부에서 center 값이 변경될 때 호출
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
-      const kakao = (window as any).kakao;
-      const newCenter = new kakao.maps.LatLng(center.lat, center.lng);
-      
       const currentCenter = mapInstance.current.getCenter();
       const latDiff = Math.abs(currentCenter.getLat() - center.lat);
       const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
 
+      // 미세한 차이가 있을 때만 이동 실행
       if (latDiff > 0.00001 || lngDiff > 0.00001) {
-        // 이동 시작 전 플래그 설정
-        isProgrammaticMove.current = true;
-        
-        // panTo는 부드러운 이동을 지원함
-        mapInstance.current.panTo(newCenter);
-        
-        // 만약 너무 멀어서 panTo가 애니메이션 없이 작동할 경우를 대비해 
-        // 일정 시간 후 플래그 해제 보장
-        setTimeout(() => {
-          if (isProgrammaticMove.current) {
-            isProgrammaticMove.current = false;
-          }
-        }, 1000);
+        smoothMoveTo(center.lat, center.lng);
       }
     }
   }, [center, isMapReady]);
