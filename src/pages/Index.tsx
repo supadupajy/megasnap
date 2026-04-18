@@ -159,6 +159,13 @@ const Index = () => {
 
   useEffect(() => {
     if (!mapData?.bounds) return;
+    
+    // 9단계 이상이면 마커를 표시하지 않음
+    if (currentZoom >= 9) {
+      setDisplayedMarkers([]);
+      return;
+    }
+
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
@@ -202,8 +209,6 @@ const Index = () => {
       displayCount = getRandomInRange(100, 110);
     } else if (currentZoom === 8) {
       displayCount = getRandomInRange(300, 350);
-    } else if (currentZoom === 9) {
-      displayCount = getRandomInRange(450, 500);
     }
 
     const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
@@ -271,7 +276,7 @@ const Index = () => {
   };
 
   const handleViewAllClick = () => {
-    if (displayedMarkers.length > 0 && currentZoom < 10) {
+    if (displayedMarkers.length > 0 && currentZoom < 9) {
       setIsPostListOpen(true);
     }
   };
@@ -454,10 +459,10 @@ const Index = () => {
                   
                   <button 
                     onClick={handleViewAllClick} 
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 10} 
+                    disabled={displayedMarkers.length === 0 || currentZoom >= 9} 
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 10 && "opacity-50 grayscale cursor-not-allowed"
+                      currentZoom >= 9 && "opacity-50 grayscale cursor-not-allowed"
                     )}
                   >
                     <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -466,7 +471,7 @@ const Index = () => {
                     <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
                   </button>
                   
-                  {displayedMarkers.length > 0 && currentZoom < 10 && (
+                  {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>

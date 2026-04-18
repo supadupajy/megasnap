@@ -230,8 +230,8 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
 
-    // 10단계 이상이면 모든 마커 제거
-    if (currentLevel >= 10) {
+    // 9단계 이상이면 모든 마커 제거
+    if (currentLevel >= 9) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current.clear();
       return;
