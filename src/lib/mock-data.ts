@@ -172,7 +172,7 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-// 임베드 재생이 확실히 보장되는 글로벌 공식 뮤직비디오 ID
+// 임베드가 확실히 허용되는 글로벌 공식 뮤직비디오 ID 리스트
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
   "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
