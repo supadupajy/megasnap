@@ -8,11 +8,12 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts } from '@/lib/mock-data';
+import { createMockPosts, YOUTUBE_LINKS } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { getYoutubeThumbnail } from '@/lib/utils';
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -33,7 +34,22 @@ const Popular = () => {
     if (hasLoaded.current) return;
     
     setIsInitialLoading(true);
-    const mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
+    // 기본 목데이터 생성
+    let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
+
+    // 50% 유튜브 비율 강제 적용
+    mockPosts = mockPosts.map((post, index) => {
+      if (index % 2 === 0) { // 짝수 인덱스마다 유튜브 링크 할당
+        const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
+        const thumb = getYoutubeThumbnail(youtubeUrl);
+        return {
+          ...post,
+          youtubeUrl,
+          image: thumb || post.image
+        };
+      }
+      return post;
+    });
 
     try {
       const { data, error } = await supabase
@@ -93,9 +109,20 @@ const Popular = () => {
     setIsLoadingMore(true);
 
     setTimeout(() => {
-      const newPosts = createMockPosts(37.5665, 126.9780, 15)
+      let newPosts = createMockPosts(37.5665, 126.9780, 15)
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
         .sort((a, b) => b.likes - a.likes);
+      
+      // 추가 로드 시에도 50% 유튜브 비율 유지
+      newPosts = newPosts.map((post, index) => {
+        if (index % 2 === 0) {
+          const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          const thumb = getYoutubeThumbnail(youtubeUrl);
+          return { ...post, youtubeUrl, image: thumb || post.image };
+        }
+        return post;
+      });
+
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
@@ -170,6 +197,7 @@ const Popular = () => {
               category={post.category}
               borderType={post.borderType}
               disablePulse={true}
+              youtubeUrl={post.youtubeUrl}
               onLikeToggle={() => handleLikeToggle(post.id)}
               onLocationClick={handleLocationClick}
               onDelete={handlePostDelete}

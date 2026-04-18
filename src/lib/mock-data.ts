@@ -172,10 +172,28 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-const YOUTUBE_LINKS = [
+// 20개의 다양한 유튜브 링크 확보
+export const YOUTUBE_LINKS = [
   "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
   "https://www.youtube.com/watch?v=9bZkp7q19f0",
-  "https://www.youtube.com/watch?v=fRh_vgS2dFE"
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE",
+  "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+  "https://www.youtube.com/watch?v=CevxZvSJLk8",
+  "https://www.youtube.com/watch?v=0-S5a0eXPoc",
+  "https://www.youtube.com/watch?v=hT_nvWreIhg",
+  "https://www.youtube.com/watch?v=3JZ_D3ELwOQ",
+  "https://www.youtube.com/watch?v=V1Pl8CzNzCw",
+  "https://www.youtube.com/watch?v=60ItHLz5WEA",
+  "https://www.youtube.com/watch?v=L_LUpnjgPso",
+  "https://www.youtube.com/watch?v=9HDEHj2yzew",
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
+  "https://www.youtube.com/watch?v=fLexgOxsZu0",
+  "https://www.youtube.com/watch?v=2S24-y0Ij3Y",
+  "https://www.youtube.com/watch?v=7wtfhZwyrcc",
+  "https://www.youtube.com/watch?v=RgKAFK5djSk",
+  "https://www.youtube.com/watch?v=Sagg08DrO5U",
+  "https://www.youtube.com/watch?v=M7lc1UVf-VE",
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
 ];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
@@ -227,7 +245,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.8; 
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; // 유튜브 확률 상향
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;

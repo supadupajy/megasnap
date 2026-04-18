@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon, Youtube } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import { useKeyboard } from '@/hooks/use-keyboard';
@@ -27,7 +26,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
@@ -110,8 +108,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!draft.image && !videoUrl && !youtubeUrl.trim()) {
-      showError('사진, 동영상 또는 유튜브 링크를 첨부해주세요.');
+    if (!draft.image && !videoUrl) {
+      showError('사진이나 동영상을 첨부해주세요.');
       return;
     }
 
@@ -131,7 +129,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       longitude: initialLocation.lng,
       image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop',
       video_url: videoUrl,
-      youtube_url: youtubeUrl.trim() || null,
       user_id: authUser.id,
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -166,7 +163,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         comments: [],
         image: postData.image_url,
         videoUrl: videoUrl,
-        youtubeUrl: youtubeUrl.trim(),
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none'
@@ -177,7 +173,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       
       postDraftStore.clear();
       setVideoUrl(null);
-      setYoutubeUrl('');
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -231,19 +226,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">유튜브 링크 (선택)</p>
-              <div className="relative">
-                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" />
-                <Input 
-                  placeholder="https://youtube.com/..."
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="h-12 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-medium"
-                />
-              </div>
-            </div>
-
             {(draft.image || videoUrl) && (
               <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
                 {draft.image ? (
@@ -294,7 +276,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={(!draft.content && !youtubeUrl.trim()) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>
