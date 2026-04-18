@@ -66,6 +66,84 @@ const Index = () => {
 
   const TILE_SIZE = 0.02;
   const throttleTimer = useRef<any>(null);
+  const processedStateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (supabasePosts.length > 0) {
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueReal = supabasePosts.filter(p => !existingIds.has(p.id));
+        return [...uniqueReal, ...prev];
+      <dyad-write path="src/pages/Index.tsx" description="앱 시작 시 자동 위치 선택 모드 진입 방지 및 히스토리 상태 초기화 로직 추가">
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
+import TrendingPosts from '@/components/TrendingPosts';
+import PostDetail from '@/components/PostDetail';
+import WritePost from '@/components/WritePost';
+import TimeSlider from '@/components/TimeSlider';
+import PlaceSearch from '@/components/PlaceSearch';
+import CategoryMenu from '@/components/CategoryMenu';
+import PostListOverlay from '@/components/PostListOverlay';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, MapPin } from 'lucide-react';
+import { createMockPosts } from '@/lib/mock-data';
+import { Post } from '@/types';
+import { cn } from '@/lib/utils';
+import { useViewedPosts } from '@/hooks/use-viewed-posts';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
+import { mapCache } from '@/utils/map-cache';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSupabasePosts } from '@/hooks/use-supabase-posts';
+import { useAuth } from '@/components/AuthProvider';
+import { Button } from '@/components/ui/button';
+import { Geolocation } from '@capacitor/geolocation';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+
+const Index = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  
+  const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
+  
+  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
+  const [mapData, setMapData] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  const [currentZoom, setCurrentZoom] = useState(6);
+  
+  const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
+    6: 28,
+    7: 105,
+    8: 325
+  });
+
+  const { viewedIds, markAsViewed } = useViewedPosts();
+  const { blockedIds } = useBlockedUsers();
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isPostListOpen, setIsPostListOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeValue, setTimeValue] = useState(12);
+  const [isWriteOpen, setIsWriteOpen] = useState(false);
+
+  // 위치 선택 모드 관련 상태
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+  const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  const TILE_SIZE = 0.02;
+  const throttleTimer = useRef<any>(null);
+  const processedStateRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (supabasePosts.length > 0) {
@@ -120,37 +198,41 @@ const Index = () => {
   }, [filteredAllPosts]);
 
   useEffect(() => {
-    if (location.state?.filterUserId) {
+    // location.state가 있고 아직 처리되지 않은 경우에만 실행
+    const stateKey = JSON.stringify(location.state);
+    if (!location.state || processedStateRef.current === stateKey) return;
+
+    processedStateRef.current = stateKey;
+
+    if (location.state.filterUserId) {
       const userId = location.state.filterUserId;
       const finalUserId = userId === 'me' ? authUser?.id : userId;
       setTargetUserId(finalUserId || null);
       setSelectedCategories([userId === 'me' ? 'mine' : 'user_filter']);
-    } else if (location.state?.post) {
+    } else if (location.state.post) {
       const incomingPost = location.state.post;
-      if (blockedIds.has(incomingPost.user.id)) return;
-
-      setAllPosts(prev => {
-        if (prev.some(p => p.id === incomingPost.id)) return prev;
-        return [incomingPost, ...prev];
-      });
-
-      setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
-      
-      const pingTimer = setTimeout(() => {
-        setHighlightedPostId(incomingPost.id);
-        setTimeout(() => setHighlightedPostId(null), 3000);
-      }, 1500);
-      
-      return () => clearTimeout(pingTimer);
-    } else if (location.state?.center) {
+      if (!blockedIds.has(incomingPost.user.id)) {
+        setAllPosts(prev => {
+          if (prev.some(p => p.id === incomingPost.id)) return prev;
+          return [incomingPost, ...prev];
+        });
+        setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
+        const pingTimer = setTimeout(() => {
+          setHighlightedPostId(incomingPost.id);
+          setTimeout(() => setHighlightedPostId(null), 3000);
+        }, 1500);
+      }
+    } else if (location.state.center) {
       setMapCenter(location.state.center);
-    } else if (location.state?.startSelection) {
-      // 다른 페이지에서 위치 선택 요청이 온 경우
+    } else if (location.state.startSelection === true) {
       setIsPostListOpen(false);
       setIsSelectingLocation(true);
       if (mapData?.center) setTempSelectedLocation(mapData.center);
     }
-  }, [location.state, blockedIds, authUser]);
+
+    // 처리가 끝난 후 히스토리 상태 초기화 (새로고침 시 재발생 방지)
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, blockedIds, authUser, navigate, location.pathname, mapData?.center]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
