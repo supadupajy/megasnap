@@ -31,7 +31,6 @@ const Messages = () => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
-      // 1. Supabase 메시지 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -56,7 +55,6 @@ const Messages = () => {
         }
       }
 
-      // 2. 로컬 스토어(Mock) 메시지 가져오기
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -76,10 +74,9 @@ const Messages = () => {
 
       const convList = Array.from(convMap.values());
 
-      // 3. 프로필 정보 보완 (Supabase 데이터용)
       const results = await Promise.all(
         convList.map(async (conv) => {
-          if (conv.profile) return conv; // 이미 로컬에서 가져온 경우
+          if (conv.profile) return conv;
 
           const { data: profile } = await supabase
             .from('profiles')
@@ -94,7 +91,6 @@ const Messages = () => {
         })
       );
 
-      // 최신순 정렬
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setConversations(results);
@@ -103,7 +99,6 @@ const Messages = () => {
 
     fetchConversations();
     
-    // 로컬 스토어 변경 감지
     const unsubscribe = chatStore.subscribe(fetchConversations);
     return () => {
       unsubscribe();
@@ -116,7 +111,7 @@ const Messages = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white pb-24">
+    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/')} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -161,7 +156,6 @@ const Messages = () => {
                   </div>
                 );
               })}
-              {filteredConversations.length === 0 && <div className="py-20 text-center"><p className="text-sm text-gray-400 font-medium">대화 내역이 없습니다.</p></div>}
             </div>
           )}
         </div>

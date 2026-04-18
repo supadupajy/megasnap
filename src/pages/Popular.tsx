@@ -22,7 +22,6 @@ const Popular = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  // 로딩 상태를 false로 시작하여 조건부로 활성화
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const hasLoaded = useRef(false);
 
@@ -133,7 +132,6 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 로딩 조건 최적화
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -145,7 +143,7 @@ const Popular = () => {
   if (!authUser) return null;
 
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <Header />
       <div className="pt-[88px]">
         <StoryBar />

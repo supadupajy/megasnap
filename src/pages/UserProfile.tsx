@@ -31,14 +31,11 @@ const UserProfile = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
-  // 통합된 사용자 데이터 가져오기
   const user = useMemo(() => {
     return getUserById(userId || 'traveler');
   }, [userId]);
 
-  // 해당 사용자의 포스트 및 저장된 포스트 데이터 생성
   useEffect(() => {
-    // 사용자의 게시물 30개 생성
     const rawPosts = createMockPosts(37.5665, 126.9780, 30);
     
     const userPosts = rawPosts.map((p, idx) => {
@@ -62,7 +59,6 @@ const UserProfile = () => {
 
     setPosts(userPosts);
 
-    // 사용자가 저장한 게시물
     const saved = createMockPosts(37.5665, 126.9780, 12)
       .filter(p => p.user.id !== user.id)
       .map(p => ({ ...p, isLiked: true }));
@@ -105,7 +101,6 @@ const UserProfile = () => {
   };
 
   const handleMessageClick = () => {
-    // 채팅방 생성 또는 기존 방 가져오기
     chatStore.getOrCreateRoom(user.id, user.nickname || user.name, user.avatar);
     navigate(`/chat/${user.id}`);
   };
@@ -123,11 +118,10 @@ const UserProfile = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <Header />
 
       <div className="pt-[88px]">
-        {/* Profile Header Section */}
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -170,7 +164,6 @@ const UserProfile = () => {
         </div>
 
         <div className="p-6">
-          {/* Profile Info */}
           <div className="flex items-center gap-6 mb-8">
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-indigo-600">
@@ -230,7 +223,6 @@ const UserProfile = () => {
             </Button>
           </div>
 
-          {/* Tabs */}
           <div className="flex border-b border-gray-100 mb-4">
             <button 
               onClick={() => setViewMode('grid')}
@@ -261,7 +253,6 @@ const UserProfile = () => {
             </button>
           </div>
 
-          {/* Content Area */}
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>
@@ -294,13 +285,9 @@ const UserProfile = () => {
                     />
                   </div>
                 ))}
-                {savedPosts.length === 0 && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 게시물이 없습니다.</div>
-                )}
               </>
             ) : (
               <>
-                {/* 지도에서 보기 배너 (사진/동영상 탭 공통) */}
                 <div 
                   onClick={() => navigate('/', { state: { filterUserId: user.id } })}
                   className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
@@ -338,24 +325,9 @@ const UserProfile = () => {
                       </div>
                     ))}
                   </div>
-                ) : viewMode === 'gifs' ? (
-                  <div className="grid grid-cols-3 gap-1 px-6">
-                    {posts.filter(p => p.isGif).map((post) => (
-                      <div 
-                        key={post.id} 
-                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                        onClick={() => handleGridItemClick(post.id)}
-                      >
-                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
-                      </div>
-                    ))}
-                    {posts.filter(p => p.isGif).length === 0 && (
-                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">등록된 GIF가 없습니다.</div>
-                    )}
-                  </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
-                    {posts.map((post) => (
+                    {(viewMode === 'gifs' ? posts.filter(p => p.isGif) : posts).map((post) => (
                       <div 
                         key={post.id} 
                         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
@@ -364,9 +336,6 @@ const UserProfile = () => {
                         <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
                       </div>
                     ))}
-                    {posts.length === 0 && (
-                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">게시물이 없습니다.</div>
-                    )}
                   </div>
                 )}
               </>

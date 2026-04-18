@@ -68,8 +68,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-10">
-      {/* Header */}
+    <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
         <button 
           onClick={() => navigate(-1)} 
@@ -81,7 +80,6 @@ const Settings = () => {
       </header>
 
       <div className="pt-[88px]">
-        {/* Account Section */}
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -91,7 +89,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* App Settings Section */}
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">앱 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -101,7 +98,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Support Section */}
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">지원</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -110,7 +106,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Login Section */}
         <div className="px-4 py-8">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem 
@@ -126,7 +121,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">

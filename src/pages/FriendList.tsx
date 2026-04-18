@@ -18,7 +18,6 @@ const FriendList = () => {
 
   useEffect(() => {
     const searchUsers = async () => {
-      // 검색어가 너무 짧으면 검색하지 않음 (최소 1자 이상)
       if (!searchQuery.trim()) {
         setUsers([]);
         return;
@@ -30,7 +29,7 @@ const FriendList = () => {
           .from('profiles')
           .select('id, nickname, avatar_url, bio')
           .or(`nickname.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
-          .neq('id', authUser?.id) // 본인은 제외
+          .neq('id', authUser?.id)
           .limit(20);
 
         if (error) throw error;
@@ -42,7 +41,6 @@ const FriendList = () => {
       }
     };
 
-    // 디바운스 처리 (300ms)
     const timer = setTimeout(() => {
       searchUsers();
     }, 300);
@@ -51,9 +49,7 @@ const FriendList = () => {
   }, [searchQuery, authUser]);
 
   const handleStartChat = (user: any) => {
-    // 채팅방 생성 또는 기존 방 가져오기
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
-    // 채팅창으로 이동
     navigate(`/chat/${user.id}`);
   };
 
@@ -66,8 +62,7 @@ const FriendList = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-10">
-      {/* Header */}
+    <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
         <button 
           onClick={handleBack} 
@@ -79,7 +74,6 @@ const FriendList = () => {
       </header>
 
       <div className="pt-[88px] px-4">
-        {/* Search */}
         <div className="relative py-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -98,7 +92,6 @@ const FriendList = () => {
           </div>
         </div>
 
-        {/* User List */}
         <div className="space-y-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
             {searchQuery ? '검색 결과' : '검색어를 입력하세요'}
@@ -126,26 +119,8 @@ const FriendList = () => {
                   </div>
                   <p className="text-xs text-gray-500 truncate">{user.bio || '안녕하세요! Chora 탐험가입니다.'}</p>
                 </div>
-                <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center">
-                  <UserPlus className="w-4 h-4 text-indigo-600" />
-                </div>
               </div>
             ))}
-            
-            {searchQuery && !isLoading && users.length === 0 && (
-              <div className="py-20 text-center flex flex-col items-center gap-2">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
-                  <Search className="w-8 h-8 text-gray-200" />
-                </div>
-                <p className="text-sm text-gray-400 font-bold">검색 결과가 없습니다.</p>
-              </div>
-            )}
-
-            {!searchQuery && (
-              <div className="py-20 text-center flex flex-col items-center gap-2">
-                <p className="text-sm text-gray-400 font-bold">친구의 닉네임을 검색하여<br/>대화를 시작해보세요!</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
