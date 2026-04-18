@@ -117,7 +117,7 @@ const Index = () => {
     if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
-    const toastId = showLoading('인플루언서 설정 및 포스팅을 생성 중입니다...');
+    const toastId = showLoading('전국 데이터를 생성하고 있습니다...');
     
     try {
       // 1. 기존 50명의 프로필 가져오기
@@ -127,40 +127,28 @@ const Index = () => {
         .limit(100);
 
       if (fetchError || !profiles || profiles.length === 0) {
-        throw new Error('프로필 데이터를 찾을 수 없습니다. 먼저 프로필을 생성해주세요.');
+        throw new Error('프로필 데이터를 찾을 수 없습니다.');
       }
 
-      // 2. 인플루언서 등급 할당 (상위 6%)
+      // 2. 인플루언서 등급 할당 (프론트엔드 표시용으로만 활용)
       const shuffled = [...profiles].sort(() => Math.random() - 0.5);
-      const updates = shuffled.map((p, i) => {
-        let followers = Math.floor(Math.random() * 5000) + 100;
-        if (i === 0) followers = 12000000; // 다이아몬드 (1%)
-        else if (i === 1) followers = 2500000; // 골드 (2%)
-        else if (i <= 3) followers = 450000; // 실버 (3%)
-
-        return {
-          ...p,
-          followers,
-          updated_at: new Date().toISOString()
-        };
+      const influencerMap = new Map();
+      shuffled.forEach((p, i) => {
+        if (i === 0) influencerMap.set(p.id, 'diamond');
+        else if (i === 1) influencerMap.set(p.id, 'gold');
+        else if (i <= 3) influencerMap.set(p.id, 'silver');
       });
 
-      // 프로필 업데이트 (팔로워 수 조정)
-      const { error: updateError } = await supabase.from('profiles').upsert(updates);
-      if (updateError) console.warn('프로필 업데이트 실패 (RLS 정책 확인 필요):', updateError.message);
-
-      // 3. 포스팅 데이터 생성 (150개)
+      // 3. 포스팅 데이터 생성 (DB 스키마에 있는 컬럼만 사용)
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
-        const mockPosts = createMockPosts(hub.lat, hub.lng, 15);
+        const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
         const insertData = mockPosts.map(p => {
-          // 50명의 유저 중 랜덤 선택
-          const randomUser = updates[Math.floor(Math.random() * updates.length)];
+          const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
           
           // 인기 포스팅 비율 (10%)
           const isPopular = Math.random() > 0.9;
           const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
-          const borderType = likes >= 1500 ? 'popular' : 'none';
 
           return {
             content: p.content,
@@ -172,10 +160,6 @@ const Index = () => {
             user_name: randomUser.nickname,
             user_avatar: randomUser.avatar_url,
             likes: likes,
-            border_type: borderType,
-            category: p.category || 'none',
-            is_gif: p.isGif || false,
-            is_influencer: (randomUser.followers || 0) >= 100000,
             created_at: p.createdAt.toISOString()
           };
         });
@@ -190,7 +174,7 @@ const Index = () => {
       }
 
       dismissToast(toastId);
-      showSuccess('인플루언서 설정 및 150개의 포스팅 생성이 완료되었습니다! ✨');
+      showSuccess('전국 100개의 포스팅 생성이 완료되었습니다! 🇰🇷');
       syncPostsWithSupabase();
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
