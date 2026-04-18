@@ -34,13 +34,12 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao && kakao.maps && kakao.maps.services) {
-      // 장소 및 주소 검색을 위한 Places 서비스 초기화
       searchService.current = new kakao.maps.services.Places();
     }
   }, [isOpen]);
 
   // 검색 실행 함수
-  const performSearch = useCallback((keyword: string, pageNum: number = 1) => {
+  const performSearch = useCallback((keyword: string) => {
     if (!keyword.trim() || !searchService.current) {
       setResults([]);
       setPagination(null);
@@ -51,33 +50,32 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     const kakao = (window as any).kakao;
 
     try {
-      // keywordSearch는 장소명, 주소, 카테고리 등 통합 검색을 지원합니다.
+      // keywordSearch는 장소명, 주소 통합 검색을 지원합니다.
       searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
         if (status === kakao.maps.services.Status.OK) {
           const formatted = data.map((item: any) => ({
             id: item.id,
-            name: item.place_name, // 장소명 또는 주소명
-            address: item.road_address_name || item.address_name, // 상세 주소
+            name: item.place_name,
+            address: item.road_address_name || item.address_name,
             lat: parseFloat(item.y),
             lng: parseFloat(item.x)
           }));
 
-          if (pageNum === 1) {
+          // paginationObj.current를 확인하여 첫 페이지면 교체, 아니면 추가합니다.
+          if (paginationObj.current === 1) {
             setResults(formatted);
           } else {
             setResults(prev => [...prev, ...formatted]);
           }
           setPagination(paginationObj);
         } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-          if (pageNum === 1) setResults([]);
+          setResults([]);
           setPagination(null);
         }
         setIsLoading(false);
       }, { 
-        page: pageNum, 
-        size: 10,
-        // 특정 지역에 국한되지 않고 전국을 대상으로 검색하도록 설정
-        useMapBounds: false 
+        size: 15,
+        useMapBounds: false // 전국 단위 검색
       });
     } catch (error) {
       console.error("Search error:", error);
@@ -89,7 +87,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim()) {
-        performSearch(query, 1);
+        performSearch(query);
       } else {
         setResults([]);
         setPagination(null);
