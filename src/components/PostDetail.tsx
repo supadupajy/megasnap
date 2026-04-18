@@ -49,6 +49,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -67,9 +68,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       if (post) {
         setLocalComments(post.comments || []);
         setIsSaved(post.isSaved || false);
-        if (post.videoUrl || getYoutubeId(post.youtubeUrl || '')) {
-          setIsPlayingVideo(true);
-        }
       }
     }
     if (!isOpen) {
@@ -87,14 +85,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
-      
-      if (currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || '')) {
-        setIsPlayingVideo(true);
-      } else {
-        setIsPlayingVideo(false);
-      }
     }
   }, [currentIndex, isOpen, onViewPost, posts]);
+
+  // Intersection Observer for Auto-play in Detail View
+  useEffect(() => {
+    const currentPost = posts[currentIndex];
+    if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsPlayingVideo(true);
+        } else {
+          setIsPlayingVideo(false);
+        }
+      },
+      { threshold: 0.6 }
+    );
+
+    if (videoContainerRef.current) {
+      observer.observe(videoContainerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [currentIndex, isOpen, posts]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -270,10 +285,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 </div>
                 
                 <div className="px-4">
-                  <div className={cn(
-                    "relative aspect-square w-full rounded-2xl transition-all duration-500", 
-                    isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
-                  )}>
+                  <div 
+                    ref={videoContainerRef}
+                    className={cn(
+                      "relative aspect-square w-full rounded-2xl transition-all duration-500", 
+                      isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
+                    )}
+                  >
                     <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
                       {isPlayingVideo ? (
                         youtubeId ? (
@@ -344,7 +362,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   
-                  {/* 포스팅 설명 영역 - 클릭 시 닫기 기능 추가 */}
                   <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}>
                     <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
                     <div className="flex gap-2 items-start">

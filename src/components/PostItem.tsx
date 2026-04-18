@@ -114,7 +114,7 @@ const PostItem = ({
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
-  // Intersection Observer for Auto-play
+  // Intersection Observer for Auto-play (Instagram Style)
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
 
@@ -126,7 +126,10 @@ const PostItem = ({
           setIsPlayingVideo(false);
         }
       },
-      { threshold: 0.6 } // 60% 이상 보일 때 재생
+      { 
+        threshold: 0.6, // 60% 이상 보일 때 재생
+        rootMargin: '0px' 
+      }
     );
 
     if (containerRef.current) {
