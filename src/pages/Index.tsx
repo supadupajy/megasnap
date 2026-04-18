@@ -39,7 +39,7 @@ const Index = () => {
   const [currentZoom, setCurrentZoom] = useState(6);
   
   const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
-    6: 50, // 초기 표시 개수 상향
+    6: 50,
     7: 150,
     8: 400
   });
@@ -55,7 +55,7 @@ const Index = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(48); // 초기 시간 필터를 48시간으로 확장
+  const [timeValue, setTimeValue] = useState(48); 
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
@@ -117,23 +117,50 @@ const Index = () => {
     if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
-    const toastId = showLoading('전국 데이터를 생성하고 있습니다...');
+    const kakao = (window as any).kakao;
+    if (!kakao || !kakao.maps || !kakao.maps.services) {
+      console.warn('Kakao Maps services not ready for seeding');
+      hasGlobalSeeded.current = false;
+      return;
+    }
+
+    const toastId = showLoading('실제 주소 기반으로 데이터를 생성 중입니다...');
+    const geocoder = new kakao.maps.services.Geocoder();
+
+    const getAddress = (lat: number, lng: number): Promise<string> => {
+      return new Promise((resolve) => {
+        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            const addr = result[0].address;
+            const city = addr.region_1depth_name || '';
+            const district = addr.region_2depth_name || '';
+            const neighborhood = addr.region_3depth_name || '';
+            resolve(`${city} ${district} ${neighborhood}`.trim());
+          } else {
+            resolve('알 수 없는 장소');
+          }
+        });
+      });
+    };
     
     try {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(100);
       if (!profiles || profiles.length === 0) throw new Error('프로필 데이터를 찾을 수 없습니다.');
 
       let allMockData: any[] = [];
-      KOREA_HUBS.forEach(hub => {
+      
+      for (const hub of KOREA_HUBS) {
         const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-        const insertData = mockPosts.map(p => {
+        
+        const insertDataPromises = mockPosts.map(async (p) => {
           const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
           const isPopular = Math.random() > 0.9;
           const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
+          const realAddress = await getAddress(p.lat, p.lng);
 
           return {
             content: p.content,
-            location_name: `${hub.name} 주변`,
+            location_name: realAddress,
             latitude: p.lat,
             longitude: p.lng,
             image_url: p.image,
@@ -144,15 +171,16 @@ const Index = () => {
             created_at: p.createdAt.toISOString()
           };
         });
-        allMockData = [...allMockData, ...insertData];
-      });
+
+        const hubData = await Promise.all(insertDataPromises);
+        allMockData = [...allMockData, ...hubData];
+      }
 
       for (let i = 0; i < allMockData.length; i += 20) {
         const chunk = allMockData.slice(i, i + 20);
         await supabase.from('posts').insert(chunk);
       }
 
-      // 생성 직후 전체 데이터를 다시 불러와서 상태 업데이트
       const { data: freshPosts } = await supabase
         .from('posts')
         .select('*')
@@ -184,7 +212,7 @@ const Index = () => {
       }
 
       dismissToast(toastId);
-      showSuccess('전국 100개의 포스팅 생성이 완료되었습니다! 🇰🇷');
+      showSuccess('실제 주소가 포함된 100개의 포스팅 생성이 완료되었습니다! 🇰🇷');
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
       dismissToast(toastId);
@@ -193,7 +221,10 @@ const Index = () => {
   }, [authUser]);
 
   useEffect(() => {
-    if (authUser) seedGlobalData();
+    if (authUser) {
+      const timer = setTimeout(() => seedGlobalData(), 1000);
+      return () => clearTimeout(timer);
+    }
   }, [authUser, seedGlobalData]);
 
   useEffect(() => {
@@ -211,33 +242,24 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
-      
-      // 하이라이트된 포스트는 무조건 표시
       if (post.id === highlightedPostId) return true;
-
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng;
       if (!isWithinBounds) return false;
-
-      // 시간 필터링 (Ad는 무시)
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
-
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;
-      
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = !!isMe;
       else if (selectedCategories.includes('user_filter')) matchesCategory = !!isTargetUser;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
-      
       return matchesCategory;
     });
 
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
-    
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
