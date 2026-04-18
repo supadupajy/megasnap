@@ -13,6 +13,7 @@ interface Place {
   address: string;
   lat: number;
   lng: number;
+  isAddress?: boolean;
 }
 
 interface PlaceSearchProps {
@@ -29,18 +30,20 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
+  const geocoderService = useRef<any>(null);
 
   // 카카오 검색 서비스 초기화
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao && kakao.maps && kakao.maps.services) {
       searchService.current = new kakao.maps.services.Places();
+      geocoderService.current = new kakao.maps.services.Geocoder();
     }
   }, [isOpen]);
 
   // 검색 실행 함수
-  const performSearch = useCallback((keyword: string) => {
-    if (!keyword.trim() || !searchService.current) {
+  const performSearch = useCallback((keyword: string, pageNum: number = 1) => {
+    if (!keyword.trim() || !searchService.current || !geocoderService.current) {
       setResults([]);
       setPagination(null);
       return;
@@ -49,45 +52,83 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     setIsLoading(true);
     const kakao = (window as any).kakao;
 
-    try {
-      // keywordSearch는 장소명, 주소 통합 검색을 지원합니다.
-      searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const formatted = data.map((item: any) => ({
-            id: item.id,
-            name: item.place_name,
-            address: item.road_address_name || item.address_name,
-            lat: parseFloat(item.y),
-            lng: parseFloat(item.x)
-          }));
-
-          // paginationObj.current를 확인하여 첫 페이지면 교체, 아니면 추가합니다.
-          if (paginationObj.current === 1) {
-            setResults(formatted);
+    // 1. 주소 검색 (Geocoder) - 1페이지에서만 우선 수행
+    const searchAddress = () => {
+      return new Promise<Place[]>((resolve) => {
+        if (pageNum !== 1) return resolve([]);
+        
+        geocoderService.current.addressSearch(keyword, (data: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const formatted = data.map((item: any, idx: number) => ({
+              id: `addr-${idx}-${item.x}-${item.y}`,
+              name: item.address_name,
+              address: item.road_address?.address_name || item.address?.address_name || item.address_name,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+              isAddress: true
+            }));
+            resolve(formatted);
           } else {
-            setResults(prev => [...prev, ...formatted]);
+            resolve([]);
           }
-          setPagination(paginationObj);
-        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-          setResults([]);
-          setPagination(null);
-        }
-        setIsLoading(false);
-      }, { 
-        size: 15,
-        useMapBounds: false // 전국 단위 검색
+        });
       });
-    } catch (error) {
-      console.error("Search error:", error);
+    };
+
+    // 2. 장소 검색 (Places)
+    const searchPlaces = () => {
+      return new Promise<{data: Place[], pagination: any}>((resolve) => {
+        searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const formatted = data.map((item: any) => ({
+              id: item.id,
+              name: item.place_name,
+              address: item.road_address_name || item.address_name,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+              isAddress: false
+            }));
+            resolve({ data: formatted, pagination: paginationObj });
+          } else {
+            resolve({ data: [], pagination: null });
+          }
+        }, { 
+          page: pageNum,
+          size: 15,
+          useMapBounds: false 
+        });
+      });
+    };
+
+    // 두 검색 결과를 통합
+    Promise.all([searchAddress(), searchPlaces()]).then(([addrResults, placeResults]) => {
+      let combined = pageNum === 1 ? [...addrResults, ...placeResults.data] : placeResults.data;
+      
+      // 중복 제거 (좌표 기준)
+      const seen = new Set();
+      combined = combined.filter(item => {
+        const key = `${item.lat.toFixed(6)},${item.lng.toFixed(6)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (pageNum === 1) {
+        setResults(combined);
+      } else {
+        setResults(prev => [...prev, ...combined]);
+      }
+      
+      setPagination(placeResults.pagination);
       setIsLoading(false);
-    }
+    });
   }, []);
 
   // 입력값 변경 시 디바운스 적용
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim()) {
-        performSearch(query);
+        performSearch(query, 1);
       } else {
         setResults([]);
         setPagination(null);
@@ -159,11 +200,19 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                       }}
                       className="w-full flex items-start gap-4 p-4 hover:bg-indigo-50/50 rounded-2xl transition-all text-left group active:scale-[0.98]"
                     >
-                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100 group-hover:border-indigo-200 transition-colors">
-                        <MapPin className="w-6 h-6 text-indigo-600" />
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100 group-hover:border-indigo-200 transition-colors",
+                        place.isAddress ? "bg-indigo-600" : "bg-white"
+                      )}>
+                        <MapPin className={cn("w-6 h-6", place.isAddress ? "text-white" : "text-indigo-600")} />
                       </div>
                       <div className="flex-1 min-w-0 py-0.5">
-                        <p className="font-black text-gray-900 truncate text-base">{place.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-gray-900 truncate text-base">{place.name}</p>
+                          {place.isAddress && (
+                            <span className="bg-indigo-100 text-indigo-600 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase">Address</span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-400 font-bold truncate mt-1 uppercase tracking-tighter">{place.address}</p>
                       </div>
                     </button>
