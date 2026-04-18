@@ -18,13 +18,15 @@ import { getYoutubeThumbnail } from '@/lib/utils';
 const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, profile, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const hasLoaded = useRef(false);
+
+  const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`, [profile, authUser]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
@@ -37,9 +39,9 @@ const Popular = () => {
     // 기본 목데이터 생성
     let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
-    // 50% 유튜브 비율 강제 적용
+    // 유튜브 비율 적용
     mockPosts = mockPosts.map((post, index) => {
-      if (index % 2 === 0) { // 짝수 인덱스마다 유튜브 링크 할당
+      if (index % 2 === 0) {
         const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
         const thumb = getYoutubeThumbnail(youtubeUrl);
         return {
@@ -67,8 +69,8 @@ const Popular = () => {
         isInfluencer: false,
         user: {
           id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
+          name: p.user_name || displayName,
+          avatar: p.user_avatar || avatarUrl
         },
         content: p.content,
         location: p.location_name,
@@ -92,7 +94,7 @@ const Popular = () => {
     } finally {
       setIsInitialLoading(false);
     }
-  }, []);
+  }, [displayName, avatarUrl]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -113,7 +115,6 @@ const Popular = () => {
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
         .sort((a, b) => b.likes - a.likes);
       
-      // 추가 로드 시에도 50% 유튜브 비율 유지
       newPosts = newPosts.map((post, index) => {
         if (index % 2 === 0) {
           const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];

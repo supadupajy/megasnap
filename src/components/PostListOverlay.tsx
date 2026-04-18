@@ -85,9 +85,16 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
 
   useEffect(() => {
     if (isOpen) {
-      setPosts(initialPosts);
+      // initialPosts가 비어있을 경우를 대비해 mapCache나 mockData 활용 고려
+      if (initialPosts.length > 0) {
+        setPosts(initialPosts);
+      } else {
+        // 주변 포스트가 없을 경우 현재 위치 기반으로 새로 생성
+        const fallbackPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
+        setPosts(fallbackPosts);
+      }
     }
-  }, [isOpen, initialPosts]);
+  }, [isOpen, initialPosts, mapCenter]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore || !isOpen) return;
@@ -96,7 +103,6 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
       const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
       setPosts(prev => {
         const combined = [...prev, ...newPosts];
-        mapCache.posts = [...mapCache.posts, ...newPosts];
         return combined;
       });
       setIsLoadingMore(false);
@@ -131,10 +137,9 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   }, []);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
-    const post = posts.find(p => p.lat === lat && p.lng === lng);
     onClose();
-    navigate('/', { state: { center: { lat, lng }, post } });
-  }, [navigate, posts, onClose]);
+    navigate('/', { state: { center: { lat, lng } } });
+  }, [navigate, onClose]);
 
   const handleLocalDelete = (id: string) => {
     setPosts(prev => prev.filter(p => p.id !== id));
