@@ -51,11 +51,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  // Swipe to close logic
+  // Toss to close logic
+  const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
-  const opacity = useTransform(dragY, [0, 300], [1, 0]);
-  const scale = useTransform(dragY, [0, 300], [1, 0.9]);
-  const backdropOpacity = useTransform(dragY, [0, 300], [0.6, 0]);
+  
+  // 중심으로부터의 거리 계산
+  const opacity = useTransform(dragY, [-300, 0, 300], [0, 1, 0]);
+  const scale = useTransform(dragY, [-300, 0, 300], [0.8, 1, 0.8]);
+  const rotate = useTransform(dragX, [-200, 200], [-10, 10]);
+  const backdropOpacity = useTransform(dragY, [-300, 0, 300], [0, 0.6, 0]);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -69,6 +73,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
+      dragX.set(0);
       dragY.set(0);
       
       const post = posts[initialIndex];
@@ -84,7 +89,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(false);
       setIsPlayingVideo(false);
     }
-  }, [isOpen, initialIndex, hasInitialized, posts, dragY]);
+  }, [isOpen, initialIndex, hasInitialized, posts, dragX, dragY]);
 
   useEffect(() => {
     const currentPost = posts[currentIndex];
@@ -105,7 +110,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [currentIndex, isOpen, onViewPost, posts]);
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.y > 150 || info.velocity.y > 500) {
+    const threshold = 150;
+    const velocityThreshold = 500;
+    
+    if (
+      Math.abs(info.offset.y) > threshold || 
+      Math.abs(info.velocity.y) > velocityThreshold ||
+      Math.abs(info.offset.x) > threshold * 1.5
+    ) {
       onClose();
     }
   };
@@ -214,16 +226,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <motion.div 
             key={post.id} 
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 500 }}
-            dragElastic={0.4}
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.8}
             onDragEnd={handleDragEnd}
-            style={{ y: dragY, opacity, scale }}
+            style={{ x: dragX, y: dragY, opacity, scale, rotate }}
             initial={{ opacity: 0, scale: 0.9, y: 100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 100 }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-default"
+            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-grab active:cursor-grabbing"
           >
             {/* Swipe Handle */}
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
