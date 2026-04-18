@@ -59,6 +59,7 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  // 위치 선택 모드 관련 상태
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -98,6 +99,7 @@ const Index = () => {
         }));
       }
       
+      // 위치 선택 모드일 때 중앙 좌표 업데이트
       if (isSelectingLocation) {
         setTempSelectedLocation(data.center);
       }
@@ -142,6 +144,11 @@ const Index = () => {
       return () => clearTimeout(pingTimer);
     } else if (location.state?.center) {
       setMapCenter(location.state.center);
+    } else if (location.state?.startSelection) {
+      // 다른 페이지에서 위치 선택 요청이 온 경우
+      setIsPostListOpen(false);
+      setIsSelectingLocation(true);
+      if (mapData?.center) setTempSelectedLocation(mapData.center);
     }
   }, [location.state, blockedIds, authUser]);
 
@@ -222,10 +229,6 @@ const Index = () => {
     
     const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
 
-    const countInfluencer = Math.max(1, Math.floor(displayCount * 0.02));
-    const countPopular = Math.max(1, Math.floor(displayCount * 0.02));
-    const countAd = Math.max(1, Math.floor(displayCount * 0.01));
-
     const needed = displayCount - survivors.length;
     let finalMarkers = survivors;
 
@@ -279,8 +282,7 @@ const Index = () => {
       showSuccess('현재 위치로 이동했습니다.');
     } catch (err: any) {
       dismissToast(toastId);
-      console.error('Geolocation error:', err);
-      showError('위치 정보를 가져올 수 없습니다. 권한 설정을 확인해주세요.');
+      showError('위치 정보를 가져올 수 없습니다.');
     }
   };
 
@@ -304,9 +306,6 @@ const Index = () => {
     }, 1500);
   };
 
-  const handleMapClick = useCallback((loc: { lat: number; lng: number }) => {
-  }, []);
-
   const confirmLocationSelection = () => {
     if (tempSelectedLocation) {
       setFinalSelectedLocation(tempSelectedLocation);
@@ -327,6 +326,7 @@ const Index = () => {
 
   const startLocationSelection = () => {
     setIsWriteOpen(false);
+    setIsPostListOpen(false);
     setTimeout(() => {
       setIsSelectingLocation(true);
       if (mapData?.center) {
@@ -351,13 +351,13 @@ const Index = () => {
             highlightedPostId={highlightedPostId}
             onMarkerClick={(p) => setSelectedPostId(p.id)}
             onMapChange={handleMapChange}
-            onMapClick={handleMapClick}
             center={mapCenter}
           />
 
           <AnimatePresence>
             {isSelectingLocation && (
               <>
+                {/* 중앙 핀 UI */}
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-[50]">
                   <motion.div 
                     initial={{ y: -20, opacity: 0 }}
@@ -372,6 +372,7 @@ const Index = () => {
                   </motion.div>
                 </div>
 
+                {/* 하단 선택 바 */}
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

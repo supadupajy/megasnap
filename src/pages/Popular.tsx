@@ -34,12 +34,10 @@ const Popular = () => {
     if (hasLoaded.current) return;
     
     setIsInitialLoading(true);
-    // 기본 목데이터 생성
     let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
-    // 50% 유튜브 비율 강제 적용
     mockPosts = mockPosts.map((post, index) => {
-      if (index % 2 === 0) { // 짝수 인덱스마다 유튜브 링크 할당
+      if (index % 2 === 0) {
         const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
         const thumb = getYoutubeThumbnail(youtubeUrl);
         return {
@@ -113,7 +111,6 @@ const Popular = () => {
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
         .sort((a, b) => b.likes - a.likes);
       
-      // 추가 로드 시에도 50% 유튜브 비율 유지
       newPosts = newPosts.map((post, index) => {
         if (index % 2 === 0) {
           const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
@@ -158,6 +155,11 @@ const Popular = () => {
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
+
+  const handleStartLocationSelection = () => {
+    setIsWriteOpen(false);
+    navigate('/', { state: { startSelection: true } });
+  };
 
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
@@ -216,7 +218,11 @@ const Popular = () => {
         </div>
       </div>
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+        onStartLocationSelection={handleStartLocationSelection}
+      />
     </div>
   );
 };

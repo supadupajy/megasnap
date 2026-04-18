@@ -127,7 +127,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     try {
       let finalVideoUrl = null;
 
-      // 동영상 파일이 있는 경우 Storage에 업로드
       if (videoFile) {
         const fileExt = videoFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
@@ -200,7 +199,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
-      showError('저장 중 오류가 발생했습니다. 동영상 용량이나 네트워크를 확인해주세요.');
+      showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
