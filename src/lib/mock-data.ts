@@ -109,20 +109,19 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-export const createMockUser = (id: string, randomFn: () => number = Math.random): User => {
+export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
   let nickname = `Explorer_${finalId}`;
   if (id === 'me') nickname = 'Dyad_Explorer';
 
-  const roll = randomFn();
   let followers = Math.floor(randomFn() * 5000) + 100;
   
-  // 인플루언서 확률 상향 (테스트를 위해 20%로 조정)
-  if (roll > 0.8) {
+  // 인플루언서 등급 결정
+  if (forceInfluencer) {
     const tierRoll = randomFn();
-    if (tierRoll > 0.8) followers = Math.floor(randomFn() * 5000000) + 10000000; // 다이아몬드 (10M+)
-    else if (tierRoll > 0.5) followers = Math.floor(randomFn() * 4000000) + 1000000; // 골드 (1M+)
-    else followers = Math.floor(randomFn() * 900000) + 100000; // 실버 (100k+)
+    if (tierRoll > 0.9) followers = Math.floor(randomFn() * 5000000) + 10000000; // 다이아몬드 (10M+) - 인플루언서 중 10%
+    else if (tierRoll > 0.6) followers = Math.floor(randomFn() * 4000000) + 1000000; // 골드 (1M+) - 인플루언서 중 30%
+    else followers = Math.floor(randomFn() * 900000) + 100000; // 실버 (100k+) - 인플루언서 중 60%
   }
 
   return {
@@ -148,10 +147,22 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 인플루언서 확률 상향
-    const isInfluencer = specificUserId ? false : randomFn() > 0.8; 
-    const isPopular = specificUserId ? false : randomFn() > 0.9;
-    const isAd = !specificUserId && !isInfluencer && !isPopular && randomFn() > 0.92;
+    // 비율 조정 로직 (일반 90%, 인기 5%, 인플루언서 5%)
+    const typeRoll = randomFn();
+    let isInfluencer = false;
+    let isPopular = false;
+    let isAd = false;
+
+    if (!specificUserId) {
+      if (typeRoll < 0.05) {
+        isInfluencer = true; // 5% 인플루언서
+      } else if (typeRoll < 0.10) {
+        isPopular = true; // 5% 인기 포스팅
+      } else if (typeRoll < 0.13) {
+        isAd = true; // 일반 포스팅 중 약 3%는 광고
+      }
+    }
+
     const isGif = !isAd && randomFn() > 0.85; 
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
@@ -193,18 +204,24 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
 
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
-    const user = specificUserId ? createMockUser(specificUserId, randomFn) : createMockUser(isAd ? "sponsored" : id, randomFn);
+    
+    // 인플루언서 여부에 따른 유저 생성
+    const user = specificUserId 
+      ? createMockUser(specificUserId, randomFn) 
+      : createMockUser(isAd ? "sponsored" : id, randomFn, isInfluencer);
 
+    // 좋아요 수 결정
     const likes = (isPopular || isInfluencer) 
       ? Math.floor(randomFn() * 2000) + 800 
       : Math.floor(randomFn() * 500) + 10;
 
+    // 테두리 타입 결정
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
     if (isInfluencer && user.followers) {
       if (user.followers >= 10000000) borderType = 'diamond';
       else if (user.followers >= 1000000) borderType = 'gold';
       else if (user.followers >= 100000) borderType = 'silver';
-    } else if (likes >= 1500) {
+    } else if (isPopular || likes >= 1500) {
       borderType = 'popular';
     }
 
