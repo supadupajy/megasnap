@@ -45,7 +45,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
 
   // 통합 검색 처리 함수
   const executeSearch = useCallback((keyword: string, isNextPage: boolean = false) => {
-    if (!keyword.trim() || !searchService.current || !geocoderService.current || isSearching.current) return;
+    if (!keyword.trim() || !searchService.current || !geocoderService.current) return;
+    if (isSearching.current) return;
 
     isSearching.current = true;
     setIsLoading(true);
@@ -53,9 +54,12 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
 
     // 장소 검색 콜백
     const placesCallback = (data: any, status: any, paginationObj: any) => {
-      let placeResults: Place[] = [];
+      // 어떤 상태든 로딩 플래그 해제
+      setIsLoading(false);
+      isSearching.current = false;
+
       if (status === kakao.maps.services.Status.OK) {
-        placeResults = data.map((item: any) => ({
+        const placeResults = data.map((item: any) => ({
           id: item.id,
           name: item.place_name,
           address: item.road_address_name || item.address_name,
@@ -63,48 +67,59 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           lng: parseFloat(item.x),
           isAddress: false
         }));
-      }
 
-      if (isNextPage) {
-        setResults(prev => [...prev, ...placeResults]);
-      } else {
-        // 첫 페이지인 경우 주소 검색도 병행
-        geocoderService.current.addressSearch(keyword, (addrData: any, addrStatus: any) => {
-          let addrResults: Place[] = [];
-          if (addrStatus === kakao.maps.services.Status.OK) {
-            addrResults = addrData.map((item: any, idx: number) => ({
-              id: `addr-${idx}-${item.x}-${item.y}`,
-              name: item.address_name,
-              address: item.road_address?.address_name || item.address?.address_name || item.address_name,
-              lat: parseFloat(item.y),
-              lng: parseFloat(item.x),
-              isAddress: true
-            }));
-          }
-          
-          // 주소 결과를 상단에 배치
-          const combined = [...addrResults, ...placeResults];
-          // 중복 제거
-          const seen = new Set();
-          const unique = combined.filter(item => {
-            const key = `${item.lat.toFixed(6)},${item.lng.toFixed(6)}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
+        if (isNextPage) {
+          setResults(prev => {
+            const combined = [...prev, ...placeResults];
+            const seen = new Set();
+            return combined.filter(item => {
+              if (seen.has(item.id)) return false;
+              seen.add(item.id);
+              return true;
+            });
           });
-          
-          setResults(unique);
-        });
+        } else {
+          // 첫 페이지인 경우 주소 검색 병행
+          geocoderService.current.addressSearch(keyword, (addrData: any, addrStatus: any) => {
+            let addrResults: Place[] = [];
+            if (addrStatus === kakao.maps.services.Status.OK) {
+              addrResults = addrData.map((item: any, idx: number) => ({
+                id: `addr-${idx}-${item.x}-${item.y}`,
+                name: item.address_name,
+                address: item.road_address?.address_name || item.address?.address_name || item.address_name,
+                lat: parseFloat(item.y),
+                lng: parseFloat(item.x),
+                isAddress: true
+              }));
+            }
+            
+            const combined = [...addrResults, ...placeResults];
+            const seen = new Set();
+            const unique = combined.filter(item => {
+              if (seen.has(item.id)) return false;
+              seen.add(item.id);
+              return true;
+            });
+            
+            setResults(unique);
+          });
+        }
+        setPagination(paginationObj);
+      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+        if (!isNextPage) setResults([]);
+        setPagination(null);
+      } else {
+        console.error("Search error status:", status);
+        setPagination(null);
       }
-
-      setPagination(paginationObj);
-      setIsLoading(false);
-      isSearching.current = false;
     };
 
     if (isNextPage && pagination) {
       pagination.nextPage();
     } else {
+      // 새로운 검색 시 결과 초기화
+      setResults([]);
+      setPagination(null);
       searchService.current.keywordSearch(keyword, placesCallback, { size: 15 });
     }
   }, [pagination]);
@@ -117,6 +132,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
       } else {
         setResults([]);
         setPagination(null);
+        setIsLoading(false);
+        isSearching.current = false;
       }
     }, 400);
     return () => clearTimeout(timer);
