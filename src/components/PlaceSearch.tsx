@@ -33,6 +33,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const searchService = useRef<any>(null);
   const geocoderService = useRef<any>(null);
   const isSearching = useRef(false);
+  const lastQuery = useRef('');
 
   // 카카오 서비스 초기화
   useEffect(() => {
@@ -43,8 +44,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     }
   }, [isOpen]);
 
-  // 통합 검색 처리 함수
-  const executeSearch = useCallback((keyword: string, isNextPage: boolean = false) => {
+  // 검색 실행 함수
+  const performSearch = useCallback(async (keyword: string, isNextPage: boolean = false) => {
     if (!keyword.trim() || !searchService.current || !geocoderService.current) return;
     if (isSearching.current) return;
 
@@ -52,14 +53,98 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     setIsLoading(true);
     const kakao = (window as any).kakao;
 
-    // 장소 검색 콜백
-    const placesCallback = (data: any, status: any, paginationObj: any) => {
-      // 어떤 상태든 로딩 플래그 해제
+    try {
+      if (isNextPage && pagination) {
+        // 추가 페이지 로드
+        pagination.nextPage();
+        // pagination.nextPage()는 비동기 콜백을 트리거하므로 여기서 isSearching을 풀지 않고 콜백에서 풉니다.
+        return;
+      }
+
+      // 초기 검색 (주소 + 장소)
+      const addressPromise = new Promise<Place[]>((resolve) => {
+        geocoderService.current.addressSearch(keyword, (data: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            resolve(data.map((item: any, idx: number) => ({
+              id: `addr-${idx}-${item.x}-${item.y}`,
+              name: item.address_name,
+              address: item.road_address?.address_name || item.address?.address_name || item.address_name,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+              isAddress: true
+            })));
+          } else {
+            resolve([]);
+          }
+        });
+      });
+
+      const placesPromise = new Promise<{data: Place[], pagination: any}>((resolve) => {
+        searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            resolve({
+              data: data.map((item: any) => ({
+                id: item.id,
+                name: item.place_name,
+                address: item.road_address_name || item.address_name,
+                lat: parseFloat(item.y),
+                lng: parseFloat(item.x),
+                isAddress: false
+              })),
+              pagination: paginationObj
+            });
+          } else {
+            resolve({ data: [], pagination: null });
+          }
+        }, { size: 15 });
+      });
+
+      const [addrResults, placeData] = await Promise.all([addressPromise, placesPromise]);
+      
+      const combined = [...addrResults, ...placeData.data];
+      const seen = new Set();
+      const unique = combined.filter(item => {
+        const key = `${item.lat.toFixed(6)},${item.lng.toFixed(6)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      setResults(unique);
+      setPagination(placeData.pagination);
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
       setIsLoading(false);
       isSearching.current = false;
+    }
+  }, [pagination]);
 
+  // 페이징 콜백 핸들러 (keywordSearch의 콜백으로 사용됨)
+  useEffect(() => {
+    if (!searchService.current) return;
+
+    // pagination.nextPage() 호출 시 실행될 전역 콜백 설정은 불가능하므로 
+    // performSearch 내부의 keywordSearch 옵션을 조정하거나 
+    // 아래와 같이 nextPage 전용 핸들러를 만듭니다.
+  }, []);
+
+  // 추가 페이지 로드 전용 함수
+  const loadNextPage = useCallback(() => {
+    if (!pagination?.hasNextPage || isSearching.current) return;
+    
+    isSearching.current = true;
+    setIsLoading(true);
+    const kakao = (window as any).kakao;
+
+    pagination.nextPage();
+    
+    // 카카오 API의 특성상 keywordSearch를 다시 호출해야 하므로 
+    // pagination 객체 자체의 nextPage()를 사용하되 결과를 results에 append하는 로직이 필요합니다.
+    // 이를 위해 keywordSearch를 다시 호출하는 방식으로 구현합니다.
+    searchService.current.keywordSearch(query, (data: any, status: any, paginationObj: any) => {
       if (status === kakao.maps.services.Status.OK) {
-        const placeResults = data.map((item: any) => ({
+        const newPlaces = data.map((item: any) => ({
           id: item.id,
           name: item.place_name,
           address: item.road_address_name || item.address_name,
@@ -68,90 +153,50 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           isAddress: false
         }));
 
-        if (isNextPage) {
-          setResults(prev => {
-            const combined = [...prev, ...placeResults];
-            const seen = new Set();
-            return combined.filter(item => {
-              if (seen.has(item.id)) return false;
-              seen.add(item.id);
-              return true;
-            });
+        setResults(prev => {
+          const combined = [...prev, ...newPlaces];
+          const seen = new Set();
+          return combined.filter(item => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
           });
-        } else {
-          // 첫 페이지인 경우 주소 검색 병행
-          geocoderService.current.addressSearch(keyword, (addrData: any, addrStatus: any) => {
-            let addrResults: Place[] = [];
-            if (addrStatus === kakao.maps.services.Status.OK) {
-              addrResults = addrData.map((item: any, idx: number) => ({
-                id: `addr-${idx}-${item.x}-${item.y}`,
-                name: item.address_name,
-                address: item.road_address?.address_name || item.address?.address_name || item.address_name,
-                lat: parseFloat(item.y),
-                lng: parseFloat(item.x),
-                isAddress: true
-              }));
-            }
-            
-            const combined = [...addrResults, ...placeResults];
-            const seen = new Set();
-            const unique = combined.filter(item => {
-              if (seen.has(item.id)) return false;
-              seen.add(item.id);
-              return true;
-            });
-            
-            setResults(unique);
-          });
-        }
+        });
         setPagination(paginationObj);
-      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-        if (!isNextPage) setResults([]);
-        setPagination(null);
-      } else {
-        console.error("Search error status:", status);
-        setPagination(null);
       }
-    };
-
-    if (isNextPage && pagination) {
-      pagination.nextPage();
-    } else {
-      // 새로운 검색 시 결과 초기화
-      setResults([]);
-      setPagination(null);
-      searchService.current.keywordSearch(keyword, placesCallback, { size: 15 });
-    }
-  }, [pagination]);
+      setIsLoading(false);
+      isSearching.current = false;
+    }, { page: pagination.current + 1, size: 15 });
+  }, [pagination, query]);
 
   // 입력값 변경 시 디바운스 검색
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.trim()) {
-        executeSearch(query, false);
-      } else {
+      if (query.trim() && query !== lastQuery.current) {
+        lastQuery.current = query;
+        performSearch(query, false);
+      } else if (!query.trim()) {
         setResults([]);
         setPagination(null);
-        setIsLoading(false);
-        isSearching.current = false;
+        lastQuery.current = '';
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [query, executeSearch]);
+  }, [query, performSearch]);
 
   // 무한 스크롤 감지
   useEffect(() => {
     if (!pagination?.hasNextPage || isLoading) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isSearching.current) {
-        executeSearch(query, true);
+      if (entry.isIntersecting) {
+        loadNextPage();
       }
     }, { threshold: 0.1 });
 
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [pagination, isLoading, query, executeSearch]);
+  }, [pagination, isLoading, loadNextPage]);
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -208,9 +253,11 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                 </button>
               ))}
               
-              <div ref={loadMoreRef} className="py-8 flex justify-center">
-                {isLoading && results.length > 0 && <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />}
-              </div>
+              {pagination?.hasNextPage && (
+                <div ref={loadMoreRef} className="py-8 flex justify-center">
+                  <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                </div>
+              )}
 
               {!isLoading && query.trim() && results.length === 0 && (
                 <div className="py-20 text-center text-gray-400 font-bold">검색 결과가 없습니다.</div>
