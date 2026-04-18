@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string, userEmail?: string) => {
     try {
-      // 1. 프로필 조회 시도
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -29,10 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // 2. 프로필이 없는 경우 (회원가입 직후 등) 자동 생성
-        console.log("[AuthProvider] Profile not found, creating default profile...");
         const defaultNickname = userEmail ? userEmail.split('@')[0] : '탐험가';
-        
         const { data: newProfile, error: insertError } = await supabase
           .from("profiles")
           .insert([
@@ -47,11 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .select()
           .single();
 
-        if (!insertError) {
-          setProfile(newProfile);
-        } else {
-          console.error("[AuthProvider] Failed to create profile:", insertError);
-        }
+        if (!insertError) setProfile(newProfile);
       } else if (!error) {
         setProfile(data);
       }
@@ -61,34 +53,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const initAuth = async () => {
+    // 초기 세션 확인
+    const initSession = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         
+        // 세션이 확인되면 즉시 로딩 해제 (프로필은 백그라운드에서 로드)
+        setLoading(false);
+
         if (initialSession?.user) {
-          await fetchProfile(initialSession.user.id, initialSession.user.email);
+          fetchProfile(initialSession.user.id, initialSession.user.email);
         }
       } catch (error) {
         console.error("Auth init error:", error);
-      } finally {
         setLoading(false);
       }
     };
 
-    initAuth();
+    initSession();
 
+    // 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id, currentSession.user.email);
+          fetchProfile(currentSession.user.id, currentSession.user.email);
         } else {
           setProfile(null);
         }
+        
+        // 상태 변경 시에도 로딩 해제 보장
         setLoading(false);
       }
     );
