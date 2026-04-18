@@ -172,28 +172,28 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-// 20개의 다양한 유튜브 링크 확보
+// 최신 K-POP 및 인기 팝송 유튜브 링크
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
-  "https://www.youtube.com/watch?v=9bZkp7q19f0",
-  "https://www.youtube.com/watch?v=fRh_vgS2dFE",
-  "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-  "https://www.youtube.com/watch?v=CevxZvSJLk8",
-  "https://www.youtube.com/watch?v=0-S5a0eXPoc",
-  "https://www.youtube.com/watch?v=hT_nvWreIhg",
-  "https://www.youtube.com/watch?v=3JZ_D3ELwOQ",
-  "https://www.youtube.com/watch?v=V1Pl8CzNzCw",
-  "https://www.youtube.com/watch?v=60ItHLz5WEA",
-  "https://www.youtube.com/watch?v=L_LUpnjgPso",
-  "https://www.youtube.com/watch?v=9HDEHj2yzew",
-  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
-  "https://www.youtube.com/watch?v=fLexgOxsZu0",
-  "https://www.youtube.com/watch?v=2S24-y0Ij3Y",
-  "https://www.youtube.com/watch?v=7wtfhZwyrcc",
-  "https://www.youtube.com/watch?v=RgKAFK5djSk",
-  "https://www.youtube.com/watch?v=Sagg08DrO5U",
-  "https://www.youtube.com/watch?v=M7lc1UVf-VE",
-  "https://www.youtube.com/watch?v=kJQP7kiw5Fk"
+  "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // NewJeans - Ditto
+  "https://www.youtube.com/watch?v=gdZLi9oWNZg", // BTS - Dynamite
+  "https://www.youtube.com/watch?v=ioNng23DkIM", // BLACKPINK - How You Like That
+  "https://www.youtube.com/watch?v=F0B7HDiY-10", // IVE - Love Dive
+  "https://www.youtube.com/watch?v=nFYwcjvLliU", // aespa - Supernova
+  "https://www.youtube.com/watch?v=ic8j13piAhQ", // Taylor Swift - Cruel Summer
+  "https://www.youtube.com/watch?v=UqyT8IEBkvY", // Bruno Mars - 24K Magic
+  "https://www.youtube.com/watch?v=ns8_OC8h2Yg", // Dua Lipa - Houdini
+  "https://www.youtube.com/watch?v=4NRXx6U8ABQ", // The Weeknd - Blinding Lights
+  "https://www.youtube.com/watch?v=H5v3kku4y6Q", // Harry Styles - As It Was
+  "https://www.youtube.com/watch?v=eVli-tstM5E", // Sabrina Carpenter - Espresso
+  "https://www.youtube.com/watch?v=T7vS7fX2-vI", // NewJeans - Hype Boy
+  "https://www.youtube.com/watch?v=pSUydWEqKwE", // BTS - Butter
+  "https://www.youtube.com/watch?v=gQlMMD8auMs", // BLACKPINK - Pink Venom
+  "https://www.youtube.com/watch?v=6ZUIwj3FgUY", // IVE - I AM
+  "https://www.youtube.com/watch?v=Os_heh8vPfs", // aespa - Drama
+  "https://www.youtube.com/watch?v=b1kbLwvqugk", // Taylor Swift - Anti-Hero
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE", // Justin Bieber - Peaches
+  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - Gangnam Style
+  "https://www.youtube.com/watch?v=jNQXAC9IVRw"  // Stray Kids - S-Class
 ];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
@@ -245,7 +245,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; // 유튜브 확률 상향
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; 
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
@@ -285,7 +285,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       }
     }
 
-    // 유튜브 링크가 있다면 썸네일을 기본 이미지로 설정
     let finalImage = images[0];
     if (youtubeUrl) {
       const thumb = getYoutubeThumbnail(youtubeUrl);
