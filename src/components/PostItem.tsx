@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, Bookmark, MoreVertical, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -352,7 +352,7 @@ const PostItem = ({
               youtubeId ? (
                 <iframe
                   className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
                   title="YouTube video player"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -364,7 +364,6 @@ const PostItem = ({
                   className="w-full h-full object-cover" 
                   controls={false}
                   autoPlay 
-                  muted
                   playsInline
                   loop
                   onClick={(e) => e.stopPropagation()}
