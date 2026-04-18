@@ -27,7 +27,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
-  const [isSubmitting) = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
