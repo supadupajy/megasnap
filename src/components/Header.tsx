@@ -31,6 +31,7 @@ const Header = () => {
 
     fetchUnreadCount();
 
+    // 채널 이름에 랜덤 문자열을 추가하여 매 렌더링/구독마다 고유함을 보장
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const channelName = `header_notifs_${authUser.id}_${uniqueId}`;
     const channel = supabase.channel(channelName);
@@ -51,22 +52,19 @@ const Header = () => {
       .subscribe();
 
     return () => {
+      // 컴포넌트 언마운트 시 채널 제거
       supabase.removeChannel(channel);
     };
   }, [authUser]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
-      <div 
-        className="h-10 w-24 flex items-center justify-start cursor-pointer shrink-0"
+      <h1 
+        className="text-2xl font-black text-indigo-600 tracking-tighter cursor-pointer italic shrink-0"
         onClick={() => navigate('/')}
       >
-        <img 
-          src="dyad-media://media/megasnap/.dyad/media/8117eca2306b91604379b7286150de8e.png" 
-          alt="Chora Logo" 
-          className="h-full w-full object-contain object-left"
-        />
-      </div>
+        Chora
+      </h1>
 
       <HeaderAdBanner />
 

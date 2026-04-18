@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Camera } from 'lucide-react';
 
 const SplashScreen = () => {
   return (
@@ -24,39 +25,44 @@ const SplashScreen = () => {
           className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-600 blur-3xl rounded-full"
         />
 
-        <div className="relative flex flex-col items-center gap-4 w-full">
-          {/* New Logo Image */}
+        <div className="relative flex flex-col items-center gap-6 w-full">
+          {/* Logo Icon */}
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
             transition={{ 
               type: "spring",
               stiffness: 260,
               damping: 20,
               delay: 0.2
             }}
-            className="w-48 h-48 flex items-center justify-center"
+            className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-200"
           >
-            <img 
-              src="dyad-media://media/megasnap/.dyad/media/8117eca2306b91604379b7286150de8e.png" 
-              alt="Chora Logo" 
-              className="w-full h-full object-contain"
-            />
+            <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
           </motion.div>
 
-          {/* Tagline */}
-          <div className="flex flex-col items-center -mt-4">
+          {/* Brand Name */}
+          <div className="flex flex-col items-center">
+            <motion.h1 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              className="text-4xl font-black text-gray-900 tracking-tighter italic"
+            >
+              Cho<span className="text-indigo-600">ra</span>
+            </motion.h1>
+            
             <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.8 }}
-              className="text-[12px] font-black text-gray-400 tracking-[0.3em] uppercase"
+              className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase"
             >
               Be here. Be seen.
             </motion.p>
           </div>
 
-          {/* BMW Ad Image (Keeping for premium feel) */}
+          {/* BMW Ad Image */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
