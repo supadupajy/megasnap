@@ -213,7 +213,10 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-      const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+      
+      // 강조된 마커는 zIndex를 가장 높게 설정 (10000)
+      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+      
       let scale = currentLevel === 7 ? 0.5 : (currentLevel === 8 ? 0.25 : 1);
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 

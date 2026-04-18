@@ -39,7 +39,7 @@ const AD_FOOD_IMAGES = [
   "https://images.unsplash.com/photo-1484723088339-0b2833a2595d",
   "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
-  "https://images.unsplash.com/photo-1473093226795-af9932fe5856",
+  "https://images.unsplash.com/photo-1473093226795-af9932fe5855",
   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
   "https://images.unsplash.com/photo-1467003909585-2f8a72700288",
   "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",

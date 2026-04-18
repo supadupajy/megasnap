@@ -140,7 +140,7 @@ const Index = () => {
         setMapCenter({ lat: incomingPost.lat, lng: incomingPost.lng });
         const pingTimer = setTimeout(() => {
           setHighlightedPostId(incomingPost.id);
-          setTimeout(() => setHighlightedPostId(null), 3000);
+          setTimeout(() => setHighlightedPostId(null), 4000);
         }, 1500);
       }
     } else if (location.state.center) {
@@ -197,11 +197,16 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
     const inBoundsCandidates = allPosts.filter(post => {
+      const isNotBlocked = !blockedIds.has(post.user.id);
+      if (!isNotBlocked) return false;
+
+      // 강조된 포스팅은 모든 필터를 무시하고 무조건 후보에 포함
+      if (post.id === highlightedPostId) return true;
+
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       
-      // 강조된 포스팅(highlightedPostId)은 범위 밖이라도 일단 후보에 포함 (지도가 이동 중일 수 있음)
-      if (!isWithinBounds && post.id !== highlightedPostId) return false;
+      if (!isWithinBounds) return false;
 
       // 광고는 항상 표시, 일반 포스트는 시간 제한 적용
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -221,12 +226,7 @@ const Index = () => {
                           (selectedCategories.includes('influencer') && post.isInfluencer);
       }
 
-      const isNotBlocked = !blockedIds.has(post.user.id);
-      
-      // 강조된 포스팅은 모든 필터를 무시하고 표시 대상 후보가 됨
-      if (post.id === highlightedPostId) return isNotBlocked;
-
-      return isWithinTime && matchesCategory && isNotBlocked;
+      return isWithinTime && matchesCategory;
     });
 
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
@@ -247,7 +247,7 @@ const Index = () => {
       finalMarkers = survivors.sort(stableSort).slice(0, displayCount);
     }
 
-    // 강조된 포스팅이 최종 리스트에 없다면 강제로 추가
+    // 강조된 포스팅이 최종 리스트에 없다면 강제로 추가 (필터링 우회 보장)
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) {
