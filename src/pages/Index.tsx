@@ -37,7 +37,6 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [currentZoom, setCurrentZoom] = useState(6);
   
-  // 레벨별로 고정된 랜덤 개수를 유지하기 위한 상태
   const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
     6: 28,
     7: 105,
@@ -88,7 +87,6 @@ const Index = () => {
       
       if (data.level !== undefined && data.level !== currentZoom) {
         setCurrentZoom(data.level);
-        // 줌 레벨이 바뀔 때만 새로운 랜덤 개수 생성
         const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
         setMaxCounts(prev => ({
           ...prev,
@@ -102,7 +100,7 @@ const Index = () => {
         setTempSelectedLocation(data.center);
       }
       throttleTimer.current = null;
-    }, 50); // 스로틀 시간을 약간 늘려 안정성 확보
+    }, 50);
   }, [isSelectingLocation, currentZoom]);
 
   const filteredAllPosts = useMemo(() => {
@@ -178,7 +176,6 @@ const Index = () => {
   useEffect(() => {
     if (!mapData?.bounds) return;
     
-    // 9단계 이상이면 마커를 표시하지 않음
     if (currentZoom >= 9) {
       setDisplayedMarkers([]);
       return;
@@ -188,6 +185,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // 1. 현재 화면 영역 내에 있는 모든 후보군 필터링
     const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -195,7 +193,6 @@ const Index = () => {
       if (!isWithinBounds) return false;
 
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
-      
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;
 
@@ -216,40 +213,29 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 레벨별 마커 선별 로직 (안정적인 정렬 및 개수 유지)
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
-    
-    // 정렬 시 ID를 추가하여 순서가 바뀌지 않도록 함 (Stable Sort)
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
 
-    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort(stableSort);
-    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort(stableSort);
-    const ads = inBoundsCandidates.filter(p => p.isAd).sort(stableSort);
-    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort(stableSort);
+    // 2. [핵심] 이미 표시되고 있는 마커 중 화면 안에 남은 것들(생존자) 찾기
+    const prevDisplayedIds = new Set(displayedMarkers.map(p => p.id));
+    const survivors = inBoundsCandidates.filter(p => prevDisplayedIds.has(p.id));
+    
+    // 3. 새로 진입했거나 아직 표시되지 않은 후보들
+    const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
 
-    const countInfluencer = Math.floor(displayCount * 0.05);
-    const countPopular = Math.floor(displayCount * 0.05);
-    const countAd = Math.floor(displayCount * 0.03);
-    
-    const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
-    const finalPopulars = populars.slice(0, Math.max(1, countPopular));
-    const finalAds = ads.slice(0, Math.max(1, countAd));
-    
-    const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
-    const remainingSlots = displayCount - currentSpecialCount;
-    const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
+    // 4. 생존자들을 유지하면서 부족한 만큼만 새로운 후보들로 채움
+    const needed = displayCount - survivors.length;
+    let finalMarkers = survivors;
 
-    let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
-    
-    if (combined.length < displayCount && inBoundsCandidates.length > combined.length) {
-      const selectedIds = new Set(combined.map(p => p.id));
-      const leftovers = inBoundsCandidates
-        .filter(p => !selectedIds.has(p.id))
-        .sort(stableSort);
-      combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
+    if (needed > 0) {
+      const additions = newCandidates.slice(0, needed);
+      finalMarkers = [...survivors, ...additions];
+    } else if (needed < 0) {
+      // 만약 생존자가 너무 많아졌다면 (줌 인 등), 우선순위에 따라 잘라냄
+      finalMarkers = survivors.sort(stableSort).slice(0, displayCount);
     }
-    
-    setDisplayedMarkers(combined);
+
+    setDisplayedMarkers(finalMarkers);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
