@@ -445,7 +445,7 @@ const Index = () => {
                 <div className="relative">
                   <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
                   
-                  {currentZoom < 9 && (
+                  {currentZoom < 10 && (
                     <button 
                       onClick={handleViewAllClick} 
                       disabled={displayedMarkers.length === 0} 
@@ -460,7 +460,7 @@ const Index = () => {
                     </button>
                   )}
                   
-                  {displayedMarkers.length > 0 && currentZoom < 9 && (
+                  {displayedMarkers.length > 0 && currentZoom < 10 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>

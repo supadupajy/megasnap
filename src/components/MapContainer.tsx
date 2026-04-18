@@ -56,7 +56,7 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        map.setMaxLevel(9); // 최대 축소 레벨을 9로 제한
+        map.setMaxLevel(10); // 최대 축소 레벨을 10으로 확장
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -228,8 +228,8 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
 
-    // 9단계 이상이면 모든 마커 제거
-    if (currentLevel >= 9) {
+    // 10단계 이상이면 모든 마커 제거
+    if (currentLevel >= 10) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current.clear();
       return;
@@ -256,6 +256,7 @@ const MapContainer = ({
       let scale = 1;
       if (currentLevel === 7) scale = 0.5;
       else if (currentLevel === 8) scale = 0.25;
+      else if (currentLevel === 9) scale = 0.125;
 
       const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}`;
 
@@ -287,7 +288,7 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         
         if (content instanceof HTMLElement) {
-          // 스케일 업데이트
+          // 스케일 업데이트 (강제 적용을 위해 style.transform 직접 수정)
           content.style.transform = `translate(-50%, -100%) scale(${scale})`;
           
           if (isHighlighted) content.classList.add('highlighted');
