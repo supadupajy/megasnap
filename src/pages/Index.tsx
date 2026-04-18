@@ -55,7 +55,7 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 60; 
+  const MAX_MARKERS = 30; 
   const throttleTimer = useRef<any>(null);
 
   useEffect(() => {
