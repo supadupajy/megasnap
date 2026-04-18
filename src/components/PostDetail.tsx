@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Comment } from '@/types';
 import {
   DropdownMenu,
@@ -51,11 +51,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  // Toss to close logic
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
   
-  // 중심으로부터의 거리 계산에 따른 변형
   const opacity = useTransform(dragY, [-300, 0, 300], [0, 1, 0]);
   const scale = useTransform(dragY, [-300, 0, 300], [0.8, 1, 0.8]);
   const rotate = useTransform(dragX, [-200, 200], [-10, 10]);
@@ -113,7 +111,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 100;
     const velocityThreshold = 300;
     
-    // 던지는 속도나 거리가 임계값을 넘으면 닫기
     if (
       Math.abs(info.offset.y) > threshold || 
       Math.abs(info.velocity.y) > velocityThreshold ||
@@ -225,7 +222,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
-      {/* Animated Backdrop */}
       <motion.div 
         style={{ opacity: backdropOpacity }}
         initial={{ opacity: 0 }}
@@ -264,7 +260,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-grab active:cursor-grabbing"
         >
-          {/* Swipe Handle */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
 
           <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
@@ -403,7 +398,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
