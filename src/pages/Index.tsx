@@ -123,29 +123,23 @@ const Index = () => {
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
       const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
 
-      // 1. 프로필 생성 (반드시 성공해야 함)
-      const { error: profileError } = await supabase.from('profiles').upsert({
+      // 1. 프로필 생성
+      await supabase.from('profiles').upsert({
         id: authUser.id,
         nickname: displayName,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       });
 
-      if (profileError) {
-        console.error('[Seed] Profile Error:', profileError);
-        throw new Error(`프로필 생성 실패: ${profileError.message}`);
-      }
-
-      // 2. 기존 데이터 확인
       if (!force) {
-        const { count, error: countError } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-        if (!countError && count && count > 0) {
+        const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+        if (count && count > 0) {
           dismissToast(toastId);
           return;
         }
       }
 
-      // 3. 데이터 생성
+      // 2. 데이터 생성 (DB에 확실히 존재하는 필드만 사용)
       const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
         name: `Explorer_${i + 1}`,
         avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
@@ -164,25 +158,16 @@ const Index = () => {
           user_name: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].name,
           user_avatar: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].avatar,
           likes: p.likes,
-          category: p.category,
-          border_type: p.borderType,
-          is_gif: p.isGif,
-          is_influencer: p.isInfluencer,
-          youtube_url: p.youtubeUrl,
           created_at: p.createdAt.toISOString()
         }));
         allMockData = [...allMockData, ...insertData];
       });
 
-      // 4. 10개씩 끊어서 삽입하며 에러 체크
+      // 3. 데이터 삽입
       for (let i = 0; i < allMockData.length; i += 10) {
         const chunk = allMockData.slice(i, i + 10);
         const { error: insertError } = await supabase.from('posts').insert(chunk);
-        
-        if (insertError) {
-          console.error(`[Seed] Insert Error at chunk ${i/10}:`, insertError);
-          throw new Error(`데이터 삽입 실패 (${i/10}): ${insertError.message}`);
-        }
+        if (insertError) throw insertError;
       }
 
       dismissToast(toastId);
