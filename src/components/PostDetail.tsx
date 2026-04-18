@@ -51,12 +51,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
   
+  // 드래그 거리에 따른 시각적 변화 (수직 드래그 중심)
   const opacity = useTransform(dragY, [-300, 0, 300], [0, 1, 0]);
-  const scale = useTransform(dragY, [-300, 0, 300], [0.8, 1, 0.8]);
-  const rotate = useTransform(dragX, [-200, 200], [-10, 10]);
+  const scale = useTransform(dragY, [-300, 0, 300], [0.9, 1, 0.9]);
   const backdropOpacity = useTransform(dragY, [-300, 0, 300], [0, 0.6, 0]);
 
   useLayoutEffect(() => {
@@ -71,7 +70,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
-      dragX.set(0);
       dragY.set(0);
       
       const post = posts[initialIndex];
@@ -87,7 +85,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(false);
       setIsPlayingVideo(false);
     }
-  }, [isOpen, initialIndex, hasInitialized, posts, dragX, dragY]);
+  }, [isOpen, initialIndex, hasInitialized, posts, dragY]);
 
   useEffect(() => {
     const currentPost = posts[currentIndex];
@@ -108,14 +106,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [currentIndex, isOpen, onViewPost, posts]);
 
   const handleDragEnd = (_: any, info: any) => {
-    const threshold = 100;
-    const velocityThreshold = 300;
+    const threshold = 120;
+    const velocityThreshold = 500;
     
+    // 수직 드래그 거리나 속도가 임계값을 넘으면 닫기
     if (
       Math.abs(info.offset.y) > threshold || 
-      Math.abs(info.velocity.y) > velocityThreshold ||
-      Math.abs(info.offset.x) > threshold * 1.5 ||
-      Math.abs(info.velocity.x) > velocityThreshold
+      Math.abs(info.velocity.y) > velocityThreshold
     ) {
       onClose();
     }
@@ -245,11 +242,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
         <motion.div 
           key={post.id} 
-          drag
-          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-          dragElastic={0.8}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.6}
           onDragEnd={handleDragEnd}
-          style={{ x: dragX, y: dragY, opacity, scale, rotate }}
+          style={{ y: dragY, opacity, scale }}
           initial={{ opacity: 0, scale: 0.9, y: 100 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ 
