@@ -124,7 +124,7 @@ const Index = () => {
       return;
     }
 
-    const toastId = showLoading('실제 주소 기반으로 데이터를 생성 중입니다...');
+    const toastId = showLoading('전국 실제 주소를 분석하여 데이터를 생성 중입니다...');
     const geocoder = new kakao.maps.services.Geocoder();
 
     const getAddress = (lat: number, lng: number): Promise<string> => {
@@ -135,9 +135,10 @@ const Index = () => {
             const city = addr.region_1depth_name || '';
             const district = addr.region_2depth_name || '';
             const neighborhood = addr.region_3depth_name || '';
-            resolve(`${city} ${district} ${neighborhood}`.trim());
+            const cleanAddress = `${city} ${district} ${neighborhood}`.trim();
+            resolve(cleanAddress || '대한민국 어딘가');
           } else {
-            resolve('알 수 없는 장소');
+            resolve('대한민국 어딘가');
           }
         });
       });
@@ -156,6 +157,8 @@ const Index = () => {
           const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
           const isPopular = Math.random() > 0.9;
           const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
+          
+          // "주변" 텍스트 없이 실제 주소만 가져옴
           const realAddress = await getAddress(p.lat, p.lng);
 
           return {
@@ -174,6 +177,11 @@ const Index = () => {
 
         const hubData = await Promise.all(insertDataPromises);
         allMockData = [...allMockData, ...hubData];
+      }
+
+      // 기존 데이터 삭제 (초기화 버튼 클릭 시)
+      if (force) {
+        await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       }
 
       for (let i = 0; i < allMockData.length; i += 20) {
@@ -212,7 +220,7 @@ const Index = () => {
       }
 
       dismissToast(toastId);
-      showSuccess('실제 주소가 포함된 100개의 포스팅 생성이 완료되었습니다! 🇰🇷');
+      showSuccess('모든 포스팅에 실제 시, 구, 동 주소가 적용되었습니다! 🇰🇷');
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
       dismissToast(toastId);
