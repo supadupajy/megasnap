@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
+import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { isGifUrl } from '@/lib/mock-data';
 import { Comment } from '@/types';
 import {
   DropdownMenu,
@@ -47,6 +46,7 @@ interface PostItemProps {
   category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
   disablePulse?: boolean;
+  youtubeUrl?: string;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
@@ -78,6 +78,7 @@ const PostItem = ({
   category = 'none',
   borderType = 'none',
   disablePulse = false,
+  youtubeUrl,
   onLikeToggle,
   onLocationClick,
   onDelete,
@@ -97,11 +98,13 @@ const PostItem = ({
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const displayImages = images.length > 0 ? images : [image];
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
+  const videoId = getYoutubeId(youtubeUrl || '');
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (onImageError) {
@@ -125,23 +128,6 @@ const PostItem = ({
     };
     checkLikeStatus();
   }, [authUser, id]);
-
-  useEffect(() => {
-    const fetchComments = async () => {
-      if (!id || id.length < 20) return;
-      const { data } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', id)
-        .order('created_at', { ascending: true });
-      
-      if (data) {
-        const formatted = data.map(c => ({ user: c.user_name, text: c.content }));
-        setLocalComments(formatted);
-      }
-    };
-    if (showComments) fetchComments();
-  }, [id, showComments]);
 
   const handleLikeToggleLocal = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -227,17 +213,6 @@ const PostItem = ({
     showSuccess(isSaved ? '저장이 취소되었습니다.' : '포스팅을 저장했습니다.');
   };
 
-  const handleReport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
-  };
-
-  const handleBlock = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    blockUser(user.id);
-    showError(`${user.name} 님을 차단했습니다.`);
-  };
-
   const confirmDelete = async () => {
     try {
       if (id.length > 20) {
@@ -284,14 +259,6 @@ const PostItem = ({
     return '';
   };
 
-  const getBadge = () => {
-    if (borderType === 'diamond') return <div className="absolute top-4 left-4 z-20 bg-cyan-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/20"><Star className="w-3.5 h-3.5 fill-black" />DIAMOND</div>;
-    if (borderType === 'gold') return <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />GOLD</div>;
-    if (borderType === 'silver') return <div className="absolute top-4 left-4 z-20 bg-slate-400 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Star className="w-3.5 h-3.5 fill-white" />SILVER</div>;
-    if (borderType === 'popular') return <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>;
-    return null;
-  };
-
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   return (
@@ -333,11 +300,11 @@ const PostItem = ({
               </DropdownMenuItem>
             ) : (
               <>
-                <DropdownMenuItem onClick={handleReport} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
                   <AlertCircle className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-bold text-gray-700">신고</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBlock} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                   <Ban className="w-4 h-4 text-red-600" />
                   <span className="text-sm font-bold text-red-600">차단</span>
                 </DropdownMenuItem>
@@ -350,23 +317,45 @@ const PostItem = ({
       <div className="px-4">
         <div className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
           <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-            <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
-              {displayImages.map((img, idx) => (
-                <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                  <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
-                  {idx === adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+            {videoId && isPlayingVideo ? (
+              <iframe
+                className="w-full h-full"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <div className="relative w-full h-full">
+                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  {displayImages.map((img, idx) => (
+                    <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                      <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
+                      {idx === adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {displayImages.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
-                {displayImages.map((_, idx) => (
-                  <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
-                ))}
+                {videoId && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
+                  >
+                    <div className="w-16 h-16 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
+                      <Play className="w-8 h-8 text-indigo-600 fill-indigo-600 ml-1" />
+                    </div>
+                  </button>
+                )}
+                {displayImages.length > 1 && !videoId && (
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
+                    {displayImages.map((_, idx) => (
+                      <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-          {getBadge()}
         </div>
       </div>
 

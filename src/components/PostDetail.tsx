@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { isGifUrl } from '@/lib/mock-data';
 import { Comment } from '@/types';
 import {
   DropdownMenu,
@@ -47,6 +46,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
@@ -63,6 +63,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
+      setIsPlayingVideo(false);
       const post = posts[initialIndex];
       if (post) {
         setLocalComments(post.comments || []);
@@ -78,6 +79,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       if (onViewPost) onViewPost(currentPost.id);
       setShowComments(false);
       setCurrentImageIndex(0);
+      setIsPlayingVideo(false);
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
@@ -106,41 +108,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
+  const videoId = getYoutubeId(post.youtubeUrl || '');
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
-    if (isMine) {
-      navigate('/profile');
-    } else {
-      navigate(`/profile/${post.user.id}`);
-    }
-  };
-
-  const handleReport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
-  };
-
-  const handleBlock = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    blockUser(post.user.id);
-    showError(`${post.user.name} 님을 차단했습니다.`);
-    onClose();
+    if (isMine) navigate('/profile');
+    else navigate(`/profile/${post.user.id}`);
   };
 
   const confirmDelete = async () => {
     try {
       if (post.id.length > 20) {
-        const { error } = await supabase
-          .from('posts')
-          .delete()
-          .eq('id', post.id);
+        const { error } = await supabase.from('posts').delete().eq('id', post.id);
         if (error) throw error;
       }
-
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(post.id);
       onClose();
@@ -150,11 +134,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     } finally {
       setIsDeleteDialogOpen(false);
     }
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = FALLBACK_IMAGE;
   };
 
   const renderCategoryBadge = () => {
@@ -185,10 +164,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         onOpenAutoFocus={(e) => e.preventDefault()} 
         className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none data-[state=open]:duration-0"
       >
-        <div 
-          className="absolute inset-0 z-0 cursor-pointer" 
-          onClick={onClose}
-        />
+        <div className="absolute inset-0 z-0 cursor-pointer" onClick={onClose} />
 
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
@@ -207,14 +183,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ 
-              duration: 0.45, 
-              ease: [0.4, 0, 0.2, 1]
-            }}
+            transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
             onClick={onClose}
-            className={cn(
-              "w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
-            )}
+            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
           >
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
@@ -244,26 +215,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[120]">
                         {isMine ? (
-                          <DropdownMenuItem 
-                            onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }}
-                            className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                          >
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                             <Trash2 className="w-4 h-4 text-red-600" />
                             <span className="text-sm font-bold text-red-600">삭제하기</span>
                           </DropdownMenuItem>
                         ) : (
                           <>
-                            <DropdownMenuItem 
-                              onClick={handleReport}
-                              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
-                            >
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
                               <AlertCircle className="w-4 h-4 text-gray-600" />
                               <span className="text-sm font-bold text-gray-700">신고</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={handleBlock}
-                              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                            >
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                               <Ban className="w-4 h-4 text-red-600" />
                               <span className="text-sm font-bold text-red-600">차단</span>
                             </DropdownMenuItem>
@@ -279,27 +241,45 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
                     )}>
                       <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-                        <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                          {images.map((img: string, idx: number) => (
-                            <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                              <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
-                              {idx === post.adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                        {videoId && isPlayingVideo ? (
+                          <iframe
+                            className="w-full h-full"
+                            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        ) : (
+                          <div className="relative w-full h-full">
+                            <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                              {images.map((img: string, idx: number) => (
+                                <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                                  <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+                                  {idx === post.adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                        {images.length > 1 && (
-                          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
-                            {images.map((_: any, idx: number) => (
-                              <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
-                            ))}
+                            {videoId && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
+                                className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
+                              >
+                                <div className="w-16 h-16 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 text-indigo-600 fill-indigo-600 ml-1" />
+                                </div>
+                              </button>
+                            )}
+                            {images.length > 1 && !videoId && (
+                              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
+                                {images.map((_: any, idx: number) => (
+                                  <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                      {isInfluencer ? (
-                        <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-black/5"><Star className="w-3.5 h-3.5 fill-black" />INFLUENCER</div>
-                      ) : isPopular && (
-                        <div className="absolute top-4 left-4 z-20 bg-red-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10"><Flame className="w-3.5 h-3.5 fill-white" />HOT</div>
-                      )}
                     </div>
                   </div>
                   
@@ -318,9 +298,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100"><Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span></button>
                           )}
                         </div>
-                        {isAd && (
-                          <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"><ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span></a>
-                        )}
                       </div>
                     </div>
                     <div className="space-y-1 mb-4">
@@ -330,7 +307,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     <div className="border-t border-gray-100 pt-4">
                       <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} /><button type="submit" disabled={!commentInput.trim()} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>
                       {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
-                      <AnimatePresence>{showComments && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="space-y-3 py-2">{localComments.slice(0, -1).map((comment, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{comment.user}</span><span className="text-sm text-gray-500">{comment.text}</span></div>))}</div></motion.div>}</AnimatePresence>
                       <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
                     </div>
                   </div>
@@ -341,11 +317,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
       </DialogContent>
 
-      <DeleteConfirmDialog 
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
+      <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </Dialog>
   );
 };

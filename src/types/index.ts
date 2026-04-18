@@ -37,4 +37,5 @@ export interface Post {
   isSaved?: boolean;
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
+  youtubeUrl?: string;
 }

@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import confetti from 'canvas-confetti';
@@ -25,15 +26,14 @@ interface WritePostProps {
 const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
   const { user: authUser, profile } = useAuth();
   
-  // postDraftStore에서 초기값 가져오기
   const [draft, setDraft] = useState(postDraftStore.get());
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
 
-  // 스토어 구독
   useEffect(() => {
     const unsubscribe = postDraftStore.subscribe(() => {
       setDraft(postDraftStore.get());
@@ -67,7 +67,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         setIsLoadingAddress(false);
       }
     }
-    // 창이 닫힐 때 데이터를 초기화하던 로직을 제거하여 데이터 유지
   }, [isOpen, initialLocation]);
 
   const takePhoto = async () => {
@@ -86,14 +85,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       console.error('Camera error:', error);
     } finally {
       setIsTakingPhoto(false);
-    }
-  };
-
-  const handleStartLocationSelection = () => {
-    // 현재 입력된 내용을 스토어에 저장하고 창을 닫음
-    onClose();
-    if (onStartLocationSelection) {
-      onStartLocationSelection();
     }
   };
 
@@ -127,7 +118,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
       likes: 0,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      youtube_url: youtubeUrl.trim() || null
     };
 
     try {
@@ -158,27 +150,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         image: draft.image,
         isLiked: false,
         createdAt: new Date(),
-        borderType: 'none'
+        borderType: 'none',
+        youtubeUrl: youtubeUrl.trim()
       };
-
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-      const interval: any = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-      }, 250);
 
       if (onPostCreated) onPostCreated(newPost);
       showSuccess('새로운 추억이 등록되었습니다! ✨');
       
-      // 성공 시에만 스토어 초기화
       postDraftStore.clear();
+      setYoutubeUrl('');
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -189,11 +169,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   return (
-    <Drawer 
-      open={isOpen} 
-      onOpenChange={(open) => !open && onClose()}
-      modal={true}
-    >
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={true}>
       <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -226,43 +202,36 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                   </div>
                 </>
               )}
-              {(isTakingPhoto || isSubmitting) && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">유튜브 링크 (선택)</p>
+              <div className="relative">
+                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" />
+                <Input 
+                  placeholder="https://youtube.com/..."
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="h-12 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-medium"
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
-                <button 
-                  onClick={handleStartLocationSelection}
-                  className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline"
-                >
-                  <MapIcon className="w-3 h-3" />
-                  지도에서 위치 선택
+                <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                  <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                 </button>
               </div>
-              
-              <div 
-                onClick={handleStartLocationSelection}
-                className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group"
-              >
+              <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {isLoadingAddress ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
-                      <span className="text-xs text-gray-400">주소를 불러오는 중...</span>
-                    </div>
-                  ) : (
-                    <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
-                      {address || '위치를 선택해주세요'}
-                    </p>
-                  )}
+                  <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
+                    {address || '위치를 선택해주세요'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -271,19 +240,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
                 value={draft.content}
                 onChange={(e) => postDraftStore.set({ content: e.target.value })}
               />
             </div>
           </div>
 
-          <div 
-            className={cn(
-              "py-4 bg-white shrink-0 transition-all duration-300",
-              isKeyboardOpen ? "pb-2" : "pb-[120px]"
-            )}
-          >
+          <div className={cn("py-4 bg-white shrink-0 transition-all duration-300", isKeyboardOpen ? "pb-2" : "pb-[120px]")}>
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}

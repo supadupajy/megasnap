@@ -1,6 +1,5 @@
 import { Post, User, Comment } from '@/types';
 
-// 결정론적 랜덤 함수 (씨앗 기반)
 const seededRandom = (seed: string) => {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -13,7 +12,6 @@ const seededRandom = (seed: string) => {
   };
 };
 
-// 안정적인 Unsplash 이미지들 - 카테고리별 15개 이상으로 확장
 const ACCIDENT_IMAGES = [
   "https://images.unsplash.com/photo-1597328290883-50c5787b7c7e",
   "https://images.unsplash.com/photo-1580273916550-e323be2ae537",
@@ -173,6 +171,12 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
+const YOUTUBE_LINKS = [
+  "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+  "https://www.youtube.com/watch?v=9bZkp7q19f0",
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE"
+];
+
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
   let nickname = `Explorer_${finalId}`;
@@ -180,12 +184,11 @@ export const createMockUser = (id: string, randomFn: () => number = Math.random,
 
   let followers = Math.floor(randomFn() * 5000) + 100;
   
-  // 인플루언서 등급 결정
   if (forceInfluencer) {
     const tierRoll = randomFn();
-    if (tierRoll > 0.9) followers = Math.floor(randomFn() * 5000000) + 10000000; // 다이아몬드 (10M+) - 인플루언서 중 10%
-    else if (tierRoll > 0.6) followers = Math.floor(randomFn() * 4000000) + 1000000; // 골드 (1M+) - 인플루언서 중 30%
-    else followers = Math.floor(randomFn() * 900000) + 100000; // 실버 (100k+) - 인플루언서 중 60%
+    if (tierRoll > 0.9) followers = Math.floor(randomFn() * 5000000) + 10000000;
+    else if (tierRoll > 0.6) followers = Math.floor(randomFn() * 4000000) + 1000000;
+    else followers = Math.floor(randomFn() * 900000) + 100000;
   }
 
   return {
@@ -211,23 +214,19 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 비율 조정 로직 (일반 95%, 인기 2%, 인플루언서 2%, 광고 1%)
     const typeRoll = randomFn();
     let isInfluencer = false;
     let isPopular = false;
     let isAd = false;
 
     if (!specificUserId) {
-      if (typeRoll < 0.02) {
-        isInfluencer = true; // 2% 인플루언서
-      } else if (typeRoll < 0.04) {
-        isPopular = true; // 2% 인기 포스팅
-      } else if (typeRoll < 0.05) {
-        isAd = true; // 1% 광고
-      }
+      if (typeRoll < 0.02) isInfluencer = true;
+      else if (typeRoll < 0.04) isPopular = true;
+      else if (typeRoll < 0.05) isAd = true;
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.8; // 20% 확률로 유튜브 링크 포함
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
@@ -235,6 +234,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)] || "멋진 장소입니다! ✨";
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
+    let youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
@@ -269,17 +269,14 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
     
-    // 인플루언서 여부에 따른 유저 생성
     const user = specificUserId 
       ? createMockUser(specificUserId, randomFn) 
       : createMockUser(isAd ? "sponsored" : id, randomFn, isInfluencer);
 
-    // 좋아요 수 결정
     const likes = (isPopular || isInfluencer) 
       ? Math.floor(randomFn() * 2000) + 800 
       : Math.floor(randomFn() * 500) + 10;
 
-    // 테두리 타입 결정
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
     if (isInfluencer && user.followers) {
       if (user.followers >= 10000000) borderType = 'diamond';
@@ -308,7 +305,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       adImageIndex: 1,
       isLiked: randomFn() > 0.5,
       createdAt: new Date(Date.now() - randomFn() * 12 * 3600000),
-      borderType
+      borderType,
+      youtubeUrl
     };
   });
 };

@@ -56,7 +56,7 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        map.setMaxLevel(10); // 최대 축소 레벨 10
+        map.setMaxLevel(10);
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -82,17 +82,8 @@ const MapContainer = ({
         setIsMapReady(true);
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { 
-          isDragging.current = true; 
-          if (animationRef.current) {
-            cancelAnimationFrame(animationRef.current);
-            animationRef.current = null;
-          }
-        });
-        kakao.maps.event.addListener(map, 'dragend', () => { 
-          isDragging.current = false; 
-          lastDragEnd.current = Date.now(); 
-        });
+        kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
+        kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; lastDragEnd.current = Date.now(); });
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
           if (Date.now() - lastDragEnd.current < 200) return;
@@ -116,58 +107,12 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  const animateMapTo = (targetLat: number, targetLng: number) => {
-    const map = mapInstance.current;
-    if (!map) return;
-    const kakao = (window as any).kakao;
-    
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-
-    const startPos = map.getCenter();
-    const startLat = startPos.getLat();
-    const startLng = startPos.getLng();
-    
-    const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
-    const duration = Math.min(Math.max(dist * 5000, 600), 1200);
-    const startTime = performance.now();
-    
-    const step = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      
-      const currentLat = startLat + (targetLat - startLat) * easeProgress;
-      const currentLng = startLng + (targetLng - startLng) * easeProgress;
-      
-      map.setCenter(new kakao.maps.LatLng(currentLat, currentLng));
-      
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(step);
-      } else {
-        animationRef.current = null;
-      }
-    };
-    
-    animationRef.current = requestAnimationFrame(step);
-  };
-
-  useEffect(() => {
-    if (isMapReady && mapInstance.current && center) {
-      const currentCenter = mapInstance.current.getCenter();
-      const dist = Math.sqrt(Math.pow(center.lat - currentCenter.getLat(), 2) + Math.pow(center.lng - currentCenter.getLng(), 2));
-      if (dist > 0.00001) {
-        animateMapTo(center.lat, center.lng);
-      }
-    }
-  }, [center, isMapReady]);
-
   const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
+    const hasVideo = !!post.youtubeUrl;
 
     let pinColor = '';
     let labelText = '';
@@ -199,6 +144,8 @@ const MapContainer = ({
       categoryIconHtml = `<div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: ${bgColor}; border-radius: 0 12px 0 12px; display: flex; align-items: center; justify-content: center; z-index: 20; border-left: 1.5px solid white; border-bottom: 1.5px solid white;"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${iconSvg}</svg></div>`;
     }
 
+    const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
+
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
@@ -218,6 +165,7 @@ const MapContainer = ({
                    style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${categoryIconHtml}
+              ${videoIconHtml}
             </div>
           </div>
           ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
@@ -230,7 +178,6 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
 
-    // 9단계 이상이면 모든 마커 제거
     if (currentLevel >= 9) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       overlaysRef.current.clear();
@@ -239,7 +186,6 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
-    // 1. 화면에서 사라진 마커 제거
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
@@ -247,27 +193,24 @@ const MapContainer = ({
       }
     });
 
-    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
 
-      // 레벨에 따른 스케일 계산
       let scale = 1;
       if (currentLevel === 7) scale = 0.5;
       else if (currentLevel === 8) scale = 0.25;
       else if (currentLevel === 9) scale = 0.125;
 
-      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}`;
+      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay animate-marker-appear';
         if (isHighlighted) content.classList.add('highlighted');
         
-        // CSS 변수 설정
         content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-state', stateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
@@ -292,9 +235,7 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         
         if (content instanceof HTMLElement) {
-          // CSS 변수 업데이트 (가장 확실한 방법)
           content.style.setProperty('--marker-scale', scale.toString());
-          
           if (isHighlighted) content.classList.add('highlighted');
           else content.classList.remove('highlighted');
           
