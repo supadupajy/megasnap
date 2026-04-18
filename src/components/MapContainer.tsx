@@ -114,16 +114,15 @@ const MapContainer = ({
       const kakao = (window as any).kakao;
       const newCenter = new kakao.maps.LatLng(center.lat, center.lng);
       
-      // 현재 중심점과 다를 때만 이동
       const currentCenter = mapInstance.current.getCenter();
-      if (Math.abs(currentCenter.getLat() - center.lat) > 0.0001 || 
-          Math.abs(currentCenter.getLng() - center.lng) > 0.0001) {
+      if (Math.abs(currentCenter.getLat() - center.lat) > 0.00001 || 
+          Math.abs(currentCenter.getLng() - center.lng) > 0.00001) {
         mapInstance.current.panTo(newCenter);
       }
     }
   }, [center, isMapReady]);
 
-  const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
+  const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
@@ -169,12 +168,12 @@ const MapContainer = ({
 
     return `
       <div class="marker-content-wrapper">
-        ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
+        <div class="marker-highlight-ping"></div>
         <div class="${animationClass}">
           ${labelHtml}
           <div class="${borderClass || ''}"
                style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                      ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
+                      ${borderClass ? '' : `border: 2px solid #ffffff;`}
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                       background-color: white;">
             <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
@@ -222,7 +221,8 @@ const MapContainer = ({
       else if (currentLevel === 8) scale = 0.25;
       else if (currentLevel === 9) scale = 0.125;
 
-      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+      // 강조 상태를 제외한 나머지 상태값으로 innerHTML 업데이트 여부 결정
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -230,8 +230,8 @@ const MapContainer = ({
         if (isHighlighted) content.classList.add('highlighted');
         
         content.style.setProperty('--marker-scale', scale.toString());
-        content.setAttribute('data-state', stateKey);
-        content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
+        content.setAttribute('data-content-state', contentStateKey);
+        content.innerHTML = getMarkerInnerHtml(post, isViewed);
 
         content.onclick = (e) => {
           e.stopPropagation();
@@ -254,13 +254,19 @@ const MapContainer = ({
         
         if (content instanceof HTMLElement) {
           content.style.setProperty('--marker-scale', scale.toString());
-          if (isHighlighted) content.classList.add('highlighted');
-          else content.classList.remove('highlighted');
           
-          if (content.getAttribute('data-state') !== stateKey) {
+          // 강조 상태는 클래스 토글로만 관리 (CSS 트랜지션 활용)
+          if (isHighlighted) {
+            content.classList.add('highlighted');
+          } else {
+            content.classList.remove('highlighted');
+          }
+          
+          // 내용이 바뀌었을 때만 innerHTML 교체 (애니메이션 끊김 방지)
+          if (content.getAttribute('data-content-state') !== contentStateKey) {
             requestAnimationFrame(() => {
-              content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
-              content.setAttribute('data-state', stateKey);
+              content.innerHTML = getMarkerInnerHtml(post, isViewed);
+              content.setAttribute('data-content-state', contentStateKey);
             });
           }
         }
