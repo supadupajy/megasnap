@@ -11,3 +11,9 @@ export function getYoutubeId(url: string) {
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }
+
+export function getYoutubeThumbnail(url: string) {
+  const id = getYoutubeId(url);
+  if (!id) return null;
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+}

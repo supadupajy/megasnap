@@ -38,4 +38,5 @@ export interface Post {
   createdAt: Date;
   borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
   videoUrl?: string;
+  youtubeUrl?: string;
 }

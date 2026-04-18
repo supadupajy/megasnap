@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { getYoutubeThumbnail } from '@/lib/utils';
 
 interface MapContainerProps {
   posts: any[];
@@ -31,7 +32,6 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const lastDragEnd = useRef<number>(0);
-  const animationRef = useRef<number | null>(null);
   
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -112,7 +112,10 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
-    const hasVideo = !!post.videoUrl;
+    const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
+    
+    // 유튜브 영상인 경우 유튜브 썸네일을 우선 사용
+    const displayImage = post.youtubeUrl ? (getYoutubeThumbnail(post.youtubeUrl) || post.image) : post.image;
 
     let pinColor = '';
     let labelText = '';
@@ -160,7 +163,7 @@ const MapContainer = ({
                       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                       background-color: white;">
             <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
-              <img src="${post.image}" 
+              <img src="${displayImage}" 
                    onerror="this.src='${FALLBACK_IMAGE}'"
                    style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
@@ -204,7 +207,7 @@ const MapContainer = ({
       else if (currentLevel === 8) scale = 0.25;
       else if (currentLevel === 9) scale = 0.125;
 
-      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.videoUrl}`;
+      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');

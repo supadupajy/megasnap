@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon, Play } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import { useKeyboard } from '@/hooks/use-keyboard';
@@ -26,6 +27,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
@@ -80,7 +82,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       
       if (image.dataUrl) {
         postDraftStore.set({ image: image.dataUrl });
-        setVideoUrl(null); // 사진 선택 시 비디오 제거
+        setVideoUrl(null);
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -92,13 +94,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) { // 50MB 제한
+      if (file.size > 50 * 1024 * 1024) {
         showError('동영상 용량은 50MB를 초과할 수 없습니다.');
         return;
       }
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
-      postDraftStore.set({ image: null }); // 비디오 선택 시 사진 제거
+      postDraftStore.set({ image: null });
     }
   };
 
@@ -108,8 +110,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!draft.image && !videoUrl) {
-      showError('사진이나 동영상을 첨 be해야 포스팅을 등록할 수 있습니다.');
+    if (!draft.image && !videoUrl && !youtubeUrl.trim()) {
+      showError('사진, 동영상 또는 유튜브 링크를 첨부해주세요.');
       return;
     }
 
@@ -127,8 +129,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       location_name: address,
       latitude: initialLocation.lat,
       longitude: initialLocation.lng,
-      image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop', // 비디오만 있을 경우 기본 썸네일
+      image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop',
       video_url: videoUrl,
+      youtube_url: youtubeUrl.trim() || null,
       user_id: authUser.id,
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -163,6 +166,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         comments: [],
         image: postData.image_url,
         videoUrl: videoUrl,
+        youtubeUrl: youtubeUrl.trim(),
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none'
@@ -173,6 +177,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       
       postDraftStore.clear();
       setVideoUrl(null);
+      setYoutubeUrl('');
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -199,7 +204,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-            {/* Media Selection Area */}
             <div className="space-y-3">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
               <div className="grid grid-cols-2 gap-3">
@@ -223,17 +227,23 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                   <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
                   <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
                 </button>
-                <input 
-                  type="file" 
-                  ref={videoInputRef} 
-                  className="hidden" 
-                  accept="video/*" 
-                  onChange={handleVideoSelect} 
+                <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">유튜브 링크 (선택)</p>
+              <div className="relative">
+                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" />
+                <Input 
+                  placeholder="https://youtube.com/..."
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="h-12 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-medium"
                 />
               </div>
             </div>
 
-            {/* Preview Area */}
             {(draft.image || videoUrl) && (
               <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
                 {draft.image ? (
@@ -284,7 +294,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={(!draft.content && !youtubeUrl.trim()) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>
