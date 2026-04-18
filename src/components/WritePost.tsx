@@ -27,6 +27,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [isSubmitting) = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
@@ -265,7 +266,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                 value={draft.content}
                 onChange={(e) => postDraftStore.set({ content: e.target.value })}
               />
