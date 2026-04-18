@@ -56,7 +56,6 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const TILE_SIZE = 0.02;
-  const MAX_MARKERS = 30; 
   const throttleTimer = useRef<any>(null);
 
   useEffect(() => {
@@ -192,42 +191,42 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 비율 기반 마커 선별 로직 (확대 시에도 일정한 비율 유지)
-    const totalInBounds = inBoundsCandidates.length;
-    const displayCount = Math.min(totalInBounds, MAX_MARKERS);
+    // 레벨별 마커 선별 로직
+    if (currentZoom === 6) {
+      // 6단계: 최대 30개 제한 및 비율 유지
+      const displayCount = 30;
+      const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
+      const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
+      const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
+      const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
 
-    // 유형별 그룹화 및 정렬
-    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
-    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
-    const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
-    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
+      const countInfluencer = Math.floor(displayCount * 0.05);
+      const countPopular = Math.floor(displayCount * 0.05);
+      const countAd = Math.floor(displayCount * 0.03);
+      
+      const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
+      const finalPopulars = populars.slice(0, Math.max(1, countPopular));
+      const finalAds = ads.slice(0, Math.max(1, countAd));
+      
+      const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
+      const remainingSlots = displayCount - currentSpecialCount;
+      const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
 
-    // 목표 개수 계산 (비율: 인플루언서 5%, 인기 5%, 광고 3%, 나머지 일반)
-    const countInfluencer = Math.floor(displayCount * 0.05);
-    const countPopular = Math.floor(displayCount * 0.05);
-    const countAd = Math.floor(displayCount * 0.03);
-    
-    const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
-    const finalPopulars = populars.slice(0, Math.max(1, countPopular));
-    const finalAds = ads.slice(0, Math.max(1, countAd));
-    
-    const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
-    const remainingSlots = displayCount - currentSpecialCount;
-    const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
-
-    let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
-    
-    // 슬롯이 남는 경우(예: 일반 포스팅 부족) 다른 유형으로 채움
-    if (combined.length < displayCount) {
-      const selectedIds = new Set(combined.map(p => p.id));
-      const leftovers = inBoundsCandidates
-        .filter(p => !selectedIds.has(p.id))
-        .sort((a, b) => b.likes - a.likes);
-      combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
+      let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
+      
+      if (combined.length < displayCount && inBoundsCandidates.length > combined.length) {
+        const selectedIds = new Set(combined.map(p => p.id));
+        const leftovers = inBoundsCandidates
+          .filter(p => !selectedIds.has(p.id))
+          .sort((a, b) => b.likes - a.likes);
+        combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
+      }
+      setDisplayedMarkers(combined);
+    } else {
+      // 7, 8, 9단계: 제한 없이 모두 표시
+      setDisplayedMarkers(inBoundsCandidates);
     }
-
-    setDisplayedMarkers(combined);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -264,15 +263,10 @@ const Index = () => {
   };
 
   const handleViewAllClick = () => {
-    if (displayedMarkers.length > 0) {
+    if (displayedMarkers.length > 0 && currentZoom < 10) {
       setIsPostListOpen(true);
     }
   };
-
-  const handleViewAllClickRef = useRef(handleViewAllClick);
-  useEffect(() => {
-    handleViewAllClickRef.current = handleViewAllClick;
-  }, [handleViewAllClick]);
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
@@ -450,20 +444,19 @@ const Index = () => {
                 <div className="relative">
                   <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
                   
-                  {currentZoom < 10 && (
-                    <button 
-                      onClick={handleViewAllClick} 
-                      disabled={displayedMarkers.length === 0} 
-                      className={cn(
-                        "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative"
-                      )}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="shine-overlay absolute inset-0 pointer-events-none" />
-                      <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-                      <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
-                    </button>
-                  )}
+                  <button 
+                    onClick={handleViewAllClick} 
+                    disabled={displayedMarkers.length === 0 || currentZoom >= 10} 
+                    className={cn(
+                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
+                      currentZoom >= 10 && "opacity-50 grayscale cursor-not-allowed"
+                    )}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="shine-overlay absolute inset-0 pointer-events-none" />
+                    <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
+                    <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+                  </button>
                   
                   {displayedMarkers.length > 0 && currentZoom < 10 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
