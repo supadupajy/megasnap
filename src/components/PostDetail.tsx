@@ -63,14 +63,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
-      setIsPlayingVideo(false);
+      
       const post = posts[initialIndex];
       if (post) {
         setLocalComments(post.comments || []);
         setIsSaved(post.isSaved || false);
+        // 상세 페이지 열릴 때 영상이 있으면 즉시 자동 재생
+        if (post.videoUrl || getYoutubeId(post.youtubeUrl || '')) {
+          setIsPlayingVideo(true);
+        }
       }
     }
-    if (!isOpen) setHasInitialized(false);
+    if (!isOpen) {
+      setHasInitialized(false);
+      setIsPlayingVideo(false);
+    }
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
@@ -79,10 +86,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       if (onViewPost) onViewPost(currentPost.id);
       setShowComments(false);
       setCurrentImageIndex(0);
-      setIsPlayingVideo(false);
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
+      
+      // 슬라이드 넘길 때마다 영상 자동 재생 체크
+      if (currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || '')) {
+        setIsPlayingVideo(true);
+      } else {
+        setIsPlayingVideo(false);
+      }
     }
   }, [currentIndex, isOpen, onViewPost, posts]);
 
@@ -111,7 +124,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const youtubeThumb = getYoutubeThumbnail(post.youtubeUrl || '');
   
-  // 유튜브 썸네일이 있으면 이미지 목록 맨 앞에 추가
   const displayImages = youtubeThumb 
     ? [youtubeThumb, ...(post.images?.length ? post.images : [post.image])]
     : (post.images?.length ? post.images : [post.image]);
@@ -251,7 +263,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           youtubeId ? (
                             <iframe
                               className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
+                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
                               title="YouTube video player"
                               frameBorder="0"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -261,8 +273,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <video 
                               src={post.videoUrl} 
                               className="w-full h-full object-cover" 
-                              controls 
+                              controls={false}
                               autoPlay 
+                              muted
+                              playsInline
+                              loop
                               onClick={(e) => e.stopPropagation()}
                             />
                           )
@@ -277,14 +292,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               ))}
                             </div>
                             {(post.videoUrl || youtubeId) && (
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
-                                className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
-                              >
-                                <div className="w-16 h-16 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
-                                  <Play className="w-8 h-8 text-indigo-600 fill-indigo-600 ml-1" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
+                                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
+                                  <Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" />
                                 </div>
-                              </button>
+                              </div>
                             )}
                             {displayImages.length > 1 && !(post.videoUrl || youtubeId) && (
                               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">

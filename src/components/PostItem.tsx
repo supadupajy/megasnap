@@ -102,17 +102,39 @@ const PostItem = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   
+  const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const youtubeId = getYoutubeId(youtubeUrl || '');
   const youtubeThumb = getYoutubeThumbnail(youtubeUrl || '');
   
-  // 유튜브 썸네일이 있으면 이미지 목록 맨 앞에 추가
   const displayImages = youtubeThumb 
     ? [youtubeThumb, ...(images.length > 0 ? images : [image])]
     : (images.length > 0 ? images : [image]);
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
+
+  // Intersection Observer for Auto-play
+  useEffect(() => {
+    if (!(videoUrl || youtubeId)) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsPlayingVideo(true);
+        } else {
+          setIsPlayingVideo(false);
+        }
+      },
+      { threshold: 0.6 } // 60% 이상 보일 때 재생
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [videoUrl, youtubeId]);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (onImageError) {
@@ -271,6 +293,7 @@ const PostItem = ({
 
   return (
     <div 
+      ref={containerRef}
       onClick={onClick}
       className={cn(
         "bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
@@ -329,7 +352,7 @@ const PostItem = ({
               youtubeId ? (
                 <iframe
                   className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
                   title="YouTube video player"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -339,8 +362,11 @@ const PostItem = ({
                 <video 
                   src={videoUrl} 
                   className="w-full h-full object-cover" 
-                  controls 
+                  controls={false}
                   autoPlay 
+                  muted
+                  playsInline
+                  loop
                   onClick={(e) => e.stopPropagation()}
                 />
               )
@@ -355,14 +381,11 @@ const PostItem = ({
                   ))}
                 </div>
                 {(videoUrl || youtubeId) && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
-                  >
-                    <div className="w-16 h-16 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
-                      <Play className="w-8 h-8 text-indigo-600 fill-indigo-600 ml-1" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
+                      <Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" />
                     </div>
-                  </button>
+                  </div>
                 )}
                 {displayImages.length > 1 && !(videoUrl || youtubeId) && (
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
