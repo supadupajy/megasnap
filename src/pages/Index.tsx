@@ -39,9 +39,9 @@ const Index = () => {
   const [currentZoom, setCurrentZoom] = useState(6);
   
   const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
-    6: 28,
-    7: 105,
-    8: 325
+    6: 50, // 초기 표시 개수 상향
+    7: 150,
+    8: 400
   });
 
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -55,7 +55,7 @@ const Index = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(24); 
+  const [timeValue, setTimeValue] = useState(48); // 초기 시간 필터를 48시간으로 확장
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
@@ -120,33 +120,14 @@ const Index = () => {
     const toastId = showLoading('전국 데이터를 생성하고 있습니다...');
     
     try {
-      // 1. 기존 50명의 프로필 가져오기
-      const { data: profiles, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .limit(100);
+      const { data: profiles } = await supabase.from('profiles').select('*').limit(100);
+      if (!profiles || profiles.length === 0) throw new Error('프로필 데이터를 찾을 수 없습니다.');
 
-      if (fetchError || !profiles || profiles.length === 0) {
-        throw new Error('프로필 데이터를 찾을 수 없습니다.');
-      }
-
-      // 2. 인플루언서 등급 할당 (프론트엔드 표시용으로만 활용)
-      const shuffled = [...profiles].sort(() => Math.random() - 0.5);
-      const influencerMap = new Map();
-      shuffled.forEach((p, i) => {
-        if (i === 0) influencerMap.set(p.id, 'diamond');
-        else if (i === 1) influencerMap.set(p.id, 'gold');
-        else if (i <= 3) influencerMap.set(p.id, 'silver');
-      });
-
-      // 3. 포스팅 데이터 생성 (DB 스키마에 있는 컬럼만 사용)
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
         const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
         const insertData = mockPosts.map(p => {
           const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
-          
-          // 인기 포스팅 비율 (10%)
           const isPopular = Math.random() > 0.9;
           const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
 
@@ -166,22 +147,50 @@ const Index = () => {
         allMockData = [...allMockData, ...insertData];
       });
 
-      // 4. 데이터 삽입 (청크 단위)
       for (let i = 0; i < allMockData.length; i += 20) {
         const chunk = allMockData.slice(i, i + 20);
-        const { error: insertError } = await supabase.from('posts').insert(chunk);
-        if (insertError) throw insertError;
+        await supabase.from('posts').insert(chunk);
+      }
+
+      // 생성 직후 전체 데이터를 다시 불러와서 상태 업데이트
+      const { data: freshPosts } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (freshPosts) {
+        const mapped = freshPosts.map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+          content: p.content,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+        })) as Post[];
+        
+        setAllPosts(mapped);
+        mapCache.posts = mapped;
       }
 
       dismissToast(toastId);
       showSuccess('전국 100개의 포스팅 생성이 완료되었습니다! 🇰🇷');
-      syncPostsWithSupabase();
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
       dismissToast(toastId);
       showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
     }
-  }, [authUser, syncPostsWithSupabase]);
+  }, [authUser]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
@@ -202,23 +211,33 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
+      
+      // 하이라이트된 포스트는 무조건 표시
       if (post.id === highlightedPostId) return true;
+
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng;
       if (!isWithinBounds) return false;
+
+      // 시간 필터링 (Ad는 무시)
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
+      if (!isWithinTime) return false;
+
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;
+      
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = !!isMe;
       else if (selectedCategories.includes('user_filter')) matchesCategory = !!isTargetUser;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
-      return isWithinTime && matchesCategory;
+      
+      return matchesCategory;
     });
 
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
+    
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
@@ -238,11 +257,37 @@ const Index = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    mapCache.populatedTiles.clear();
-    setAllPosts([]);
-    await syncPostsWithSupabase();
+    const { data } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (data) {
+      const mapped = data.map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes || 0),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+      })) as Post[];
+      setAllPosts(mapped);
+      mapCache.posts = mapped;
+    }
     setIsRefreshing(false);
-  }, [syncPostsWithSupabase]);
+    showSuccess('데이터를 새로고침했습니다.');
+  }, []);
 
   const handleForceSeed = () => {
     seedGlobalData(true);
