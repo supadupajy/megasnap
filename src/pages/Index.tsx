@@ -193,8 +193,8 @@ const Index = () => {
 
     // 레벨별 마커 선별 로직
     if (currentZoom === 6) {
-      // 6단계: 최대 30개 제한 및 비율 유지
-      const displayCount = 30;
+      // 6단계: 최대 20개 제한 및 비율 유지
+      const displayCount = 20;
       const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
       const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
       const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
