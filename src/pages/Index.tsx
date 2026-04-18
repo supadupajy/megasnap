@@ -269,6 +269,11 @@ const Index = () => {
     }
   };
 
+  const handleViewAllClickRef = useRef(handleViewAllClick);
+  useEffect(() => {
+    handleViewAllClickRef.current = handleViewAllClick;
+  }, [handleViewAllClick]);
+
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
     setMapCenter({ lat: newPost.lat, lng: newPost.lng });

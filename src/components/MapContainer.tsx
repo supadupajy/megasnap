@@ -56,7 +56,7 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        map.setMaxLevel(10); // 최대 축소 레벨을 10으로 확장
+        map.setMaxLevel(10); // 최대 축소 레벨 10
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -203,23 +203,25 @@ const MapContainer = ({
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
     return `
-      ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
-      <div class="${animationClass}">
-        ${labelHtml}
-        <div class="${borderClass || ''}"
-             style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
-                    ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
-                    overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                    background-color: white;">
-          <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
-            <img src="${post.image}" 
-                 onerror="this.src='${FALLBACK_IMAGE}'"
-                 style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-            ${categoryIconHtml}
+      <div class="marker-content-wrapper">
+        ${isHighlighted ? '<div class="marker-highlight-ping"></div>' : ''}
+        <div class="${animationClass}">
+          ${labelHtml}
+          <div class="${borderClass || ''}"
+               style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2;
+                      ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
+                      overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                      background-color: white;">
+            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
+              <img src="${post.image}" 
+                   onerror="this.src='${FALLBACK_IMAGE}'"
+                   style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
+              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
+              ${categoryIconHtml}
+            </div>
           </div>
+          ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
         </div>
-        ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
       </div>
     `;
   };
@@ -263,8 +265,10 @@ const MapContainer = ({
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay animate-marker-appear';
-        content.style.transformOrigin = 'bottom center';
-        content.style.transform = `translate(-50%, -100%) scale(${scale})`;
+        if (isHighlighted) content.classList.add('highlighted');
+        
+        // CSS 변수 설정
+        content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-state', stateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
 
@@ -288,8 +292,8 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         
         if (content instanceof HTMLElement) {
-          // 스케일 업데이트 (강제 적용을 위해 style.transform 직접 수정)
-          content.style.transform = `translate(-50%, -100%) scale(${scale})`;
+          // CSS 변수 업데이트 (가장 확실한 방법)
+          content.style.setProperty('--marker-scale', scale.toString());
           
           if (isHighlighted) content.classList.add('highlighted');
           else content.classList.remove('highlighted');
