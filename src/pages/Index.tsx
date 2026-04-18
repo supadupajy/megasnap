@@ -27,6 +27,14 @@ import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// 유효한 UUID 생성을 위한 헬퍼 함수
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -120,32 +128,43 @@ const Index = () => {
     const toastId = showLoading('가상 계정 및 데이터를 생성하고 있습니다...');
     
     try {
-      // 1. 내 프로필 생성
-      await supabase.from('profiles').upsert({
+      // 1. 내 프로필 생성/업데이트
+      const { error: myProfileError } = await supabase.from('profiles').upsert({
         id: authUser.id,
         nickname: profile?.nickname || authUser.email?.split('@')[0] || '탐험가',
         avatar_url: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         updated_at: new Date().toISOString()
       });
 
-      // 2. 가상 유저 20명 생성
+      if (myProfileError) console.warn('내 프로필 업데이트 실패 (RLS 가능성):', myProfileError.message);
+
+      // 2. 가상 유저 20명 생성 (유효한 UUID 사용)
       const virtualUsers = Array.from({ length: 20 }).map((_, i) => ({
-        id: `virtual_user_${i + 1}_${Math.random().toString(36).substr(2, 5)}`,
+        id: generateUUID(),
         nickname: `Explorer_${i + 1}`,
         avatar_url: `https://i.pravatar.cc/150?u=bot_${i + 1}`,
         bio: `Chora와 함께 지도를 탐험하는 ${i + 1}번째 멤버입니다. 📍`,
         updated_at: new Date().toISOString()
       }));
 
-      const { error: vUserError } = await supabase.from('profiles').upsert(virtualUsers);
-      if (vUserError) throw new Error(`가상 계정 생성 실패: ${vUserError.message}`);
+      // 프로필 삽입 시도 (RLS 정책에 따라 실패할 수 있음)
+      const { error: vUserError } = await supabase.from('profiles').insert(virtualUsers);
+      
+      if (vUserError) {
+        console.error('가상 프로필 생성 실패:', vUserError);
+        // RLS로 인해 profiles 삽입이 막힌 경우, posts 테이블의 메타데이터만 활용하도록 진행
+        if (vUserError.code === '42501') {
+          console.warn('RLS 정책으로 인해 profiles 테이블에 직접 삽입이 불가능합니다. 포스팅 메타데이터로 대체합니다.');
+        } else {
+          throw new Error(`프로필 생성 오류: ${vUserError.message}`);
+        }
+      }
 
       // 3. 포스팅 데이터 생성 및 분배
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
         const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
         const insertData = mockPosts.map(p => {
-          // 가상 유저 중 한 명을 랜덤하게 선택
           const randomUser = virtualUsers[Math.floor(Math.random() * virtualUsers.length)];
           return {
             content: p.content,
@@ -153,8 +172,8 @@ const Index = () => {
             latitude: p.lat,
             longitude: p.lng,
             image_url: p.image,
-            user_id: randomUser.id, // 가상 유저 ID 할당
-            user_name: randomUser.nickname,
+            user_id: authUser.id, // 실제 로그인한 유저 ID를 소유자로 설정 (RLS 통과를 위해)
+            user_name: randomUser.nickname, // 표시 이름은 가상 유저로
             user_avatar: randomUser.avatar_url,
             likes: p.likes,
             created_at: p.createdAt.toISOString()
@@ -171,7 +190,7 @@ const Index = () => {
       }
 
       dismissToast(toastId);
-      showSuccess('20개의 가상 계정과 100개의 포스팅이 생성되었습니다! 🇰🇷');
+      showSuccess('20명의 가상 유저 데이터가 포함된 100개의 포스팅이 생성되었습니다! 🇰🇷');
       syncPostsWithSupabase();
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
