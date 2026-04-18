@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Place {
   id: string;
@@ -29,6 +30,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<any>(null);
   
+  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
   const geocoderService = useRef<any>(null);
@@ -45,7 +47,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   }, [isOpen]);
 
   // 검색 실행 함수
-  const performSearch = useCallback(async (keyword: string, isNextPage: boolean = false) => {
+  const performSearch = useCallback(async (keyword: string) => {
     if (!keyword.trim() || !searchService.current || !geocoderService.current) return;
     if (isSearching.current) return;
 
@@ -54,13 +56,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     const kakao = (window as any).kakao;
 
     try {
-      if (isNextPage && pagination) {
-        // 추가 페이지 로드
-        pagination.nextPage();
-        // pagination.nextPage()는 비동기 콜백을 트리거하므로 여기서 isSearching을 풀지 않고 콜백에서 풉니다.
-        return;
-      }
-
       // 초기 검색 (주소 + 장소)
       const addressPromise = new Promise<Place[]>((resolve) => {
         geocoderService.current.addressSearch(keyword, (data: any, status: any) => {
@@ -118,15 +113,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
       setIsLoading(false);
       isSearching.current = false;
     }
-  }, [pagination]);
-
-  // 페이징 콜백 핸들러 (keywordSearch의 콜백으로 사용됨)
-  useEffect(() => {
-    if (!searchService.current) return;
-
-    // pagination.nextPage() 호출 시 실행될 전역 콜백 설정은 불가능하므로 
-    // performSearch 내부의 keywordSearch 옵션을 조정하거나 
-    // 아래와 같이 nextPage 전용 핸들러를 만듭니다.
   }, []);
 
   // 추가 페이지 로드 전용 함수
@@ -135,15 +121,9 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     
     isSearching.current = true;
     setIsLoading(true);
-    const kakao = (window as any).kakao;
 
-    pagination.nextPage();
-    
-    // 카카오 API의 특성상 keywordSearch를 다시 호출해야 하므로 
-    // pagination 객체 자체의 nextPage()를 사용하되 결과를 results에 append하는 로직이 필요합니다.
-    // 이를 위해 keywordSearch를 다시 호출하는 방식으로 구현합니다.
     searchService.current.keywordSearch(query, (data: any, status: any, paginationObj: any) => {
-      if (status === kakao.maps.services.Status.OK) {
+      if (status === (window as any).kakao.maps.services.Status.OK) {
         const newPlaces = data.map((item: any) => ({
           id: item.id,
           name: item.place_name,
@@ -174,7 +154,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     const timer = setTimeout(() => {
       if (query.trim() && query !== lastQuery.current) {
         lastQuery.current = query;
-        performSearch(query, false);
+        performSearch(query);
       } else if (!query.trim()) {
         setResults([]);
         setPagination(null);
@@ -200,7 +180,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[85vh] flex flex-col outline-none bg-white rounded-t-[40px] z-[1001]">
+      <DrawerContent 
+        className={cn(
+          "flex flex-col outline-none bg-white rounded-t-[40px] z-[1001] transition-all duration-300",
+          isKeyboardOpen ? "h-[95vh]" : "h-[85vh]"
+        )}
+        style={{ paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : '0px' }}
+      >
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
         <div className="px-8 flex flex-col flex-1 overflow-hidden">
@@ -214,7 +200,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           <div className="relative mb-6 shrink-0">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
-              placeholder="장소명 또는 주소를 입력하세요 (예: 상일동)" 
+              placeholder="장소명 또는 주소를 입력하세요" 
               className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold shadow-inner"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
