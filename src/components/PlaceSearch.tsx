@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Search, MapPin, X, Loader2 } from 'lucide-react';
+import { Search, MapPin, X, Loader2, ChevronLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useKeyboard } from '@/hooks/use-keyboard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Place {
   id: string;
@@ -30,14 +29,12 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<any>(null);
   
-  const { isKeyboardOpen } = useKeyboard();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
   const geocoderService = useRef<any>(null);
   const isSearching = useRef(false);
   const lastQuery = useRef('');
 
-  // 카카오 서비스 초기화
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao?.maps?.services) {
@@ -46,7 +43,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     }
   }, [isOpen]);
 
-  // 검색 실행 함수
   const performSearch = useCallback(async (keyword: string) => {
     if (!keyword.trim() || !searchService.current || !geocoderService.current) return;
     if (isSearching.current) return;
@@ -175,44 +171,43 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   }, [pagination, isLoading, loadNextPage]);
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent 
-        className={cn(
-          "flex flex-col outline-none bg-white rounded-t-[40px] z-[1001] transition-all duration-300",
-          isKeyboardOpen ? "h-full rounded-t-none" : "h-[85vh]"
-        )}
-      >
-        {/* 키보드가 열렸을 때는 핸들 바를 숨겨 공간 확보 */}
-        {!isKeyboardOpen && (
-          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
-        )}
-        
-        <div className={cn("px-8 flex flex-col flex-1 overflow-hidden", isKeyboardOpen && "pt-12")}>
-          <div className="flex items-center justify-between mb-6 shrink-0">
-            <h2 className="text-xl font-black text-gray-900">장소 및 주소 검색</h2>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-              <X className="w-5 h-5 text-gray-400" />
-            </Button>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed inset-0 z-[2000] bg-white flex flex-col"
+        >
+          {/* Header */}
+          <div className="pt-12 pb-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-800" />
+            </button>
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input 
+                placeholder="장소명 또는 주소 검색" 
+                className="pl-9 h-11 bg-gray-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoFocus
+              />
+              {isLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="relative mb-6 shrink-0">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input 
-              placeholder="장소명 또는 주소를 입력하세요" 
-              className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold shadow-inner"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoFocus
-            />
-            {isLoading && results.length === 0 && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-              </div>
-            )}
-          </div>
-
-          <ScrollArea className="flex-1 -mx-8 px-8">
-            <div className="space-y-2 pb-10">
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="p-4 space-y-1">
               {results.map((place) => (
                 <button 
                   key={place.id} 
@@ -220,19 +215,19 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                   className="w-full flex items-start gap-4 p-4 hover:bg-indigo-50/50 rounded-2xl transition-all text-left group active:scale-[0.98]"
                 >
                   <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100", 
+                    "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100", 
                     place.isAddress ? "bg-indigo-600" : "bg-white"
                   )}>
-                    <MapPin className={cn("w-6 h-6", place.isAddress ? "text-white" : "text-indigo-600")} />
+                    <MapPin className={cn("w-5 h-5", place.isAddress ? "text-white" : "text-indigo-600")} />
                   </div>
                   <div className="flex-1 min-w-0 py-0.5">
                     <div className="flex items-center gap-2">
                       <p className="font-black text-gray-900 truncate text-base">{place.name}</p>
                       {place.isAddress && (
-                        <span className="bg-indigo-100 text-indigo-600 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase">Address</span>
+                        <span className="bg-indigo-100 text-indigo-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">Address</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 font-bold truncate mt-1 uppercase tracking-tighter">{place.address}</p>
+                    <p className="text-xs text-gray-400 font-bold truncate mt-0.5 uppercase tracking-tighter">{place.address}</p>
                   </div>
                 </button>
               ))}
@@ -246,11 +241,22 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
               {!isLoading && query.trim() && results.length === 0 && (
                 <div className="py-20 text-center text-gray-400 font-bold">검색 결과가 없습니다.</div>
               )}
+              
+              {!query.trim() && (
+                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                    궁금한 장소나 주소를 입력하여<br/>지도를 탐험해보세요!
+                  </p>
+                </div>
+              )}
             </div>
-          </ScrollArea>
-        </div>
-      </DrawerContent>
-    </Drawer>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

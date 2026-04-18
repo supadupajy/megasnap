@@ -172,21 +172,19 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-// 외부 재생이 확실히 보장되는 글로벌 히트곡 유튜브 링크
+// 임베드 재생이 확실히 보장되는 글로벌 공식 뮤직비디오 ID
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
-  "https://www.youtube.com/watch?v=2S24-y0Ij3Y", // BLACKPINK - Kill This Love
-  "https://www.youtube.com/watch?v=XsX3ATc3FbA", // BTS - Boy With Luv
-  "https://www.youtube.com/watch?v=ArmDp-zijuc", // NewJeans - Super Shy
-  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
-  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson ft. Bruno Mars - Uptown Funk
-  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
   "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson - Uptown Funk
+  "https://www.youtube.com/watch?v=hT_nvWreIhg", // OneRepublic - Counting Stars
+  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
+  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
   "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
   "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
   "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
   "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
-  "https://www.youtube.com/watch?v=hT_nvWreIhg", // OneRepublic - Counting Stars
   "https://www.youtube.com/watch?v=7wtfhZwyrcc", // Imagine Dragons - Believer
   "https://www.youtube.com/watch?v=YykjpeuMNEk", // Coldplay - Hymn For The Weekend
   "https://www.youtube.com/watch?v=u31qwQUeGuM", // The Weeknd - Save Your Tears

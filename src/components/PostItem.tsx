@@ -114,7 +114,6 @@ const PostItem = ({
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
-  // Intersection Observer for Auto-play (Instagram Style)
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
 
@@ -127,7 +126,7 @@ const PostItem = ({
         }
       },
       { 
-        threshold: 0.6, // 60% 이상 보일 때 재생
+        threshold: 0.6,
         rootMargin: '0px' 
       }
     );
@@ -355,7 +354,7 @@ const PostItem = ({
               youtubeId ? (
                 <iframe
                   className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1`}
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&origin=${window.location.origin}`}
                   title="YouTube video player"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -444,7 +443,7 @@ const PostItem = ({
               placeholder="댓글 달기..." 
               className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
               value={commentInput} 
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => setCommentInput(e.target.value)}
               disabled={isSubmittingComment}
             />
             <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
