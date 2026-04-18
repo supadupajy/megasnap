@@ -12,6 +12,21 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
+import {<dyad-write path="src/pages/Index.tsx" description="메인 화면 초기 마커 데이터 설정 및 모두 보기 버튼 로직 수정">
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
+import TrendingPosts from '@/components/TrendingPosts';
+import PostDetail from '@/components/PostDetail';
+import WritePost from '@/components/WritePost';
+import TimeSlider from '@/components/TimeSlider';
+import PlaceSearch from '@/components/PlaceSearch';
+import CategoryMenu from '@/components/CategoryMenu';
+import PostListOverlay from '@/components/PostListOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, MapPin } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
@@ -33,7 +48,7 @@ const Index = () => {
   
   const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
   
-  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts.length > 0 ? mapCache.posts : createMockPosts(37.5665, 126.9780, 50));
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
@@ -66,6 +81,13 @@ const Index = () => {
   const TILE_SIZE = 0.02;
   const throttleTimer = useRef<any>(null);
 
+  // 초기 마커 설정 (지도가 로드되기 전이라도 데이터를 보여주기 위함)
+  useEffect(() => {
+    if (displayedMarkers.length === 0 && allPosts.length > 0) {
+      setDisplayedMarkers(allPosts.slice(0, 20));
+    }
+  }, [allPosts]);
+
   useEffect(() => {
     if (supabasePosts.length > 0) {
       setAllPosts(prev => {
@@ -89,13 +111,6 @@ const Index = () => {
       
       if (data.level !== undefined && data.level !== currentZoom) {
         setCurrentZoom(data.level);
-        const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-        setMaxCounts(prev => ({
-          ...prev,
-          6: getRandomInRange(25, 30),
-          7: getRandomInRange(100, 110),
-          8: getRandomInRange(300, 350)
-        }));
       }
       
       if (isSelectingLocation) {
@@ -176,7 +191,13 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => {
-    if (!mapData?.bounds) return;
+    if (!mapData?.bounds) {
+      // 지도가 아직 로드되지 않았을 때도 초기 마커를 보여줌
+      if (displayedMarkers.length === 0 && allPosts.length > 0) {
+        setDisplayedMarkers(allPosts.slice(0, 20));
+      }
+      return;
+    }
     
     if (currentZoom >= 9) {
       setDisplayedMarkers([]);
@@ -221,10 +242,6 @@ const Index = () => {
     const survivors = inBoundsCandidates.filter(p => prevDisplayedIds.has(p.id));
     
     const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
-
-    const countInfluencer = Math.max(1, Math.floor(displayCount * 0.02));
-    const countPopular = Math.max(1, Math.floor(displayCount * 0.02));
-    const countAd = Math.max(1, Math.floor(displayCount * 0.01));
 
     const needed = displayCount - survivors.length;
     let finalMarkers = survivors;
@@ -289,9 +306,7 @@ const Index = () => {
   };
 
   const handleViewAllClick = () => {
-    if (displayedMarkers.length > 0 && currentZoom < 9) {
-      setIsPostListOpen(true);
-    }
+    setIsPostListOpen(true);
   };
 
   const handlePostCreated = (newPost: Post) => {
@@ -472,10 +487,8 @@ const Index = () => {
                   
                   <button 
                     onClick={handleViewAllClick} 
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 9} 
                     className={cn(
-                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 9 && "opacity-50 grayscale cursor-not-allowed"
+                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative"
                     )}
                   >
                     <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -484,7 +497,7 @@ const Index = () => {
                     <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
                   </button>
                   
-                  {displayedMarkers.length > 0 && currentZoom < 9 && (
+                  {displayedMarkers.length > 0 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>
