@@ -8,6 +8,7 @@ import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { createMockPosts } from '@/lib/mock-data';
+import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ObservedPostItem = ({ 
@@ -84,16 +85,14 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
 
   useEffect(() => {
     if (isOpen) {
-      // 오버레이가 열릴 때 데이터가 없으면 즉시 생성
-      if (initialPosts && initialPosts.length > 0) {
+      // initialPosts가 비어있을 경우를 대비해 mapCache나 mockData 활용 고려
+      if (initialPosts.length > 0) {
         setPosts(initialPosts);
       } else {
-        const fallbackPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 15);
+        // 주변 포스트가 없을 경우 현재 위치 기반으로 새로 생성
+        const fallbackPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
         setPosts(fallbackPosts);
       }
-    } else {
-      // 닫힐 때 데이터 초기화 (메모리 관리)
-      setPosts([]);
     }
   }, [isOpen, initialPosts, mapCenter]);
 
@@ -102,7 +101,10 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
     setIsLoadingMore(true);
     setTimeout(() => {
       const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
-      setPosts(prev => [...prev, ...newPosts]);
+      setPosts(prev => {
+        const combined = [...prev, ...newPosts];
+        return combined;
+      });
       setIsLoadingMore(false);
     }, 800);
   }, [isLoadingMore, mapCenter, isOpen]);
