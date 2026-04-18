@@ -116,7 +116,7 @@ export const GIF_POOL = [
   "https://images.unsplash.com/photo-1501183638710-841dd1904471",
   "https://images.unsplash.com/photo-1470770841072-f978cf4d019e",
   "https://images.unsplash.com/photo-1506260408121-e353d10b87c7",
-  "https://images.unsplash.com/photo-151884642898-4c92249e20b6",
+  "https://images.unsplash.com/photo-1511884642898-4c92249e20b6",
   "https://images.unsplash.com/photo-1434725039720-aaad6dd32dfe",
   "https://images.unsplash.com/photo-1470252649358-969e6c24309c",
   "https://images.unsplash.com/photo-1431794062232-2a99a5441867",
@@ -172,28 +172,28 @@ const CONTENT_POOL = [
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
 
-// 외부 재생이 가능한 안정적인 공식 유튜브 링크
+// 외부 재생이 확실히 보장되는 글로벌 히트곡 유튜브 링크
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=aqz-KE-bpKQ", // NewJeans - Ditto
-  "https://www.youtube.com/watch?v=gdZLi9oWNZg", // BTS - Dynamite
-  "https://www.youtube.com/watch?v=ioNng23DkIM", // BLACKPINK - How You Like That
-  "https://www.youtube.com/watch?v=F0B7HDiY-10", // IVE - Love Dive
-  "https://www.youtube.com/watch?v=nFYwcjvLliU", // aespa - Supernova
-  "https://www.youtube.com/watch?v=ic8j13piAhQ", // Taylor Swift - Cruel Summer
-  "https://www.youtube.com/watch?v=UqyT8IEBkvY", // Bruno Mars - 24K Magic
-  "https://www.youtube.com/watch?v=ns8_OC8h2Yg", // Dua Lipa - Houdini
-  "https://www.youtube.com/watch?v=4NRXx6U8ABQ", // The Weeknd - Blinding Lights
-  "https://www.youtube.com/watch?v=H5v3kku4y6Q", // Harry Styles - As It Was
-  "https://www.youtube.com/watch?v=eVli-tstM5E", // Sabrina Carpenter - Espresso
-  "https://www.youtube.com/watch?v=T7vS7fX2-vI", // NewJeans - Hype Boy
-  "https://www.youtube.com/watch?v=pSUydWEqKwE", // BTS - Butter
-  "https://www.youtube.com/watch?v=gQlMMD8auMs", // BLACKPINK - Pink Venom
-  "https://www.youtube.com/watch?v=6ZUIwj3FgUY", // IVE - I AM
-  "https://www.youtube.com/watch?v=Os_heh8vPfs", // aespa - Drama
-  "https://www.youtube.com/watch?v=b1kbLwvqugk", // Taylor Swift - Anti-Hero
-  "https://www.youtube.com/watch?v=fRh_vgS2dFE", // Justin Bieber - Peaches
-  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - Gangnam Style
-  "https://www.youtube.com/watch?v=jNQXAC9IVRw"  // Stray Kids - S-Class
+  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
+  "https://www.youtube.com/watch?v=2S24-y0Ij3Y", // BLACKPINK - Kill This Love
+  "https://www.youtube.com/watch?v=XsX3ATc3FbA", // BTS - Boy With Luv
+  "https://www.youtube.com/watch?v=ArmDp-zijuc", // NewJeans - Super Shy
+  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson ft. Bruno Mars - Uptown Funk
+  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
+  "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
+  "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
+  "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
+  "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
+  "https://www.youtube.com/watch?v=hT_nvWreIhg", // OneRepublic - Counting Stars
+  "https://www.youtube.com/watch?v=7wtfhZwyrcc", // Imagine Dragons - Believer
+  "https://www.youtube.com/watch?v=YykjpeuMNEk", // Coldplay - Hymn For The Weekend
+  "https://www.youtube.com/watch?v=u31qwQUeGuM", // The Weeknd - Save Your Tears
+  "https://www.youtube.com/watch?v=TUVcZfQe-Kw", // Dua Lipa - Levitating
+  "https://www.youtube.com/watch?v=DyDfgMOUjCI", // Billie Eilish - bad guy
+  "https://www.youtube.com/watch?v=RlPNh_PB6Ww", // Olivia Rodrigo - vampire
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE"  // Justin Bieber - Peaches
 ];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
