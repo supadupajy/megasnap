@@ -42,6 +42,7 @@ const MapContainer = ({
   const [currentLevel, setCurrentLevel] = useState(6);
   const isDragging = useRef(false);
 
+  // 지도 초기화
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
 
@@ -107,6 +108,21 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
+  // 외부에서 center 값이 변경될 때 지도 이동
+  useEffect(() => {
+    if (isMapReady && mapInstance.current && center) {
+      const kakao = (window as any).kakao;
+      const newCenter = new kakao.maps.LatLng(center.lat, center.lng);
+      
+      // 현재 중심점과 다를 때만 이동
+      const currentCenter = mapInstance.current.getCenter();
+      if (Math.abs(currentCenter.getLat() - center.lat) > 0.0001 || 
+          Math.abs(currentCenter.getLng() - center.lng) > 0.0001) {
+        mapInstance.current.panTo(newCenter);
+      }
+    }
+  }, [center, isMapReady]);
+
   const getMarkerInnerHtml = (post: any, isViewed: boolean, isHighlighted: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
@@ -114,7 +130,6 @@ const MapContainer = ({
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
-    // 유튜브 영상인 경우 유튜브 썸네일을 우선 사용
     const displayImage = post.youtubeUrl ? (getYoutubeThumbnail(post.youtubeUrl) || post.image) : post.image;
 
     let pinColor = '';
