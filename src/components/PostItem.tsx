@@ -114,6 +114,7 @@ const PostItem = ({
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
+  // Intersection Observer for Auto-play
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
 
@@ -125,7 +126,7 @@ const PostItem = ({
           setIsPlayingVideo(false);
         }
       },
-      { threshold: 0.6 }
+      { threshold: 0.6 } // 60% 이상 보일 때 재생
     );
 
     if (containerRef.current) {
@@ -146,18 +147,14 @@ const PostItem = ({
   useEffect(() => {
     const checkLikeStatus = async () => {
       if (!authUser || !id || id.length < 20) return;
-      try {
-        const { data } = await supabase
-          .from('likes')
-          .select('id')
-          .eq('post_id', id)
-          .eq('user_id', authUser.id)
-          .maybeSingle();
-        
-        if (data) setIsLiked(true);
-      } catch (err) {
-        console.error('Like status check error:', err);
-      }
+      const { data } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('post_id', id)
+        .eq('user_id', authUser.id)
+        .single();
+      
+      if (data) setIsLiked(true);
     };
     checkLikeStatus();
   }, [authUser, id]);
