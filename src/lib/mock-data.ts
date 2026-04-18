@@ -311,6 +311,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       borderType = 'popular';
     }
 
+    // 시간 범위를 48시간으로 확장하여 필터링 효과를 확실히 함
+    const createdAt = new Date(Date.now() - randomFn() * 48 * 3600000);
+
     return {
       id,
       isAd,
@@ -329,7 +332,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       images,
       adImageIndex: 1,
       isLiked: randomFn() > 0.5,
-      createdAt: new Date(Date.now() - randomFn() * 12 * 3600000),
+      createdAt,
       borderType,
       youtubeUrl
     };

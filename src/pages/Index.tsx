@@ -56,7 +56,7 @@ const Index = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(12);
+  const [timeValue, setTimeValue] = useState(24); // 기본값을 24시간으로 변경
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   // 위치 선택 모드 관련 상태
@@ -202,6 +202,7 @@ const Index = () => {
       
       if (!isWithinBounds) return false;
 
+      // 광고는 항상 표시, 일반 포스트는 시간 제한 적용
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;

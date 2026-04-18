@@ -11,11 +11,11 @@ interface TimeSliderProps {
 }
 
 const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
-  // 1부터 12까지의 시간 (시각적으로는 12가 위, 1이 아래)
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+  // 1부터 24까지의 시간 (시각적으로는 24가 위, 1이 아래)
+  const hours = Array.from({ length: 24 }, (_, i) => i + 1);
 
   return (
-    <div className="fixed right-4 top-1/2 -translate-y-1/2 h-1/3 w-8 flex flex-col items-center z-50 pointer-events-none">
+    <div className="fixed right-4 top-1/2 -translate-y-1/2 h-[40%] w-8 flex flex-col items-center z-50 pointer-events-none">
       <div className="pointer-events-auto h-full w-full bg-white/80 backdrop-blur-xl rounded-full shadow-xl border border-white/20 flex flex-col items-center py-4 gap-3">
         <div className="flex flex-col items-center gap-0.5">
           <Clock className="w-3 h-3 text-indigo-600" />
@@ -30,7 +30,7 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
           <motion.div 
             className="absolute bottom-0 w-1 bg-indigo-600 rounded-full left-1/2 -translate-x-1/2 origin-bottom"
             initial={false}
-            animate={{ height: `${((value - 1) / 11) * 100}%` }}
+            animate={{ height: `${((value - 1) / 23) * 100}%` }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
           />
 
@@ -38,7 +38,7 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
           <input
             type="range"
             min="1"
-            max="12"
+            max="24"
             step="1"
             value={value}
             onChange={(e) => onChange(parseInt(e.target.value))}
@@ -49,13 +49,14 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
             } as any}
           />
 
-          {/* Markers */}
+          {/* Markers (Show dots every 2 hours for cleaner UI) */}
           <div className="flex-1 w-full flex flex-col justify-between py-1 z-10 pointer-events-none">
             {[...hours].reverse().map((h) => (
               <div key={h} className="flex items-center justify-center w-full">
                 <div className={cn(
                   "w-0.5 h-0.5 rounded-full transition-colors duration-300",
-                  h <= value ? "bg-indigo-600" : "bg-gray-300"
+                  h <= value ? "bg-indigo-600" : "bg-gray-300",
+                  h % 4 !== 0 && "opacity-30" // 4시간 단위로 강조
                 )} />
               </div>
             ))}
