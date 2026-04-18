@@ -191,41 +191,49 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 레벨별 마커 선별 로직
+    // 레벨별 마커 선별 로직 (랜덤 범위 적용)
+    const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+    
+    let displayCount = inBoundsCandidates.length;
+    
     if (currentZoom === 6) {
-      // 6단계: 최대 20개 제한 및 비율 유지
-      const displayCount = 20;
-      const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
-      const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
-      const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
-      const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
-
-      const countInfluencer = Math.floor(displayCount * 0.05);
-      const countPopular = Math.floor(displayCount * 0.05);
-      const countAd = Math.floor(displayCount * 0.03);
-      
-      const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
-      const finalPopulars = populars.slice(0, Math.max(1, countPopular));
-      const finalAds = ads.slice(0, Math.max(1, countAd));
-      
-      const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
-      const remainingSlots = displayCount - currentSpecialCount;
-      const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
-
-      let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
-      
-      if (combined.length < displayCount && inBoundsCandidates.length > combined.length) {
-        const selectedIds = new Set(combined.map(p => p.id));
-        const leftovers = inBoundsCandidates
-          .filter(p => !selectedIds.has(p.id))
-          .sort((a, b) => b.likes - a.likes);
-        combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
-      }
-      setDisplayedMarkers(combined);
-    } else {
-      // 7, 8, 9단계: 제한 없이 모두 표시
-      setDisplayedMarkers(inBoundsCandidates);
+      displayCount = getRandomInRange(25, 30);
+    } else if (currentZoom === 7) {
+      displayCount = getRandomInRange(100, 110);
+    } else if (currentZoom === 8) {
+      displayCount = getRandomInRange(300, 350);
+    } else if (currentZoom === 9) {
+      displayCount = getRandomInRange(450, 500);
     }
+
+    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
+    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
+    const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
+    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
+
+    const countInfluencer = Math.floor(displayCount * 0.05);
+    const countPopular = Math.floor(displayCount * 0.05);
+    const countAd = Math.floor(displayCount * 0.03);
+    
+    const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
+    const finalPopulars = populars.slice(0, Math.max(1, countPopular));
+    const finalAds = ads.slice(0, Math.max(1, countAd));
+    
+    const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
+    const remainingSlots = displayCount - currentSpecialCount;
+    const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
+
+    let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
+    
+    if (combined.length < displayCount && inBoundsCandidates.length > combined.length) {
+      const selectedIds = new Set(combined.map(p => p.id));
+      const leftovers = inBoundsCandidates
+        .filter(p => !selectedIds.has(p.id))
+        .sort((a, b) => b.likes - a.likes);
+      combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
+    }
+    
+    setDisplayedMarkers(combined);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
