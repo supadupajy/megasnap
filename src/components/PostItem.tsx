@@ -352,7 +352,7 @@ const PostItem = ({
               youtubeId ? (
                 <iframe
                   className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
                   title="YouTube video player"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -364,7 +364,6 @@ const PostItem = ({
                   className="w-full h-full object-cover" 
                   controls={false}
                   autoPlay 
-                  muted
                   playsInline
                   loop
                   onClick={(e) => e.stopPropagation()}
