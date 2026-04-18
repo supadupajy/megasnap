@@ -19,11 +19,15 @@ const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, profile, loading: authLoading } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
+  
+  // 초기 상태부터 목데이터를 생성하여 빈 화면 방지
+  const [posts, setPosts] = useState<Post[]>(() => {
+    return createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
+  });
+  
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
-  const hasLoaded = useRef(false);
 
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`, [profile, authUser]);
@@ -32,27 +36,10 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const loadInitialData = useCallback(async (uid: string) => {
-    if (hasLoaded.current) return;
+  const fetchServerPosts = useCallback(async () => {
+    if (!authUser) return;
     
     setIsInitialLoading(true);
-    // 기본 목데이터 생성
-    let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
-
-    // 유튜브 비율 적용
-    mockPosts = mockPosts.map((post, index) => {
-      if (index % 2 === 0) {
-        const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
-        const thumb = getYoutubeThumbnail(youtubeUrl);
-        return {
-          ...post,
-          youtubeUrl,
-          image: thumb || post.image
-        };
-      }
-      return post;
-    });
-
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -62,72 +49,70 @@ const Popular = () => {
 
       if (error) throw error;
 
-      const realPosts = (data || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name || displayName,
-          avatar: p.user_avatar || avatarUrl
-        },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
+      if (data && data.length > 0) {
+        const realPosts = data.map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: {
+            id: p.user_id,
+            name: p.user_name || displayName,
+            avatar: p.user_avatar || avatarUrl
+          },
+          content: p.content,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+        })) as Post[];
 
-      const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
-      setPosts(combined);
-      hasLoaded.current = true;
+        setPosts(prev => {
+          const existingIds = new Set(realPosts.map(p => p.id));
+          const filteredPrev = prev.filter(p => !existingIds.has(p.id));
+          return [...realPosts, ...filteredPrev].sort((a, b) => b.likes - a.likes);
+        });
+      }
     } catch (err) {
-      console.error('[Popular] Fetch Error:', err);
-      setPosts(mockPosts);
+      console.error('[Popular] Server Fetch Error:', err);
     } finally {
       setIsInitialLoading(false);
     }
-  }, [displayName, avatarUrl]);
+  }, [authUser, displayName, avatarUrl]);
 
   useEffect(() => {
     if (!authLoading) {
       if (authUser) {
-        loadInitialData(authUser.id);
+        fetchServerPosts();
       } else {
         navigate('/login', { replace: true });
       }
     }
-  }, [authLoading, authUser, loadInitialData, navigate]);
+  }, [authLoading, authUser, fetchServerPosts, navigate]);
 
   const loadMorePosts = useCallback(() => {
-    if (isLoadingMore || isInitialLoading) return;
+    if (isLoadingMore) return;
     setIsLoadingMore(true);
 
     setTimeout(() => {
-      let newPosts = createMockPosts(37.5665, 126.9780, 15)
-        .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
+      const newPosts = createMockPosts(37.5665, 126.9780, 15)
+        .map(p => ({ 
+          ...p, 
+          likes: Math.floor(Math.random() * 1000) + 500,
+          youtubeUrl: Math.random() > 0.5 ? YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)] : undefined
+        }))
         .sort((a, b) => b.likes - a.likes);
       
-      newPosts = newPosts.map((post, index) => {
-        if (index % 2 === 0) {
-          const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          const thumb = getYoutubeThumbnail(youtubeUrl);
-          return { ...post, youtubeUrl, image: thumb || post.image };
-        }
-        return post;
-      });
-
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
-  }, [isLoadingMore, isInitialLoading]);
+  }, [isLoadingMore]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -160,15 +145,13 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (isInitialLoading && posts.length === 0)) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
-
-  if (!authUser) return null;
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
