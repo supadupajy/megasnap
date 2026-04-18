@@ -37,6 +37,13 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [currentZoom, setCurrentZoom] = useState(6);
   
+  // 레벨별로 고정된 랜덤 개수를 유지하기 위한 상태
+  const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
+    6: 28,
+    7: 105,
+    8: 325
+  });
+
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -78,14 +85,25 @@ const Index = () => {
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      if (data.level !== undefined) setCurrentZoom(data.level);
+      
+      if (data.level !== undefined && data.level !== currentZoom) {
+        setCurrentZoom(data.level);
+        // 줌 레벨이 바뀔 때만 새로운 랜덤 개수 생성
+        const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+        setMaxCounts(prev => ({
+          ...prev,
+          6: getRandomInRange(25, 30),
+          7: getRandomInRange(100, 110),
+          8: getRandomInRange(300, 350)
+        }));
+      }
       
       if (isSelectingLocation) {
         setTempSelectedLocation(data.center);
       }
       throttleTimer.current = null;
-    }, 30);
-  }, [isSelectingLocation]);
+    }, 50); // 스로틀 시간을 약간 늘려 안정성 확보
+  }, [isSelectingLocation, currentZoom]);
 
   const filteredAllPosts = useMemo(() => {
     return allPosts.filter(p => !blockedIds.has(p.user.id));
@@ -94,7 +112,7 @@ const Index = () => {
   const trendingPosts = useMemo(() => {
     return filteredAllPosts
       .filter(p => !p.isAd)
-      .sort((a, b) => b.likes - a.likes)
+      .sort((a, b) => b.likes - a.likes || a.id.localeCompare(b.id))
       .slice(0, 20)
       .map((p, index) => ({ ...p, rank: index + 1 }));
   }, [filteredAllPosts]);
@@ -198,23 +216,16 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 레벨별 마커 선별 로직 (랜덤 범위 적용)
-    const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+    // 레벨별 마커 선별 로직 (안정적인 정렬 및 개수 유지)
+    const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
     
-    let displayCount = inBoundsCandidates.length;
-    
-    if (currentZoom === 6) {
-      displayCount = getRandomInRange(25, 30);
-    } else if (currentZoom === 7) {
-      displayCount = getRandomInRange(100, 110);
-    } else if (currentZoom === 8) {
-      displayCount = getRandomInRange(300, 350);
-    }
+    // 정렬 시 ID를 추가하여 순서가 바뀌지 않도록 함 (Stable Sort)
+    const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
 
-    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
-    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
-    const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
-    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
+    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort(stableSort);
+    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort(stableSort);
+    const ads = inBoundsCandidates.filter(p => p.isAd).sort(stableSort);
+    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort(stableSort);
 
     const countInfluencer = Math.floor(displayCount * 0.05);
     const countPopular = Math.floor(displayCount * 0.05);
@@ -234,12 +245,12 @@ const Index = () => {
       const selectedIds = new Set(combined.map(p => p.id));
       const leftovers = inBoundsCandidates
         .filter(p => !selectedIds.has(p.id))
-        .sort((a, b) => b.likes - a.likes);
+        .sort(stableSort);
       combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
     }
     
     setDisplayedMarkers(combined);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
