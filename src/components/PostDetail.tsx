@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Comment } from '@/types';
 import {
   DropdownMenu,
@@ -51,13 +50,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
-  const dragY = useMotionValue(0);
-  
-  // 드래그 거리에 따른 시각적 변화 (수직 드래그 중심)
-  const opacity = useTransform(dragY, [-300, 0, 300], [0, 1, 0]);
-  const scale = useTransform(dragY, [-300, 0, 300], [0.9, 1, 0.9]);
-  const backdropOpacity = useTransform(dragY, [-300, 0, 300], [0, 0.6, 0]);
-
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
@@ -70,7 +62,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
-      dragY.set(0);
       
       const post = posts[initialIndex];
       if (post) {
@@ -85,7 +76,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(false);
       setIsPlayingVideo(false);
     }
-  }, [isOpen, initialIndex, hasInitialized, posts, dragY]);
+  }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
     const currentPost = posts[currentIndex];
@@ -104,19 +95,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     }
   }, [currentIndex, isOpen, onViewPost, posts]);
-
-  const handleDragEnd = (_: any, info: any) => {
-    const threshold = 120;
-    const velocityThreshold = 500;
-    
-    // 수직 드래그 거리나 속도가 임계값을 넘으면 닫기
-    if (
-      Math.abs(info.offset.y) > threshold || 
-      Math.abs(info.velocity.y) > velocityThreshold
-    ) {
-      onClose();
-    }
-  };
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -219,12 +197,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
-      <motion.div 
-        style={{ opacity: backdropOpacity }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black z-0 cursor-pointer" 
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 z-0 cursor-pointer" 
         onClick={onClose} 
       />
 
@@ -240,22 +215,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       </div>
       
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
-        <motion.div 
-          key={post.id} 
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.6}
-          onDragEnd={handleDragEnd}
-          style={{ y: dragY, opacity, scale }}
-          initial={{ opacity: 0, scale: 0.9, y: 100 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ 
-            opacity: 0, 
-            scale: 0.95,
-            transition: { duration: 0.2, ease: "easeOut" } 
-          }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-grab active:cursor-grabbing"
+        <div 
+          className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto"
         >
           <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
 
@@ -317,7 +278,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         youtubeId ? (
                           <iframe
                             className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
+                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=0&modestbranding=1`}
                             title="YouTube video player"
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -329,7 +290,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             className="w-full h-full object-cover" 
                             controls={false}
                             autoPlay 
-                            muted
                             playsInline
                             loop
                             onClick={(e) => e.stopPropagation()}
@@ -395,7 +355,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
