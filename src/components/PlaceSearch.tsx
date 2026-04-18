@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Place {
   id: string;
@@ -28,6 +29,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const [results, setResults] = useState<Place[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<any>(null);
+  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
@@ -35,28 +37,18 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const isSearching = useRef(false);
   const lastQuery = useRef('');
 
-  // 바디 스크롤 및 위치 고정 (키보드 대응)
+  // 바디 스크롤 잠금
   useEffect(() => {
     if (isOpen) {
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
     } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
       document.body.style.overflow = '';
-      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      document.body.style.touchAction = '';
     }
-    
     return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
       document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, [isOpen]);
 
@@ -195,14 +187,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     return () => observer.disconnect();
   }, [pagination, isLoading, loadNextPage]);
 
-  // 키보드가 올라올 때 화면이 밀리는 것을 방지하기 위한 핸들러
-  const handleInputFocus = () => {
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-    }, 100);
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -211,8 +195,11 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="fixed top-0 left-0 right-0 bottom-0 z-[2000] bg-white flex flex-col overflow-hidden"
-          style={{ height: '100%', position: 'fixed' }}
+          className="fixed top-0 left-0 right-0 z-[2000] bg-white flex flex-col overflow-hidden"
+          style={{ 
+            height: isKeyboardOpen ? `calc(100dvh - ${keyboardHeight}px)` : '100dvh',
+            touchAction: 'auto'
+          }}
         >
           {/* Header */}
           <div className="pt-12 pb-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
@@ -229,7 +216,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                 className="pl-9 h-11 bg-gray-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onFocus={handleInputFocus}
                 autoFocus
                 autoComplete="off"
               />

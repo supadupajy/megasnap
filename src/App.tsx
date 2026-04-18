@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import ExitDialog from "./components/ExitDialog";
+import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 
@@ -65,7 +66,6 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  // 로그인 페이지가 아닐 때만 로딩 화면 표시
   if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -105,6 +105,8 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <KeyboardSimulator />
 
       <ExitDialog 
         isOpen={showExitDialog} 
