@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser, profile, refreshProfile } = useAuth();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -92,40 +92,55 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 전역 데이터 시딩 로직 개선
+  // 데이터 시딩 로직 (20명의 가상 저자 버전)
   const seedGlobalData = useCallback(async (force = false) => {
     if (!authUser || (hasGlobalSeeded.current && !force)) return;
     hasGlobalSeeded.current = true;
 
     try {
+      // 1. 내 프로필이 있는지 먼저 확인 및 생성
+      if (!profile) {
+        await refreshProfile();
+      }
+
       const { count, error: countError } = await supabase.from('posts').select('*', { count: 'exact', head: true });
       if (countError) throw countError;
       
       if (count === 0 || force) {
-        const toastId = showLoading('전국 지도를 탐험할 준비를 하고 있습니다...');
+        const toastId = showLoading('전국 지도를 탐험할 준비를 하고 있습니다 (100개 생성 중)...');
+        
+        // 20명의 가상 저자 정보 생성
+        const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
+          name: `Explorer_${i + 1}`,
+          avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
+        }));
+
         let allMockData: any[] = [];
-        const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-        const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
         
         KOREA_HUBS.forEach(hub => {
           const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-          const insertData = mockPosts.map(p => ({
-            content: p.content,
-            location_name: `${hub.name} 주변`,
-            latitude: p.lat,
-            longitude: p.lng,
-            image_url: p.image,
-            user_id: authUser.id, // 실제 로그인한 사용자 ID 사용
-            user_name: displayName,
-            user_avatar: avatarUrl,
-            likes: p.likes,
-            category: p.category,
-            border_type: p.borderType,
-            is_gif: p.isGif,
-            is_influencer: p.isInfluencer,
-            youtube_url: p.youtubeUrl,
-            created_at: p.createdAt.toISOString()
-          }));
+          const insertData = mockPosts.map((p, idx) => {
+            // 20명의 저자 중 한 명을 랜덤하게 배정
+            const author = virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)];
+            
+            return {
+              content: p.content,
+              location_name: `${hub.name} 주변`,
+              latitude: p.lat,
+              longitude: p.lng,
+              image_url: p.image,
+              user_id: authUser.id, // 실제 DB 제약조건 통과를 위해 내 ID 사용
+              user_name: author.name, // 표시 이름은 가상 저자
+              user_avatar: author.avatar, // 표시 아바타는 가상 저자
+              likes: p.likes,
+              category: p.category,
+              border_type: p.borderType,
+              is_gif: p.isGif,
+              is_influencer: p.isInfluencer,
+              youtube_url: p.youtubeUrl,
+              created_at: p.createdAt.toISOString()
+            };
+          });
           allMockData = [...allMockData, ...insertData];
         });
 
@@ -137,7 +152,6 @@ const Index = () => {
           showError(`데이터 생성 실패: ${insertError.message}`);
         } else {
           showSuccess('대한민국 전역에 100개의 새로운 추억이 등록되었습니다! 🇰🇷');
-          // 생성 후 즉시 동기화 시도
           syncPostsWithSupabase();
         }
       }
@@ -145,7 +159,7 @@ const Index = () => {
       console.error('[Global Seed] Error:', err);
       showError('데이터베이스 연결 상태를 확인해주세요.');
     }
-  }, [authUser, profile]);
+  }, [authUser, profile, refreshProfile]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -169,7 +183,6 @@ const Index = () => {
       if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 3 && authUser) {
         mapCache.populatedTiles.add(tileKey);
         const mockData = createMockPosts(mapData.center.lat, mapData.center.lng, 8);
-        const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
         
         const insertData = mockData.map(p => ({
           content: p.content,
@@ -177,9 +190,9 @@ const Index = () => {
           latitude: p.lat,
           longitude: p.lng,
           image_url: p.image,
-          user_id: authUser.id, // 실제 로그인한 사용자 ID 사용
-          user_name: displayName,
-          user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
+          user_id: authUser.id,
+          user_name: `Explorer_${Math.floor(Math.random() * 20) + 1}`,
+          user_avatar: `https://i.pravatar.cc/150?u=bot_${Math.floor(Math.random() * 20) + 1}`,
           likes: p.likes,
           category: p.category,
           border_type: p.borderType,
@@ -195,7 +208,7 @@ const Index = () => {
     } finally {
       isSyncing.current = false;
     }
-  }, [mapData, authUser, profile]);
+  }, [mapData, authUser]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
