@@ -12,6 +12,7 @@ import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { postDraftStore } from '@/utils/post-draft-store';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -23,13 +24,22 @@ interface WritePostProps {
 
 const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
   const { user: authUser, profile } = useAuth();
-  const [content, setContent] = useState('');
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  // postDraftStore에서 초기값 가져오기
+  const [draft, setDraft] = useState(postDraftStore.get());
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
+
+  // 스토어 구독
+  useEffect(() => {
+    const unsubscribe = postDraftStore.subscribe(() => {
+      setDraft(postDraftStore.get());
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const kakao = (window as any).kakao;
@@ -41,7 +51,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
-            // 시, 구, 동 정보를 조합하여 표시
             const city = addr.region_1depth_name || '';
             const district = addr.region_2depth_name || '';
             const neighborhood = addr.region_3depth_name || '';
@@ -57,12 +66,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         setAddress('위치를 선택해주세요');
         setIsLoadingAddress(false);
       }
-    } else {
-      setAddress('');
-      setIsLoadingAddress(false);
-      setContent('');
-      setCapturedImage(null);
     }
+    // 창이 닫힐 때 데이터를 초기화하던 로직을 제거하여 데이터 유지
   }, [isOpen, initialLocation]);
 
   const takePhoto = async () => {
@@ -75,7 +80,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       });
       
       if (image.dataUrl) {
-        setCapturedImage(image.dataUrl);
+        postDraftStore.set({ image: image.dataUrl });
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -85,9 +90,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   const handleStartLocationSelection = () => {
-    // 1. 먼저 현재 창을 닫습니다.
+    // 현재 입력된 내용을 스토어에 저장하고 창을 닫음
     onClose();
-    // 2. 부모에게 위치 선택 모드 시작을 알립니다.
     if (onStartLocationSelection) {
       onStartLocationSelection();
     }
@@ -99,7 +103,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!capturedImage) {
+    if (!draft.image) {
       showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
       return;
     }
@@ -114,11 +118,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
     const postData = {
-      content: content,
+      content: draft.content,
       location_name: address,
       latitude: initialLocation.lat,
       longitude: initialLocation.lng,
-      image_url: capturedImage,
+      image_url: draft.image,
       user_id: authUser.id,
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -144,14 +148,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           name: displayName,
           avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
         },
-        content: content,
+        content: draft.content,
         location: address,
         lat: initialLocation.lat,
         lng: initialLocation.lng,
         likes: 0,
         commentsCount: 0,
         comments: [],
-        image: capturedImage,
+        image: draft.image,
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none'
@@ -173,8 +177,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       if (onPostCreated) onPostCreated(newPost);
       showSuccess('새로운 추억이 등록되었습니다! ✨');
       
-      setContent('');
-      setCapturedImage(null);
+      // 성공 시에만 스토어 초기화
+      postDraftStore.clear();
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -209,8 +213,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               onClick={takePhoto}
               className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
             >
-              {capturedImage ? (
-                <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
+              {draft.image ? (
+                <img src={draft.image} alt="Captured" className="w-full h-full object-cover" />
               ) : (
                 <>
                   <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -268,8 +272,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
                 className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                value={draft.content}
+                onChange={(e) => postDraftStore.set({ content: e.target.value })}
               />
             </div>
           </div>
@@ -283,7 +287,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={!content || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={!draft.content || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>
