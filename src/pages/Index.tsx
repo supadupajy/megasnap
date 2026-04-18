@@ -32,41 +32,6 @@ const Index = () => {
   const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
-<dyad-write path="src/pages/Index.tsx" description="마커 깜빡임 제거 및 6단계 마커 개수 최적화 (15~40개)">
-"use client";
-
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import MapContainer from '@/components/MapContainer';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
-import TrendingPosts from '@/components/TrendingPosts';
-import PostDetail from '@/components/PostDetail';
-import WritePost from '@/components/WritePost';
-import TimeSlider from '@/components/TimeSlider';
-import PlaceSearch from '@/components/PlaceSearch';
-import CategoryMenu from '@/components/CategoryMenu';
-import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, MapPin } from 'lucide-react';
-import { createMockPosts } from '@/lib/mock-data';
-import { Post } from '@/types';
-import { cn } from '@/lib/utils';
-import { useViewedPosts } from '@/hooks/use-viewed-posts';
-import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { mapCache } from '@/utils/map-cache';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useSupabasePosts } from '@/hooks/use-supabase-posts';
-import { useAuth } from '@/components/AuthProvider';
-import { Button } from '@/components/ui/button';
-
-const Index = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user: authUser } = useAuth();
-  
-  const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
-  
-  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
@@ -195,6 +160,7 @@ const Index = () => {
   useEffect(() => {
     if (!mapData?.bounds) return;
     
+    // 9단계 이상이면 마커를 표시하지 않음
     if (currentZoom >= 9) {
       setDisplayedMarkers([]);
       return;
@@ -232,16 +198,17 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    // 레벨별 마커 선별 로직 (깜빡임 방지를 위해 고정 최대값 사용)
+    // 레벨별 마커 선별 로직 (랜덤 범위 적용)
+    const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+    
     let displayCount = inBoundsCandidates.length;
     
     if (currentZoom === 6) {
-      // 6단계: 15~40개 유동적 표시 (최대 40개로 고정하여 깜빡임 방지)
-      displayCount = 40;
+      displayCount = getRandomInRange(25, 30);
     } else if (currentZoom === 7) {
-      displayCount = 110;
+      displayCount = getRandomInRange(100, 110);
     } else if (currentZoom === 8) {
-      displayCount = 350;
+      displayCount = getRandomInRange(300, 350);
     }
 
     const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
@@ -271,8 +238,7 @@ const Index = () => {
       combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
     }
     
-    // 실제 후보군보다 많이 표시할 수는 없으므로 필터링
-    setDisplayedMarkers(combined.filter(p => inBoundsCandidates.some(c => c.id === p.id)));
+    setDisplayedMarkers(combined);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
