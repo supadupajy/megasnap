@@ -55,7 +55,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
   
-  // 중심으로부터의 거리 계산
+  // 중심으로부터의 거리 계산에 따른 변형
   const opacity = useTransform(dragY, [-300, 0, 300], [0, 1, 0]);
   const scale = useTransform(dragY, [-300, 0, 300], [0.8, 1, 0.8]);
   const rotate = useTransform(dragX, [-200, 200], [-10, 10]);
@@ -113,9 +113,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const threshold = 150;
     const velocityThreshold = 500;
     
+    // 아래로 던지거나, 옆으로 강하게 밀었을 때 닫기
     if (
-      Math.abs(info.offset.y) > threshold || 
-      Math.abs(info.velocity.y) > velocityThreshold ||
+      info.offset.y > threshold || 
+      info.velocity.y > velocityThreshold ||
       Math.abs(info.offset.x) > threshold * 1.5
     ) {
       onClose();
@@ -203,11 +204,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()} 
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none data-[state=closed]:animate-none"
       >
         {/* Animated Backdrop */}
         <motion.div 
           style={{ opacity: backdropOpacity }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.6 }}
+          exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black z-0 cursor-pointer" 
           onClick={onClose} 
         />
@@ -233,7 +237,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             style={{ x: dragX, y: dragY, opacity, scale, rotate }}
             initial={{ opacity: 0, scale: 0.9, y: 100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+            exit={{ 
+              y: 1000, 
+              opacity: 0, 
+              scale: 0.5, 
+              transition: { duration: 0.4, ease: "circIn" } 
+            }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-grab active:cursor-grabbing"
           >
