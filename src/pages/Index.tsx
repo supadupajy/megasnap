@@ -50,7 +50,6 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(12);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 위치 선택 모드 관련 상태
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -73,7 +72,6 @@ const Index = () => {
     mapCache.posts = allPosts;
   }, [allPosts]);
 
-  // 30ms 스로틀을 적용하여 실시간성을 유지하면서도 과도한 업데이트를 방지합니다.
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) return;
     
@@ -192,17 +190,40 @@ const Index = () => {
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
-    const currentDisplayedIds = new Set(displayedMarkers.map(m => m.id));
-    const stillInBounds = inBoundsCandidates.filter(m => currentDisplayedIds.has(m.id));
-    const newlyInBounds = inBoundsCandidates.filter(m => !currentDisplayedIds.has(m.id));
-    
-    newlyInBounds.sort((a, b) => {
-      const scoreA = (a.isInfluencer ? 1000 : 0) + (a.borderType === 'popular' ? 500 : 0) + a.likes;
-      const scoreB = (b.isInfluencer ? 1000 : 0) + (b.borderType === 'popular' ? 500 : 0) + b.likes;
-      return scoreB - scoreA;
-    });
+    // 비율 기반 마커 선별 로직 (확대 시에도 일정한 비율 유지)
+    const totalInBounds = inBoundsCandidates.length;
+    const displayCount = Math.min(totalInBounds, MAX_MARKERS);
 
-    const combined = [...stillInBounds, ...newlyInBounds].slice(0, MAX_MARKERS);
+    // 유형별 그룹화 및 정렬
+    const influencers = inBoundsCandidates.filter(p => p.isInfluencer).sort((a, b) => b.likes - a.likes);
+    const populars = inBoundsCandidates.filter(p => p.borderType === 'popular' && !p.isInfluencer).sort((a, b) => b.likes - a.likes);
+    const ads = inBoundsCandidates.filter(p => p.isAd).sort((a, b) => b.likes - a.likes);
+    const regulars = inBoundsCandidates.filter(p => !p.isInfluencer && p.borderType !== 'popular' && !p.isAd).sort((a, b) => b.likes - a.likes);
+
+    // 목표 개수 계산 (비율: 인플루언서 5%, 인기 5%, 광고 3%, 나머지 일반)
+    const countInfluencer = Math.floor(displayCount * 0.05);
+    const countPopular = Math.floor(displayCount * 0.05);
+    const countAd = Math.floor(displayCount * 0.03);
+    
+    const finalInfluencers = influencers.slice(0, Math.max(1, countInfluencer));
+    const finalPopulars = populars.slice(0, Math.max(1, countPopular));
+    const finalAds = ads.slice(0, Math.max(1, countAd));
+    
+    const currentSpecialCount = finalInfluencers.length + finalPopulars.length + finalAds.length;
+    const remainingSlots = displayCount - currentSpecialCount;
+    const finalRegulars = regulars.slice(0, Math.max(0, remainingSlots));
+
+    let combined = [...finalInfluencers, ...finalPopulars, ...finalAds, ...finalRegulars];
+    
+    // 슬롯이 남는 경우(예: 일반 포스팅 부족) 다른 유형으로 채움
+    if (combined.length < displayCount) {
+      const selectedIds = new Set(combined.map(p => p.id));
+      const leftovers = inBoundsCandidates
+        .filter(p => !selectedIds.has(p.id))
+        .sort((a, b) => b.likes - a.likes);
+      combined = [...combined, ...leftovers.slice(0, displayCount - combined.length)];
+    }
+
     setDisplayedMarkers(combined);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser]);
 
@@ -257,7 +278,6 @@ const Index = () => {
   };
 
   const handleMapClick = useCallback((loc: { lat: number; lng: number }) => {
-    // 이제 클릭으로 위치를 선택하지 않으므로 로직 제거
   }, []);
 
   const confirmLocationSelection = () => {
@@ -282,7 +302,6 @@ const Index = () => {
     setIsWriteOpen(false);
     setTimeout(() => {
       setIsSelectingLocation(true);
-      // 진입 시 현재 지도의 중심점을 초기 선택 위치로 설정
       if (mapData?.center) {
         setTempSelectedLocation(mapData.center);
       } else {
@@ -309,28 +328,23 @@ const Index = () => {
             center={mapCenter}
           />
 
-          {/* 위치 선택 모드 전용 중앙 고정 핀 UI */}
           <AnimatePresence>
             {isSelectingLocation && (
               <>
-                {/* 중앙 고정 핀 */}
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-[50]">
                   <motion.div 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="relative mb-12" // 핀의 끝점이 중앙에 오도록 보정
+                    className="relative mb-12"
                   >
                     <div className="relative w-12 h-12">
-                      {/* 뾰족한 부분이 아래를 향하도록 수정: rounded-br-none + rotate-45 */}
                       <div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" />
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
                     </div>
-                    {/* 핀 아래 그림자 */}
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
                   </motion.div>
                 </div>
 
-                {/* 하단 컨트롤 바 */}
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -514,7 +528,6 @@ const Index = () => {
         mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
       />
       
-      {/* Index 페이지 전용 BottomNav 추가 */}
       {!isSelectingLocation && (
         <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       )}
