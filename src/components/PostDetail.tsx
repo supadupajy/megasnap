@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { Comment } from '@/types';
 import {
   DropdownMenu,
@@ -51,6 +51,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
+  // Swipe to close logic
+  const dragY = useMotionValue(0);
+  const opacity = useTransform(dragY, [0, 300], [1, 0]);
+  const scale = useTransform(dragY, [0, 300], [1, 0.9]);
+  const backdropOpacity = useTransform(dragY, [0, 300], [0.6, 0]);
+
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
@@ -63,12 +69,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
+      dragY.set(0);
       
       const post = posts[initialIndex];
       if (post) {
         setLocalComments(post.comments || []);
         setIsSaved(post.isSaved || false);
-        // 상세 페이지 열릴 때 영상이 있으면 즉시 자동 재생
         if (post.videoUrl || getYoutubeId(post.youtubeUrl || '')) {
           setIsPlayingVideo(true);
         }
@@ -78,7 +84,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(false);
       setIsPlayingVideo(false);
     }
-  }, [isOpen, initialIndex, hasInitialized, posts]);
+  }, [isOpen, initialIndex, hasInitialized, posts, dragY]);
 
   useEffect(() => {
     const currentPost = posts[currentIndex];
@@ -90,7 +96,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
       
-      // 슬라이드 넘길 때마다 영상 자동 재생 체크
       if (currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || '')) {
         setIsPlayingVideo(true);
       } else {
@@ -98,6 +103,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
     }
   }, [currentIndex, isOpen, onViewPost, posts]);
+
+  const handleDragEnd = (_: any, info: any) => {
+    if (info.offset.y > 150 || info.velocity.y > 500) {
+      onClose();
+    }
+  };
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -180,9 +191,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         onOpenAutoFocus={(e) => e.preventDefault()} 
-        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-black/60 backdrop-blur-sm border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none data-[state=open]:duration-0"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-0 bg-transparent border-none shadow-none w-full h-full max-w-none overflow-hidden translate-x-0 translate-y-0 left-0 top-0 outline-none data-[state=open]:animate-none"
       >
-        <div className="absolute inset-0 z-0 cursor-pointer" onClick={onClose} />
+        {/* Animated Backdrop */}
+        <motion.div 
+          style={{ opacity: backdropOpacity }}
+          className="absolute inset-0 bg-black z-0 cursor-pointer" 
+          onClick={onClose} 
+        />
 
         <div className="absolute top-4 right-6 z-[110]">
           <Button 
@@ -198,17 +214,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
           <motion.div 
             key={post.id} 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 500 }}
+            dragElastic={0.4}
+            onDragEnd={handleDragEnd}
+            style={{ y: dragY, opacity, scale }}
+            initial={{ opacity: 0, scale: 0.9, y: 100 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-            onClick={onClose}
-            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-pointer"
+            exit={{ opacity: 0, scale: 0.9, y: 100 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto cursor-default"
           >
+            {/* Swipe Handle */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
+
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                 <div className="flex flex-col">
-                  <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between px-4 py-4 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
                         <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
