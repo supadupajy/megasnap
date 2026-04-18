@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Database } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Database, Sparkles } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, profile, refreshProfile } = useAuth();
+  const { user: authUser, profile } = useAuth();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -38,12 +38,6 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [currentZoom, setCurrentZoom] = useState(6);
   
-  const [maxCounts, setMaxCounts] = useState<Record<number, number>>({
-    6: 50,
-    7: 150,
-    8: 400
-  });
-
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -65,20 +59,7 @@ const Index = () => {
 
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
-  const hasGlobalSeeded = useRef(false);
-
-  const KOREA_HUBS = [
-    { name: '서울', lat: 37.5665, lng: 126.9780 },
-    { name: '부산', lat: 35.1796, lng: 129.0756 },
-    { name: '인천', lat: 37.4563, lng: 126.7052 },
-    { name: '대구', lat: 35.8714, lng: 128.6014 },
-    { name: '대전', lat: 36.3504, lng: 127.3845 },
-    { name: '광주', lat: 35.1595, lng: 126.8526 },
-    { name: '울산', lat: 35.5384, lng: 129.3114 },
-    { name: '제주', lat: 33.4996, lng: 126.5312 },
-    { name: '강릉', lat: 37.7519, lng: 128.8761 },
-    { name: '전주', lat: 35.8242, lng: 127.1480 }
-  ];
+  const isAutoSeeding = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) return;
@@ -90,6 +71,85 @@ const Index = () => {
       throttleTimer.current = null;
     }, 100);
   }, [isSelectingLocation, currentZoom]);
+
+  // 실제 주소를 가져오는 헬퍼 함수
+  const getRealAddress = useCallback(async (lat: number, lng: number): Promise<string> => {
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps?.services) return '대한민국 어딘가';
+    
+    const geocoder = new kakao.maps.services.Geocoder();
+    return new Promise((resolve) => {
+      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address;
+          const city = addr.region_1depth_name || '';
+          const district = addr.region_2depth_name || '';
+          const neighborhood = addr.region_3depth_name || '';
+          resolve(`${city} ${district} ${neighborhood}`.trim());
+        } else {
+          resolve('대한민국 어딘가');
+        }
+      });
+    });
+  }, []);
+
+  // 지도를 옮길 때 자동으로 포스팅 생성
+  const autoSeedArea = useCallback(async () => {
+    if (!mapData?.center || isAutoSeeding.current || !authUser) return;
+    
+    // 현재 위치를 기반으로 타일 키 생성 (소수점 1자리까지 반올림하여 약 10km 단위 체크)
+    const tileKey = `${mapData.center.lat.toFixed(1)}_${mapData.center.lng.toFixed(1)}`;
+    if (mapCache.populatedTiles.has(tileKey)) return;
+
+    isAutoSeeding.current = true;
+    mapCache.populatedTiles.add(tileKey);
+
+    try {
+      const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
+      if (!profiles || profiles.length === 0) return;
+
+      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 12);
+      const insertDataPromises = mockPosts.map(async (p) => {
+        const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
+        const realAddress = await getRealAddress(p.lat, p.lng);
+        
+        return {
+          content: p.content,
+          location_name: realAddress,
+          latitude: p.lat,
+          longitude: p.lng,
+          image_url: p.image,
+          user_id: randomUser.id,
+          user_name: randomUser.nickname,
+          user_avatar: randomUser.avatar_url,
+          likes: Math.floor(Math.random() * 1000) + 10,
+          created_at: p.createdAt.toISOString()
+        };
+      });
+
+      const finalData = await Promise.all(insertDataPromises);
+      await supabase.from('posts').insert(finalData);
+      
+      // 생성 후 즉시 동기화
+      const { sw, ne } = mapData.bounds;
+      const dbPosts = await fetchPostsInBounds(sw, ne);
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
+        const combined = [...prev, ...newUnique];
+        mapCache.posts = combined;
+        return combined;
+      });
+    } catch (err) {
+      console.error('[AutoSeed] Error:', err);
+    } finally {
+      isAutoSeeding.current = false;
+    }
+  }, [mapData, authUser, getRealAddress]);
+
+  useEffect(() => {
+    if (mapData) autoSeedArea();
+  }, [mapData, autoSeedArea]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -112,133 +172,11 @@ const Index = () => {
     }
   }, [mapData]);
 
-  const seedGlobalData = useCallback(async (force = false) => {
-    if (!authUser) return;
-    if (hasGlobalSeeded.current && !force) return;
-    hasGlobalSeeded.current = true;
-
-    const kakao = (window as any).kakao;
-    if (!kakao || !kakao.maps || !kakao.maps.services) {
-      console.warn('Kakao Maps services not ready for seeding');
-      hasGlobalSeeded.current = false;
-      return;
-    }
-
-    const toastId = showLoading('전국 실제 주소를 분석하여 데이터를 생성 중입니다...');
-    const geocoder = new kakao.maps.services.Geocoder();
-
-    const getAddress = (lat: number, lng: number): Promise<string> => {
-      return new Promise((resolve) => {
-        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-          if (status === kakao.maps.services.Status.OK && result[0]) {
-            const addr = result[0].address;
-            const city = addr.region_1depth_name || '';
-            const district = addr.region_2depth_name || '';
-            const neighborhood = addr.region_3depth_name || '';
-            const cleanAddress = `${city} ${district} ${neighborhood}`.trim();
-            resolve(cleanAddress || '대한민국 어딘가');
-          } else {
-            resolve('대한민국 어딘가');
-          }
-        });
-      });
-    };
-    
-    try {
-      const { data: profiles } = await supabase.from('profiles').select('*').limit(100);
-      if (!profiles || profiles.length === 0) throw new Error('프로필 데이터를 찾을 수 없습니다.');
-
-      let allMockData: any[] = [];
-      
-      for (const hub of KOREA_HUBS) {
-        const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-        
-        const insertDataPromises = mockPosts.map(async (p) => {
-          const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
-          const isPopular = Math.random() > 0.9;
-          const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
-          
-          // "주변" 텍스트 없이 실제 주소만 가져옴
-          const realAddress = await getAddress(p.lat, p.lng);
-
-          return {
-            content: p.content,
-            location_name: realAddress,
-            latitude: p.lat,
-            longitude: p.lng,
-            image_url: p.image,
-            user_id: randomUser.id,
-            user_name: randomUser.nickname,
-            user_avatar: randomUser.avatar_url,
-            likes: likes,
-            created_at: p.createdAt.toISOString()
-          };
-        });
-
-        const hubData = await Promise.all(insertDataPromises);
-        allMockData = [...allMockData, ...hubData];
-      }
-
-      // 기존 데이터 삭제 (초기화 버튼 클릭 시)
-      if (force) {
-        await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      }
-
-      for (let i = 0; i < allMockData.length; i += 20) {
-        const chunk = allMockData.slice(i, i + 20);
-        await supabase.from('posts').insert(chunk);
-      }
-
-      const { data: freshPosts } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (freshPosts) {
-        const mapped = freshPosts.map(p => ({
-          id: p.id,
-          isAd: false,
-          isGif: false,
-          isInfluencer: false,
-          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-          content: p.content,
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: Number(p.likes || 0),
-          commentsCount: 0,
-          comments: [],
-          image: p.image_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-        })) as Post[];
-        
-        setAllPosts(mapped);
-        mapCache.posts = mapped;
-      }
-
-      dismissToast(toastId);
-      showSuccess('모든 포스팅에 실제 시, 구, 동 주소가 적용되었습니다! 🇰🇷');
-    } catch (err: any) {
-      console.error('[Seed] Final Error:', err);
-      dismissToast(toastId);
-      showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
-    }
-  }, [authUser]);
-
-  useEffect(() => {
-    if (authUser) {
-      const timer = setTimeout(() => seedGlobalData(), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [authUser, seedGlobalData]);
-
   useEffect(() => {
     syncPostsWithSupabase();
   }, [mapData, syncPostsWithSupabase]);
 
+  // 마커 표시 로직 (최대 20개 제한)
   useEffect(() => {
     if (!mapData?.bounds) return;
     if (currentZoom >= 9) { setDisplayedMarkers([]); return; }
@@ -251,29 +189,36 @@ const Index = () => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
       if (post.id === highlightedPostId) return true;
+      
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng;
       if (!isWithinBounds) return false;
+      
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       if (!isWithinTime) return false;
+      
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;
+      
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = !!isMe;
       else if (selectedCategories.includes('user_filter')) matchesCategory = !!isTargetUser;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      
       return matchesCategory;
     });
 
-    const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
+    // 한 화면에 최대 20개만 표시 (좋아요 순 정렬)
+    const displayCount = 20; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
+    
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
     }
     setDisplayedMarkers(finalMarkers);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts, highlightedPostId]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, highlightedPostId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -319,8 +264,20 @@ const Index = () => {
     showSuccess('데이터를 새로고침했습니다.');
   }, []);
 
-  const handleForceSeed = () => {
-    seedGlobalData(true);
+  const handleForceSeed = async () => {
+    const toastId = showLoading('데이터를 초기화하고 전국 데이터를 재생성합니다...');
+    try {
+      await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      mapCache.populatedTiles.clear();
+      mapCache.posts = [];
+      setAllPosts([]);
+      dismissToast(toastId);
+      showSuccess('데이터가 초기화되었습니다. 지도를 움직여보세요!');
+      autoSeedArea();
+    } catch (err) {
+      dismissToast(toastId);
+      showError('초기화 중 오류가 발생했습니다.');
+    }
   };
 
   const handleTrendingPostClick = useCallback((post: Post) => {
