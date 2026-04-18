@@ -187,7 +187,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
-        <div className="px-6 flex flex-col flex-1 min-h-0">
+        <div className="px-8 flex flex-col flex-1 min-h-0">
           <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <span className="text-indigo-600">✨</span>
@@ -201,7 +201,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
             <div className="space-y-3">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mx-1">
                 <button 
                   onClick={takePhoto}
                   className={cn(
@@ -227,7 +227,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             </div>
 
             {(draft.image || videoUrl) && (
-              <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+              <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg mx-1">
                 {draft.image ? (
                   <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
@@ -249,7 +249,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                   <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                 </button>
               </div>
-              <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
+              <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group mx-1">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-indigo-600" />
                 </div>
@@ -265,7 +265,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
               <Textarea 
                 placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium mx-1"
                 value={draft.content}
                 onChange={(e) => postDraftStore.set({ content: e.target.value })}
               />
