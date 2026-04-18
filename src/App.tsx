@@ -65,6 +65,7 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
+  // 로그인 페이지가 아닐 때만 로딩 화면 표시
   if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
