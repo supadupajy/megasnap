@@ -198,83 +198,85 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button 
-                  onClick={takePhoto}
-                  className={cn(
-                    "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                    draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                  )}
-                >
-                  <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
-                  <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
-                </button>
-                <button 
-                  onClick={() => videoInputRef.current?.click()}
-                  className={cn(
-                    "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                    videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                  )}
-                >
-                  <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
-                  <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
-                </button>
-                <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
-              </div>
-            </div>
-
-            {(draft.image || videoUrl) && (
-              <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
-                {draft.image ? (
-                  <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <video src={videoUrl!} className="w-full h-full object-contain" controls />
-                )}
-                <button 
-                  onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); }}
-                  className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
-                <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
-                  <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
-                </button>
-              </div>
-              <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                  <MapPin className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
-                    {address || '위치를 선택해주세요'}
-                  </p>
+          <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+            <div className="space-y-6 px-1">
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={takePhoto}
+                    className={cn(
+                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                      draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                    )}
+                  >
+                    <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
+                    <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
+                  </button>
+                  <button 
+                    onClick={() => videoInputRef.current?.click()}
+                    className={cn(
+                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                      videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                    )}
+                  >
+                    <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
+                    <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                  </button>
+                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-              <Textarea 
-                placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-indigo-600 resize-none text-base font-medium"
-                value={draft.content}
-                onChange={(e) => postDraftStore.set({ content: e.target.value })}
-              />
+              {(draft.image || videoUrl) && (
+                <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+                  {draft.image ? (
+                    <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                  )}
+                  <button 
+                    onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); }}
+                    className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                  <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                    <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
+                  </button>
+                </div>
+                <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <MapPin className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
+                      {address || '위치를 선택해주세요'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                <Textarea 
+                  placeholder="이 장소에서의 추억을 기록해보세요..."
+                  className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                  value={draft.content}
+                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 
           <div className={cn("py-4 bg-white shrink-0 transition-all duration-300", isKeyboardOpen ? "pb-2" : "pb-[120px]")}>
             <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
               onClick={handlePost}
               disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
