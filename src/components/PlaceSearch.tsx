@@ -34,6 +34,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao && kakao.maps && kakao.maps.services) {
+      // 장소 및 주소 검색을 위한 Places 서비스 초기화
       searchService.current = new kakao.maps.services.Places();
     }
   }, [isOpen]);
@@ -50,12 +51,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     const kakao = (window as any).kakao;
 
     try {
+      // keywordSearch는 장소명, 주소, 카테고리 등 통합 검색을 지원합니다.
       searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
         if (status === kakao.maps.services.Status.OK) {
           const formatted = data.map((item: any) => ({
             id: item.id,
-            name: item.place_name,
-            address: item.road_address_name || item.address_name,
+            name: item.place_name, // 장소명 또는 주소명
+            address: item.road_address_name || item.address_name, // 상세 주소
             lat: parseFloat(item.y),
             lng: parseFloat(item.x)
           }));
@@ -71,7 +73,12 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           setPagination(null);
         }
         setIsLoading(false);
-      }, { page: pageNum, size: 10 });
+      }, { 
+        page: pageNum, 
+        size: 10,
+        // 특정 지역에 국한되지 않고 전국을 대상으로 검색하도록 설정
+        useMapBounds: false 
+      });
     } catch (error) {
       console.error("Search error:", error);
       setIsLoading(false);
@@ -119,7 +126,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
         
         <div className="px-8 flex flex-col flex-1 overflow-hidden">
           <div className="flex items-center justify-between mb-6 shrink-0">
-            <h2 className="text-xl font-black text-gray-900">장소 검색</h2>
+            <h2 className="text-xl font-black text-gray-900">장소 및 주소 검색</h2>
             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-gray-100">
               <X className="w-5 h-5 text-gray-400" />
             </Button>
@@ -128,7 +135,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           <div className="relative mb-6 shrink-0">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
-              placeholder="어디로 갈까요? (예: 성수동 카페)" 
+              placeholder="장소명 또는 주소를 입력하세요 (예: 상일동)" 
               className="pl-12 h-14 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold shadow-inner"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
