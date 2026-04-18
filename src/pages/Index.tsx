@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, profile } = useAuth();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -68,7 +68,6 @@ const Index = () => {
   const isSyncing = useRef(false);
   const hasGlobalSeeded = useRef(false);
 
-  // 대한민국 주요 거점 도시 좌표
   const KOREA_HUBS = [
     { name: '서울', lat: 37.5665, lng: 126.9780 },
     { name: '부산', lat: 35.1796, lng: 129.0756 },
@@ -82,38 +81,32 @@ const Index = () => {
     { name: '전주', lat: 35.8242, lng: 127.1480 }
   ];
 
-  // 1. 지도 변경 핸들러
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) return;
-    
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      
-      if (data.level !== undefined && data.level !== currentZoom) {
-        setCurrentZoom(data.level);
-      }
-      
-      if (isSelectingLocation) {
-        setTempSelectedLocation(data.center);
-      }
+      if (data.level !== undefined && data.level !== currentZoom) setCurrentZoom(data.level);
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 2. 전역 데이터 시딩 (최초 1회 전국 100개 생성)
-  const seedGlobalData = useCallback(async () => {
-    if (hasGlobalSeeded.current) return;
+  // 전역 데이터 시딩 로직 개선
+  const seedGlobalData = useCallback(async (force = false) => {
+    if (!authUser || (hasGlobalSeeded.current && !force)) return;
     hasGlobalSeeded.current = true;
 
     try {
-      const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+      const { count, error: countError } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+      if (countError) throw countError;
       
-      if (count === 0) {
+      if (count === 0 || force) {
         const toastId = showLoading('전국 지도를 탐험할 준비를 하고 있습니다...');
         let allMockData: any[] = [];
+        const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+        const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
         
-        // 각 허브 도시별로 10개씩 생성 (총 100개)
         KOREA_HUBS.forEach(hub => {
           const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
           const insertData = mockPosts.map(p => ({
@@ -122,9 +115,9 @@ const Index = () => {
             latitude: p.lat,
             longitude: p.lng,
             image_url: p.image,
-            user_id: p.user.id,
-            user_name: p.user.name,
-            user_avatar: p.user.avatar,
+            user_id: authUser.id, // 실제 로그인한 사용자 ID 사용
+            user_name: displayName,
+            user_avatar: avatarUrl,
             likes: p.likes,
             category: p.category,
             border_type: p.borderType,
@@ -136,25 +129,31 @@ const Index = () => {
           allMockData = [...allMockData, ...insertData];
         });
 
-        const { error } = await supabase.from('posts').insert(allMockData);
+        const { error: insertError } = await supabase.from('posts').insert(allMockData);
         dismissToast(toastId);
-        if (!error) showSuccess('대한민국 전역에 100개의 새로운 추억이 등록되었습니다! 🇰🇷');
+        
+        if (insertError) {
+          console.error('[Global Seed] Insert Error:', insertError);
+          showError(`데이터 생성 실패: ${insertError.message}`);
+        } else {
+          showSuccess('대한민국 전역에 100개의 새로운 추억이 등록되었습니다! 🇰🇷');
+          // 생성 후 즉시 동기화 시도
+          syncPostsWithSupabase();
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Global Seed] Error:', err);
+      showError('데이터베이스 연결 상태를 확인해주세요.');
     }
-  }, []);
+  }, [authUser, profile]);
 
-  // 3. Supabase 데이터 동기화
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
-    
     isSyncing.current = true;
     const { sw, ne } = mapData.bounds;
 
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne);
-      
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
@@ -163,23 +162,24 @@ const Index = () => {
         return combined;
       });
 
-      // 타일 기반 추가 시딩 (데이터가 너무 적을 때만)
       const latIdx = Math.floor(mapData.center.lat / TILE_SIZE);
       const lngIdx = Math.floor(mapData.center.lng / TILE_SIZE);
       const tileKey = `${latIdx},${lngIdx}`;
 
-      if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 3) {
+      if (!mapCache.populatedTiles.has(tileKey) && dbPosts.length < 3 && authUser) {
         mapCache.populatedTiles.add(tileKey);
         const mockData = createMockPosts(mapData.center.lat, mapData.center.lng, 8);
+        const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+        
         const insertData = mockData.map(p => ({
           content: p.content,
           location_name: p.location,
           latitude: p.lat,
           longitude: p.lng,
           image_url: p.image,
-          user_id: p.user.id,
-          user_name: p.user.name,
-          user_avatar: p.user.avatar,
+          user_id: authUser.id, // 실제 로그인한 사용자 ID 사용
+          user_name: displayName,
+          user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
           likes: p.likes,
           category: p.category,
           border_type: p.borderType,
@@ -195,7 +195,7 @@ const Index = () => {
     } finally {
       isSyncing.current = false;
     }
-  }, [mapData]);
+  }, [mapData, authUser, profile]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
@@ -205,14 +205,9 @@ const Index = () => {
     syncPostsWithSupabase();
   }, [mapData, syncPostsWithSupabase]);
 
-  // 4. 필터링 및 마커 표시 로직
   useEffect(() => {
     if (!mapData?.bounds) return;
-    
-    if (currentZoom >= 9) {
-      setDisplayedMarkers([]);
-      return;
-    }
+    if (currentZoom >= 9) { setDisplayedMarkers([]); return; }
 
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
@@ -221,46 +216,27 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
-
       if (post.id === highlightedPostId) return true;
-
-      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
-                             post.lng >= sw.lng && post.lng <= ne.lng;
-      
+      const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng;
       if (!isWithinBounds) return false;
-
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
       const isMe = authUser && post.user.id === authUser.id;
       const isTargetUser = post.user.id === targetUserId;
-
       let matchesCategory = false;
-      if (selectedCategories.includes('mine')) {
-        matchesCategory = !!isMe;
-      } else if (selectedCategories.includes('user_filter')) {
-        matchesCategory = !!isTargetUser;
-      } else if (selectedCategories.includes('all')) {
-        matchesCategory = true;
-      } else {
-        matchesCategory = selectedCategories.includes(post.category || 'none') ||
-                          (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-                          (selectedCategories.includes('influencer') && post.isInfluencer);
-      }
-
+      if (selectedCategories.includes('mine')) matchesCategory = !!isMe;
+      else if (selectedCategories.includes('user_filter')) matchesCategory = !!isTargetUser;
+      else if (selectedCategories.includes('all')) matchesCategory = true;
+      else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
       return isWithinTime && matchesCategory;
     });
 
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
-
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
-
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
-      if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) {
-        finalMarkers.unshift(highlightedPost);
-      }
+      if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
     }
-
     setDisplayedMarkers(finalMarkers);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts, highlightedPostId]);
 
@@ -278,9 +254,11 @@ const Index = () => {
     setIsRefreshing(true);
     mapCache.populatedTiles.clear();
     setAllPosts([]);
+    // 새로고침 시 데이터가 없다면 강제 시딩 시도
+    await seedGlobalData(true);
     await syncPostsWithSupabase();
     setIsRefreshing(false);
-  }, [syncPostsWithSupabase]);
+  }, [syncPostsWithSupabase, seedGlobalData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
@@ -309,10 +287,7 @@ const Index = () => {
   };
 
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-
-  const handleViewAllClick = () => {
-    if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true);
-  };
+  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); };
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
