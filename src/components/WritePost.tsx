@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Youtube } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
-import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,12 +25,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const { user: authUser, profile } = useAuth();
   
   const [draft, setDraft] = useState(postDraftStore.get());
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
+  
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = postDraftStore.subscribe(() => {
@@ -80,11 +80,25 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       
       if (image.dataUrl) {
         postDraftStore.set({ image: image.dataUrl });
+        setVideoUrl(null); // 사진 선택 시 비디오 제거
       }
     } catch (error) {
       console.error('Camera error:', error);
     } finally {
       setIsTakingPhoto(false);
+    }
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) { // 50MB 제한
+        showError('동영상 용량은 50MB를 초과할 수 없습니다.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      setVideoUrl(url);
+      postDraftStore.set({ image: null }); // 비디오 선택 시 사진 제거
     }
   };
 
@@ -94,8 +108,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!draft.image) {
-      showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
+    if (!draft.image && !videoUrl) {
+      showError('사진이나 동영상을 첨 be해야 포스팅을 등록할 수 있습니다.');
       return;
     }
 
@@ -113,13 +127,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       location_name: address,
       latitude: initialLocation.lat,
       longitude: initialLocation.lng,
-      image_url: draft.image,
+      image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop', // 비디오만 있을 경우 기본 썸네일
+      video_url: videoUrl,
       user_id: authUser.id,
       user_name: displayName,
       user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
       likes: 0,
-      created_at: new Date().toISOString(),
-      youtube_url: youtubeUrl.trim() || null
+      created_at: new Date().toISOString()
     };
 
     try {
@@ -147,18 +161,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         likes: 0,
         commentsCount: 0,
         comments: [],
-        image: draft.image,
+        image: postData.image_url,
+        videoUrl: videoUrl,
         isLiked: false,
         createdAt: new Date(),
-        borderType: 'none',
-        youtubeUrl: youtubeUrl.trim()
+        borderType: 'none'
       };
 
       if (onPostCreated) onPostCreated(newPost);
       showSuccess('새로운 추억이 등록되었습니다! ✨');
       
       postDraftStore.clear();
-      setYoutubeUrl('');
+      setVideoUrl(null);
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -185,37 +199,56 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-            <div 
-              onClick={takePhoto}
-              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
-            >
-              {draft.image ? (
-                <img src={draft.image} alt="Captured" className="w-full h-full object-cover" />
-              ) : (
-                <>
-                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Camera className="w-7 h-7 text-indigo-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-gray-900">사진 촬영하기</p>
-                    <p className="text-xs text-gray-400 mt-1">지금 이 순간을 캡처하세요</p>
-                  </div>
-                </>
-              )}
-            </div>
-
+            {/* Media Selection Area */}
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">유튜브 링크 (선택)</p>
-              <div className="relative">
-                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" />
-                <Input 
-                  placeholder="https://youtube.com/..."
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="h-12 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-medium"
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={takePhoto}
+                  className={cn(
+                    "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                    draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                  )}
+                >
+                  <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
+                  <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
+                </button>
+                <button 
+                  onClick={() => videoInputRef.current?.click()}
+                  className={cn(
+                    "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                    videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                  )}
+                >
+                  <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
+                  <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                </button>
+                <input 
+                  type="file" 
+                  ref={videoInputRef} 
+                  className="hidden" 
+                  accept="video/*" 
+                  onChange={handleVideoSelect} 
                 />
               </div>
             </div>
+
+            {/* Preview Area */}
+            {(draft.image || videoUrl) && (
+              <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+                {draft.image ? (
+                  <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                )}
+                <button 
+                  onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); }}
+                  className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
@@ -251,7 +284,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
               onClick={handlePost}
-              disabled={!draft.content || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>

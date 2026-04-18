@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Heart, MessageCircle, Share2, MapPin, X, Flame, Star, ChevronDown, ChevronUp, Utensils, Car, TreePine, Sparkles, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, getYoutubeId } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
@@ -108,7 +108,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
-  const videoId = getYoutubeId(post.youtubeUrl || '');
+  const videoUrl = post.videoUrl;
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
@@ -241,15 +241,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : ""))
                     )}>
                       <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-                        {videoId && isPlayingVideo ? (
-                          <iframe
-                            className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
+                        {videoUrl && isPlayingVideo ? (
+                          <video 
+                            src={videoUrl} 
+                            className="w-full h-full object-cover" 
+                            controls 
+                            autoPlay 
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         ) : (
                           <div className="relative w-full h-full">
                             <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
@@ -260,7 +259,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 </div>
                               ))}
                             </div>
-                            {videoId && (
+                            {videoUrl && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
                                 className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
@@ -270,7 +269,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 </div>
                               </button>
                             )}
-                            {images.length > 1 && !videoId && (
+                            {images.length > 1 && !videoUrl && (
                               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                                 {images.map((_: any, idx: number) => (
                                   <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />

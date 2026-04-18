@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
-import { cn, getYoutubeId } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,7 @@ interface PostItemProps {
   category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
   disablePulse?: boolean;
-  youtubeUrl?: string;
+  videoUrl?: string;
   onLikeToggle?: (e: React.MouseEvent) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
@@ -78,7 +78,7 @@ const PostItem = ({
   category = 'none',
   borderType = 'none',
   disablePulse = false,
-  youtubeUrl,
+  videoUrl,
   onLikeToggle,
   onLocationClick,
   onDelete,
@@ -104,7 +104,6 @@ const PostItem = ({
   
   const displayImages = images.length > 0 ? images : [image];
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
-  const videoId = getYoutubeId(youtubeUrl || '');
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (onImageError) {
@@ -317,15 +316,14 @@ const PostItem = ({
       <div className="px-4">
         <div className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
           <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-            {videoId && isPlayingVideo ? (
-              <iframe
-                className="w-full h-full"
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            {videoUrl && isPlayingVideo ? (
+              <video 
+                src={videoUrl} 
+                className="w-full h-full object-cover" 
+                controls 
+                autoPlay 
+                onClick={(e) => e.stopPropagation()}
+              />
             ) : (
               <div className="relative w-full h-full">
                 <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
@@ -336,7 +334,7 @@ const PostItem = ({
                     </div>
                   ))}
                 </div>
-                {videoId && (
+                {videoUrl && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); setIsPlayingVideo(true); }}
                     className="absolute inset-0 flex items-center justify-center bg-black/20 group/play"
@@ -346,7 +344,7 @@ const PostItem = ({
                     </div>
                   </button>
                 )}
-                {displayImages.length > 1 && !videoId && (
+                {displayImages.length > 1 && !videoUrl && (
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
                     {displayImages.map((_, idx) => (
                       <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />

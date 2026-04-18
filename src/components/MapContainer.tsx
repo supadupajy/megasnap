@@ -112,7 +112,7 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
-    const hasVideo = !!post.youtubeUrl;
+    const hasVideo = !!post.videoUrl;
 
     let pinColor = '';
     let labelText = '';
@@ -204,7 +204,7 @@ const MapContainer = ({
       else if (currentLevel === 8) scale = 0.25;
       else if (currentLevel === 9) scale = 0.125;
 
-      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.youtubeUrl}`;
+      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}-${!!post.videoUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
