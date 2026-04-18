@@ -33,19 +33,8 @@ const Index = () => {
   
   const { data: supabasePosts = [], refetch: refetchSupabase } = useSupabasePosts();
   
-  const [allPosts, setAllPosts] = useState<Post[]>(() => {
-    // 초기 진입 시 캐시가 비어있으면 기본 위치 기반으로 생성
-    if (mapCache.posts.length === 0) {
-      return createMockPosts(37.5665, 126.9780, 50);
-    }
-    return mapCache.posts;
-  });
-
-  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>(() => {
-    // 초기 마커도 미리 계산하여 빈 화면 방지
-    return allPosts.slice(0, 28);
-  });
-
+  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [currentZoom, setCurrentZoom] = useState(6);
@@ -100,6 +89,13 @@ const Index = () => {
       
       if (data.level !== undefined && data.level !== currentZoom) {
         setCurrentZoom(data.level);
+        const getRandomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+        setMaxCounts(prev => ({
+          ...prev,
+          6: getRandomInRange(25, 30),
+          7: getRandomInRange(100, 110),
+          8: getRandomInRange(300, 350)
+        }));
       }
       
       if (isSelectingLocation) {
@@ -110,7 +106,7 @@ const Index = () => {
   }, [isSelectingLocation, currentZoom]);
 
   const filteredAllPosts = useMemo(() => {
-    return allPosts.filter(p => p && p.user && !blockedIds.has(p.user.id));
+    return allPosts.filter(p => !blockedIds.has(p.user.id));
   }, [allPosts, blockedIds]);
 
   const trendingPosts = useMemo(() => {
@@ -226,6 +222,10 @@ const Index = () => {
     
     const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
 
+    const countInfluencer = Math.max(1, Math.floor(displayCount * 0.02));
+    const countPopular = Math.max(1, Math.floor(displayCount * 0.02));
+    const countAd = Math.max(1, Math.floor(displayCount * 0.01));
+
     const needed = displayCount - survivors.length;
     let finalMarkers = survivors;
 
@@ -289,7 +289,9 @@ const Index = () => {
   };
 
   const handleViewAllClick = () => {
-    setIsPostListOpen(true);
+    if (currentZoom < 9) {
+      setIsPostListOpen(true);
+    }
   };
 
   const handlePostCreated = (newPost: Post) => {
@@ -470,8 +472,10 @@ const Index = () => {
                   
                   <button 
                     onClick={handleViewAllClick} 
+                    disabled={currentZoom >= 9} 
                     className={cn(
-                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative"
+                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
+                      currentZoom >= 9 && "opacity-50 grayscale cursor-not-allowed"
                     )}
                   >
                     <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -480,7 +484,7 @@ const Index = () => {
                     <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
                   </button>
                   
-                  {displayedMarkers.length > 0 && (
+                  {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>
