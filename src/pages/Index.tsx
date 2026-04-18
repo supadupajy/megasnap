@@ -117,70 +117,87 @@ const Index = () => {
     if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
-    const toastId = showLoading('전국 데이터를 생성하고 있습니다...');
+    const toastId = showLoading('인플루언서 설정 및 포스팅을 생성 중입니다...');
     
     try {
-      // 1. 내 프로필은 확실히 생성 (본인 권한)
-      await supabase.from('profiles').upsert({
-        id: authUser.id,
-        nickname: profile?.nickname || authUser.email?.split('@')[0] || '탐험가',
-        avatar_url: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
-        updated_at: new Date().toISOString()
-      });
+      // 1. 기존 50명의 프로필 가져오기
+      const { data: profiles, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(100);
 
-      // 2. 기존 데이터가 충분하면 중단 (강제 초기화 아닐 때)
-      if (!force) {
-        const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-        if (count && count > 50) {
-          dismissToast(toastId);
-          return;
-        }
+      if (fetchError || !profiles || profiles.length === 0) {
+        throw new Error('프로필 데이터를 찾을 수 없습니다. 먼저 프로필을 생성해주세요.');
       }
 
-      // 3. 가상 유저 정보 정의 (DB profiles 테이블에는 넣지 않음 - 보안 정책 때문)
-      const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
-        name: `Explorer_${i + 1}`,
-        avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
-      }));
+      // 2. 인플루언서 등급 할당 (상위 6%)
+      const shuffled = [...profiles].sort(() => Math.random() - 0.5);
+      const updates = shuffled.map((p, i) => {
+        let followers = Math.floor(Math.random() * 5000) + 100;
+        if (i === 0) followers = 12000000; // 다이아몬드 (1%)
+        else if (i === 1) followers = 2500000; // 골드 (2%)
+        else if (i <= 3) followers = 450000; // 실버 (3%)
 
-      // 4. 포스팅 데이터 생성 (user_id는 내 ID로, 표시 정보는 가상 유저로)
+        return {
+          ...p,
+          followers,
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      // 프로필 업데이트 (팔로워 수 조정)
+      const { error: updateError } = await supabase.from('profiles').upsert(updates);
+      if (updateError) console.warn('프로필 업데이트 실패 (RLS 정책 확인 필요):', updateError.message);
+
+      // 3. 포스팅 데이터 생성 (150개)
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
-        const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
+        const mockPosts = createMockPosts(hub.lat, hub.lng, 15);
         const insertData = mockPosts.map(p => {
-          const randomAuthor = virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)];
+          // 50명의 유저 중 랜덤 선택
+          const randomUser = updates[Math.floor(Math.random() * updates.length)];
+          
+          // 인기 포스팅 비율 (10%)
+          const isPopular = Math.random() > 0.9;
+          const likes = isPopular ? Math.floor(Math.random() * 2000) + 1500 : p.likes;
+          const borderType = likes >= 1500 ? 'popular' : 'none';
+
           return {
             content: p.content,
             location_name: `${hub.name} 주변`,
             latitude: p.lat,
             longitude: p.lng,
             image_url: p.image,
-            user_id: authUser.id, // 내가 소유자여야 DB 저장이 가능함 (RLS)
-            user_name: randomAuthor.name, // 하지만 이름은 가상 유저로 표시
-            user_avatar: randomAuthor.avatar, // 아바타도 가상 유저로 표시
-            likes: p.likes,
+            user_id: randomUser.id,
+            user_name: randomUser.nickname,
+            user_avatar: randomUser.avatar_url,
+            likes: likes,
+            border_type: borderType,
+            category: p.category || 'none',
+            is_gif: p.isGif || false,
+            is_influencer: (randomUser.followers || 0) >= 100000,
             created_at: p.createdAt.toISOString()
           };
         });
         allMockData = [...allMockData, ...insertData];
       });
 
-      // 5. 데이터 삽입
-      for (let i = 0; i < allMockData.length; i += 10) {
-        const chunk = allMockData.slice(i, i + 10);
+      // 4. 데이터 삽입 (청크 단위)
+      for (let i = 0; i < allMockData.length; i += 20) {
+        const chunk = allMockData.slice(i, i + 20);
         const { error: insertError } = await supabase.from('posts').insert(chunk);
         if (insertError) throw insertError;
       }
 
       dismissToast(toastId);
-      showSuccess('전국 100개의 다양한 유저 포스팅이 생성되었습니다! 🇰🇷');
+      showSuccess('인플루언서 설정 및 150개의 포스팅 생성이 완료되었습니다! ✨');
       syncPostsWithSupabase();
     } catch (err: any) {
       console.error('[Seed] Final Error:', err);
       dismissToast(toastId);
       showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
     }
-  }, [authUser, profile, syncPostsWithSupabase]);
+  }, [authUser, syncPostsWithSupabase]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
