@@ -32,6 +32,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const lastDragEnd = useRef<number>(0);
+  const isProgrammaticMove = useRef<boolean>(false);
   
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => {
@@ -61,6 +62,9 @@ const MapContainer = ({
         mapInstance.current = map;
 
         const updateMapData = () => {
+          // 프로그래밍 방식으로 이동 중일 때는 외부 상태 업데이트를 잠시 멈춤 (애니메이션 끊김 방지)
+          if (isProgrammaticMove.current) return;
+
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
           const sw = bounds.getSouthWest();
@@ -84,7 +88,18 @@ const MapContainer = ({
 
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
-        kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; lastDragEnd.current = Date.now(); });
+        kakao.maps.event.addListener(map, 'dragend', () => { 
+          isDragging.current = false; 
+          lastDragEnd.current = Date.now(); 
+        });
+
+        // 이동 애니메이션이 끝났을 때 상태 동기화
+        kakao.maps.event.addListener(map, 'idle', () => {
+          if (isProgrammaticMove.current) {
+            isProgrammaticMove.current = false;
+            updateMapData();
+          }
+        });
 
         kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
           if (Date.now() - lastDragEnd.current < 200) return;
@@ -108,16 +123,30 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 외부에서 center 값이 변경될 때 지도 이동
+  // 외부에서 center 값이 변경될 때 지도 이동 (panTo 사용)
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const kakao = (window as any).kakao;
       const newCenter = new kakao.maps.LatLng(center.lat, center.lng);
       
       const currentCenter = mapInstance.current.getCenter();
-      if (Math.abs(currentCenter.getLat() - center.lat) > 0.00001 || 
-          Math.abs(currentCenter.getLng() - center.lng) > 0.00001) {
+      const latDiff = Math.abs(currentCenter.getLat() - center.lat);
+      const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
+
+      if (latDiff > 0.00001 || lngDiff > 0.00001) {
+        // 이동 시작 전 플래그 설정
+        isProgrammaticMove.current = true;
+        
+        // panTo는 부드러운 이동을 지원함
         mapInstance.current.panTo(newCenter);
+        
+        // 만약 너무 멀어서 panTo가 애니메이션 없이 작동할 경우를 대비해 
+        // 일정 시간 후 플래그 해제 보장
+        setTimeout(() => {
+          if (isProgrammaticMove.current) {
+            isProgrammaticMove.current = false;
+          }
+        }, 1000);
       }
     }
   }, [center, isMapReady]);
@@ -221,7 +250,6 @@ const MapContainer = ({
       else if (currentLevel === 8) scale = 0.25;
       else if (currentLevel === 9) scale = 0.125;
 
-      // 강조 상태를 제외한 나머지 상태값으로 innerHTML 업데이트 여부 결정
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
@@ -255,14 +283,12 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           content.style.setProperty('--marker-scale', scale.toString());
           
-          // 강조 상태는 클래스 토글로만 관리 (CSS 트랜지션 활용)
           if (isHighlighted) {
             content.classList.add('highlighted');
           } else {
             content.classList.remove('highlighted');
           }
           
-          // 내용이 바뀌었을 때만 innerHTML 교체 (애니메이션 끊김 방지)
           if (content.getAttribute('data-content-state') !== contentStateKey) {
             requestAnimationFrame(() => {
               content.innerHTML = getMarkerInnerHtml(post, isViewed);
