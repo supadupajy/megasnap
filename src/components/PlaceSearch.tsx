@@ -35,6 +35,31 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const isSearching = useRef(false);
   const lastQuery = useRef('');
 
+  // 바디 스크롤 및 위치 고정 (키보드 대응)
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    }
+    
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao?.maps?.services) {
@@ -170,6 +195,14 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     return () => observer.disconnect();
   }, [pagination, isLoading, loadNextPage]);
 
+  // 키보드가 올라올 때 화면이 밀리는 것을 방지하기 위한 핸들러
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+    }, 100);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -177,8 +210,9 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-0 z-[2000] bg-white flex flex-col"
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          className="fixed top-0 left-0 right-0 bottom-0 z-[2000] bg-white flex flex-col overflow-hidden"
+          style={{ height: '100%', position: 'fixed' }}
         >
           {/* Header */}
           <div className="pt-12 pb-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
@@ -195,7 +229,9 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                 className="pl-9 h-11 bg-gray-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onFocus={handleInputFocus}
                 autoFocus
+                autoComplete="off"
               />
               {isLoading && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -206,7 +242,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           </div>
 
           {/* Results */}
-          <div className="flex-1 overflow-y-auto no-scrollbar">
+          <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
             <div className="p-4 space-y-1">
               {results.map((place) => (
                 <button 
