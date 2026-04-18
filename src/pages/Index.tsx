@@ -200,7 +200,8 @@ const Index = () => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
       
-      if (!isWithinBounds) return false;
+      // 강조된 포스팅(highlightedPostId)은 범위 밖이라도 일단 후보에 포함 (지도가 이동 중일 수 있음)
+      if (!isWithinBounds && post.id !== highlightedPostId) return false;
 
       // 광고는 항상 표시, 일반 포스트는 시간 제한 적용
       const isWithinTime = post.isAd || (now - post.createdAt.getTime()) <= timeLimitMs;
@@ -221,6 +222,10 @@ const Index = () => {
       }
 
       const isNotBlocked = !blockedIds.has(post.user.id);
+      
+      // 강조된 포스팅은 모든 필터를 무시하고 표시 대상 후보가 됨
+      if (post.id === highlightedPostId) return isNotBlocked;
+
       return isWithinTime && matchesCategory && isNotBlocked;
     });
 
@@ -242,8 +247,16 @@ const Index = () => {
       finalMarkers = survivors.sort(stableSort).slice(0, displayCount);
     }
 
+    // 강조된 포스팅이 최종 리스트에 없다면 강제로 추가
+    if (highlightedPostId) {
+      const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
+      if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) {
+        finalMarkers = [highlightedPost, ...finalMarkers];
+      }
+    }
+
     setDisplayedMarkers(finalMarkers);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts]);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, maxCounts, highlightedPostId]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -265,10 +278,11 @@ const Index = () => {
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
     setIsTrendingExpanded(false);
+    // 클릭 즉시 강조 ID 설정하여 마커 렌더링 보장
+    setHighlightedPostId(post.id);
     setTimeout(() => {
-      setHighlightedPostId(post.id);
-      setTimeout(() => setHighlightedPostId(null), 3000);
-    }, 1500);
+      setHighlightedPostId(null);
+    }, 4000);
   }, []);
 
   const handleCurrentLocation = async () => {
