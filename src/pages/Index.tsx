@@ -91,7 +91,6 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 데이터 동기화 함수
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
     isSyncing.current = true;
@@ -113,7 +112,6 @@ const Index = () => {
     }
   }, [mapData]);
 
-  // 데이터 시딩 로직 (의존성 최소화)
   const seedGlobalData = useCallback(async (force = false) => {
     if (!authUser) return;
     if (hasGlobalSeeded.current && !force) return;
@@ -125,22 +123,29 @@ const Index = () => {
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
       const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
 
-      // 프로필 생성
-      await supabase.from('profiles').upsert({
+      // 1. 프로필 생성 (반드시 성공해야 함)
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: authUser.id,
         nickname: displayName,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       });
 
+      if (profileError) {
+        console.error('[Seed] Profile Error:', profileError);
+        throw new Error(`프로필 생성 실패: ${profileError.message}`);
+      }
+
+      // 2. 기존 데이터 확인
       if (!force) {
-        const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-        if (count && count > 0) {
+        const { count, error: countError } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+        if (!countError && count && count > 0) {
           dismissToast(toastId);
           return;
         }
       }
 
+      // 3. 데이터 생성
       const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
         name: `Explorer_${i + 1}`,
         avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
@@ -149,41 +154,44 @@ const Index = () => {
       let allMockData: any[] = [];
       KOREA_HUBS.forEach(hub => {
         const mockPosts = createMockPosts(hub.lat, hub.lng, 10);
-        const insertData = mockPosts.map(p => {
-          const author = virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)];
-          return {
-            content: p.content,
-            location_name: `${hub.name} 주변`,
-            latitude: p.lat,
-            longitude: p.lng,
-            image_url: p.image,
-            user_id: authUser.id,
-            user_name: author.name,
-            user_avatar: author.avatar,
-            likes: p.likes,
-            category: p.category,
-            border_type: p.borderType,
-            is_gif: p.isGif,
-            is_influencer: p.isInfluencer,
-            youtube_url: p.youtubeUrl,
-            created_at: p.createdAt.toISOString()
-          };
-        });
+        const insertData = mockPosts.map(p => ({
+          content: p.content,
+          location_name: `${hub.name} 주변`,
+          latitude: p.lat,
+          longitude: p.lng,
+          image_url: p.image,
+          user_id: authUser.id,
+          user_name: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].name,
+          user_avatar: virtualAuthors[Math.floor(Math.random() * virtualAuthors.length)].avatar,
+          likes: p.likes,
+          category: p.category,
+          border_type: p.borderType,
+          is_gif: p.isGif,
+          is_influencer: p.isInfluencer,
+          youtube_url: p.youtubeUrl,
+          created_at: p.createdAt.toISOString()
+        }));
         allMockData = [...allMockData, ...insertData];
       });
 
-      for (let i = 0; i < allMockData.length; i += 20) {
-        const chunk = allMockData.slice(i, i + 20);
-        await supabase.from('posts').insert(chunk);
+      // 4. 10개씩 끊어서 삽입하며 에러 체크
+      for (let i = 0; i < allMockData.length; i += 10) {
+        const chunk = allMockData.slice(i, i + 10);
+        const { error: insertError } = await supabase.from('posts').insert(chunk);
+        
+        if (insertError) {
+          console.error(`[Seed] Insert Error at chunk ${i/10}:`, insertError);
+          throw new Error(`데이터 삽입 실패 (${i/10}): ${insertError.message}`);
+        }
       }
 
       dismissToast(toastId);
       showSuccess('전국 100개의 테스트 데이터가 생성되었습니다! 🇰🇷');
       syncPostsWithSupabase();
     } catch (err: any) {
-      console.error('[Seed] Error:', err);
+      console.error('[Seed] Final Error:', err);
       dismissToast(toastId);
-      showError('데이터 생성 중 오류가 발생했습니다.');
+      showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
     }
   }, [authUser, profile, syncPostsWithSupabase]);
 
@@ -365,7 +373,6 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              {/* 데이터 강제 초기화 버튼 (상단 우측) */}
               <div className="absolute top-[100px] right-4 z-[60]">
                 <button 
                   onClick={handleForceSeed}
