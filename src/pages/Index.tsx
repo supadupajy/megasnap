@@ -63,7 +63,6 @@ const Index = () => {
   const [finalSelectedLocation, setFinalSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  const TILE_SIZE = 0.05; 
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const hasGlobalSeeded = useRef(false);
@@ -92,18 +91,41 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
+  // 데이터 동기화 함수
+  const syncPostsWithSupabase = useCallback(async () => {
+    if (!mapData?.bounds || isSyncing.current) return;
+    isSyncing.current = true;
+    const { sw, ne } = mapData.bounds;
+
+    try {
+      const dbPosts = await fetchPostsInBounds(sw, ne);
+      setAllPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
+        const combined = [...prev, ...newUnique];
+        mapCache.posts = combined;
+        return combined;
+      });
+    } catch (err) {
+      console.error('[Sync] Error:', err);
+    } finally {
+      isSyncing.current = false;
+    }
+  }, [mapData]);
+
+  // 데이터 시딩 로직 (의존성 최소화)
   const seedGlobalData = useCallback(async (force = false) => {
     if (!authUser) return;
     if (hasGlobalSeeded.current && !force) return;
     hasGlobalSeeded.current = true;
 
     const toastId = showLoading('데이터베이스를 초기화하고 있습니다...');
-    console.log('[Seed] Starting data seeding process...');
-
+    
     try {
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
       const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
 
+      // 프로필 생성
       await supabase.from('profiles').upsert({
         id: authUser.id,
         nickname: displayName,
@@ -152,40 +174,18 @@ const Index = () => {
 
       for (let i = 0; i < allMockData.length; i += 20) {
         const chunk = allMockData.slice(i, i + 20);
-        const { error: insertError } = await supabase.from('posts').insert(chunk);
-        if (insertError) throw insertError;
+        await supabase.from('posts').insert(chunk);
       }
 
       dismissToast(toastId);
       showSuccess('전국 100개의 테스트 데이터가 생성되었습니다! 🇰🇷');
       syncPostsWithSupabase();
     } catch (err: any) {
-      console.error('[Seed] Critical Error:', err);
+      console.error('[Seed] Error:', err);
       dismissToast(toastId);
-      showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
+      showError('데이터 생성 중 오류가 발생했습니다.');
     }
   }, [authUser, profile, syncPostsWithSupabase]);
-
-  const syncPostsWithSupabase = useCallback(async () => {
-    if (!mapData?.bounds || isSyncing.current) return;
-    isSyncing.current = true;
-    const { sw, ne } = mapData.bounds;
-
-    try {
-      const dbPosts = await fetchPostsInBounds(sw, ne);
-      setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-        const combined = [...prev, ...newUnique];
-        mapCache.posts = combined;
-        return combined;
-      });
-    } catch (err) {
-      console.error('[Sync] Error:', err);
-    } finally {
-      isSyncing.current = false;
-    }
-  }, [mapData]);
 
   useEffect(() => {
     if (authUser) seedGlobalData();
@@ -365,7 +365,7 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              {/* 데이터 강제 초기화 버튼 (상단 우측으로 이동) */}
+              {/* 데이터 강제 초기화 버튼 (상단 우측) */}
               <div className="absolute top-[100px] right-4 z-[60]">
                 <button 
                   onClick={handleForceSeed}
