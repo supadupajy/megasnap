@@ -19,15 +19,11 @@ const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, profile, loading: authLoading } = useAuth();
-  
-  // 초기 상태를 목데이터로 설정하여 빈 화면 방지
-  const [posts, setPosts] = useState<Post[]>(() => {
-    return createMockPosts(37.5665, 126.9780, 10).sort((a, b) => b.likes - a.likes);
-  });
-  
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const hasLoaded = useRef(false);
 
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser?.id}`, [profile, authUser]);
@@ -36,70 +32,102 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (authLoading) return;
-      
-      setIsInitialLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('likes', { ascending: false })
-          .limit(20);
+  const loadInitialData = useCallback(async (uid: string) => {
+    if (hasLoaded.current) return;
+    
+    setIsInitialLoading(true);
+    // 기본 목데이터 생성
+    let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
-        if (error) throw error;
-
-        const realPosts = (data || []).map(p => ({
-          id: p.id,
-          isAd: false,
-          isGif: false,
-          isInfluencer: false,
-          user: {
-            id: p.user_id,
-            name: p.user_name || displayName,
-            avatar: p.user_avatar || avatarUrl
-          },
-          content: p.content,
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: Number(p.likes || 0),
-          commentsCount: 0,
-          comments: [],
-          image: p.image_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-        })) as Post[];
-
-        // 목데이터와 실제 데이터를 합침
-        const mockPosts = createMockPosts(37.5665, 126.9780, 10);
-        const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
-        setPosts(combined);
-      } catch (err) {
-        console.error('[Popular] Fetch Error:', err);
-      } finally {
-        setIsInitialLoading(false);
+    // 유튜브 비율 적용
+    mockPosts = mockPosts.map((post, index) => {
+      if (index % 2 === 0) {
+        const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
+        const thumb = getYoutubeThumbnail(youtubeUrl);
+        return {
+          ...post,
+          youtubeUrl,
+          image: thumb || post.image
+        };
       }
-    };
+      return post;
+    });
 
-    loadData();
-  }, [authLoading, displayName, avatarUrl]);
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('likes', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      const realPosts = (data || []).map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: {
+          id: p.user_id,
+          name: p.user_name || displayName,
+          avatar: p.user_avatar || avatarUrl
+        },
+        content: p.content,
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes || 0),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+      })) as Post[];
+
+      const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
+      setPosts(combined);
+      hasLoaded.current = true;
+    } catch (err) {
+      console.error('[Popular] Fetch Error:', err);
+      setPosts(mockPosts);
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }, [displayName, avatarUrl]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (authUser) {
+        loadInitialData(authUser.id);
+      } else {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [authLoading, authUser, loadInitialData, navigate]);
 
   const loadMorePosts = useCallback(() => {
-    if (isLoadingMore) return;
+    if (isLoadingMore || isInitialLoading) return;
     setIsLoadingMore(true);
 
     setTimeout(() => {
-      const newPosts = createMockPosts(37.5665, 126.9780, 10)
+      let newPosts = createMockPosts(37.5665, 126.9780, 15)
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
         .sort((a, b) => b.likes - a.likes);
       
+      newPosts = newPosts.map((post, index) => {
+        if (index % 2 === 0) {
+          const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          const thumb = getYoutubeThumbnail(youtubeUrl);
+          return { ...post, youtubeUrl, image: thumb || post.image };
+        }
+        return post;
+      });
+
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
-  }, [isLoadingMore]);
+  }, [isLoadingMore, isInitialLoading]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -131,6 +159,16 @@ const Popular = () => {
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
+
+  if (authLoading || (isInitialLoading && posts.length === 0)) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!authUser) return null;
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">

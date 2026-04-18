@@ -74,28 +74,24 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
-  
-  // 초기 상태를 initialPosts 또는 mapCache로 설정
-  const [posts, setPosts] = useState<Post[]>(() => {
-    if (initialPosts && initialPosts.length > 0) return initialPosts;
-    if (mapCache.posts.length > 0) return mapCache.posts.slice(0, 10);
-    return createMockPosts(mapCenter.lat, mapCenter.lng, 10);
-  });
-  
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  // 오버레이가 열릴 때 데이터 동기화
   useEffect(() => {
     if (isOpen) {
-      if (initialPosts && initialPosts.length > 0) {
+      // initialPosts가 비어있을 경우를 대비해 mapCache나 mockData 활용 고려
+      if (initialPosts.length > 0) {
         setPosts(initialPosts);
-      } else if (posts.length === 0) {
-        setPosts(createMockPosts(mapCenter.lat, mapCenter.lng, 10));
+      } else {
+        // 주변 포스트가 없을 경우 현재 위치 기반으로 새로 생성
+        const fallbackPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
+        setPosts(fallbackPosts);
       }
     }
   }, [isOpen, initialPosts, mapCenter]);
@@ -105,7 +101,10 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
     setIsLoadingMore(true);
     setTimeout(() => {
       const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
-      setPosts(prev => [...prev, ...newPosts]);
+      setPosts(prev => {
+        const combined = [...prev, ...newPosts];
+        return combined;
+      });
       setIsLoadingMore(false);
     }, 800);
   }, [isLoadingMore, mapCenter, isOpen]);
