@@ -211,19 +211,19 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 비율 조정 로직 (일반 90%, 인기 5%, 인플루언서 5%)
+    // 비율 조정 로직 (일반 95%, 인기 2%, 인플루언서 2%, 광고 1%)
     const typeRoll = randomFn();
     let isInfluencer = false;
     let isPopular = false;
     let isAd = false;
 
     if (!specificUserId) {
-      if (typeRoll < 0.05) {
-        isInfluencer = true; // 5% 인플루언서
-      } else if (typeRoll < 0.10) {
-        isPopular = true; // 5% 인기 포스팅
-      } else if (typeRoll < 0.13) {
-        isAd = true; // 일반 포스팅 중 약 3%는 광고
+      if (typeRoll < 0.02) {
+        isInfluencer = true; // 2% 인플루언서
+      } else if (typeRoll < 0.04) {
+        isPopular = true; // 2% 인기 포스팅
+      } else if (typeRoll < 0.05) {
+        isAd = true; // 1% 광고
       }
     }
 

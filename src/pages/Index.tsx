@@ -185,7 +185,6 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // 1. 현재 화면 영역 내에 있는 모든 후보군 필터링
     const inBoundsCandidates = allPosts.filter(post => {
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat &&
                              post.lng >= sw.lng && post.lng <= ne.lng;
@@ -216,14 +215,16 @@ const Index = () => {
     const displayCount = maxCounts[currentZoom] || inBoundsCandidates.length;
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
 
-    // 2. [핵심] 이미 표시되고 있는 마커 중 화면 안에 남은 것들(생존자) 찾기
     const prevDisplayedIds = new Set(displayedMarkers.map(p => p.id));
     const survivors = inBoundsCandidates.filter(p => prevDisplayedIds.has(p.id));
     
-    // 3. 새로 진입했거나 아직 표시되지 않은 후보들
     const newCandidates = inBoundsCandidates.filter(p => !prevDisplayedIds.has(p.id)).sort(stableSort);
 
-    // 4. 생존자들을 유지하면서 부족한 만큼만 새로운 후보들로 채움
+    // 특수 마커 비율 조정 (각 2%, 2%, 1%)
+    const countInfluencer = Math.max(1, Math.floor(displayCount * 0.02));
+    const countPopular = Math.max(1, Math.floor(displayCount * 0.02));
+    const countAd = Math.max(1, Math.floor(displayCount * 0.01));
+
     const needed = displayCount - survivors.length;
     let finalMarkers = survivors;
 
@@ -231,7 +232,6 @@ const Index = () => {
       const additions = newCandidates.slice(0, needed);
       finalMarkers = [...survivors, ...additions];
     } else if (needed < 0) {
-      // 만약 생존자가 너무 많아졌다면 (줌 인 등), 우선순위에 따라 잘라냄
       finalMarkers = survivors.sort(stableSort).slice(0, displayCount);
     }
 
