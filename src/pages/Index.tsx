@@ -35,6 +35,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  const [currentZoom, setCurrentZoom] = useState(6);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -78,6 +79,7 @@ const Index = () => {
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
+      if (data.level !== undefined) setCurrentZoom(data.level);
       
       if (isSelectingLocation) {
         setTempSelectedLocation(data.center);
@@ -443,20 +445,22 @@ const Index = () => {
                 <div className="relative">
                   <div className="absolute inset-0 -m-2 bg-indigo-400/30 rounded-[28px] animate-ping-small pointer-events-none" />
                   
-                  <button 
-                    onClick={handleViewAllClick} 
-                    disabled={displayedMarkers.length === 0} 
-                    className={cn(
-                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative"
-                    )}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="shine-overlay absolute inset-0 pointer-events-none" />
-                    <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-                    <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
-                  </button>
+                  {currentZoom < 9 && (
+                    <button 
+                      onClick={handleViewAllClick} 
+                      disabled={displayedMarkers.length === 0} 
+                      className={cn(
+                        "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative"
+                      )}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="shine-overlay absolute inset-0 pointer-events-none" />
+                      <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
+                      <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+                    </button>
+                  )}
                   
-                  {displayedMarkers.length > 0 && (
+                  {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>

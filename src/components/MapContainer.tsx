@@ -39,6 +39,7 @@ const MapContainer = ({
   }, [onMapClick]);
 
   const [isMapReady, setIsMapReady] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(6);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
+        map.setMaxLevel(9); // 최대 축소 레벨을 9로 제한
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -62,13 +64,17 @@ const MapContainer = ({
           const currentCenter = map.getCenter();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
+          const level = map.getLevel();
+          
+          setCurrentLevel(level);
           
           onMapChange({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
               ne: { lat: ne.getLat(), lng: ne.getLng() } 
             },
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() }
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            level: level
           });
         };
 
@@ -205,7 +211,7 @@ const MapContainer = ({
                     ${borderClass ? '' : `border: 2px solid ${isHighlighted ? '#22d3ee' : '#ffffff'};`}
                     overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                     background-color: white;">
-          <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;" class="${(borderType !== 'none' || isAd) ? 'shine-overlay' : ''}">
+          <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
             <img src="${post.image}" 
                  onerror="this.src='${FALLBACK_IMAGE}'"
                  style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
@@ -221,6 +227,13 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
+
+    // 9단계 이상이면 모든 마커 제거
+    if (currentLevel >= 9) {
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      overlaysRef.current.clear();
+      return;
+    }
 
     const currentPostIds = new Set(posts.map(p => p.id));
 
@@ -239,12 +252,18 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       const baseZIndex = isHighlighted ? 1000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
 
-      // 상태 문자열 생성 (깜빡임 방지용 비교 데이터)
-      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}`;
+      // 레벨에 따른 스케일 계산
+      let scale = 1;
+      if (currentLevel === 7) scale = 0.5;
+      else if (currentLevel === 8) scale = 0.25;
+
+      const stateKey = `${post.likes}-${isViewed}-${isHighlighted}-${post.image}-${currentLevel}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay animate-marker-appear';
+        content.style.transformOrigin = 'bottom center';
+        content.style.transform = `translate(-50%, -100%) scale(${scale})`;
         content.setAttribute('data-state', stateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
 
@@ -268,11 +287,12 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         
         if (content instanceof HTMLElement) {
-          // 하이라이트 클래스 토글
+          // 스케일 업데이트
+          content.style.transform = `translate(-50%, -100%) scale(${scale})`;
+          
           if (isHighlighted) content.classList.add('highlighted');
           else content.classList.remove('highlighted');
           
-          // 상태가 실제로 변경되었을 때만 innerHTML 업데이트 (깜빡임 방지 핵심)
           if (content.getAttribute('data-state') !== stateKey) {
             requestAnimationFrame(() => {
               content.innerHTML = getMarkerInnerHtml(post, isViewed, isHighlighted);
@@ -282,7 +302,7 @@ const MapContainer = ({
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
   return (
     <div className="w-full h-full relative bg-gray-100">
