@@ -39,7 +39,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   }, [isOpen]);
 
   // 검색 실행 함수
-  const performSearch = useCallback((keyword: string, page: number = 1) => {
+  const performSearch = useCallback((keyword: string, pageNum: number = 1) => {
     if (!keyword.trim() || !searchService.current) {
       setResults([]);
       setPagination(null);
@@ -49,28 +49,33 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     setIsLoading(true);
     const kakao = (window as any).kakao;
 
-    searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
-      if (status === kakao.maps.services.Status.OK) {
-        const formatted = data.map((item: any) => ({
-          id: item.id,
-          name: item.place_name,
-          address: item.road_address_name || item.address_name,
-          lat: parseFloat(item.y),
-          lng: parseFloat(item.x)
-        }));
+    try {
+      searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const formatted = data.map((item: any) => ({
+            id: item.id,
+            name: item.place_name,
+            address: item.road_address_name || item.address_name,
+            lat: parseFloat(item.y),
+            lng: parseFloat(item.x)
+          }));
 
-        if (page === 1) {
-          setResults(formatted);
-        } else {
-          setResults(prev => [...prev, ...formatted]);
+          if (pageNum === 1) {
+            setResults(formatted);
+          } else {
+            setResults(prev => [...prev, ...formatted]);
+          }
+          setPagination(paginationObj);
+        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+          if (pageNum === 1) setResults([]);
+          setPagination(null);
         }
-        setPagination(paginationObj);
-      } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-        if (page === 1) setResults([]);
-        setPagination(null);
-      }
+        setIsLoading(false);
+      }, { page: pageNum, size: 10 });
+    } catch (error) {
+      console.error("Search error:", error);
       setIsLoading(false);
-    }, { page, size: 10 });
+    }
   }, []);
 
   // 입력값 변경 시 디바운스 적용
@@ -129,7 +134,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
             />
-            {isLoading && page === 1 && (
+            {isLoading && results.length === 0 && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
               </div>
