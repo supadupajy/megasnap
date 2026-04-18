@@ -92,7 +92,6 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // 데이터 시딩 로직 (강력한 버전)
   const seedGlobalData = useCallback(async (force = false) => {
     if (!authUser) return;
     if (hasGlobalSeeded.current && !force) return;
@@ -102,33 +101,24 @@ const Index = () => {
     console.log('[Seed] Starting data seeding process...');
 
     try {
-      // 1. 프로필 강제 생성/확인
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
       const avatarUrl = profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`;
 
-      const { error: profileError } = await supabase.from('profiles').upsert({
+      await supabase.from('profiles').upsert({
         id: authUser.id,
         nickname: displayName,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       });
 
-      if (profileError) {
-        console.error('[Seed] Profile Upsert Error:', profileError);
-        throw new Error(`프로필 생성 실패: ${profileError.message}`);
-      }
-
-      // 2. 기존 데이터 확인 (강제 모드가 아닐 때만)
       if (!force) {
         const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true });
         if (count && count > 0) {
-          console.log(`[Seed] Already have ${count} posts. Skipping.`);
           dismissToast(toastId);
           return;
         }
       }
 
-      // 3. 100개 데이터 생성
       const virtualAuthors = Array.from({ length: 20 }).map((_, i) => ({
         name: `Explorer_${i + 1}`,
         avatar: `https://i.pravatar.cc/150?u=bot_${i + 1}`
@@ -160,12 +150,10 @@ const Index = () => {
         allMockData = [...allMockData, ...insertData];
       });
 
-      // 4. 20개씩 끊어서 삽입 (안정성)
       for (let i = 0; i < allMockData.length; i += 20) {
         const chunk = allMockData.slice(i, i + 20);
         const { error: insertError } = await supabase.from('posts').insert(chunk);
         if (insertError) throw insertError;
-        console.log(`[Seed] Inserted chunk ${i/20 + 1}/5`);
       }
 
       dismissToast(toastId);
@@ -176,7 +164,7 @@ const Index = () => {
       dismissToast(toastId);
       showError(err.message || '데이터 생성 중 오류가 발생했습니다.');
     }
-  }, [authUser, profile, refreshProfile]);
+  }, [authUser, profile, syncPostsWithSupabase]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -377,6 +365,17 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
+              {/* 데이터 강제 초기화 버튼 (상단 우측으로 이동) */}
+              <div className="absolute top-[100px] right-4 z-[60]">
+                <button 
+                  onClick={handleForceSeed}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-2xl text-[11px] font-black shadow-xl shadow-indigo-200 active:scale-90 transition-all border-2 border-white"
+                >
+                  <Database className="w-4 h-4" />
+                  데이터 초기화
+                </button>
+              </div>
+
               <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
                 <div className="w-full shrink-0 pointer-events-auto">
                   <TrendingPosts posts={trendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={handleTrendingPostClick} />
@@ -400,17 +399,6 @@ const Index = () => {
                 </div>
               </div>
               <AnimatePresence>{!isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}><TimeSlider value={timeValue} onChange={setTimeValue} /></motion.div>}</AnimatePresence>
-              
-              {/* 데이터 강제 초기화 버튼 (디버깅용) */}
-              <div className="absolute bottom-4 right-4 z-20">
-                <button 
-                  onClick={handleForceSeed}
-                  className="flex items-center gap-2 px-3 py-2 bg-black/20 backdrop-blur-md text-white/60 rounded-xl text-[10px] font-bold hover:bg-black/40 transition-all"
-                >
-                  <Database className="w-3 h-3" />
-                  데이터 초기화
-                </button>
-              </div>
             </>
           )}
         </div>
