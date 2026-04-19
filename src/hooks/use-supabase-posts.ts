@@ -40,6 +40,7 @@ const mapDbToPost = (p: any): Post => {
     comments: [],
     image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
     videoUrl: p.video_url,
+    youtubeUrl: p.youtube_url, // 유튜브 URL 추가
     category: 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),
@@ -53,7 +54,7 @@ export const useSupabasePosts = (limit = 50) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
-        .select("id, content, location_name, latitude, longitude, image_url, video_url, user_id, user_name, user_avatar, likes, created_at")
+        .select("id, content, location_name, latitude, longitude, image_url, video_url, youtube_url, user_id, user_name, user_avatar, likes, created_at")
         .order("created_at", { ascending: false })
         .limit(limit);
 
@@ -67,7 +68,7 @@ export const useSupabasePosts = (limit = 50) => {
 export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {lat: number, lng: number}) => {
   const { data, error } = await supabase
     .from("posts")
-    .select("id, content, location_name, latitude, longitude, image_url, video_url, user_id, user_name, user_avatar, likes, created_at")
+    .select("id, content, location_name, latitude, longitude, image_url, video_url, youtube_url, user_id, user_name, user_avatar, likes, created_at")
     .gte("latitude", sw.lat)
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)

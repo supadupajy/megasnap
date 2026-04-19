@@ -78,10 +78,11 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         latitude: p.lat,
         longitude: p.lng,
         image_url: p.image,
+        youtube_url: p.youtubeUrl, // 유튜브 URL 추가
         user_id: randomUser.id,
         user_name: randomUser.nickname || "탐험가",
         user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-        likes: Math.floor(Math.random() * 5000) + 10,
+        likes: p.likes, // mock-data에서 생성된 확률 기반 좋아요 수 사용
         created_at: new Date(Date.now() - Math.random() * 24 * 3600000).toISOString()
       });
     }
