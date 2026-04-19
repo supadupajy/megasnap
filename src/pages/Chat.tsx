@@ -29,7 +29,6 @@ const isValidUUID = (uuid: string) => {
 };
 
 const HEADER_HEIGHT = 88;
-const INPUT_AREA_HEIGHT = 100;
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -84,26 +83,29 @@ const Chat = () => {
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
       const keyboardHeight = window.innerHeight - vp.height - offsetTop;
-      const isKeyboardOpen = keyboardHeight > 100; // 100px 이상이면 키보드가 올라온 것으로 간주
+      const isKeyboardOpen = keyboardHeight > 100;
 
+      // 1. 헤더 위치 조정
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
+      // 2. 입력창 위치 및 여백 조정 (Flutter의 SafeArea + viewInsets 로직)
       if (inputRef.current) {
         const bottomOffset = Math.max(0, keyboardHeight);
         inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
         
-        // 키보드가 열려있을 때는 하단 여백을 최소화(8px), 닫혀있을 때는 시스템 바를 피하기 위해 40px 유지
+        // 키보드가 열리면 하단 여백을 8px로 줄여 밀착시키고, 
+        // 닫히면 env(safe-area-inset-bottom)을 사용하여 네비게이션 바를 피함
         inputRef.current.style.paddingBottom = isKeyboardOpen 
           ? '8px' 
-          : 'max(40px, env(safe-area-inset-bottom))';
+          : 'calc(12px + env(safe-area-inset-bottom))';
       }
 
+      // 3. 스크롤 영역 하단 패딩 동적 계산
       if (scrollRef.current) {
-        // 스크롤 영역의 하단 패딩도 키보드 상태에 따라 조절
-        const currentInputPadding = isKeyboardOpen ? 8 : 40;
-        const bottomPad = (INPUT_AREA_HEIGHT - 40 + currentInputPadding) + Math.max(0, keyboardHeight) + 24;
+        const inputHeight = inputRef.current?.offsetHeight || 60;
+        const bottomPad = inputHeight + Math.max(0, keyboardHeight) + 16;
         scrollRef.current.style.paddingBottom = `${bottomPad}px`;
       }
 
@@ -297,7 +299,6 @@ const Chat = () => {
         style={{
           height: '100dvh',
           paddingTop: `${HEADER_HEIGHT + 16}px`,
-          paddingBottom: `${INPUT_AREA_HEIGHT + 24}px`,
         }}
       >
         {messages.map((msg) => {
@@ -334,8 +335,7 @@ const Chat = () => {
         ref={inputRef}
         className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
-          height: `${INPUT_AREA_HEIGHT}px`,
-          paddingBottom: 'max(40px, env(safe-area-inset-bottom))',
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
