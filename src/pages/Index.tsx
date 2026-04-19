@@ -230,7 +230,8 @@ const Index = () => {
   }, [mapData, syncPostsWithSupabase]);
 
   useEffect(() => {
-    if (mapData && displayedMarkers.length < 12 && !isAutoSeeding.current) {
+    // 마커 개수가 15개 미만일 때 자동 생성 트리거
+    if (mapData && displayedMarkers.length < 15 && !isAutoSeeding.current) {
       autoSeedArea();
     }
   }, [mapData, displayedMarkers.length, autoSeedArea]);
@@ -265,7 +266,6 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 표시 개수 제한을 150개로 대폭 늘려 화면 내 포스팅이 사라지지 않게 함
     const displayCount = 150; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
