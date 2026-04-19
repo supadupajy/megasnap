@@ -96,7 +96,6 @@ const Index = () => {
     };
   };
 
-  // DB 전체에서 실시간 인기 포스팅(좋아요 순) 20개 가져오기
   const fetchGlobalTrending = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -129,10 +128,12 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation]);
 
-  const syncPostsWithSupabase = useCallback(async () => {
-    if (!mapData?.bounds || isSyncing.current) return;
+  const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
+    const targetBounds = forceBounds || mapData?.bounds;
+    if (!targetBounds || isSyncing.current) return;
+    
     isSyncing.current = true;
-    const { sw, ne } = mapData.bounds;
+    const { sw, ne } = targetBounds;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne);
       setAllPosts(prev => {
@@ -142,7 +143,11 @@ const Index = () => {
         mapCache.posts = combined;
         return combined;
       });
-    } catch (err) { console.error('[Sync] Error:', err); } finally { isSyncing.current = false; }
+    } catch (err) { 
+      console.error('[Sync] Error:', err); 
+    } finally { 
+      isSyncing.current = false; 
+    }
   }, [mapData]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
@@ -179,7 +184,6 @@ const Index = () => {
       }
       return post;
     }));
-    // 인기 리스트도 업데이트
     setGlobalTrendingPosts(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
@@ -191,16 +195,37 @@ const Index = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchGlobalTrending(); // 인기 리스트 갱신
-    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
-    if (data) {
-      const mapped = data.map(mapDbToPost);
-      setAllPosts(mapped);
-      mapCache.posts = mapped;
+    await fetchGlobalTrending(); 
+    
+    // 현재 지도의 영역이 있다면 해당 영역의 데이터를 즉시 다시 불러옴
+    if (mapData?.bounds) {
+      const { sw, ne } = mapData.bounds;
+      try {
+        const dbPosts = await fetchPostsInBounds(sw, ne);
+        // 기존 데이터와 합쳐서 즉시 업데이트
+        setAllPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
+          const combined = [...prev, ...newUnique];
+          mapCache.posts = combined;
+          return combined;
+        });
+      } catch (err) {
+        console.error('[Refresh] Sync Error:', err);
+      }
+    } else {
+      // 영역 정보가 없을 경우에만 기본 1000개 로드
+      const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
+      if (data) {
+        const mapped = data.map(mapDbToPost);
+        setAllPosts(mapped);
+        mapCache.posts = mapped;
+      }
     }
+    
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
-  }, [fetchGlobalTrending]);
+  }, [fetchGlobalTrending, mapData]);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
