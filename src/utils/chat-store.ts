@@ -19,36 +19,8 @@ export interface ChatRoom {
   messages: ChatMessage[];
 }
 
-// 초기 예시 데이터 (Mock)
-const INITIAL_CHATS: ChatRoom[] = [
-  {
-    id: 'travel_maker',
-    user: { name: 'travel_maker', avatar: 'https://i.pravatar.cc/150?u=travel_maker' },
-    lastMessage: '오! 감사합니다. 바로 가봐야겠네요!',
-    time: '12분',
-    unread: true,
-    messages: [
-      { id: 1, text: "안녕하세요! 성수동 카페 정보 좀 알려주실 수 있나요?", sender: 'other', time: '오후 2:12' },
-      { id: 2, text: "네, 당연하죠! 어떤 스타일의 카페를 찾으시나요?", sender: 'me', time: '오후 2:15' },
-      { id: 3, text: "조용하고 작업하기 좋은 곳이면 좋겠어요.", sender: 'other', time: '오후 2:16' },
-      { id: 4, text: "그렇다면 '카페 어니언'이나 '대림창고' 보다는 '로우키'를 추천드려요.", sender: 'me', time: '오후 2:18' },
-      { id: 5, text: "오! 감사합니다. 바로 가봐야겠네요!", sender: 'other', time: '오후 2:20' },
-    ]
-  },
-  {
-    id: 'seoul_snap',
-    user: { name: 'seoul_snap', avatar: 'https://i.pravatar.cc/150?u=seoul_snap' },
-    lastMessage: '사진 너무 잘 찍으시네요! 👍',
-    time: '2시간',
-    unread: false,
-    messages: [
-      { id: 1, text: "작가님 어제 올리신 남산 타워 사진 정말 멋져요!", sender: 'me', time: '오전 10:05' },
-      { id: 5, text: "사진 너무 잘 찍으시네요! 👍", sender: 'other', time: '오전 11:05' },
-    ]
-  }
-];
-
-let chatRooms: ChatRoom[] = [...INITIAL_CHATS];
+// 샘플 데이터를 삭제하고 빈 배열로 시작합니다.
+let chatRooms: ChatRoom[] = [];
 const listeners = new Set<() => void>();
 
 export const chatStore = {
