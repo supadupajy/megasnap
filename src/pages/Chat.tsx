@@ -49,12 +49,11 @@ const Chat = () => {
     }
   };
 
-  // 키보드가 올라오거나 화면 크기가 변할 때 하단 스크롤 유지
+  // 키보드 리사이징 대응
   useEffect(() => {
     const handleResize = () => {
-      setTimeout(() => scrollToBottom('auto'), 100);
+      setTimeout(() => scrollToBottom('auto'), 50);
     };
-    
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize);
       return () => window.visualViewport?.removeEventListener('resize', handleResize);
@@ -165,12 +164,12 @@ const Chat = () => {
 
   return (
     /* 
-      h-full(100%)은 adjustResize에 의해 키보드 영역을 제외한 높이로 자동 조절됩니다.
-      flex-col 구조를 통해 헤더와 푸터는 양 끝에 붙고, 메시지 영역만 유동적으로 변합니다.
+      Grid 레이아웃을 사용하여 상단(88px), 중앙(남은 공간), 하단(자동)을 명확히 구분합니다.
+      fixed inset-0을 통해 화면 전체를 차지하며, 키보드가 올라오면 시스템 리사이징에 의해 1fr 영역이 줄어듭니다.
     */
-    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
-      {/* 1. 상단 헤더 (고정) */}
-      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
+    <div className="fixed inset-0 bg-white grid grid-rows-[88px_1fr_auto] overflow-hidden z-[1000]">
+      {/* 1. 상단 헤더 (88px 고정) */}
+      <header className="pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -196,10 +195,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (유동적 길이 조절) */}
+      {/* 2. 중앙 메시지 영역 (남은 공간 모두 차지) */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
+        className="px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -217,8 +216,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (키보드 바로 위에 고정) */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
+      {/* 3. 하단 입력창 (내용에 맞게 높이 조절) */}
+      <div className="p-4 bg-white border-t border-gray-100 z-10">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
