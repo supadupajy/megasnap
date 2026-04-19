@@ -35,7 +35,12 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  
+  // 뷰포트 상태 관리
+  const [viewport, setViewport] = useState({
+    height: window.innerHeight,
+    offsetTop: 0
+  });
   
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,28 +54,37 @@ const Chat = () => {
     }
   };
 
-  // VisualViewport API를 사용하여 실제 가시 영역 높이 추적
+  // VisualViewport를 사용하여 키보드 대응 좌표 강제 계산
   useEffect(() => {
-    const handleVisualViewportResize = () => {
+    const updateViewport = () => {
       if (window.visualViewport) {
-        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
-        setViewportHeight(window.visualViewport.height);
-        // 브라우저의 강제 스크롤 방지
+        setViewport({
+          height: window.visualViewport.height,
+          offsetTop: window.visualViewport.offsetTop
+        });
+        // 브라우저의 자동 스크롤 시도 즉시 차단
         window.scrollTo(0, 0);
-        setTimeout(() => scrollToBottom('auto'), 50);
       }
     };
 
-    window.visualViewport?.addEventListener('resize', handleVisualViewportResize);
-    window.visualViewport?.addEventListener('scroll', () => window.scrollTo(0, 0));
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
     
-    // 초기 높이 설정
-    if (window.visualViewport) {
-      setViewportHeight(window.visualViewport.height);
-    }
+    // 초기 실행
+    updateViewport();
 
+    // 입력창 포커스 시 브라우저 스크롤 방지
+    const handleFocusIn = (e: FocusEvent) => {
+      if ((e.target as HTMLElement).tagName === 'INPUT') {
+        setTimeout(updateViewport, 50);
+      }
+    };
+
+    window.addEventListener('focusin', handleFocusIn);
     return () => {
-      window.visualViewport?.removeEventListener('resize', handleVisualViewportResize);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('focusin', handleFocusIn);
     };
   }, []);
 
@@ -230,8 +244,11 @@ const Chat = () => {
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col bg-white overflow-hidden z-[1000]"
-      style={{ height: `${viewportHeight}px` }}
+      className="fixed left-0 right-0 flex flex-col bg-white overflow-hidden z-[1000]"
+      style={{ 
+        top: `${viewport.offsetTop}px`,
+        height: `${viewport.height}px`
+      }}
     >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
