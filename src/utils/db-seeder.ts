@@ -5,60 +5,61 @@ import { createMockPosts } from "@/lib/mock-data";
 
 /**
  * 대한민국 주요 대도시 좌표 및 정밀 영역(Bounds) 목록
+ * 서울 지역의 범위를 확장하고 밀도를 2배로 상향 (1500 -> 3000)
  */
 const MAJOR_CITIES = [
   { 
     name: "서울", 
     lat: 37.5665, lng: 126.9780, 
-    density: 1500,
-    bounds: { sw: { lat: 37.4285, lng: 126.7644 }, ne: { lat: 37.7014, lng: 127.1838 } }
+    density: 3000, // 2배 증설
+    bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } }
   },
   { 
     name: "부산", 
     lat: 35.1796, lng: 129.0756, 
-    density: 500,
+    density: 1000, // 2배 증설
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } }
   },
   { 
     name: "인천", 
     lat: 37.4563, lng: 126.7052, 
-    density: 400,
+    density: 800, // 2배 증설
     bounds: { sw: { lat: 37.3689, lng: 126.5841 }, ne: { lat: 37.5856, lng: 126.7712 } }
   },
   { 
     name: "대구", 
     lat: 35.8714, lng: 128.6014, 
-    density: 350,
+    density: 700, // 2배 증설
     bounds: { sw: { lat: 35.7756, lng: 128.4523 }, ne: { lat: 35.9542, lng: 128.7234 } }
   },
   { 
     name: "대전", 
     lat: 36.3504, lng: 127.3845, 
-    density: 300,
+    density: 600, // 2배 증설
     bounds: { sw: { lat: 36.2654, lng: 127.2845 }, ne: { lat: 36.4856, lng: 127.4856 } }
   },
   { 
     name: "광주", 
     lat: 35.1595, lng: 126.8526, 
-    density: 300,
+    density: 600, // 2배 증설
     bounds: { sw: { lat: 35.0856, lng: 126.7542 }, ne: { lat: 35.2542, lng: 126.9542 } }
   },
   { 
     name: "울산", 
     lat: 35.5384, lng: 129.3114, 
-    density: 250,
+    density: 500, // 2배 증설
     bounds: { sw: { lat: 35.4542, lng: 129.1542 }, ne: { lat: 35.6542, lng: 129.4542 } }
   },
   { 
     name: "수원", 
     lat: 37.2636, lng: 127.0286, 
-    density: 300,
+    density: 600, // 2배 증설
     bounds: { sw: { lat: 37.2142, lng: 126.9542 }, ne: { lat: 37.3542, lng: 127.1542 } }
   },
   { 
     name: "제주", 
     lat: 33.4996, lng: 126.5312, 
-    density: 400,
+    density: 800, // 2배 증설
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
   }
 ];
@@ -90,7 +91,7 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
     // 1. 사용자 풀 준비
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) 
       ? profiles 
       : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
@@ -106,10 +107,25 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        // 약 10%의 확률로 강제 인플루언서 좋아요 수 할당
+        // 등급별 균등 확률 적용 (각 10%씩, 총 40% 특별 포스팅)
         let finalLikes = p.likes;
-        if (Math.random() < 0.1) {
-          finalLikes = Math.floor(Math.random() * 45000) + 5000; // 5,000 ~ 50,000
+        const tierRoll = Math.random();
+        
+        if (tierRoll < 0.1) {
+          // Diamond (15,000+)
+          finalLikes = Math.floor(Math.random() * 35000) + 15000;
+        } else if (tierRoll < 0.2) {
+          // Gold (10,000 - 14,999)
+          finalLikes = Math.floor(Math.random() * 5000) + 10000;
+        } else if (tierRoll < 0.3) {
+          // Silver (5,000 - 9,999)
+          finalLikes = Math.floor(Math.random() * 5000) + 5000;
+        } else if (tierRoll < 0.4) {
+          // Popular (1,500 - 4,999)
+          finalLikes = Math.floor(Math.random() * 3500) + 1500;
+        } else {
+          // Normal (10 - 1,499)
+          finalLikes = Math.floor(Math.random() * 1489) + 10;
         }
 
         allInsertData.push({
