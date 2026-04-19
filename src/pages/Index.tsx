@@ -134,8 +134,8 @@ const Index = () => {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
       if (!profiles || profiles.length === 0) { isAutoSeeding.current = false; return; }
       
-      // 영역 정보를 전달하여 분산 배치 활성화
-      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18, undefined, mapData.bounds);
+      // 영역 정보를 전달하여 분산 배치 활성화 (최대 20개 생성)
+      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 20, undefined, mapData.bounds);
       
       const insertDataPromises = mockPosts.map(async (p) => {
         const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
@@ -201,8 +201,8 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // 한 화면에 최대 20개 마커로 제한 (좋아요 순 정렬 후 선별)
-    const displayCount = 20; 
+    // 한 화면에 최대 30개 마커로 상향 조정
+    const displayCount = 30; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
     
