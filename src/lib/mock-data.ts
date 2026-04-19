@@ -100,7 +100,8 @@ export const createMockPosts = (
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    const isAd = i % 10 === 0;
+    // 광고 비율을 5%로 하향 조정 (i % 20)
+    const isAd = i % 20 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
