@@ -1,5 +1,4 @@
 import { Post, User, Comment } from '@/types';
-import { getYoutubeThumbnail } from './utils';
 
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -73,11 +72,6 @@ export const GIF_POOL = [
   "https://images.unsplash.com/photo-1475113548554-5a36f1f523d6"
 ].map(url => `${url}?auto=format&fit=crop&w=800&q=80`);
 
-export const isGifUrl = (url: string) => {
-  if (!url) return false;
-  return url.toLowerCase().includes('.gif');
-};
-
 const COMMENT_TEXTS = [
   "와 여기 진짜 가보고 싶었는데! 정보 감사합니다.",
   "날씨 좋을 때 가면 최고죠 ㅎㅎ",
@@ -117,27 +111,6 @@ const CONTENT_POOL = [
 ];
 
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
-
-export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=9bZkp7q19f0",
-  "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
-  "https://www.youtube.com/watch?v=OPf0YbXqDm0",
-  "https://www.youtube.com/watch?v=hT_nvWreIhg",
-  "https://www.youtube.com/watch?v=nfWlot6h_JM",
-  "https://www.youtube.com/watch?v=kffacxfA7G4",
-  "https://www.youtube.com/watch?v=CevxZvSJLk8",
-  "https://www.youtube.com/watch?v=09R8_2nJtjg",
-  "https://www.youtube.com/watch?v=YQHsXMglC9A",
-  "https://www.youtube.com/watch?v=2vjPBrBU-TM",
-  "https://www.youtube.com/watch?v=7wtfhZwyrcc",
-  "https://www.youtube.com/watch?v=YykjpeuMNEk",
-  "https://www.youtube.com/watch?v=u31qwQUeGuM",
-  "https://www.youtube.com/watch?v=TUVcZfQe-Kw",
-  "https://www.youtube.com/watch?v=DyDfgMOUjCI",
-  "https://www.youtube.com/watch?v=RlPNh_PB6Ww",
-  "https://www.youtube.com/watch?v=fRh_vgS2dFE"
-];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
@@ -182,14 +155,12 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let isAd = false;
 
     if (!specificUserId) {
-      // 확률 대폭 상향: 인플루언서 10%, 인기 15%
       if (typeRoll < 0.10) isInfluencer = true;
       else if (typeRoll < 0.25) isPopular = true;
       else if (typeRoll < 0.30) isAd = true;
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; 
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
@@ -197,7 +168,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)] || "멋진 장소입니다! ✨";
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
-    let youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
@@ -230,10 +200,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     let finalImage = images[0];
-    if (youtubeUrl) {
-      const thumb = getYoutubeThumbnail(youtubeUrl);
-      if (thumb) finalImage = thumb;
-    }
 
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
@@ -242,7 +208,6 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       ? createMockUser(specificUserId, randomFn) 
       : createMockUser(isAd ? "sponsored" : id, randomFn, isInfluencer);
 
-    // 특별한 포스팅은 좋아요 수를 높게 설정하여 테두리가 확실히 나타나게 함
     const likes = (isPopular || isInfluencer) 
       ? Math.floor(randomFn() * 3000) + 1500 
       : Math.floor(randomFn() * 500) + 10;
@@ -277,8 +242,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       adImageIndex: 1,
       isLiked: randomFn() > 0.5,
       createdAt,
-      borderType,
-      youtubeUrl
+      borderType
     };
   });
 };

@@ -8,12 +8,11 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts, YOUTUBE_LINKS } from '@/lib/mock-data';
+import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { getYoutubeThumbnail } from '@/lib/utils';
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -37,19 +36,6 @@ const Popular = () => {
     // 목업 데이터 생성 시 인플루언서와 인기 포스팅이 섞이도록 함
     let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
-    mockPosts = mockPosts.map((post, index) => {
-      if (index % 3 === 0 && !post.youtubeUrl) {
-        const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
-        const thumb = getYoutubeThumbnail(youtubeUrl);
-        return {
-          ...post,
-          youtubeUrl,
-          image: thumb || post.image
-        };
-      }
-      return post;
-    });
-
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -61,7 +47,6 @@ const Popular = () => {
 
       const realPosts = (data || []).map(p => {
         const likes = Number(p.likes || 0);
-        // 인플루언서 여부는 DB에 없으므로 좋아요 수로 임시 판단하거나 기본값 설정
         const isInfluencer = likes > 5000; 
         
         return {
@@ -118,15 +103,6 @@ const Popular = () => {
         .map(p => ({ ...p, likes: Math.floor(Math.random() * 2000) + 1000 }))
         .sort((a, b) => b.likes - a.likes);
       
-      newPosts = newPosts.map((post, index) => {
-        if (index % 3 === 0 && !post.youtubeUrl) {
-          const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          const thumb = getYoutubeThumbnail(youtubeUrl);
-          return { ...post, youtubeUrl, image: thumb || post.image };
-        }
-        return post;
-      });
-
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
     }, 800);
@@ -206,7 +182,6 @@ const Popular = () => {
               category={post.category}
               borderType={post.borderType}
               disablePulse={true}
-              youtubeUrl={post.youtubeUrl}
               onLikeToggle={() => handleLikeToggle(post.id)}
               onLocationClick={handleLocationClick}
               onDelete={handlePostDelete}
