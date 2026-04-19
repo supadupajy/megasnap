@@ -1,8 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
-import { verifyYoutubeUrl } from "./youtube-utils";
+import { createMockPosts, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl, validYoutubeIds } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
@@ -88,21 +87,6 @@ const AD_COMMENTS = [
   '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
 ];
 
-const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
-  return new Promise((resolve) => {
-    const kakao = (window as any).kakao;
-    if (!kakao?.maps?.services) { resolve("대한민국"); return; }
-    const geocoder = new kakao.maps.services.Geocoder();
-    geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-      if (status === kakao.maps.services.Status.OK && result[0]) {
-        const addr = result[0].address;
-        const region = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`.trim();
-        resolve(region || "대한민국");
-      } else { resolve("대한민국"); }
-    });
-  });
-};
-
 const getRandomLikesFlat = () => {
   const r = Math.random();
   if (r < 0.5) return Math.floor(Math.random() * 1001); // 0~1000 (50%)
@@ -112,19 +96,28 @@ const getRandomLikesFlat = () => {
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
+  console.log("[Seeder] 🚀 대한민국 전역 데이터 생성 프로세스 시작...");
+  
   try {
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
     const allInsertData: any[] = [];
 
-    let globalIndex = 0; // 전체 포스팅 순번을 추적하여 이미지 중복 방지
+    let globalIndex = 0;
+    const totalCities = MAJOR_CITIES.length;
 
-    for (const city of MAJOR_CITIES) {
+    for (let cityIdx = 0; cityIdx < totalCities; cityIdx++) {
+      const city = MAJOR_CITIES[cityIdx];
+      console.log(`[Seeder] 📍 ${city.name} 지역 데이터 생성 중... (${cityIdx + 1}/${totalCities})`);
+      
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
+      
       for (let i = 0; i < mockPosts.length; i++) {
         const p = mockPosts[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
-        const realAddress = await getAddressFromCoords(p.lat, p.lng);
+        
+        // 속도 향상을 위해 API 호출 대신 템플릿 주소 사용
+        const mockAddress = `${city.name} ${['중구', '남구', '북구', '동구', '서구'][Math.floor(Math.random() * 5)]} 어딘가`;
         
         const finalLikes = getRandomLikesFlat();
         const isAd = p.isAd;
@@ -133,15 +126,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         
         if (isAd) {
-          // 광고 이미지는 순환 선택
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
         } else {
-          // 유튜브 영상과 일반 이미지를 50:50 비율로 섞되, 순차적으로 선택하여 중복 최소화
-          if (globalIndex % 2 === 0) {
-            const candidateUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
-            // 실시간 검증은 속도를 위해 생략하거나 일부만 수행 (여기서는 순환 선택으로 다양성 확보)
-            finalYoutubeUrl = candidateUrl;
-            finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
+          if (globalIndex % 2 === 0 && validYoutubeIds.length > 0) {
+            const ytId = validYoutubeIds[globalIndex % validYoutubeIds.length];
+            finalYoutubeUrl = `https://www.youtube.com/shorts/${ytId}`;
+            finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
           } else {
             finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
           }
@@ -153,7 +143,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
         allInsertData.push({
           content: finalContent,
-          location_name: realAddress,
+          location_name: mockAddress,
           latitude: p.lat,
           longitude: p.lng,
           image_url: finalImage,
@@ -169,23 +159,37 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
     }
 
-    const chunkSize = 50;
-    for (let i = 0; i < allInsertData.length; i += chunkSize) {
+    const totalToInsert = allInsertData.length;
+    console.log(`[Seeder] 📦 총 ${totalToInsert}개의 포스팅 준비 완료. 데이터베이스 업로드 시작...`);
+
+    const chunkSize = 500; // 배치 사이즈 상향
+    for (let i = 0; i < totalToInsert; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
       const { error } = await supabase.from('posts').insert(chunk);
+      
       if (error) throw error;
+      
+      const progress = Math.min(100, Math.round(((i + chunk.length) / totalToInsert) * 100));
+      console.log(`[Seeder] 📤 업로드 진행 중... ${progress}% (${i + chunk.length}/${totalToInsert})`);
     }
-    return allInsertData.length;
-  } catch (err: any) { console.error("Global seeding failed:", err); throw err; }
+
+    console.log(`[Seeder] ✅ 모든 작업이 완료되었습니다! 총 ${totalToInsert}개의 포스팅이 생성되었습니다.`);
+    return totalToInsert;
+  } catch (err: any) { 
+    console.error("[Seeder] ❌ 데이터 생성 중 오류 발생:", err); 
+    throw err; 
+  }
 };
 
 export const randomizeExistingLikes = async () => {
+  console.log("[Seeder] 🎲 좋아요 수치 랜덤화 시작...");
   try {
     const { data, error } = await supabase.rpc('randomize_all_likes');
     if (error) throw error;
+    console.log(`[Seeder] ✅ ${data}개 포스팅의 좋아요 수치가 성공적으로 변경되었습니다.`);
     return data || 0;
   } catch (err) {
-    console.error("Randomizing likes failed:", err);
+    console.error("[Seeder] ❌ 좋아요 랜덤화 실패:", err);
     throw err;
   }
 };
