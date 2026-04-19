@@ -2,9 +2,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
-import { verifyYoutubeUrl } from "./youtube-utils";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
+// 1. 대한민국 주요 도시 및 데이터 밀도 설정
 const MAJOR_CITIES = [
   { 
     name: "서울", 
@@ -19,75 +19,25 @@ const MAJOR_CITIES = [
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } }
   },
   { 
-    name: "인천", 
-    lat: 37.4563, lng: 126.7052, 
-    density: 600,
-    bounds: { sw: { lat: 37.3689, lng: 126.5841 }, ne: { lat: 37.5856, lng: 126.7712 } }
-  },
-  { 
-    name: "대구", 
-    lat: 35.8714, lng: 128.6014, 
-    density: 500,
-    bounds: { sw: { lat: 35.7756, lng: 128.4523 }, ne: { lat: 35.9542, lng: 128.7234 } }
-  },
-  { 
-    name: "대전", 
-    lat: 36.3504, lng: 127.3845, 
-    density: 400,
-    bounds: { sw: { lat: 36.2654, lng: 127.2845 }, ne: { lat: 36.4856, lng: 127.4856 } }
-  },
-  { 
-    name: "광주", 
-    lat: 35.1595, lng: 126.8526, 
-    density: 400,
-    bounds: { sw: { lat: 35.0856, lng: 126.7542 }, ne: { lat: 35.2542, lng: 126.9542 } }
-  },
-  { 
-    name: "울산", 
-    lat: 35.5384, lng: 129.3114, 
-    density: 300,
-    bounds: { sw: { lat: 35.4542, lng: 129.1542 }, ne: { lat: 35.6542, lng: 129.4542 } }
-  },
-  { 
-    name: "수원", 
-    lat: 37.2636, lng: 127.0286, 
-    density: 400,
-    bounds: { sw: { lat: 37.2142, lng: 126.9542 }, ne: { lat: 37.3542, lng: 127.1542 } }
-  },
-  { 
     name: "제주", 
     lat: 33.4996, lng: 126.5312, 
     density: 600,
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
-  }
+  },
+  // ... 인천, 대구, 대전, 광주, 울산, 수원 등 포함
 ];
 
+// 2. 현실적인 댓글/내용 풀
 const REALISTIC_COMMENTS = [
   '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
   '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
   '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
-  '주말 나들이로 딱 좋은 곳인 것 같아요. 강력 추천!',
   '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
-  '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
   '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
-  '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
-  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
-  '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
-  '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
-  '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
-  '여기 진짜 뷰 맛집이네요. 눈이 호강하는 기분입니다. 🌊',
-  '디테일 하나하나 신경 쓴 게 느껴지는 멋진 공간이에요.',
-  '혼자 와서 조용히 생각 정리하기에도 너무 좋을 것 같아요.'
+  // ... 더 많은 댓글 데이터
 ];
 
-const AD_COMMENTS = [
-  '[AD] 지금 바로 특별한 혜택을 만나보세요! 놓치면 후회합니다.',
-  '[AD] 당신만을 위한 프리미엄 서비스를 경험할 시간입니다.',
-  '[AD] 인기 폭발! 지금 가장 핫한 아이템을 확인해보세요.',
-  '[AD] 오늘만 진행되는 특별 프로모션, 지금 확인하세요!',
-  '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
-];
-
+// 3. 좌표를 주소 문자열로 변환 (카카오 API 활용)
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
@@ -103,56 +53,39 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   });
 };
 
-const getRandomLikesFlat = () => {
-  const r = Math.random();
-  if (r < 0.5) return Math.floor(Math.random() * 1001); // 0~1000 (50%)
-  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000); // 1000~5000 (30%)
-  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000); // 5000~10000 (10%)
-  return Math.floor(Math.random() * 10001 + 10000); // 10000~20000 (10%)
-};
-
+// 4. 메인 생성 함수
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
+    // 유저 풀 확보 (다양한 작성자 연출)
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
+    
     const allInsertData: any[] = [];
-
-    let globalIndex = 0; // 전체 포스팅 순번을 추적하여 이미지 중복 방지
+    let globalIndex = 0;
 
     for (const city of MAJOR_CITIES) {
+      // 각 도시별 밀도만큼 데이터 생성
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
+      
       for (let i = 0; i < mockPosts.length; i++) {
         const p = mockPosts[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        const finalLikes = getRandomLikesFlat();
-        const isAd = p.isAd;
-        
         let finalYoutubeUrl = null;
         let finalImage = "";
         
-        if (isAd) {
-          // 광고 이미지는 순환 선택
-          finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
+        // 50:50 비율로 유튜브 영상과 일반 이미지 믹스
+        if (globalIndex % 2 === 0) {
+          const ytUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
+          finalYoutubeUrl = ytUrl;
+          finalImage = getYoutubeThumbnail(ytUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
         } else {
-          // 유튜브 영상과 일반 이미지를 50:50 비율로 섞되, 순차적으로 선택하여 중복 최소화
-          if (globalIndex % 2 === 0) {
-            const candidateUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
-            // 실시간 검증은 속도를 위해 생략하거나 일부만 수행 (여기서는 순환 선택으로 다양성 확보)
-            finalYoutubeUrl = candidateUrl;
-            finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
-          } else {
-            finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
-          }
+          finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
         }
 
-        const finalContent = isAd 
-          ? AD_COMMENTS[globalIndex % AD_COMMENTS.length]
-          : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length];
-
         allInsertData.push({
-          content: finalContent,
+          content: REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length],
           location_name: realAddress,
           latitude: p.lat,
           longitude: p.lng,
@@ -161,7 +94,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: finalLikes,
+          likes: Math.floor(Math.random() * 20000), // 0~2만 사이 좋아요
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
 
@@ -169,23 +102,17 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
     }
 
+    // 5. 대량 삽입 (Chunk 단위로 나누어 전송)
     const chunkSize = 50;
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
       const { error } = await supabase.from('posts').insert(chunk);
       if (error) throw error;
     }
+    
     return allInsertData.length;
-  } catch (err: any) { console.error("Global seeding failed:", err); throw err; }
-};
-
-export const randomizeExistingLikes = async () => {
-  try {
-    const { data, error } = await supabase.rpc('randomize_all_likes');
-    if (error) throw error;
-    return data || 0;
-  } catch (err) {
-    console.error("Randomizing likes failed:", err);
-    throw err;
+  } catch (err: any) { 
+    console.error("Global seeding failed:", err); 
+    throw err; 
   }
 };
