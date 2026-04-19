@@ -60,19 +60,13 @@ const Chat = () => {
     }
   };
 
-  // 모바일 브라우저의 강제 스크롤 방지 및 하단 유지
+  // 키보드 상태나 메시지가 변경될 때 하단 유지
   useEffect(() => {
-    if (isKeyboardOpen) {
-      // 브라우저가 입력창을 위해 페이지를 스크롤하는 것을 방지
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-      
-      const timer = setTimeout(() => {
-        scrollToBottom('auto');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isKeyboardOpen]);
+    const timer = setTimeout(() => {
+      scrollToBottom(isKeyboardOpen ? 'auto' : 'smooth');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isKeyboardOpen, messages.length, keyboardHeight]);
 
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
@@ -102,7 +96,6 @@ const Chat = () => {
     if (!error && data) {
       setMessages(prev => mergeMessages(prev, data));
       await markAsRead();
-      setTimeout(() => scrollToBottom('auto'), 100);
     }
   };
 
@@ -162,12 +155,6 @@ const Chat = () => {
     return () => { supabase.removeChannel(channel); };
   }, [authUser?.id, chatId]);
 
-  useLayoutEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom('smooth');
-    }
-  }, [messages.length]);
-
   const handleSend = async () => {
     const content = inputValue.trim();
     if (!content || !authUser || !chatId || isProcessingRef.current) return;
@@ -219,8 +206,14 @@ const Chat = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-white overflow-hidden">
-      {/* Header - Flex Item */}
+    <div 
+      className="flex flex-col h-[100dvh] bg-white overflow-hidden transition-all duration-300"
+      style={{ 
+        // 웹 시뮬레이터에서 키보드가 올라올 때 화면 전체를 위로 밀어줌
+        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px' 
+      }}
+    >
+      {/* Header - Flex Item (Fixed 제거) */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
@@ -262,11 +255,11 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Flex Item (키보드에 의해 밀려 올라감) */}
+      {/* Input Area - Flex Item (Fixed 제거, 자연스럽게 하단 위치) */}
       <div 
-        className="p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 shrink-0"
+        className="p-4 bg-white border-t border-gray-100 shrink-0"
         style={{ 
-          // 키보드가 없을 때만 하단 여백(Safe Area) 추가
+          // 실제 모바일 기기에서 키보드가 없을 때만 하단 여백 추가
           paddingBottom: isKeyboardOpen ? '16px' : '40px' 
         }}
       >
