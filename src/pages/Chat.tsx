@@ -36,6 +36,12 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -43,16 +49,14 @@ const Chat = () => {
     }
 
     try {
-      const { error } = await supabase
+      await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
         .eq('is_read', false);
       
-      if (!error) {
-        chatStore.markAsRead(chatId);
-      }
+      chatStore.markAsRead(chatId);
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
@@ -112,64 +116,82 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       setMessages(data || []);
-      await markAsRead(); // 메시지 로드 후 즉시 읽음 처리
+      await markAsRead();
       setIsLoading(false);
+      setTimeout(scrollToBottom, 100);
     };
 
     fetchMessages();
 
+    // 실시간 구독: 내가 받거나 보낸 메시지 모두 감지
     const channel = supabase
-      .channel(`chat:${chatId}`)
+      .channel(`chat_room_${chatId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
-        table: 'messages', 
-        filter: `receiver_id=eq.${authUser.id}` 
+        table: 'messages'
       }, 
       async (payload) => {
         const newMsg = payload.new as Message;
-        if (newMsg.sender_id === chatId) {
-          setMessages((prev) => [...prev, newMsg]);
-          await markAsRead(); // 새 메시지 수신 시 즉시 읽음 처리
+        // 현재 대화방의 메시지인 경우에만 추가
+        if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
+            (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
+          
+          setMessages((prev) => {
+            // 중복 방지 (낙관적 업데이트 대응)
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          
+          if (newMsg.sender_id === chatId) {
+            await markAsRead();
+          }
+          setTimeout(scrollToBottom, 50);
         }
       }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [authUser, chatId]);
 
+  // 메시지 변경이나 키보드 상태 변경 시 스크롤
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    scrollToBottom();
   }, [messages, keyboardHeight]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    const tempId = Math.random().toString();
-    const optimisticMsg: Message = {
-      id: tempId,
-      content: content,
-      sender_id: authUser.id,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
 
     if (isValidUUID(chatId)) {
-      const { error } = await supabase.from('messages').insert([{
+      const { data, error } = await supabase.from('messages').insert([{
         sender_id: authUser.id,
         receiver_id: chatId,
         content: content,
-      }]);
+      }]).select().single();
 
       if (error) {
         showError('메시지 전송에 실패했습니다.');
-        setMessages((prev) => prev.filter(m => m.id !== tempId));
+      } else if (data) {
+        // 실시간 리스너에서 처리되지만, 더 빠른 반응을 위해 수동 추가 (중복은 리스너에서 체크)
+        setMessages(prev => [...prev, data as Message]);
+        setTimeout(scrollToBottom, 50);
       }
     } else {
       chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
+      // 로컬 스토어 메시지 반영
+      const room = chatStore.getRoom(chatId);
+      if (room) {
+        const formatted = room.messages.map(m => ({
+          id: m.id.toString(),
+          content: m.text,
+          sender_id: m.sender === 'me' ? authUser.id : chatId,
+          created_at: new Date().toISOString()
+        }));
+        setMessages(formatted);
+      }
     }
   };
 

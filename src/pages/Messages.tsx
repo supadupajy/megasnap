@@ -66,6 +66,7 @@ const Messages = () => {
         }
       }
 
+      // 로컬 스토어 데이터 합산
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -110,20 +111,13 @@ const Messages = () => {
     
     if (!authUser) return;
 
-    // 실시간 리스너 추가: 메시지 추가/수정/삭제 시 목록 갱신
+    // 실시간 리스너: 메시지 테이블의 모든 변화 감지
     const channel = supabase
       .channel('messages_list_updates')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'messages',
-        filter: `receiver_id=eq.${authUser.id}`
-      }, fetchConversations)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'messages',
-        filter: `sender_id=eq.${authUser.id}`
+        table: 'messages'
       }, fetchConversations)
       .subscribe();
 
@@ -279,9 +273,8 @@ const Messages = () => {
                         dragConstraints={{ left: -80, right: 0 }}
                         dragElastic={0.1}
                         animate={{ x: isSwiped ? -80 : 0 }}
-                        onDragStart={() => { isDragging.current = true; }}
+                        onDragStart={() => { isDragging.current = false; }}
                         onDragEnd={(_, info) => {
-                          setTimeout(() => { isDragging.current = false; }, 100);
                           if (info.offset.x < -40) setSwipedId(conv.other_id);
                           else setSwipedId(null);
                         }}
