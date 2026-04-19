@@ -32,6 +32,7 @@ interface PostDetailProps {
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; // Coke Ad
+const THIRD_PLACEHOLDER = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80";
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick, onDelete }: PostDetailProps) => {
   const navigate = useNavigate();
@@ -158,11 +159,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const youtubeThumbnail = post.youtubeUrl ? getYoutubeThumbnail(post.youtubeUrl) : null;
   
-  // 이미지를 항상 3개로 구성 (원본, 광고, 원본)
+  // 이미지를 항상 3개로 구성 (원본, 광고, 고유한 세번째 이미지)
   const displayImages = useMemo(() => {
     if (youtubeThumbnail) return [youtubeThumbnail];
-    const base = post.images?.length ? post.images[0] : post.image;
-    return [base, AD_IMAGE, base];
+    const img1 = post.images?.length ? post.images[0] : post.image;
+    // 세번째 이미지가 중복되지 않도록 images[1]이 있으면 사용하고, 없으면 고유한 플레이스홀더 사용
+    const img3 = (post.images?.length > 1 && post.images[1] !== AD_IMAGE) ? post.images[1] : THIRD_PLACEHOLDER;
+    return [img1, AD_IMAGE, img3];
   }, [youtubeThumbnail, post.images, post.image]);
 
   const adIndex = 1; // 항상 2번째 이미지를 광고로 설정
