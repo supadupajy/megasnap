@@ -36,38 +36,10 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
-  // 실제 가용 화면 높이를 추적
-  const [viewportHeight, setViewportHeight] = useState('100dvh');
-  
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
-
-  // 키보드 대응을 위한 VisualViewport 감지 및 높이 강제 설정
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.visualViewport) {
-        // 키보드가 올라오면 visualViewport.height가 줄어든 가용 높이를 반환합니다.
-        setViewportHeight(`${window.visualViewport.height}px`);
-        // 높이 변경 시 메시지 하단으로 즉시 스크롤
-        setTimeout(() => scrollToBottom('auto'), 50);
-      }
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-      window.visualViewport.addEventListener('scroll', handleResize);
-      handleResize();
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-        window.visualViewport.removeEventListener('scroll', handleResize);
-      }
-    };
-  }, []);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -76,6 +48,18 @@ const Chat = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
+
+  // 키보드가 올라오거나 화면 크기가 변할 때 하단 스크롤 유지
+  useEffect(() => {
+    const handleResize = () => {
+      setTimeout(() => scrollToBottom('auto'), 100);
+    };
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
   // 메시지 로드 및 구독 로직
   useEffect(() => {
@@ -181,15 +165,12 @@ const Chat = () => {
 
   return (
     /* 
-      전체 컨테이너를 fixed로 고정하고, 높이를 visualViewport.height로 강제합니다.
-      이렇게 하면 키보드가 올라올 때 컨테이너 자체가 물리적으로 줄어듭니다.
+      h-full(100%)은 adjustResize에 의해 키보드 영역을 제외한 높이로 자동 조절됩니다.
+      flex-col 구조를 통해 헤더와 푸터는 양 끝에 붙고, 메시지 영역만 유동적으로 변합니다.
     */
-    <div 
-      className="fixed inset-0 w-full bg-white flex flex-col overflow-hidden z-[1000]"
-      style={{ height: viewportHeight }}
-    >
-      {/* 1. 상단 헤더 (고정 높이, 절대 줄어들지 않음) */}
-      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
+    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
+      {/* 1. 상단 헤더 (고정) */}
+      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -215,11 +196,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 
-        2. 가운데 메시지 영역 (유동 높이)
-        컨테이너 높이가 줄어들면 이 영역의 길이(height)가 자동으로 줄어듭니다.
-        min-h-0을 주어 내용물에 상관없이 줄어들 수 있게 합니다.
-      */}
+      {/* 2. 중앙 메시지 영역 (유동적 길이 조절) */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
@@ -240,8 +217,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (고정 높이, 절대 줄어들지 않음) */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+      {/* 3. 하단 입력창 (키보드 바로 위에 고정) */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
