@@ -38,7 +38,6 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
-  // 중복 전송 방지를 위한 Ref
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -126,7 +125,7 @@ const Chat = () => {
 
     fetchMessages();
 
-    const channelId = `chat_v2_${[authUser.id, chatId].sort().join('_')}`;
+    const channelId = `chat_v3_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { 
@@ -141,6 +140,7 @@ const Chat = () => {
         
         if (isRelevant) {
           setMessages(prev => {
+            // ID 중복 체크를 통해 UI 중복 노출 방지
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
@@ -171,16 +171,16 @@ const Chat = () => {
     }
   }, [messages]);
 
-  const handleSend = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault(); // 폼 제출 기본 동작 방지
     
-    // 중복 실행 방지 (Ref + State)
-    if (!inputValue.trim() || !authUser || !chatId || isProcessingRef.current) return;
+    // 전송 중이거나 입력값이 없으면 즉시 차단
+    if (!inputValue.trim() || !authUser || !chatId || isProcessingRef.current || isSending) return;
     
     const content = inputValue.trim();
     isProcessingRef.current = true;
     setIsSending(true);
-    setInputValue(''); // 입력창 즉시 초기화
+    setInputValue(''); // 입력창 즉시 비우기
 
     if (isValidUUID(chatId)) {
       try {
@@ -192,14 +192,17 @@ const Chat = () => {
         }]);
         
         if (error) throw error;
-        // 성공 시 별도의 setMessages를 하지 않습니다. (Realtime 리스너가 처리)
+        // 성공 시 화면 업데이트는 Realtime 리스너가 처리함
       } catch (err) {
         showError('메시지 전송에 실패했습니다.');
-        setInputValue(content); // 실패 시에만 복구
+        setInputValue(content); // 실패 시에만 입력값 복구
+      } finally {
+        // 전송 완료 후 상태 해제
+        isProcessingRef.current = false;
+        setIsSending(false);
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
-      // 로컬 스토어는 리얼타임이 없으므로 수동 업데이트
       const room = chatStore.getRoom(chatId);
       if (room) {
         const formatted = room.messages.map(m => ({
@@ -212,13 +215,9 @@ const Chat = () => {
         }));
         setMessages(formatted);
       }
-    }
-    
-    // 전송 완료 후 약간의 쿨타임 부여
-    setTimeout(() => {
       isProcessingRef.current = false;
       setIsSending(false);
-    }, 100);
+    }
   };
 
   const handleBack = () => {
