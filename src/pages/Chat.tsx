@@ -37,12 +37,16 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState('100dvh');
+  
+  // 뷰포트 스타일 상태
+  const [viewportStyle, setViewportStyle] = useState<React.CSSProperties>({
+    height: '100dvh',
+    top: 0
+  });
   
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -52,38 +56,53 @@ const Chat = () => {
     }
   };
 
-  // 모바일 브라우저의 VisualViewport 대응
+  // 모바일 브라우저의 VisualViewport 물리적 좌표 동기화
   useEffect(() => {
-    const handleVisualViewportResize = () => {
+    const handleViewport = () => {
       if (window.visualViewport) {
-        // 실제 모바일 기기에서는 visualViewport 높이를 직접 사용
-        setViewportHeight(`${window.visualViewport.height}px`);
-        // 브라우저의 강제 스크롤 방지
-        window.scrollTo(0, 0);
+        const { height, offsetTop } = window.visualViewport;
+        
+        setViewportStyle({
+          height: `${height}px`,
+          top: `${offsetTop}px`,
+          position: 'fixed',
+          left: 0,
+          right: 0
+        });
+
+        // 브라우저의 강제 스크롤 시도 차단
+        if (offsetTop > 0) {
+          window.scrollTo(0, 0);
+        }
       }
     };
 
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleVisualViewportResize);
-      window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
-      handleVisualViewportResize();
+      window.visualViewport.addEventListener('resize', handleViewport);
+      window.visualViewport.addEventListener('scroll', handleViewport);
+      handleViewport();
     }
 
     return () => {
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
-        window.visualViewport.removeEventListener('scroll', handleVisualViewportResize);
+        window.visualViewport.removeEventListener('resize', handleViewport);
+        window.visualViewport.removeEventListener('scroll', handleViewport);
       }
     };
   }, []);
 
-  // 웹 시뮬레이터(가상 키보드) 대응
+  // 웹 시뮬레이터 대응 (터치 기기가 아닐 때)
   useEffect(() => {
     if (keyboardHeight > 0 && !('ontouchstart' in window)) {
-      // 터치 기기가 아닌 환경(웹 시뮬레이터)에서만 keyboardHeight 적용
-      setViewportHeight(`calc(100vh - ${keyboardHeight}px)`);
-    } else if (!isKeyboardOpen) {
-      setViewportHeight('100dvh');
+      setViewportStyle({
+        height: `calc(100vh - ${keyboardHeight}px)`,
+        top: 0,
+        position: 'fixed',
+        left: 0,
+        right: 0
+      });
+    } else if (!isKeyboardOpen && !window.visualViewport) {
+      setViewportStyle({ height: '100dvh', top: 0 });
     }
     
     const timer = setTimeout(() => scrollToBottom('auto'), 100);
@@ -246,9 +265,8 @@ const Chat = () => {
 
   return (
     <div 
-      ref={containerRef}
-      className="fixed inset-0 flex flex-col bg-white overflow-hidden"
-      style={{ height: viewportHeight }}
+      className="bg-white flex flex-col overflow-hidden"
+      style={viewportStyle}
     >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
@@ -295,7 +313,10 @@ const Chat = () => {
       {/* Input Area */}
       <div 
         className="p-4 bg-white border-t border-gray-100 shrink-0"
-        style={{ paddingBottom: isKeyboardOpen ? '16px' : '40px' }}
+        style={{ 
+          // 키보드가 올라왔을 때는 여백을 줄이고, 없을 때는 safe-area 확보
+          paddingBottom: isKeyboardOpen ? '12px' : 'calc(12px + env(safe-area-inset-bottom, 24px))' 
+        }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
@@ -304,7 +325,7 @@ const Chat = () => {
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
             onFocus={() => {
-              // 포커스 시 브라우저의 강제 스크롤 방지
+              // 포커스 시 즉시 스크롤 보정
               setTimeout(() => window.scrollTo(0, 0), 0);
             }}
             onKeyDown={(e) => {
