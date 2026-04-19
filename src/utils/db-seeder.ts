@@ -1,59 +1,69 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { MAJOR_CITIES, REALISTIC_COMMENTS } from "@/lib/mock-data";
+import { MAJOR_CITIES, REALISTIC_COMMENTS, YOUTUBE_IDS_50, getUnsplashUrl, UNSPLASH_IDS_100 } from "@/lib/mock-data";
 
 /**
- * 1. 검증된 유튜브 ID 리스트 (K-POP & POP)
- * 공식 채널(HYBE, SMTOWN, JYP) 영상들은 대부분 임베드를 허용합니다.
+ * 유튜브 영상의 유효성(재생 가능 여부)을 확인합니다.
  */
-const VERIFIED_YOUTUBE_IDS = [
-  "gdZLi9hhztQ", "WMweEpGlu_U", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo", // NewJeans, BTS, IVE
-  "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", "0NCP48xaSfs", "h4m-pIReA6Y", // Pop: Dua Lipa, Bruno Mars 등
-  "TQTlCHxyuu8", "M7lc1UVf-VE", "9bZkp7q19f0", "hTermM40EDU", "CtpT_S6-B9U" 
-];
+const validateYoutubeVideo = async (id: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    return response.status === 200;
+  } catch {
+    return false;
+  }
+};
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
-    // 유저 풀 (작성자 다양화)
+    // 1. 유튜브 영상 사전 검증 (Clean List 만들기)
+    console.log("유튜브 영상 정책 검토 중...");
+    const validYoutubeIds: string[] = [];
+    
+    // 병렬로 체크하여 속도 향상
+    const checkPromises = YOUTUBE_IDS_50.map(async (id) => {
+      const isValid = await validateYoutubeVideo(id);
+      if (isValid) validYoutubeIds.push(id);
+    });
+    await Promise.all(checkPromises);
+
+    console.log(`검토 완료: ${YOUTUBE_IDS_50.length}개 중 ${validYoutubeIds.length}개 재생 가능`);
+
+    // 2. 유저 풀 확보
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
 
     let totalInserted = 0;
 
     for (const city of MAJOR_CITIES) {
-      console.log(`${city.name} 데이터 생성 시작... (밀도: 1500)`);
+      console.log(`${city.name} 데이터 생성 시작...`);
       const cityInsertData: any[] = [];
-      
-      // 밀도 1500 반영
       const density = 1500; 
 
       for (let i = 0; i < density; i++) {
         const isYoutube = Math.random() > 0.5;
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
-        
-        // 좌표 랜덤 생성
         const lat = city.bounds.sw.lat + Math.random() * (city.bounds.ne.lat - city.bounds.sw.lat);
         const lng = city.bounds.sw.lng + Math.random() * (city.bounds.ne.lng - city.bounds.sw.lng);
 
         let finalImage = "";
         let finalYoutubeUrl = null;
 
-        if (isYoutube) {
-          // 리스트 중 랜덤 선택
-          const videoId = VERIFIED_YOUTUBE_IDS[i % VERIFIED_YOUTUBE_IDS.length];
+        // 유튜브 영상으로 결정되었고, 검증된 리스트가 있는 경우
+        if (isYoutube && validYoutubeIds.length > 0) {
+          const videoId = validYoutubeIds[i % validYoutubeIds.length];
           finalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-          // 고화질 썸네일 경로
           finalImage = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
         } else {
-          // Picsum 이미지를 시드와 함께 활용
-          const imageSeed = (i % 100) + 1;
-          finalImage = `https://picsum.photos/seed/${imageSeed + city.name}/800/600`; 
+          // 유튜브가 아니거나 검증된 영상이 없으면 Unsplash 이미지 사용
+          const imageId = UNSPLASH_IDS_100[i % UNSPLASH_IDS_100.length];
+          finalImage = getUnsplashUrl(imageId);
         }
 
         cityInsertData.push({
           content: REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)],
-          location_name: `${city.name} ${Math.floor(Math.random() * 100) + 1}번길 인근`,
+          location_name: `${city.name} 인근`,
           latitude: lat,
           longitude: lng,
           image_url: finalImage,
@@ -65,26 +75,24 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           created_at: new Date(Date.now() - Math.random() * 60 * 24 * 3600000).toISOString()
         });
 
-        // 100개 단위로 끊어서 DB 삽입 (메모리 방어)
+        // 100개 단위 배치 삽입
         if (cityInsertData.length >= 100) {
           const { error } = await supabase.from('posts').insert(cityInsertData);
           if (error) throw error;
           totalInserted += cityInsertData.length;
-          cityInsertData.length = 0; // 배열 비우기
+          cityInsertData.length = 0;
         }
       }
 
-      // 남은 데이터 삽입
       if (cityInsertData.length > 0) {
-        const { error } = await supabase.from('posts').insert(cityInsertData);
-        if (error) throw error;
+        await supabase.from('posts').insert(cityInsertData);
         totalInserted += cityInsertData.length;
       }
     }
 
     return totalInserted;
-  } catch (err: any) {
-    console.error("Global seeding failed:", err);
+  } catch (err) {
+    console.error("Seeding failed:", err);
     throw err;
   }
 };
