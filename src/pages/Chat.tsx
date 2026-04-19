@@ -125,7 +125,6 @@ const Chat = () => {
 
     fetchMessages();
 
-    // 실시간 구독 채널 생성 (고유한 이름 사용)
     const channelId = `chat_room_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
       .channel(channelId)
@@ -136,16 +135,13 @@ const Chat = () => {
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newMsg = payload.new as Message;
-          // 현재 대화방의 메시지인지 확인
-          if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
-              (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
+          // 중복 방지: 내가 보낸 메시지는 이미 handleSend에서 추가했으므로, 상대방이 보낸 것만 추가
+          if (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) {
             setMessages(prev => {
-              // 중복 방지
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
-            // 상대방이 보낸 메시지라면 읽음 처리
-            if (newMsg.sender_id === chatId) markAsRead();
+            markAsRead();
           }
         } else if (payload.eventType === 'UPDATE') {
           const updatedMsg = payload.new as Message;
@@ -190,11 +186,8 @@ const Chat = () => {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content);
       } else if (data) {
-        // 낙관적 업데이트: 실시간 이벤트를 기다리지 않고 즉시 추가
-        setMessages(prev => {
-          if (prev.some(m => m.id === data.id)) return prev;
-          return [...prev, data as Message];
-        });
+        // 내가 보낸 메시지는 즉시 화면에 추가 (낙관적 업데이트)
+        setMessages(prev => [...prev, data as Message]);
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
