@@ -14,29 +14,29 @@ const seededRandom = (seed: string) => {
 };
 
 /**
- * 재생이 보장된 공식 K-pop 및 Pop 유튜브 링크
+ * 재생 및 임베딩이 확실히 보장된 공식 뮤직비디오 리스트
  */
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=ArmDp-zijuc",
-  "https://www.youtube.com/watch?v=pSUydWNJ968",
-  "https://www.youtube.com/watch?v=fJS5er6p28E",
-  "https://www.youtube.com/watch?v=6ZUIwj3FgUY",
-  "https://www.youtube.com/watch?v=gdZLi9oWNZg",
-  "https://www.youtube.com/watch?v=WMweEpGlu_U",
-  "https://www.youtube.com/watch?v=POe9SOEKotU",
-  "https://www.youtube.com/watch?v=4TWR90JKlpg",
-  "https://www.youtube.com/watch?v=TQTlCHxyuu8",
-  "https://www.youtube.com/watch?v=Os_heh8vPfs",
-  "https://www.youtube.com/watch?v=hT_nvWreIhg",
-  "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
-  "https://www.youtube.com/watch?v=OPf0YbXqDm0",
-  "https://www.youtube.com/watch?v=nfWlot6h_JM",
-  "https://www.youtube.com/watch?v=kffacxfA7G4",
-  "https://www.youtube.com/watch?v=CevxZvSJLk8",
-  "https://www.youtube.com/watch?v=09R8_2nJtjg",
-  "https://www.youtube.com/watch?v=YQHsXMglC9A",
-  "https://www.youtube.com/watch?v=2vjPBrBU-TM",
+  "https://www.youtube.com/watch?v=gdZLi9oWNZg", // BTS - Dynamite
+  "https://www.youtube.com/watch?v=WMweEpGlu_U", // BTS - Butter
+  "https://www.youtube.com/watch?v=vRXZj0DzXIA", // BLACKPINK - Ice Cream
+  "https://www.youtube.com/watch?v=ioNng23DkIM", // BLACKPINK - How You Like That
+  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
+  "https://www.youtube.com/watch?v=fHI8X4OXW-Q", // NewJeans - Ditto
+  "https://www.youtube.com/watch?v=ArmDp-zijuc", // NewJeans - OMG
+  "https://www.youtube.com/watch?v=pSUydWNJ968", // IVE - I AM
+  "https://www.youtube.com/watch?v=6ZUIwj3FgUY", // IVE - LOVE DIVE
+  "https://www.youtube.com/watch?v=TQTlCHxyuu8", // LE SSERAFIM - UNFORGIVEN
+  "https://www.youtube.com/watch?v=hT_nvWreIhg", // Charlie Puth - Left and Right
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson - Uptown Funk
+  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
+  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
+  "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
+  "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
+  "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
+  "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
 ];
 
 const ACCIDENT_IMAGES = ["1597328290883-50c5787b7c7e", "1580273916550-e323be2ae537", "1566241440091-ec10df8db2e1", "1494976388531-d1058494cdd8", "1516733725897-1aa73b87c8e8", "1549317661-bd32c8ce0db2", "1574610758891-5b809b6e6e2e", "1506015391300-4802dc74de2e", "1518527989017-5baca7a58d3c", "1599412227383-b7d4751c8765", "1578496479914-7ef3b0193be3", "1590102426319-c7526718cd70", "1517055727180-d1a9761c546a", "1503376780353-7e6692767b70", "1541899481282-d53bffe3c35d", "1450101499163-c8848c66ca85", "1506719040632-7d588830c6a6", "1515569067071-ec3b51335dd0", "1533106497176-45ae19e68ba2", "1504215636907-fe1e63f29066"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
@@ -111,18 +111,16 @@ export const createMockPosts = (
     let isPopular = false;
     let isAd = false;
 
-    // 요청하신 비율 적용: 인플루언서 5%, 인기 5%, 일반 90%
+    // 인플루언서 및 인기 포스팅 확률 상향 (각 10%)
     if (!specificUserId) {
-      if (typeRoll < 0.05) isInfluencer = true; 
-      else if (typeRoll < 0.10) isPopular = true; 
-      // 나머지는 일반 포스팅
+      if (typeRoll < 0.10) isInfluencer = true; 
+      else if (typeRoll < 0.20) isPopular = true; 
     }
 
-    // GIF 제거 요청 반영 (isGif는 항상 false)
     const isGif = false; 
     
-    // 유튜브 영상 비중 (일반 포스팅 중 약 30% 확률로 유튜브)
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; 
+    // 유튜브 영상 비중 (약 25% 확률)
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.75; 
     
     let lat, lng;
     if (bounds) {
