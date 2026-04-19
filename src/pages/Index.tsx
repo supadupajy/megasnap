@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Sparkles } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2 } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser } = useAuth();
   
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -47,7 +47,6 @@ const Index = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
-  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(48); 
   const [isWriteOpen, setIsWriteOpen] = useState(false);
@@ -59,7 +58,6 @@ const Index = () => {
 
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
-  const hasInitialLoaded = useRef(false);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -73,24 +71,19 @@ const Index = () => {
   };
 
   const mapDbToPost = (p: any): Post => {
-    const likes = Number(p.likes || 0);
-    const borderType = getTierFromId(p.id);
-    const isInfluencer = ['silver', 'gold', 'diamond'].includes(borderType);
-    const isAd = p.content?.startsWith('[AD]');
-    const isGif = p.content?.startsWith('[GIF]');
-    const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
-    
+    const isAd = p.content?.trim().startsWith('[AD]');
+    const borderType = isAd ? 'none' : getTierFromId(p.id);
     return {
       id: p.id,
       isAd,
-      isGif,
-      isInfluencer,
+      isGif: false,
+      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-      content: cleanContent,
+      content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name,
       lat: p.latitude,
       lng: p.longitude,
-      likes: likes,
+      likes: Number(p.likes || 0),
       commentsCount: 0,
       comments: [],
       image: p.image_url,
@@ -112,21 +105,6 @@ const Index = () => {
       throttleTimer.current = null;
     }, 100);
   }, [isSelectingLocation]);
-
-  const loadInitialGlobalPosts = useCallback(async () => {
-    if (hasInitialLoaded.current) return;
-    hasInitialLoaded.current = true;
-    try {
-      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
-      if (!error && data) {
-        const mapped = data.map(mapDbToPost);
-        setAllPosts(mapped);
-        mapCache.posts = mapped;
-      }
-    } catch (err) { console.error('[InitialLoad] Error:', err); }
-  }, []);
-
-  useEffect(() => { loadInitialGlobalPosts(); }, [loadInitialGlobalPosts]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -156,23 +134,21 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       if (blockedIds.has(post.user.id)) return false;
       if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
-      if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      
+      // 광고(isAd)는 시간 제한 및 카테고리 필터를 무시하고 항상 노출
+      if (post.isAd) return true;
+
+      if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
       
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
-      else if (selectedCategories.includes('user_filter')) matchesCategory = post.user.id === targetUserId;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
       return matchesCategory;
     });
     
-    const finalMarkers = [...inBoundsCandidates];
-    if (highlightedPostId) {
-      const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
-      if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
-    }
-    setDisplayedMarkers(finalMarkers);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, targetUserId, authUser, currentZoom, highlightedPostId]);
+    setDisplayedMarkers(inBoundsCandidates);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -230,7 +206,7 @@ const Index = () => {
   const startLocationSelection = () => { setIsWriteOpen(false); setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); };
 
   const filteredAllPosts = useMemo(() => allPosts.filter(p => !blockedIds.has(p.user.id)), [allPosts, blockedIds]);
-  const trendingPosts = useMemo(() => [...filteredAllPosts].filter(p => !p.isAd).sort((a, b) => b.likes - a.likes || a.id.localeCompare(b.id)).slice(0, 20).map((p, index) => ({ ...p, rank: index + 1 })), [filteredAllPosts]);
+  const trendingPosts = useMemo(() => [...filteredAllPosts].filter(p => !p.isAd).sort((a, b) => b.likes - a.likes).slice(0, 20).map((p, index) => ({ ...p, rank: index + 1 })), [filteredAllPosts]);
 
   return (
     <>
@@ -256,7 +232,7 @@ const Index = () => {
           )}
         </div>
       </motion.div>
-      <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} targetUserId={targetUserId} />
+      <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
       <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={displayedMarkers} initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} />
