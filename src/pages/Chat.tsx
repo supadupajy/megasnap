@@ -48,14 +48,23 @@ const Chat = () => {
     }
   };
 
-  // 키보드가 올라와서 뷰포트 높이가 변할 때마다 스크롤 하단 고정
+  // 키보드 발생 시 브라우저의 강제 스크롤 시도 차단
   useEffect(() => {
-    const handleResize = () => {
-      setTimeout(() => scrollToBottom('auto'), 100);
+    const handleFocus = () => {
+      setTimeout(() => window.scrollTo(0, 0), 10);
     };
     
-    window.visualViewport?.addEventListener('resize', handleResize);
-    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    window.addEventListener('focusin', handleFocus);
+    window.visualViewport?.addEventListener('resize', () => {
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        scrollToBottom('auto');
+      }, 50);
+    });
+
+    return () => {
+      window.removeEventListener('focusin', handleFocus);
+    };
   }, []);
 
   const markAsRead = async () => {
@@ -210,10 +219,10 @@ const Chat = () => {
     else navigate('/messages');
   };
 
-  if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
+  if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white overflow-hidden z-[1000]">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">

@@ -25,6 +25,19 @@
     --ring: 243.4 75.4% 58.6%;
     --radius: 0.5rem;
   }
+
+  /* 브라우저의 자동 스크롤 및 바운스 방지 */
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @layer base {

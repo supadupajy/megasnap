@@ -31,12 +31,11 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   
-  // 푸시 알림 훅 호출 (로그인된 상태에서만 동작)
   usePushNotifications();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
@@ -72,17 +71,17 @@ const AnimatedRoutes = () => {
 
   if (loading && location.pathname !== '/login') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-white">
+    <div className="relative h-full bg-white overflow-hidden">
       {!hideLayout && session && <Header />}
       
-      <main className="relative">
+      <main className="h-full relative">
         <AnimatePresence mode="wait">
           <motion.div 
             key={location.pathname}
@@ -90,7 +89,7 @@ const AnimatedRoutes = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="w-full"
+            className="h-full w-full"
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
@@ -136,13 +135,15 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AnimatePresence mode="wait">
-              {showSplash ? (
-                <SplashScreen key="splash" />
-              ) : (
-                <AnimatedRoutes key="main-app" />
-              )}
-            </AnimatePresence>
+            <div className="h-screen w-screen overflow-hidden bg-white">
+              <AnimatePresence mode="wait">
+                {showSplash ? (
+                  <SplashScreen key="splash" />
+                ) : (
+                  <AnimatedRoutes key="main-app" />
+                )}
+              </AnimatePresence>
+            </div>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
