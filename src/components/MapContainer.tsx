@@ -37,10 +37,14 @@ const MapContainer = ({
   const isProgrammaticMove = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   
+  // 콜백 함수들을 Ref로 관리하여 의존성 배열 문제 해결
+  const onMarkerClickRef = useRef(onMarkerClick);
+  const onMapChangeRef = useRef(onMapChange);
   const onMapClickRef = useRef(onMapClick);
-  useEffect(() => {
-    onMapClickRef.current = onMapClick;
-  }, [onMapClick]);
+
+  useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
   const [isMapReady, setIsMapReady] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(6);
@@ -50,10 +54,11 @@ const MapContainer = ({
     if (!mapElement.current || mapInstance.current) return;
 
     const initMap = () => {
-      const kakao = (window as any).kakao;
-      if (!kakao?.maps) return false;
-
       try {
+        const kakao = (window as any).kakao;
+        // Map 생성자까지 로드되었는지 확인
+        if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
+
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
           level: 6
@@ -65,19 +70,37 @@ const MapContainer = ({
 
         const updateMapData = () => {
           if (isProgrammaticMove.current) return;
+          try {
+            const bounds = map.getBounds();
+            const currentCenter = map.getCenter();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            const level = map.getLevel();
+            
+            setCurrentLevel(level);
+            onMapChangeRef.current({
+              bounds: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } },
+              center: { lat:think
+The previous response was cut off in the middle of a `dyad-write` block for `src/components/MapContainer.tsx`. I need to complete that file and then provide any other necessary changes to fix the app startup issue as promised in the previous thought process.
 
-          const bounds = map.getBounds();
-          const currentCenter = map.getCenter();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const level = map.getLevel();
-          
-          setCurrentLevel(level);
-          onMapChange({
-            bounds: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } },
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: level
-          });
+The cutoff point was:
+```tsx
+            onMapChangeRef.current({
+              bounds: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } },
+              center: { lat:
+```
+
+I will continue from there.
+
+Plan:
+1. Complete `src/components/MapContainer.tsx`.
+2. Update `src/globals.css` to remove Leaflet imports as mentioned in the previous thought process.
+3. Provide a concise summary.currentCenter.getLat(), lng: currentCenter.getLng() },
+              level: level
+            });
+          } catch (e) {
+            console.error('Map update error:', e);
+          }
         };
 
         updateMapData();
@@ -118,7 +141,7 @@ const MapContainer = ({
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
-    if (!map || !kakao) return;
+    if (!map || !kakao || !kakao.maps?.LatLng) return;
 
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
@@ -141,19 +164,25 @@ const MapContainer = ({
       const currentLat = startLat + (targetLat - startLat) * ease;
       const currentLng = startLng + (targetLng - startLng) * ease;
 
-      map.setCenter(new kakao.maps.LatLng(currentLat, currentLng));
+      try {
+        map.setCenter(new kakao.maps.LatLng(currentLat, currentLng));
+      } catch (e) {
+        console.error('Smooth move error:', e);
+      }
 
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         isProgrammaticMove.current = false;
         animationFrameRef.current = null;
-        const bounds = map.getBounds();
-        onMapChange({
-          bounds: { sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } },
-          center: { lat: targetLat, lng: targetLng },
-          level: map.getLevel()
-        });
+        try {
+          const bounds = map.getBounds();
+          onMapChangeRef.current({
+            bounds: { sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } },
+            center: { lat: targetLat, lng: targetLng },
+            level: map.getLevel()
+          });
+        } catch (e) {}
       }
     };
 
@@ -171,7 +200,7 @@ const MapContainer = ({
 
   useEffect(() => {
     const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao) return;
+    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
     if (searchOverlayRef.current) {
       searchOverlayRef.current.setMap(null);
@@ -209,8 +238,6 @@ const MapContainer = ({
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    
-    // 유튜브 썸네일 로직 제거: 무조건 Unsplash 이미지를 사용
     const displayImage = post.image;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
@@ -240,13 +267,14 @@ const MapContainer = ({
 
   useEffect(() => {
     const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao) return;
+    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     if (currentLevel >= 9) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => { if (!currentPostIds.has(id)) { overlay.setMap(null); overlaysRef.current.delete(id); } });
 
     posts.forEach(post => {
+      if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
@@ -263,7 +291,11 @@ const MapContainer = ({
         content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        content.onclick = (e) => { e.stopPropagation(); if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; onMarkerClick(post); };
+        content.onclick = (e) => { 
+          e.stopPropagation(); 
+          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
+          onMarkerClickRef.current(post); 
+        };
         const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1, zIndex: baseZIndex });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
@@ -274,7 +306,10 @@ const MapContainer = ({
           content.style.setProperty('--marker-scale', scale.toString());
           if (isHighlighted) content.classList.add('highlighted'); else content.classList.remove('highlighted');
           if (content.getAttribute('data-content-state') !== contentStateKey) {
-            requestAnimationFrame(() => { content.innerHTML = getMarkerInnerHtml(post, isViewed); content.setAttribute('data-content-state', contentStateKey); });
+            requestAnimationFrame(() => { 
+              content.innerHTML = getMarkerInnerHtml(post, isViewed); 
+              content.setAttribute('data-content-state', contentStateKey); 
+            });
           }
         }
       }
