@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,7 @@ const Messages = () => {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isDragging = useRef(false);
 
   const fetchConversations = async () => {
     if (!authUser) return;
@@ -188,11 +189,15 @@ const Messages = () => {
     }
   };
 
-  const handleItemClick = (otherId: string) => {
+  const handleItemTap = (otherId: string) => {
+    // 드래그 중이거나 이미 스와이프된 상태라면 무시
+    if (isDragging.current) return;
+    
     if (swipedId) {
       setSwipedId(null);
       return;
     }
+    
     navigate(`/chat/${otherId}`);
   };
 
@@ -256,18 +261,23 @@ const Messages = () => {
                         dragConstraints={{ left: -80, right: 0 }}
                         dragElastic={0.1}
                         animate={{ x: isSwiped ? -80 : 0 }}
+                        onDragStart={() => {
+                          isDragging.current = true;
+                        }}
                         onDragEnd={(_, info) => {
+                          // 드래그 종료 후 약간의 지연 시간을 두어 클릭 이벤트와 겹치지 않게 함
+                          setTimeout(() => {
+                            isDragging.current = false;
+                          }, 100);
+
                           if (info.offset.x < -40) {
                             setSwipedId(conv.other_id);
                           } else {
                             setSwipedId(null);
                           }
                         }}
+                        onTap={() => handleItemTap(conv.other_id)}
                         className="relative bg-white flex items-center gap-4 p-3 cursor-pointer z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleItemClick(conv.other_id);
-                        }}
                       >
                         <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
                           <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
