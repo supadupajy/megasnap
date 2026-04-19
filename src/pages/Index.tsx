@@ -12,7 +12,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Database, Sparkles } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Sparkles } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
@@ -73,7 +73,6 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation]);
 
-  // 실제 주소를 가져오는 헬퍼 함수
   const getRealAddress = useCallback(async (lat: number, lng: number): Promise<string> => {
     const kakao = (window as any).kakao;
     if (!kakao?.maps?.services) return '대한민국 어딘가';
@@ -94,7 +93,6 @@ const Index = () => {
     });
   }, []);
 
-  // 초기 전역 데이터 로딩 (인기 리스트 및 초기 마커용)
   const loadInitialGlobalPosts = useCallback(async () => {
     if (hasInitialLoaded.current) return;
     hasInitialLoaded.current = true;
@@ -138,9 +136,10 @@ const Index = () => {
     loadInitialGlobalPosts();
   }, [loadInitialGlobalPosts]);
 
-  // 지도를 옮길 때 자동으로 포스팅 생성
   const autoSeedArea = useCallback(async () => {
-    if (!mapData?.center || isAutoSeeding.current || !authUser) return;
+    // 마커가 이미 충분하거나(10개 이상), 줌이 너무 멀거나, 이미 생성 중이면 중단
+    if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 7) return;
+    if (displayedMarkers.length >= 10) return;
     
     const tileKey = `${mapData.center.lat.toFixed(1)}_${mapData.center.lng.toFixed(1)}`;
     if (mapCache.populatedTiles.has(tileKey)) return;
@@ -152,7 +151,8 @@ const Index = () => {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
       if (!profiles || profiles.length === 0) return;
 
-      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 12);
+      // 한 화면에 약 15~20개가 되도록 생성
+      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 15);
       const insertDataPromises = mockPosts.map(async (p) => {
         const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
         const realAddress = await getRealAddress(p.lat, p.lng);
@@ -166,7 +166,7 @@ const Index = () => {
           user_id: randomUser.id,
           user_name: randomUser.nickname,
           user_avatar: randomUser.avatar_url,
-          likes: Math.floor(Math.random() * 1000) + 10,
+          likes: Math.floor(Math.random() * 1200) + 50,
           created_at: p.createdAt.toISOString()
         };
       });
@@ -174,14 +174,13 @@ const Index = () => {
       const finalData = await Promise.all(insertDataPromises);
       await supabase.from('posts').insert(finalData);
       
-      // 생성 후 즉시 동기화 트리거
       syncPostsWithSupabase();
     } catch (err) {
       console.error('[AutoSeed] Error:', err);
     } finally {
       isAutoSeeding.current = false;
     }
-  }, [mapData, authUser, getRealAddress]);
+  }, [mapData, authUser, getRealAddress, displayedMarkers.length, currentZoom]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -211,7 +210,6 @@ const Index = () => {
     }
   }, [mapData, syncPostsWithSupabase, autoSeedArea]);
 
-  // 마커 표시 로직 (최대 20개 제한)
   useEffect(() => {
     if (!mapData?.bounds) return;
     if (currentZoom >= 9) { setDisplayedMarkers([]); return; }
@@ -243,7 +241,6 @@ const Index = () => {
       return matchesCategory;
     });
 
-    // 한 화면에 최대 20개만 표시 (좋아요 순 정렬)
     const displayCount = 20; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
@@ -298,22 +295,6 @@ const Index = () => {
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
   }, []);
-
-  const handleForceSeed = async () => {
-    const toastId = showLoading('데이터를 초기화하고 전국 데이터를 재생성합니다...');
-    try {
-      await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      mapCache.populatedTiles.clear();
-      mapCache.posts = [];
-      setAllPosts([]);
-      dismissToast(toastId);
-      showSuccess('데이터가 초기화되었습니다. 지도를 움직여보세요!');
-      autoSeedArea();
-    } catch (err) {
-      dismissToast(toastId);
-      showError('초기화 중 오류가 발생했습니다.');
-    }
-  };
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setMapCenter({ lat: post.lat, lng: post.lng });
@@ -379,7 +360,6 @@ const Index = () => {
 
   const filteredAllPosts = useMemo(() => allPosts.filter(p => !blockedIds.has(p.user.id)), [allPosts, blockedIds]);
   
-  // 인기 포스팅 리스트: 전체 데이터에서 좋아요 순으로 추출
   const trendingPosts = useMemo(() => {
     return [...filteredAllPosts]
       .filter(p => !p.isAd)
@@ -430,16 +410,6 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              <div className="absolute top-[100px] right-4 z-[60]">
-                <button 
-                  onClick={handleForceSeed}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-2xl text-[11px] font-black shadow-xl shadow-indigo-200 active:scale-90 transition-all border-2 border-white"
-                >
-                  <Database className="w-4 h-4" />
-                  데이터 초기화
-                </button>
-              </div>
-
               <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
                 <div className="w-full shrink-0 pointer-events-auto">
                   <TrendingPosts posts={trendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={handleTrendingPostClick} />
