@@ -153,10 +153,10 @@ const Chat = () => {
 
   return (
     <div 
-      className="flex flex-col h-full bg-white"
+      className="flex flex-col h-[100dvh] bg-white"
       style={{ 
-        // 웹 시뮬레이터에서는 padding으로 대응, 실제 기기에서는 시스템 리사이징에 맡김
-        paddingBottom: keyboardHeight > 0 && !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
+        // 스마트폰에서도 keyboardHeight가 적용되도록 조건문 제거
+        paddingBottom: `${keyboardHeight}px`
       }}
     >
       {/* Header */}
