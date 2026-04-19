@@ -7,6 +7,15 @@ import { useKeyboard } from '@/hooks/use-keyboard';
 const KeyboardSimulator = () => {
   const { isKeyboardOpen, setIsKeyboardOpenManual } = useKeyboard();
 
+  // Dyad 프리뷰 환경(localhost 또는 dyad.sh)에서만 가상 키보드를 표시합니다.
+  // 실제 스마트폰(APK 또는 일반 도메인)에서는 시스템 키보드가 작동하므로 표시하지 않습니다.
+  const isPreview = 
+    window.location.hostname === 'localhost' || 
+    window.location.hostname.includes('dyad.sh') ||
+    window.location.hostname.includes('webcontainer.io');
+
+  if (!isPreview) return null;
+
   return (
     <AnimatePresence>
       {isKeyboardOpen && (

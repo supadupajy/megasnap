@@ -112,8 +112,10 @@ const Chat = () => {
     }
   }, [authUser?.id, chatId]);
 
+  // 키보드가 올라오거나 메시지가 추가될 때 스크롤을 하단으로 이동
   useLayoutEffect(() => {
-    scrollToBottom('auto');
+    const timer = setTimeout(() => scrollToBottom('auto'), 100);
+    return () => clearTimeout(timer);
   }, [messages.length, isKeyboardOpen]);
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -153,7 +155,11 @@ const Chat = () => {
   return (
     <div 
       className="relative flex flex-col w-full h-full bg-white overflow-hidden"
-      style={{ paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : 0 }}
+      style={{ 
+        // 실제 기기에서는 visualViewport가 높이를 줄이므로 padding이 필요 없을 수 있지만,
+        // 시뮬레이터 환경과 일관성을 위해 유지합니다.
+        paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : 0 
+      }}
     >
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -213,7 +219,10 @@ const Chat = () => {
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            onFocus={() => setIsKeyboardOpenManual(true)}
+            onFocus={() => {
+              // 실제 기기에서는 시스템 키보드가 올라오므로 수동 트리거는 프리뷰에서만 의미가 있습니다.
+              setIsKeyboardOpenManual(true);
+            }}
             onClick={(e) => {
               e.stopPropagation();
               setIsKeyboardOpenManual(true);
