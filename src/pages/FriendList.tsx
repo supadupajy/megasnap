@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Search, UserPlus, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, Search, Loader2, MessageSquare, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,43 +16,62 @@ const FriendList = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const searchUsers = useCallback(async (query: string) => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setUsers([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // bio 컬럼을 제외하고 검색
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar_url')
+        .ilike('nickname', `%${trimmedQuery}%`)
+        .neq('id', authUser?.id)
+        .limit(30);
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err) {
+      console.error('User search error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authUser]);
+
   useEffect(() => {
-    const searchUsers = async () => {
-      if (!searchQuery.trim()) {
-        setUsers([]);
-        return;
-      }
+    const timer = setTimeout(() => {
+      searchUsers(searchQuery);
+    }, 150);
 
-      setIsLoading(true);
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url, bio')
-          .or(`nickname.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
-          .neq('id', authUser?.id)
-          .limit(20);
-
-        setUsers(data || []);
-      } catch (err) {
-        console.error('User search error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timer = setTimeout(() => searchUsers(), 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, authUser]);
+  }, [searchQuery, searchUsers]);
 
   const handleStartChat = (user: any) => {
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
     navigate(`/chat/${user.id}`);
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1 && window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/messages');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white pb-10">
+    <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
+        <button 
+          onClick={handleBack} 
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-800" />
+        </button>
         <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">새로운 메시지</h1>
       </header>
 
@@ -60,20 +79,39 @@ const FriendList = () => {
         <div className="relative py-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input placeholder="닉네임 또는 아이디 검색" className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
-            {isLoading && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
+            <Input 
+              placeholder="닉네임으로 친구 찾기" 
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              </div>
+            )}
           </div>
         </div>
 
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{searchQuery ? '검색 결과' : '검색어를 입력하세요'}</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
+          </p>
+          
           <div className="space-y-1">
             {users.map((user) => (
-              <div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
+              <div 
+                key={user.id} 
+                onClick={() => handleStartChat(user)}
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
+              >
                 <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
                   <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                     <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
+                      {user.nickname?.[0] || '?'}
+                    </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -83,9 +121,17 @@ const FriendList = () => {
                   </div>
                   <p className="text-xs text-gray-500 truncate">{user.bio || '안녕하세요! Chora 탐험가입니다.'}</p>
                 </div>
-                <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center"><UserPlus className="w-4 h-4 text-indigo-600" /></div>
               </div>
             ))}
+            
+            {!isLoading && searchQuery.trim() && users.length === 0 && (
+              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-gray-200" />
+                </div>
+                <p className="text-sm text-gray-400 font-bold">해당 닉네임을 가진 사용자가 없습니다.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

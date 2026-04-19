@@ -19,54 +19,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userEmail?: string) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
-      if (!error) setProfile(data);
+        .maybeSingle();
+
+      if (!data && !error) {
+        const defaultNickname = userEmail ? userEmail.split('@')[0] : '탐험가';
+        const { data: newProfile, error: insertError } = await supabase
+          .from("profiles")
+          .upsert([
+            {
+              id: userId,
+              nickname: defaultNickname,
+              avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
+              bio: "지도를 여행하는 탐험가 📍",
+              updated_at: new Date().toISOString()
+            }
+          ])
+          .select()
+          .single();
+
+        if (!insertError) setProfile(newProfile);
+      } else if (data) {
+        setProfile(data);
+      }
     } catch (err) {
-      console.error("Profile fetch error:", err);
+      console.error("[AuthProvider] Profile fetch error:", err);
     }
   };
 
   useEffect(() => {
-    // 1. 세션 초기화 (비동기지만 setLoading을 최대한 빨리 호출)
-    const initAuth = async () => {
+    const initSession = async () => {
       try {
+        // 1. 세션 정보를 먼저 가져옴
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         
+        // 2. 세션 확인 즉시 로딩 종료 (프로필은 배경에서 로드)
+        setLoading(false);
+        
         if (initialSession?.user) {
-          // 프로필은 백그라운드에서 가져옴 (await 하지 않음)
-          fetchProfile(initialSession.user.id);
+          fetchProfile(initialSession.user.id, initialSession.user.email);
         }
       } catch (error) {
         console.error("Auth init error:", error);
-      } finally {
-        // 세션 확인이 끝나면 즉시 로딩 해제
         setLoading(false);
       }
     };
 
-    initAuth();
+    initSession();
 
-    // 2. 인증 상태 변화 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          fetchProfile(currentSession.user.id);
+          fetchProfile(currentSession.user.id, currentSession.user.email);
         } else {
           setProfile(null);
         }
-        
-        // 상태 변화가 감지되면 로딩 해제 보장
         setLoading(false);
       }
     );
@@ -77,7 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const refreshProfile = async () => {
-    if (user?.id) await fetchProfile(user.id);
+    if (user?.id) await fetchProfile(user.id, user.email);
   };
 
   const signOut = async () => {

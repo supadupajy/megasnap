@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
-import confetti from 'canvas-confetti';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { postDraftStore } from '@/utils/post-draft-store';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -24,15 +23,25 @@ interface WritePostProps {
 
 const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
   const { user: authUser, profile } = useAuth();
-  const [content, setContent] = useState('');
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  const [draft, setDraft] = useState(postDraftStore.get());
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
+  
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // 선택된 좌표가 있을 경우 주소로 변환
+  useEffect(() => {
+    const unsubscribe = postDraftStore.subscribe(() => {
+      setDraft(postDraftStore.get());
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen) {
@@ -43,12 +52,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
-            // 도로명 주소가 있으면 도로명, 없으면 지번 주소 사용
-            const roadAddr = result[0].road_address;
-            const cleanAddress = roadAddr 
-              ? `${roadAddr.region_1depth_name} ${roadAddr.region_2depth_name} ${roadAddr.region_3depth_name}`
-              : `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`;
-            setAddress(cleanAddress);
+            const city = addr.region_1depth_name || '';
+            const district = addr.region_2depth_name || '';
+            const neighborhood = addr.region_3depth_name || '';
+            
+            const cleanAddress = `${city} ${district} ${neighborhood}`.trim();
+            setAddress(cleanAddress || '알 수 없는 장소');
           } else {
             setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
           }
@@ -71,12 +80,28 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       });
       
       if (image.dataUrl) {
-        setCapturedImage(image.dataUrl);
+        postDraftStore.set({ image: image.dataUrl });
+        setVideoUrl(null);
+        setVideoFile(null);
       }
     } catch (error) {
       console.error('Camera error:', error);
     } finally {
       setIsTakingPhoto(false);
+    }
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        showError('동영상 용량은 50MB를 초과할 수 없습니다.');
+        return;
+      }
+      setVideoFile(file);
+      const url = URL.createObjectURL(file);
+      setVideoUrl(url);
+      postDraftStore.set({ image: null });
     }
   };
 
@@ -86,8 +111,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!capturedImage) {
-      showError('사진을 첨부해야 포스팅을 등록할 수 있습니다.');
+    if (!draft.image && !videoUrl) {
+      showError('사진이나 동영상을 첨부해주세요.');
       return;
     }
 
@@ -97,23 +122,43 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     }
 
     setIsSubmitting(true);
-
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
-    const postData = {
-      content: content,
-      location_name: address,
-      latitude: initialLocation.lat,
-      longitude: initialLocation.lng,
-      image_url: capturedImage,
-      user_id: authUser.id,
-      user_name: displayName,
-      user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
-      likes: 0,
-      created_at: new Date().toISOString()
-    };
-
     try {
+      let finalVideoUrl = null;
+
+      if (videoFile) {
+        const fileExt = videoFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${authUser.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('post-videos')
+          .upload(filePath, videoFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('post-videos')
+          .getPublicUrl(filePath);
+        
+        finalVideoUrl = publicUrl;
+      }
+
+      const postData = {
+        content: draft.content,
+        location_name: address,
+        latitude: initialLocation.lat,
+        longitude: initialLocation.lng,
+        image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
+        video_url: finalVideoUrl,
+        user_id: authUser.id,
+        user_name: displayName,
+        user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
+        likes: 0,
+        created_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('posts')
         .insert([postData])
@@ -131,38 +176,26 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           name: displayName,
           avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
         },
-        content: content,
+        content: draft.content,
         location: address,
         lat: initialLocation.lat,
         lng: initialLocation.lng,
         likes: 0,
         commentsCount: 0,
         comments: [],
-        image: capturedImage,
+        image: postData.image_url,
+        videoUrl: finalVideoUrl,
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none'
       };
 
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-      const interval: any = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-      }, 250);
-
       if (onPostCreated) onPostCreated(newPost);
       showSuccess('새로운 추억이 등록되었습니다! ✨');
       
-      // 상태 초기화
-      setContent('');
-      setCapturedImage(null);
+      postDraftStore.clear();
+      setVideoUrl(null);
+      setVideoFile(null);
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -173,15 +206,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   return (
-    <Drawer 
-      open={isOpen} 
-      onOpenChange={(open) => !open && onClose()}
-      modal={true}
-    >
-      <DrawerContent className="h-[92vh] flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl">
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={true}>
+      <DrawerContent 
+        className={cn(
+          "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
+          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh]"
+        )}
+      >
+        {!isKeyboardOpen && (
+          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        )}
         
-        <div className="px-6 flex flex-col flex-1 min-h-0">
+        <div className={cn("px-10 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
           <div className="flex items-center justify-between mb-4 shrink-0">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <span className="text-indigo-600">✨</span>
@@ -192,89 +228,87 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
-            {/* 사진 촬영 영역 */}
-            <div 
-              onClick={takePhoto}
-              className="aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all group relative overflow-hidden shrink-0"
-            >
-              {capturedImage ? (
-                <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-              ) : (
-                <>
-                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Camera className="w-7 h-7 text-indigo-600" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-gray-900">사진 촬영하기</p>
-                    <p className="text-xs text-gray-400 mt-1">지금 이 순간을 캡처하세요</p>
-                  </div>
-                </>
-              )}
-              {(isTakingPhoto || isSubmitting) && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+            <div className="space-y-6 px-1">
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={takePhoto}
+                    className={cn(
+                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                      draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                    )}
+                  >
+                    <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
+                    <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
+                  </button>
+                  <button 
+                    onClick={() => videoInputRef.current?.click()}
+                    className={cn(
+                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                      videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                    )}
+                  >
+                    <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
+                    <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                  </button>
+                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
                 </div>
-              )}
-            </div>
-
-            {/* 위치 선택 영역 */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
-                <button 
-                  onClick={onStartLocationSelection}
-                  className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline"
-                >
-                  <MapIcon className="w-3 h-3" />
-                  지도에서 위치 선택
-                </button>
               </div>
-              
-              <div 
-                onClick={onStartLocationSelection}
-                className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group"
-              >
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                  <MapPin className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {isLoadingAddress ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
-                      <span className="text-xs text-gray-400">주소를 불러오는 중...</span>
-                    </div>
+
+              {(draft.image || videoUrl) && (
+                <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+                  {draft.image ? (
+                    <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
+                    <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                  )}
+                  <button 
+                    onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); }}
+                    className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                  <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                    <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
+                  </button>
+                </div>
+                <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <MapPin className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
                       {address || '위치를 선택해주세요'}
                     </p>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 내용 입력 영역 */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-              <Textarea 
-                placeholder="이 장소에서의 추억을 기록해보세요..."
-                className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                <Textarea 
+                  placeholder="이 장소에서의 추억을 기록해보세요..."
+                  className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                  value={draft.content}
+                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 
-          <div 
-            className={cn(
-              "py-4 bg-white shrink-0 transition-all duration-300",
-              isKeyboardOpen ? "pb-2" : "pb-[120px]"
-            )}
-          >
+          <div className={cn("py-4 bg-white shrink-0 transition-all duration-300", isKeyboardOpen ? "pb-2" : "pb-[120px]")}>
             <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
               onClick={handlePost}
-              disabled={!content || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>

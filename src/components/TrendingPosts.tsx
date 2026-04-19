@@ -68,7 +68,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           isExpanded ? "ring-1 ring-black/5" : ""
         )}
       >
-        {/* Header: Always visible */}
         <div 
           className="h-[44px] px-3 flex items-center gap-2 cursor-pointer"
           onClick={handleHeaderClick}
@@ -119,7 +118,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           />
         </div>
 
-        {/* Dropdown Content */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -130,7 +128,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               className="overflow-hidden border-t border-gray-50"
             >
               <div className="max-h-[450px] overflow-y-auto no-scrollbar overscroll-contain p-2 space-y-1">
-                {/* AD Banner */}
                 <div className="relative h-[112px] w-full rounded-xl overflow-hidden mb-2 group cursor-pointer">
                   <img 
                     src="https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80" 
@@ -175,10 +172,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         "w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 relative",
                         isInfluencer ? "influencer-border-container p-[2px]" : (isPopular ? "popular-border-container p-[2px]" : "bg-gray-100")
                       )}>
-                        <div className={cn(
-                          "w-full h-full rounded-[9px] overflow-hidden relative bg-white",
-                          isInfluencer && "shine-overlay"
-                        )}>
+                        <div className="w-full h-full rounded-[9px] overflow-hidden relative bg-white">
                           <img
                             src={post.image}
                             alt=""
