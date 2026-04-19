@@ -29,7 +29,7 @@ const isValidUUID = (uuid: string) => {
 };
 
 const HEADER_HEIGHT = 88;
-const INPUT_AREA_HEIGHT = 100; // 높이를 80에서 100으로 더 늘림
+const INPUT_AREA_HEIGHT = 100;
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -84,6 +84,7 @@ const Chat = () => {
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
       const keyboardHeight = window.innerHeight - vp.height - offsetTop;
+      const isKeyboardOpen = keyboardHeight > 100; // 100px 이상이면 키보드가 올라온 것으로 간주
 
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
@@ -92,10 +93,17 @@ const Chat = () => {
       if (inputRef.current) {
         const bottomOffset = Math.max(0, keyboardHeight);
         inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
+        
+        // 키보드가 열려있을 때는 하단 여백을 최소화(8px), 닫혀있을 때는 시스템 바를 피하기 위해 40px 유지
+        inputRef.current.style.paddingBottom = isKeyboardOpen 
+          ? '8px' 
+          : 'max(40px, env(safe-area-inset-bottom))';
       }
 
       if (scrollRef.current) {
-        const bottomPad = INPUT_AREA_HEIGHT + Math.max(0, keyboardHeight) + 24;
+        // 스크롤 영역의 하단 패딩도 키보드 상태에 따라 조절
+        const currentInputPadding = isKeyboardOpen ? 8 : 40;
+        const bottomPad = (INPUT_AREA_HEIGHT - 40 + currentInputPadding) + Math.max(0, keyboardHeight) + 24;
         scrollRef.current.style.paddingBottom = `${bottomPad}px`;
       }
 
@@ -327,7 +335,7 @@ const Chat = () => {
         className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
           height: `${INPUT_AREA_HEIGHT}px`,
-          paddingBottom: 'max(40px, env(safe-area-inset-bottom))', // 하단 여백을 20px에서 40px로 대폭 늘림
+          paddingBottom: 'max(40px, env(safe-area-inset-bottom))',
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
