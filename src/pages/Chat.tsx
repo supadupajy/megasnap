@@ -28,6 +28,11 @@ const isValidUUID = (uuid: string) => {
   return regex.test(uuid);
 };
 
+// 헤더 높이 상수 (fixed 레이아웃에서 paddingTop 계산용)
+const HEADER_HEIGHT = 88;
+// 입력창 높이 상수
+const INPUT_AREA_HEIGHT = 72;
+
 const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
@@ -51,13 +56,14 @@ const Chat = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ visualViewport로 키보드 높이 감지 → 입력창을 키보드 바로 위로 올림
+  // ✅ visualViewport로 키보드 높이 감지
+  // interactive-widget=resizes-visual 모드에서
+  // 시각적 뷰포트가 줄어드는 만큼을 키보드 높이로 계산
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
 
     const handleViewport = () => {
-      // 키보드 높이 = 전체 높이 - 시각적 뷰포트 높이 - 상단 오프셋
       const keyboardHeight = window.innerHeight - vp.height - vp.offsetTop;
       setInputAreaBottom(Math.max(0, keyboardHeight));
       setTimeout(scrollToBottom, 50);
@@ -197,19 +203,15 @@ const Chat = () => {
     );
   }
 
-  // 입력창 높이 추정값 (pt-3 + py-2 + h-10 + pb)
-  const INPUT_AREA_HEIGHT = 72;
-
   return (
-    <div
-      className="flex flex-col bg-white overflow-hidden"
-      style={{ height: '100dvh' }}
-    >
+    <div className="bg-white" style={{ height: '100dvh' }}>
+
+      {/* ✅ 헤더: fixed top-0으로 뷰포트 스크롤과 무관하게 항상 상단 고정 */}
       <header
-        className="flex-shrink-0 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100"
+        className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100"
         style={{
           paddingTop: 'max(32px, env(safe-area-inset-top))',
-          minHeight: '64px',
+          height: `${HEADER_HEIGHT}px`,
         }}
       >
         <div className="flex items-center gap-3">
@@ -245,10 +247,19 @@ const Chat = () => {
         </div>
       </header>
 
+      {/* ✅ 메시지 영역:
+          - paddingTop: 헤더 높이만큼 확보
+          - paddingBottom: 입력창 높이 + 키보드 높이만큼 확보
+          - height: 100dvh로 전체 높이 채움
+          - overflow-y-auto로 메시지만 스크롤 */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar transition-all duration-200"
-        style={{ paddingBottom: `${INPUT_AREA_HEIGHT + inputAreaBottom}px` }}
+        className="overflow-y-auto px-4 space-y-4 no-scrollbar"
+        style={{
+          height: '100dvh',
+          paddingTop: `${HEADER_HEIGHT + 16}px`,
+          paddingBottom: `${INPUT_AREA_HEIGHT + inputAreaBottom + 16}px`,
+        }}
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -280,8 +291,10 @@ const Chat = () => {
         })}
       </div>
 
+      {/* ✅ 입력창: fixed bottom으로 키보드 바로 위에 고정
+          inputAreaBottom = 키보드 높이 → 키보드가 올라오면 같이 올라감 */}
       <div
-        className="fixed left-0 right-0 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 transition-all duration-200"
+        className="fixed left-0 right-0 z-50 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 transition-[bottom] duration-200"
         style={{
           bottom: `${inputAreaBottom}px`,
           paddingBottom: inputAreaBottom > 0
