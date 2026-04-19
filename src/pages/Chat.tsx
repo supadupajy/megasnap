@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, Send, MoreVertical, Phone, Video, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,16 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 스크롤을 최하단으로 이동시키는 함수
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   };
 
+  // 메시지 읽음 처리 함수
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -51,7 +57,7 @@ const Chat = () => {
     }
 
     try {
-      // 상대방이 나에게 보낸 읽지 않은 메시지들을 모두 읽음 처리
+      // 1. DB 업데이트 (상대방이 나에게 보낸 메시지들)
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -60,6 +66,7 @@ const Chat = () => {
         .eq('is_read', false);
       
       if (!error) {
+        // 2. 로컬 스토어 업데이트 (헤더 뱃지 동기화용)
         chatStore.markAsRead(chatId);
       }
     } catch (err) {
@@ -67,6 +74,7 @@ const Chat = () => {
     }
   };
 
+  // 상대방 정보 로드
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
@@ -90,6 +98,7 @@ const Chat = () => {
     fetchOtherUser();
   }, [chatId]);
 
+  // 메시지 로드 및 실시간 구독
   useEffect(() => {
     if (!authUser || !chatId) return;
 
@@ -121,7 +130,8 @@ const Chat = () => {
       setMessages(data || []);
       await markAsRead();
       setIsLoading(false);
-      setTimeout(() => scrollToBottom('auto'), 100);
+      // 초기 로드 시 즉시 스크롤
+      setTimeout(() => scrollToBottom('auto'), 50);
     };
 
     fetchMessages();
@@ -136,6 +146,7 @@ const Chat = () => {
       }, 
       async (payload) => {
         const newMsg = payload.new as Message;
+        // 현재 대화방의 메시지인 경우
         if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
           
@@ -144,6 +155,7 @@ const Chat = () => {
             return [...prev, newMsg];
           });
           
+          // 내가 받은 메시지라면 즉시 읽음 처리
           if (newMsg.sender_id === chatId) {
             await markAsRead();
           }
@@ -153,7 +165,7 @@ const Chat = () => {
         event: 'UPDATE',
         schema: 'public',
         table: 'messages',
-        filter: `sender_id=eq.${authUser.id}` // 내가 보낸 메시지를 상대방이 읽었을 때
+        filter: `sender_id=eq.${authUser.id}` // 내가 보낸 메시지를 상대방이 읽었을 때 (1 표시 제거용)
       }, (payload) => {
         const updatedMsg = payload.new as Message;
         setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
@@ -163,10 +175,10 @@ const Chat = () => {
     return () => { supabase.removeChannel(channel); };
   }, [authUser, chatId]);
 
-  // 메시지 목록이 변경될 때마다 스크롤
-  useEffect(() => {
+  // 메시지 목록이 변경될 때마다 스크롤 (레이아웃 완료 후)
+  useLayoutEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom();
+      scrollToBottom('smooth');
     }
   }, [messages]);
 

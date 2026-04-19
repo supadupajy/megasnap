@@ -47,6 +47,7 @@ const Header = () => {
 
     fetchCounts();
 
+    // 실시간 업데이트 구독
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
 
@@ -58,13 +59,14 @@ const Header = () => {
         filter: `user_id=eq.${authUser.id}` 
       }, fetchCounts)
       .on('postgres_changes', { 
-        event: '*', // INSERT, UPDATE, DELETE 모두 감지
+        event: '*', // INSERT 뿐만 아니라 UPDATE(읽음 처리)도 감지해야 함
         schema: 'public', 
         table: 'messages', 
         filter: `receiver_id=eq.${authUser.id}` 
       }, fetchCounts)
       .subscribe();
 
+    // 로컬 스토어 구독
     const unsubscribeChatStore = chatStore.subscribe(fetchCounts);
 
     return () => { 
