@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
-import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -30,7 +29,6 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -40,6 +38,7 @@ const Chat = () => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -50,19 +49,7 @@ const Chat = () => {
     }
   };
 
-  const fetchMessages = async () => {
-    if (!authUser || !chatId || !isValidUUID(chatId)) return;
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
-      .order('created_at', { ascending: true });
-    
-    if (!error && data) {
-      setMessages(data as Message[]);
-    }
-  };
-
+  // 메시지 로드 및 구독 로직
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
@@ -81,41 +68,53 @@ const Chat = () => {
 
   useEffect(() => {
     if (!authUser || !chatId) return;
-    if (!isValidUUID(chatId)) {
-      const room = chatStore.getRoom(chatId);
-      if (room) {
-        const formatted = room.messages.map(m => ({
-          id: m.id.toString(),
-          content: m.text,
-          sender_id: m.sender === 'me' ? authUser.id : chatId,
-          receiver_id: m.sender === 'me' ? chatId : authUser.id,
-          created_at: new Date().toISOString(),
-          is_read: true
-        }));
-        setMessages(formatted);
+    
+    const fetchMessages = async () => {
+      if (!isValidUUID(chatId)) {
+        const room = chatStore.getRoom(chatId);
+        if (room) {
+          setMessages(room.messages.map(m => ({
+            id: m.id.toString(),
+            content: m.text,
+            sender_id: m.sender === 'me' ? authUser.id : chatId,
+            receiver_id: m.sender === 'me' ? chatId : authUser.id,
+            created_at: new Date().toISOString(),
+            is_read: true
+          })));
+        }
+        return;
       }
-      setIsLoading(false);
-      return;
-    }
+
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
+        .order('created_at', { ascending: true });
+      
+      if (data) setMessages(data as Message[]);
+    };
+
     fetchMessages();
     
-    const channel = supabase
-      .channel(`chat_${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const newMsg = payload.new as Message;
-        if ((newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
-            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id)) {
-          setMessages(prev => [...prev, newMsg]);
-        }
-      })
-      .subscribe();
-    
-    return () => { supabase.removeChannel(channel); };
+    if (isValidUUID(chatId)) {
+      const channel = supabase
+        .channel(`chat_${chatId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const newMsg = payload.new as Message;
+          if ((newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
+              (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id)) {
+            setMessages(prev => [...prev, newMsg]);
+          }
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [authUser?.id, chatId]);
 
+  // 화면 진입 시 및 메시지 추가 시 스크롤 하단 고정
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length, keyboardHeight]);
+  }, [messages.length]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -141,32 +140,26 @@ const Chat = () => {
       } finally {
         isProcessingRef.current = false;
         setIsSending(false);
+        // 전송 후에도 포커스 유지
+        inputRef.current?.focus();
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
       isProcessingRef.current = false;
       setIsSending(false);
+      inputRef.current?.focus();
     }
   };
 
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
-  // 실제 터치 기기인지 확인
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
   return (
     /* 
       핵심: fixed inset-0 대신 h-full w-full flex flex-col을 사용합니다.
-      Capacitor의 resize: "body" 설정에 의해 body 높이가 줄어들면, 
-      이 컨테이너도 자동으로 그 높이에 맞춰 줄어듭니다.
+      Capacitor의 resize: "body" 설정에 의해 키보드가 올라오면 body 높이가 줄어들고, 
+      이 컨테이너도 자동으로 그 줄어든 높이에 맞춰 크기가 재조정됩니다.
     */
-    <div 
-      className="h-full w-full bg-white flex flex-col overflow-hidden relative"
-      style={{ 
-        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 하단을 띄워줌
-        paddingBottom: !isTouchDevice ? `${keyboardHeight}px` : '0px'
-      }}
-    >
+    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -222,10 +215,12 @@ const Chat = () => {
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
         >
           <Input 
+            ref={inputRef}
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
+            autoFocus={true}
           />
           <Button 
             type="submit"
