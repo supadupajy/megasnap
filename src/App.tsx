@@ -54,6 +54,7 @@ const AnimatedRoutes = () => {
   const { session, loading } = useAuth();
   const [showExitDialog, setShowExitDialog] = useState(false);
   
+  const isChatPage = location.pathname.startsWith("/chat");
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
 
   useEffect(() => {
@@ -78,7 +79,8 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    <div className="relative min-h-[100dvh] bg-white">
+    /* Chat 페이지일 때는 부모가 높이를 잡지 않고 자식(Chat.tsx)의 100dvh에 맡김 */
+    <div className={`relative bg-white ${!isChatPage ? "min-h-[100dvh]" : ""}`}>
       {!hideLayout && session && <Header />}
       
       <main className="relative">
