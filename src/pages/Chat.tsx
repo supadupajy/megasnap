@@ -69,12 +69,17 @@ const Chat = () => {
 
       if (!isValidUUID(chatId)) {
         const room = chatStore.getRoom(chatId);
-        setOtherUser(
-          room?.user || {
+        if (room) {
+          setOtherUser({
+            nickname: room.user.name,
+            avatar_url: room.user.avatar
+          });
+        } else {
+          setOtherUser({
             nickname: `Explorer_${chatId}`,
             avatar_url: `https://i.pravatar.cc/150?u=${chatId}`,
-          }
-        );
+          });
+        }
         setIsLoading(false);
         return;
       }
