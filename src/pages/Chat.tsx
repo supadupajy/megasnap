@@ -38,6 +38,8 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
+  // 중복 전송 방지를 위한 Ref
+  const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -124,8 +126,7 @@ const Chat = () => {
 
     fetchMessages();
 
-    // 고유한 채널 ID 생성
-    const channelId = `chat_${[authUser.id, chatId].sort().join('_')}`;
+    const channelId = `chat_v2_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { 
@@ -135,13 +136,11 @@ const Chat = () => {
       }, (payload) => {
         const newMsg = payload.new as Message;
         
-        // 이 채팅방과 관련된 메시지인지 확인
         const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
                            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
         
         if (isRelevant) {
           setMessages(prev => {
-            // 중복 ID 체크 (혹시 모를 상황 대비)
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
@@ -172,25 +171,31 @@ const Chat = () => {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || !authUser || !chatId || isSending) return;
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    // 중복 실행 방지 (Ref + State)
+    if (!inputValue.trim() || !authUser || !chatId || isProcessingRef.current) return;
     
     const content = inputValue.trim();
-    setInputValue('');
+    isProcessingRef.current = true;
     setIsSending(true);
+    setInputValue(''); // 입력창 즉시 초기화
 
     if (isValidUUID(chatId)) {
-      // DB에 저장만 합니다. 화면 업데이트는 Realtime 리스너가 처리합니다.
-      const { error } = await supabase.from('messages').insert([{
-        sender_id: authUser.id,
-        receiver_id: chatId,
-        content: content,
-        is_read: false
-      }]);
-      
-      if (error) {
+      try {
+        const { error } = await supabase.from('messages').insert([{
+          sender_id: authUser.id,
+          receiver_id: chatId,
+          content: content,
+          is_read: false
+        }]);
+        
+        if (error) throw error;
+        // 성공 시 별도의 setMessages를 하지 않습니다. (Realtime 리스너가 처리)
+      } catch (err) {
         showError('메시지 전송에 실패했습니다.');
-        setInputValue(content);
+        setInputValue(content); // 실패 시에만 복구
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
@@ -208,7 +213,12 @@ const Chat = () => {
         setMessages(formatted);
       }
     }
-    setIsSending(false);
+    
+    // 전송 완료 후 약간의 쿨타임 부여
+    setTimeout(() => {
+      isProcessingRef.current = false;
+      setIsSending(false);
+    }, 100);
   };
 
   const handleBack = () => {
@@ -258,23 +268,22 @@ const Chat = () => {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
+        <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
           />
           <Button 
+            type="submit"
             size="icon" 
-            onClick={handleSend} 
             disabled={!inputValue.trim() || isSending} 
             className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
           >
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );
