@@ -26,17 +26,14 @@
     --radius: 0.5rem;
   }
 
-  /* 브라우저의 자동 스크롤 및 바운스 방지 */
+  /* 브라우저의 리사이징을 방해하지 않도록 고정 위치 제거 */
   html, body, #root {
     height: 100%;
     width: 100%;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
-    position: fixed; /* 페이지 전체를 고정하여 브라우저가 밀어올리지 못하게 함 */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    -webkit-overflow-scrolling: touch;
+    background-color: white;
   }
 }
 

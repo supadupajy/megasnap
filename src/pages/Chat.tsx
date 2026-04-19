@@ -36,18 +36,6 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
-  // 가시 영역 스타일 상태
-  const [containerStyle, setContainerStyle] = useState<React.CSSProperties>({
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: 'flex',
-    flexDirection: 'column'
-  });
-  
-  const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -59,68 +47,7 @@ const Chat = () => {
     }
   };
 
-  // VisualViewport를 사용하여 브라우저의 강제 스크롤을 무력화하고 좌표를 고정
-  useEffect(() => {
-    const updateLayout = () => {
-      const vv = window.visualViewport;
-      if (!vv) return;
-
-      // 브라우저가 화면을 밀어올린 만큼(offsetTop) 컨테이너를 다시 아래로 내리고,
-      // 키보드를 제외한 높이(height)만큼만 컨테이너 크기를 조절합니다.
-      setContainerStyle({
-        position: 'fixed',
-        top: vv.offsetTop,
-        left: vv.offsetLeft,
-        width: vv.width,
-        height: vv.height,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'white',
-        zIndex: 1000
-      });
-
-      // 브라우저의 자동 스크롤 시도를 즉시 원복
-      window.scrollTo(0, 0);
-    };
-
-    window.visualViewport?.addEventListener('resize', updateLayout);
-    window.visualViewport?.addEventListener('scroll', updateLayout);
-    
-    // 초기 실행
-    updateLayout();
-
-    // 입력창 포커스 시 브라우저가 화면을 밀어올리는 것을 방지하기 위한 추가 조치
-    const handleFocus = () => {
-      requestAnimationFrame(updateLayout);
-      setTimeout(updateLayout, 100);
-    };
-
-    window.addEventListener('focusin', handleFocus);
-    return () => {
-      window.visualViewport?.removeEventListener('resize', updateLayout);
-      window.visualViewport?.removeEventListener('scroll', updateLayout);
-      window.removeEventListener('focusin', handleFocus);
-    };
-  }, []);
-
-  const markAsRead = async () => {
-    if (!authUser || !chatId || !isValidUUID(chatId)) {
-      if (chatId) chatStore.markAsRead(chatId);
-      return;
-    }
-    try {
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('receiver_id', authUser.id)
-        .eq('sender_id', chatId)
-        .eq('is_read', false);
-      chatStore.markAsRead(chatId);
-    } catch (err) {
-      console.error('[Chat] markAsRead error:', err);
-    }
-  };
-
+  // 메시지 로드 및 실시간 구독 로직
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
     const { data, error } = await supabase
@@ -128,17 +55,9 @@ const Chat = () => {
       .select('*')
       .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
       .order('created_at', { ascending: true });
+    
     if (!error && data) {
-      setMessages(prev => {
-        const incomingArr = Array.isArray(data) ? data : [data];
-        const map = new Map<string, Message>();
-        prev.forEach(m => map.set(m.id, m));
-        incomingArr.forEach(m => map.set(m.id, m));
-        return Array.from(map.values()).sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-      });
-      await markAsRead();
+      setMessages(data as Message[]);
     }
   };
 
@@ -173,46 +92,37 @@ const Chat = () => {
         }));
         setMessages(formatted);
       }
-      markAsRead();
       setIsLoading(false);
       return;
     }
     fetchMessages();
-    const channelId = `chat_${[authUser.id, chatId].sort().join('_')}_${Date.now()}`;
+    
     const channel = supabase
-      .channel(channelId)
+      .channel(`chat_${chatId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMsg = payload.new as Message;
-        const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
-                           (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
-        if (isRelevant) {
-          setMessages(prev => {
-            const map = new Map<string, Message>();
-            prev.forEach(m => map.set(m.id, m));
-            map.set(newMsg.id, newMsg);
-            return Array.from(map.values()).sort((a, b) => 
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-          });
-          if (newMsg.receiver_id === authUser.id) markAsRead();
+        if ((newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
+            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id)) {
+          setMessages(prev => [...prev, newMsg]);
         }
       })
       .subscribe();
+    
     return () => { supabase.removeChannel(channel); };
   }, [authUser?.id, chatId]);
 
   useLayoutEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom('smooth');
-    }
+    scrollToBottom('auto');
   }, [messages.length]);
 
-  const handleSend = async () => {
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const content = inputValue.trim();
-    if (!content || !authUser || !chatId || isProcessingRef.current) return;
-    isProcessingRef.current = true;
+    if (!content || !authUser || !chatId || isSending) return;
+
     setIsSending(true);
     setInputValue('');
+
     if (isValidUUID(chatId)) {
       try {
         const { error } = await supabase.from('messages').insert([{
@@ -226,45 +136,24 @@ const Chat = () => {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content);
       } finally {
-        setTimeout(() => {
-          isProcessingRef.current = false;
-          setIsSending(false);
-        }, 500);
+        setIsSending(false);
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
-      const room = chatStore.getRoom(chatId);
-      if (room) {
-        const formatted = room.messages.map(m => ({
-          id: m.id.toString(),
-          content: m.text,
-          sender_id: m.sender === 'me' ? authUser.id : chatId,
-          receiver_id: m.sender === 'me' ? chatId : authUser.id,
-          created_at: new Date().toISOString(),
-          is_read: true
-        }));
-        setMessages(formatted);
-      }
-      isProcessingRef.current = false;
       setIsSending(false);
     }
-  };
-
-  const handleBack = () => {
-    if (window.history.length > 1 && window.history.state?.idx > 0) navigate(-1);
-    else navigate('/messages');
   };
 
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div style={containerStyle}>
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${chatId}`)}>
+            <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
               <img src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} alt="user" className="w-full h-full rounded-full object-cover border-2 border-white" />
             </div>
             <div className="flex flex-col">
@@ -283,7 +172,7 @@ const Chat = () => {
       {/* Message List */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -301,30 +190,27 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0 pb-[env(safe-area-inset-bottom,24px)]">
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
+      {/* Input Area - Flex 컨테이너의 마지막 요소로 배치 */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+        <form 
+          onSubmit={handleSend}
+          className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+        >
           <Input 
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
           />
           <Button 
-            onClick={handleSend}
+            type="submit"
             size="icon" 
             disabled={!inputValue.trim() || isSending} 
             className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
           >
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );
