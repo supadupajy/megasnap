@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
-import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -30,7 +29,6 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -116,7 +114,7 @@ const Chat = () => {
   // 화면 진입 시 및 메시지 추가 시 스크롤 하단 고정
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length, keyboardHeight]);
+  }, [messages.length]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -142,7 +140,6 @@ const Chat = () => {
       } finally {
         isProcessingRef.current = false;
         setIsSending(false);
-        // 전송 후에도 포커스 유지
         inputRef.current?.focus();
       }
     } else {
@@ -155,23 +152,12 @@ const Chat = () => {
 
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
-  // 실제 터치 기기인지 확인 (웹 시뮬레이터와 실제 기기 구분)
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
   return (
     /* 
-      핵심: 키보드가 올라오면 keyboardHeight만큼 전체 높이를 줄입니다.
-      이렇게 하면 헤더가 위로 밀려나지 않고 항상 상단에 위치하게 됩니다.
+      adjustResize 설정이 되어 있으므로, h-full(100%)은 키보드를 제외한 가용 영역이 됩니다.
+      따라서 별도의 높이 계산 없이 Flex 구조만으로 헤더 상단 고정이 가능합니다.
     */
-    <div 
-      className="w-full bg-white flex flex-col overflow-hidden relative"
-      style={{ 
-        // 키보드가 올라오면 전체 높이에서 키보드 높이를 뺌
-        height: isTouchDevice ? `calc(100% - ${keyboardHeight}px)` : '100%',
-        // 웹 시뮬레이터 환경 대응
-        paddingBottom: !isTouchDevice && keyboardHeight > 0 ? `${keyboardHeight}px` : '0px'
-      }}
-    >
+    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
