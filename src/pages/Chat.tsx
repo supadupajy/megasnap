@@ -36,8 +36,13 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
+  // 가시 영역 높이 상태
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isProcessingRef = useRef(false);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -46,6 +51,32 @@ const Chat = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
+
+  // VisualViewport를 감지하여 키보드 대응 레이아웃 조정
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const updateViewport = () => {
+      // 실제 보이는 영역의 높이로 업데이트
+      setViewportHeight(vv.height);
+      // 브라우저가 화면을 밀어올린 정도를 계산
+      setKeyboardHeight(window.innerHeight - vv.height);
+      
+      // 스크롤 위치 유지
+      if (document.activeElement?.tagName === 'INPUT') {
+        scrollToBottom('auto');
+      }
+    };
+
+    vv.addEventListener('resize', updateViewport);
+    vv.addEventListener('scroll', updateViewport);
+    
+    return () => {
+      vv.removeEventListener('resize', updateViewport);
+      vv.removeEventListener('scroll', updateViewport);
+    };
+  }, []);
 
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
@@ -117,8 +148,9 @@ const Chat = () => {
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const content = inputValue.trim();
-    if (!content || !authUser || !chatId || isSending) return;
+    if (!content || !authUser || !chatId || isProcessingRef.current) return;
 
+    isProcessingRef.current = true;
     setIsSending(true);
     setInputValue('');
 
@@ -135,10 +167,12 @@ const Chat = () => {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content);
       } finally {
+        isProcessingRef.current = false;
         setIsSending(false);
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
+      isProcessingRef.current = false;
       setIsSending(false);
     }
   };
@@ -146,7 +180,10 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="relative w-full h-full bg-white overflow-hidden">
+    <div 
+      className="flex flex-col bg-white overflow-hidden"
+      style={{ height: `${viewportHeight}px` }}
+    >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -171,7 +208,7 @@ const Chat = () => {
       {/* Message List */}
       <div 
         ref={scrollRef} 
-        className="absolute inset-0 pt-[88px] pb-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar bg-white"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -189,14 +226,14 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* TEST: Input Area in the Middle */}
-      <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 p-4 z-[100] pointer-events-none">
+      {/* Input Area - 가시 영역 바닥에 고정 */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
-          className="flex items-center gap-2 bg-white rounded-[24px] px-4 py-2 border-2 border-indigo-600 shadow-2xl pointer-events-auto"
+          className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
         >
           <Input 
-            placeholder="중간 테스트 입력창..." 
+            placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
@@ -210,7 +247,6 @@ const Chat = () => {
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
         </form>
-        <p className="text-center text-[10px] font-black text-indigo-600 mt-2 uppercase tracking-widest">Middle Position Test Mode</p>
       </div>
     </div>
   );
