@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -29,16 +30,13 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
+  const { keyboardHeight } = useKeyboard(); // 가상/실제 키보드 높이 가져오기
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  
-  // 가시 영역 높이 상태
-  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,32 +50,7 @@ const Chat = () => {
     }
   };
 
-  // VisualViewport를 감지하여 키보드 대응 레이아웃 조정
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const updateViewport = () => {
-      // 실제 보이는 영역의 높이로 업데이트
-      setViewportHeight(vv.height);
-      // 브라우저가 화면을 밀어올린 정도를 계산
-      setKeyboardHeight(window.innerHeight - vv.height);
-      
-      // 스크롤 위치 유지
-      if (document.activeElement?.tagName === 'INPUT') {
-        scrollToBottom('auto');
-      }
-    };
-
-    vv.addEventListener('resize', updateViewport);
-    vv.addEventListener('scroll', updateViewport);
-    
-    return () => {
-      vv.removeEventListener('resize', updateViewport);
-      vv.removeEventListener('scroll', updateViewport);
-    };
-  }, []);
-
+  // 메시지 데이터 로드
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
     const { data, error } = await supabase
@@ -143,7 +116,7 @@ const Chat = () => {
 
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length]);
+  }, [messages.length, keyboardHeight]); // 키보드가 올라올 때도 스크롤 하단으로
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -181,8 +154,8 @@ const Chat = () => {
 
   return (
     <div 
-      className="flex flex-col bg-white overflow-hidden"
-      style={{ height: `${viewportHeight}px` }}
+      className="flex flex-col h-full bg-white transition-[padding] duration-300 ease-out"
+      style={{ paddingBottom: `${keyboardHeight}px` }} // 키보드 높이만큼 하단 여백 추가
     >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
@@ -226,7 +199,7 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - 가시 영역 바닥에 고정 */}
+      {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
