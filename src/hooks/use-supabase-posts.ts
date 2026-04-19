@@ -4,18 +4,24 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 
-// DB 데이터를 앱에서 사용하는 Post 타입으로 변환하는 헬퍼 함수
+// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
+const getTierFromId = (id: string) => {
+  let h = 0;
+  for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+  const val = Math.abs(h % 1000) / 1000;
+  
+  if (val < 0.01) return 'diamond'; // 1%
+  if (val < 0.03) return 'gold';    // 2%
+  if (val < 0.07) return 'silver';  // 4%
+  if (val < 0.15) return 'popular'; // 8%
+  return 'none';
+};
+
 const mapDbToPost = (p: any): Post => {
   const likes = Number(p.likes || 0);
+  const borderType = getTierFromId(p.id);
+  const isInfluencer = ['silver', 'gold', 'diamond'].includes(borderType);
   
-  // 등급 판정 로직 (1.5k / 5k / 10k / 15k)
-  let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
-  if (likes >= 15000) borderType = 'diamond';
-  else if (likes >= 10000) borderType = 'gold';
-  else if (likes >= 5000) borderType = 'silver';
-  else if (likes >= 1500) borderType = 'popular';
-
-  const isInfluencer = likes >= 5000;
   const isAd = p.content?.startsWith('[AD]');
   const isGif = p.content?.startsWith('[GIF]');
   const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
