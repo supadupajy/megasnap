@@ -178,7 +178,7 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
-  useEffect(() => { if (mapData && displayedMarkers.length < 15 && !isAutoSeeding.current) autoSeedArea(); }, [mapData, displayedMarkers.length, autoSeedArea]);
+  useEffect(() => { if (mapData && displayedMarkers.length < 10 && !isAutoSeeding.current) autoSeedArea(); }, [mapData, displayedMarkers.length, autoSeedArea]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -197,9 +197,12 @@ const Index = () => {
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
       return matchesCategory;
     });
-    const displayCount = 150; 
+    
+    // 한 화면에 최대 20개 마커로 제한 (좋아요 순 정렬 후 선별)
+    const displayCount = 20; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
+    
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
