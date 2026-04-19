@@ -36,7 +36,6 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 메시지 읽음 처리 함수
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -44,14 +43,16 @@ const Chat = () => {
     }
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
         .eq('is_read', false);
       
-      chatStore.markAsRead(chatId);
+      if (!error) {
+        chatStore.markAsRead(chatId);
+      }
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
@@ -111,7 +112,7 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       setMessages(data || []);
-      markAsRead(); // 초기 로드 시 읽음 처리
+      await markAsRead(); // 메시지 로드 후 즉시 읽음 처리
       setIsLoading(false);
     };
 
@@ -125,11 +126,11 @@ const Chat = () => {
         table: 'messages', 
         filter: `receiver_id=eq.${authUser.id}` 
       }, 
-      (payload) => {
+      async (payload) => {
         const newMsg = payload.new as Message;
         if (newMsg.sender_id === chatId) {
           setMessages((prev) => [...prev, newMsg]);
-          markAsRead(); // 새 메시지 수신 시 읽음 처리
+          await markAsRead(); // 새 메시지 수신 시 즉시 읽음 처리
         }
       }).subscribe();
 

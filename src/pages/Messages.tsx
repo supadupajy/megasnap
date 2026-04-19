@@ -33,7 +33,6 @@ const Messages = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   
-  // 스와이프 및 삭제 관련 상태
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -108,8 +107,32 @@ const Messages = () => {
 
   useEffect(() => {
     fetchConversations();
-    const unsubscribe = chatStore.subscribe(fetchConversations);
-    return () => unsubscribe();
+    
+    if (!authUser) return;
+
+    // 실시간 리스너 추가: 메시지 추가/수정/삭제 시 목록 갱신
+    const channel = supabase
+      .channel('messages_list_updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `receiver_id=eq.${authUser.id}`
+      }, fetchConversations)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `sender_id=eq.${authUser.id}`
+      }, fetchConversations)
+      .subscribe();
+
+    const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
+    
+    return () => {
+      supabase.removeChannel(channel);
+      unsubscribeChatStore();
+    };
   }, [authUser]);
 
   useEffect(() => {
@@ -190,14 +213,11 @@ const Messages = () => {
   };
 
   const handleItemTap = (otherId: string) => {
-    // 드래그 중이거나 이미 스와이프된 상태라면 무시
     if (isDragging.current) return;
-    
     if (swipedId) {
       setSwipedId(null);
       return;
     }
-    
     navigate(`/chat/${otherId}`);
   };
 
@@ -244,7 +264,6 @@ const Messages = () => {
 
                   return (
                     <div key={conv.other_id} className="relative group overflow-hidden rounded-[24px]">
-                      {/* 삭제 버튼 배경 */}
                       <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
                         <button 
                           onClick={(e) => handleDeleteClick(e, conv.other_id)}
@@ -255,26 +274,16 @@ const Messages = () => {
                         </button>
                       </div>
 
-                      {/* 대화 아이템 */}
                       <motion.div
                         drag="x"
                         dragConstraints={{ left: -80, right: 0 }}
                         dragElastic={0.1}
                         animate={{ x: isSwiped ? -80 : 0 }}
-                        onDragStart={() => {
-                          isDragging.current = true;
-                        }}
+                        onDragStart={() => { isDragging.current = true; }}
                         onDragEnd={(_, info) => {
-                          // 드래그 종료 후 약간의 지연 시간을 두어 클릭 이벤트와 겹치지 않게 함
-                          setTimeout(() => {
-                            isDragging.current = false;
-                          }, 100);
-
-                          if (info.offset.x < -40) {
-                            setSwipedId(conv.other_id);
-                          } else {
-                            setSwipedId(null);
-                          }
+                          setTimeout(() => { isDragging.current = false; }, 100);
+                          if (info.offset.x < -40) setSwipedId(conv.other_id);
+                          else setSwipedId(null);
                         }}
                         onTap={() => handleItemTap(conv.other_id)}
                         className="relative bg-white flex items-center gap-4 p-3 cursor-pointer z-10"
