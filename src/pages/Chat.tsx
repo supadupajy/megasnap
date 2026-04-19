@@ -155,13 +155,11 @@ const Chat = () => {
     <div 
       className="fixed inset-0 bg-white flex flex-col overflow-hidden"
       style={{ 
-        // 스마트폰(터치 기기)에서는 시스템이 웹뷰 크기를 줄이므로 bottom: 0으로 충분합니다.
-        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 띄워줍니다.
         bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
       }}
     >
-      {/* Header */}
-      <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
+      {/* Header - Fixed to the very top of the container */}
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/95 backdrop-blur-md z-[60] flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
@@ -181,10 +179,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List */}
+      {/* Message List - Added pt-[88px] to account for fixed header */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar pt-[100px] pb-4 bg-white min-h-0"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
