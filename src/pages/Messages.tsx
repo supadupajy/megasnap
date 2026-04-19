@@ -115,31 +115,24 @@ const Messages = () => {
 
       setIsSearchingGlobal(true);
       try {
-        // profiles 테이블에서 nickname 검색
+        // bio 컬럼을 제외하고 검색
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, nickname, avatar_url, bio')
+          .select('id, nickname, avatar_url')
           .ilike('nickname', `%${trimmedQuery}%`)
           .neq('id', authUser?.id)
           .limit(10);
 
-        if (error) {
-          console.error('Supabase search error:', error);
-          // RLS 에러인 경우 콘솔에 상세 출력
-          if (error.code === '42501') {
-            console.warn('RLS Policy issue: profiles table is not readable.');
-          }
-          throw error;
-        }
+        if (error) throw error;
 
         if (data) {
           const existingIds = new Set(conversations.map(c => c.other_id));
           setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
         }
       } catch (err: any) {
-        // 에러 발생 시 사용자에게 알림 (개발 중 확인용)
+        console.error('Supabase search error:', err);
         if (err.code === '42501') {
-          showError('데이터베이스 접근 권한이 없습니다. (RLS 확인 필요)');
+          showError('데이터베이스 접근 권한이 없습니다.');
         }
       } finally {
         setIsSearchingGlobal(false);

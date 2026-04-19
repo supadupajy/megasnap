@@ -25,12 +25,12 @@ const FriendList = () => {
 
     setIsLoading(true);
     try {
-      // nickname 컬럼을 기준으로 ilike(대소문자 구분 없는 포함 검색) 수행
+      // bio 컬럼을 제외하고 검색
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, nickname, avatar_url, bio')
+        .select('id, nickname, avatar_url')
         .ilike('nickname', `%${trimmedQuery}%`)
-        .neq('id', authUser?.id) // 본인은 제외
+        .neq('id', authUser?.id)
         .limit(30);
 
       if (error) throw error;
@@ -43,7 +43,6 @@ const FriendList = () => {
   }, [authUser]);
 
   useEffect(() => {
-    // 반응성을 위해 디바운스 시간을 150ms로 단축
     const timer = setTimeout(() => {
       searchUsers(searchQuery);
     }, 150);
