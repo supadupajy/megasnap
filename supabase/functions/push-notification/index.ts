@@ -1,12 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { JWT } from 'https://esm.sh/google-auth-library@9'
 
+// Firebase 서비스 계정 설정 (FCM v1 API 사용)
 const FIREBASE_SERVICE_ACCOUNT = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') || '{}')
 
 Deno.serve(async (req) => {
   try {
     const payload = await req.json()
-    const { record } = payload // 새 메시지 데이터 (sender_id, receiver_id, content 등)
+    const { record } = payload 
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
       .eq('id', record.sender_id)
       .single()
 
-    // 3. Firebase Access Token 생성 (FCM v1 API용)
+    // 3. Firebase Access Token 생성
     const client = new JWT({
       email: FIREBASE_SERVICE_ACCOUNT.client_email,
       key: FIREBASE_SERVICE_ACCOUNT.private_key,
@@ -56,14 +57,13 @@ Deno.serve(async (req) => {
               body: record.content,
             },
             data: {
-              chatId: record.sender_id, // 클릭 시 이동할 채팅방 ID
+              chatId: record.sender_id,
               type: 'chat'
             },
             android: {
               priority: 'high',
               notification: {
-                sound: 'default',
-                click_action: 'TOP_STORY_ACTIVITY'
+                sound: 'default'
               }
             },
             apns: {
@@ -80,8 +80,6 @@ Deno.serve(async (req) => {
     )
 
     const result = await fcmResponse.json()
-    console.log('FCM Result:', result)
-
     return new Response(JSON.stringify({ success: true, result }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }
