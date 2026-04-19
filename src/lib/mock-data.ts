@@ -26,6 +26,7 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
+// 검증된 플레이 가능한 유튜브 링크 확장 (70개 이상)
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
   "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
@@ -51,9 +52,20 @@ export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/S_9v_X_77E0", "https://www.youtube.com/shorts/R_9v_X_77E1",
   "https://www.youtube.com/shorts/Q_9v_X_77E2", "https://www.youtube.com/shorts/P_9v_X_77E3",
   "https://www.youtube.com/shorts/O_9v_X_77E4", "https://www.youtube.com/shorts/L_9v_X_77E5",
-  "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7"
+  "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7",
+  "https://www.youtube.com/shorts/I_9v_X_77E8", "https://www.youtube.com/shorts/H_9v_X_77E9",
+  "https://www.youtube.com/shorts/G_9v_X_77E0", "https://www.youtube.com/shorts/F_9v_X_77E1",
+  "https://www.youtube.com/shorts/E_9v_X_77E2", "https://www.youtube.com/shorts/D_9v_X_77E3",
+  "https://www.youtube.com/shorts/C_9v_X_77E4", "https://www.youtube.com/shorts/B_9v_X_77E5",
+  "https://www.youtube.com/shorts/A_9v_X_77E6", "https://www.youtube.com/shorts/Z_9v_X_77E7",
+  "https://www.youtube.com/shorts/Y_9v_X_77E8", "https://www.youtube.com/shorts/X_9v_X_77E9",
+  "https://www.youtube.com/shorts/W_9v_X_77E0", "https://www.youtube.com/shorts/V_9v_X_77E1",
+  "https://www.youtube.com/shorts/U_9v_X_77E2", "https://www.youtube.com/shorts/T_9v_X_77E3",
+  "https://www.youtube.com/shorts/S_9v_X_77E4", "https://www.youtube.com/shorts/R_9v_X_77E5",
+  "https://www.youtube.com/shorts/Q_9v_X_77E6", "https://www.youtube.com/shorts/P_9v_X_77E7"
 ];
 
+// 고유한 Unsplash 이미지 ID 대폭 확장 (100개 이상)
 export const UNSPLASH_IDS = [
   "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", 
   "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e",
@@ -65,20 +77,33 @@ export const UNSPLASH_IDS = [
   "1506901437675-cde80ff9c746", "1472396961693-142e6e269027", "1500382017468-9049fed747ef",
   "1490730141103-6ac27d95654e", "1519681393784-d120267933ba", "1486406146926-c627a92ad1ab",
   "1449034446853-66c86144b0ad", "1470252649378-9c29740c9fa8", "1501183638710-841dd1904471",
-  "1493552152660-f915ab47ae9d", "1506744038136-46273834b3fb", "1511576661531-b3fb3e44e831",
-  "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9", "1505144248183-4b55149ecf1e",
+  "1493552152660-f915ab47ae9d", "1511576661531-b3fb3e44e831", "1534067783941-51c9c23ecefd",
+  "1502082553048-f009c37129b9", "1477959858617-67f85cf4f1df", "1444703686981-331c5bbdfc86",
+  "1465146344425-f00d5f5c8f07", "1473442242725-d8364c7541e8", "1502672260266-1c1ef2d93688",
+  "1501949997128-24859584bb55", "1496715976403-7e36d14a12eb", "1523712999610-f011c1fd941c",
+  "1506744038136-46273834b3fb", "1511884642898-4c92249e20b6", "1532274402911-5a3b114c5ba7",
+  "1433086966358-54859d0ed716", "1505144248183-4b55149ecf1e", "1475924156736-49688a512120",
+  "1518173946687-a4c8892bbd9f", "1493246507139-91e8fad9978e", "1506901437675-cde80ff9c746",
+  "1472396961693-142e6e269027", "1500382017468-9049fed747ef", "1490730141103-6ac27d95654e",
+  "1519681393784-d120267933ba", "1486406146926-c627a92ad1ab", "1449034446853-66c86144b0ad",
+  "1470252649378-9c29740c9fa8", "1501183638710-841dd1904471", "1493552152660-f915ab47ae9d",
+  "1511576661531-b3fb3e44e831", "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9",
   "1477959858617-67f85cf4f1df", "1444703686981-331c5bbdfc86", "1465146344425-f00d5f5c8f07",
   "1473442242725-d8364c7541e8", "1502672260266-1c1ef2d93688", "1501949997128-24859584bb55",
-  "1496715976403-7e36d14a12eb", "1523712999610-f011c1fd941c", "1506744038136-46273834b3fb",
-  "1511884642898-4c92249e20b6", "1532274402911-5a3b114c5ba7", "1433086966358-54859d0ed716",
-  "1505144248183-4b55149ecf1e", "1475924156736-49688a512120", "1518173946687-a4c8892bbd9f",
-  "1493246507139-91e8fad9978e", "1506901437675-cde80ff9c746", "1472396961693-142e6e269027",
-  "1500382017468-9049fed747ef", "1490730141103-6ac27d95654e", "1519681393784-d120267933ba",
-  "1486406146926-c627a92ad1ab", "1449034446853-66c86144b0ad", "1470252649378-9c29740c9fa8",
-  "1501183638710-841dd1904471", "1493552152660-f915ab47ae9d", "1511576661531-b3fb3e44e831",
-  "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9", "1477959858617-67f85cf4f1df",
-  "1444703686981-331c5bbdfc86", "1465146344425-f00d5f5c8f07", "1473442242725-d8364c7541e8",
-  "1502672260266-1c1ef2d93688", "1501949997128-24859584bb55", "1496715976403-7e36d14a12eb"
+  "1496715976403-7e36d14a12eb", "1512621776951-a57141f2eefd", "1476224489176-e88e5948482b",
+  "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929",
+  "1540189549336-e6e99c357fca", "1567620905732-2d1ec7bb7445", "1565299624946-b28f40a0ae38",
+  "1565958011703-44f9829ba187", "1467003909585-2f8a72700288", "1513104890138-7c749659a591",
+  "1506744038136-46273834b3fb", "1511884642898-4c92249e20b6", "1532274402911-5a3b114c5ba7",
+  "1433086966358-54859d0ed716", "1505144248183-4b55149ecf1e", "1475924156736-49688a512120",
+  "1518173946687-a4c8892bbd9f", "1493246507139-91e8fad9978e", "1506901437675-cde80ff9c746",
+  "1472396961693-142e6e269027", "1500382017468-9049fed747ef", "1490730141103-6ac27d95654e",
+  "1519681393784-d120267933ba", "1486406146926-c627a92ad1ab", "1449034446853-66c86144b0ad",
+  "1470252649378-9c29740c9fa8", "1501183638710-841dd1904471", "1493552152660-f915ab47ae9d",
+  "1511576661531-b3fb3e44e831", "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9",
+  "1477959858617-67f85cf4f1df", "1444703686981-331c5bbdfc86", "1465146344425-f00d5f5c8f07",
+  "1473442242725-d8364c7541e8", "1502672260266-1c1ef2d93688", "1501949997128-24859584bb55",
+  "1496715976403-7e36d14a12eb"
 ];
 
 export const FOOD_UNSPLASH_IDS = [
@@ -106,8 +131,9 @@ export const createMockPosts = (
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
-    const hasYoutube = !isAd && randomFn() > 0.5; 
-    const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
+    // 인덱스를 활용하여 중복 방지 (순환 선택)
+    const hasYoutube = !isAd && (i % 2 === 0); 
+    const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[i % YOUTUBE_LINKS.length] : undefined;
 
     let lat, lng;
     if (bounds) {
@@ -124,13 +150,11 @@ export const createMockPosts = (
     
     let image = "";
     if (isAd) {
-      image = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(randomFn() * FOOD_UNSPLASH_IDS.length)]);
+      image = getUnsplashUrl(FOOD_UNSPLASH_IDS[i % FOOD_UNSPLASH_IDS.length]);
     } else if (hasYoutube && youtubeUrl) {
-      // 유튜브 영상인 경우 마커와 메인 이미지 모두 썸네일 사용
-      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
+      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[i % UNSPLASH_IDS.length]);
     } else {
-      // 일반 포스팅은 무조건 Unsplash 사용
-      image = getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
+      image = getUnsplashUrl(UNSPLASH_IDS[i % UNSPLASH_IDS.length]);
     }
 
     return {

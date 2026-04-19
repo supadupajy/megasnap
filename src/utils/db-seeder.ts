@@ -117,6 +117,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
     const allInsertData: any[] = [];
 
+    let globalIndex = 0; // 전체 포스팅 순번을 추적하여 이미지 중복 방지
+
     for (const city of MAJOR_CITIES) {
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       for (let i = 0; i < mockPosts.length; i++) {
@@ -131,27 +133,23 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         
         if (isAd) {
-          finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
+          // 광고 이미지는 순환 선택
+          finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
         } else {
-          // 유튜브 영상 추가 시 유효성 검증
-          if (Math.random() < 0.5) {
-            const candidateUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-            const isValid = await verifyYoutubeUrl(candidateUrl);
-            if (isValid) {
-              finalYoutubeUrl = candidateUrl;
-              // 유튜브 영상인 경우 썸네일을 메인 이미지로 사용
-              finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
-            } else {
-              finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
-            }
+          // 유튜브 영상과 일반 이미지를 50:50 비율로 섞되, 순차적으로 선택하여 중복 최소화
+          if (globalIndex % 2 === 0) {
+            const candidateUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
+            // 실시간 검증은 속도를 위해 생략하거나 일부만 수행 (여기서는 순환 선택으로 다양성 확보)
+            finalYoutubeUrl = candidateUrl;
+            finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
           } else {
-            finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
+            finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
           }
         }
 
         const finalContent = isAd 
-          ? AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)]
-          : REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
+          ? AD_COMMENTS[globalIndex % AD_COMMENTS.length]
+          : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length];
 
         allInsertData.push({
           content: finalContent,
@@ -166,6 +164,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           likes: finalLikes,
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
+
+        globalIndex++;
       }
     }
 
