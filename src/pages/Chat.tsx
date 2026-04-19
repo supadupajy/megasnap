@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
-import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -30,17 +29,12 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  
-  // 실제 스마트폰 뷰포트 대응을 위한 상태
-  const [realHeight, setRealHeight] = useState('100%');
-  const [offsetTop, setOffsetTop] = useState('0px');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,53 +48,6 @@ const Chat = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
-
-  // 스마트폰 브라우저의 강제 스크롤(밀림) 방지 및 뷰포트 동기화
-  useEffect(() => {
-    const handleViewport = () => {
-      if (window.visualViewport) {
-        const vv = window.visualViewport;
-        // 브라우저가 페이지를 밀어 올렸을 때 발생하는 offset을 상쇄하기 위해 top을 조절
-        setRealHeight(`${vv.height}px`);
-        setOffsetTop(`${vv.offsetTop}px`);
-        
-        // 브라우저가 강제로 스크롤을 시도하면 즉시 0으로 복구
-        if (window.scrollY !== 0) {
-          window.scrollTo(0, 0);
-        }
-      }
-    };
-
-    const preventNativeScroll = () => {
-      if (window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewport);
-      window.visualViewport.addEventListener('scroll', handleViewport);
-    }
-    window.addEventListener('scroll', preventNativeScroll);
-
-    // 초기 실행
-    handleViewport();
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewport);
-        window.visualViewport.removeEventListener('scroll', handleViewport);
-      }
-      window.removeEventListener('scroll', preventNativeScroll);
-    };
-  }, []);
-
-  // 키보드 상태 변화 시 스크롤 조절
-  useEffect(() => {
-    if (isKeyboardOpen) {
-      setTimeout(() => scrollToBottom('auto'), 100);
-    }
-  }, [isKeyboardOpen]);
 
   // 메시지 로드 및 구독 로직
   useEffect(() => {
@@ -206,22 +153,14 @@ const Chat = () => {
 
   return (
     /* 
-      스마트폰 대응 핵심:
-      1. fixed inset-0으로 고정
-      2. height를 visualViewport.height로 설정하여 키보드 영역 제외
-      3. top을 visualViewport.offsetTop으로 설정하여 브라우저의 강제 밀림(scroll)을 상쇄
-      4. 프리뷰 시뮬레이션을 위해 keyboardHeight도 함께 고려
+      APK 환경 최적화:
+      1. fixed 대신 relative/flex 구조를 사용하여 WebView의 높이 변화(adjustResize)를 자연스럽게 따릅니다.
+      2. h-full(또는 100dvh)을 사용하여 키보드가 올라와 WebView가 작아지면 컨테이너도 함께 작아지게 합니다.
+      3. overflow-hidden으로 브라우저의 강제 스크롤을 방지합니다.
     */
-    <div 
-      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000]"
-      style={{ 
-        height: realHeight,
-        top: offsetTop,
-        bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'auto'
-      }}
-    >
-      {/* 1. 상단 헤더 (고정 높이) */}
-      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
+    <div className="relative flex flex-col w-full h-full bg-white overflow-hidden">
+      {/* 1. 상단 헤더 (고정 높이, 절대 밀려나지 않음) */}
+      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -247,10 +186,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (남은 공간 차지) */}
+      {/* 2. 중앙 메시지 영역 (flex-1로 남은 공간을 모두 차지) */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -268,8 +207,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (키보드 바로 위 고정) */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
+      {/* 3. 하단 입력창 (키보드가 올라오면 WebView 하단에 자동으로 붙음) */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
@@ -280,7 +219,6 @@ const Chat = () => {
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            autoFocus={true}
           />
           <Button 
             type="submit"
