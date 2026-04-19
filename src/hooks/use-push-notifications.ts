@@ -16,10 +16,12 @@ export const usePushNotifications = () => {
 
     const registerPush = async () => {
       try {
+        // 기존 리스너 제거 (중복 등록 방지)
+        await PushNotifications.removeAllListeners();
+
         // 1. 리스너 등록
         await PushNotifications.addListener('registration', async (token) => {
           console.log('Push registration success, token:', token.value);
-          // 토큰이 변경되었을 때만 업데이트하거나, 매번 업데이트하여 최신 상태 유지
           await supabase
             .from('profiles')
             .update({ push_token: token.value })
@@ -58,7 +60,6 @@ export const usePushNotifications = () => {
 
     registerPush();
     
-    // 클린업: 리스너 제거
     return () => {
       PushNotifications.removeAllListeners();
     };
