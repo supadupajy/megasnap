@@ -33,7 +33,8 @@ const Messages = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   
-  // 삭제 관련 상태
+  // 스와이프 및 삭제 관련 상태
+  const [swipedId, setSwipedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -168,7 +169,6 @@ const Messages = () => {
     if (!authUser || !deleteTargetId) return;
 
     try {
-      // 실제 DB에서 해당 유저와의 메시지 삭제 (단순 구현을 위해 전체 삭제)
       const { error } = await supabase
         .from('messages')
         .delete()
@@ -177,6 +177,7 @@ const Messages = () => {
       if (error) throw error;
 
       setConversations(prev => prev.filter(c => c.other_id !== deleteTargetId));
+      setSwipedId(null);
       showSuccess('대화가 삭제되었습니다.');
     } catch (err) {
       console.error('Delete chat error:', err);
@@ -187,8 +188,16 @@ const Messages = () => {
     }
   };
 
+  const handleItemClick = (otherId: string) => {
+    if (swipedId) {
+      setSwipedId(null);
+      return;
+    }
+    navigate(`/chat/${otherId}`);
+  };
+
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
+    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar" onClick={() => setSwipedId(null)}>
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/')} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -226,6 +235,8 @@ const Messages = () => {
               <AnimatePresence initial={false}>
                 {filteredConversations.map((conv) => {
                   const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const isSwiped = swipedId === conv.other_id;
+
                   return (
                     <div key={conv.other_id} className="relative group overflow-hidden rounded-[24px]">
                       {/* 삭제 버튼 배경 */}
@@ -239,18 +250,24 @@ const Messages = () => {
                         </button>
                       </div>
 
-                      {/* 대화 아이템 (스와이프 가능) */}
+                      {/* 대화 아이템 */}
                       <motion.div
                         drag="x"
                         dragConstraints={{ left: -80, right: 0 }}
                         dragElastic={0.1}
+                        animate={{ x: isSwiped ? -80 : 0 }}
                         onDragEnd={(_, info) => {
-                          if (info.offset.x > 50) {
-                            // 오른쪽으로 밀면 제자리 (필요시 구현)
+                          if (info.offset.x < -40) {
+                            setSwipedId(conv.other_id);
+                          } else {
+                            setSwipedId(null);
                           }
                         }}
                         className="relative bg-white flex items-center gap-4 p-3 cursor-pointer z-10"
-                        onClick={() => navigate(`/chat/${conv.other_id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleItemClick(conv.other_id);
+                        }}
                       >
                         <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
                           <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
