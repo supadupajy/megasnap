@@ -48,22 +48,22 @@ const Chat = () => {
     }
   };
 
-  // 키보드 발생 시 브라우저의 강제 스크롤 시도 차단
+  // 브라우저의 강제 스크롤 시도를 원천 차단
   useEffect(() => {
-    const handleFocus = () => {
-      setTimeout(() => window.scrollTo(0, 0), 10);
-    };
-    
-    window.addEventListener('focusin', handleFocus);
-    window.visualViewport?.addEventListener('resize', () => {
-      setTimeout(() => {
+    const preventScroll = () => {
+      if (window.scrollY !== 0) {
         window.scrollTo(0, 0);
-        scrollToBottom('auto');
-      }, 50);
-    });
+      }
+    };
+
+    window.addEventListener('scroll', preventScroll, { passive: false });
+    window.visualViewport?.addEventListener('resize', () => scrollToBottom('auto'));
+    window.visualViewport?.addEventListener('scroll', preventScroll);
 
     return () => {
-      window.removeEventListener('focusin', handleFocus);
+      window.removeEventListener('scroll', preventScroll);
+      window.visualViewport?.removeEventListener('resize', () => scrollToBottom('auto'));
+      window.visualViewport?.removeEventListener('scroll', preventScroll);
     };
   }, []);
 
