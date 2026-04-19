@@ -33,7 +33,6 @@ const Popular = () => {
     if (hasLoaded.current) return;
     
     setIsInitialLoading(true);
-    // 목업 데이터 생성 시 인플루언서와 인기 포스팅이 섞이도록 함
     let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
     try {
@@ -41,25 +40,30 @@ const Popular = () => {
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(20);
+        .limit(40);
 
       if (error) throw error;
 
       const realPosts = (data || []).map(p => {
         const likes = Number(p.likes || 0);
-        const isInfluencer = likes > 5000; 
+        
+        let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
+        if (likes >= 15000) borderType = 'diamond';
+        else if (likes >= 10000) borderType = 'gold';
+        else if (likes >= 5000) borderType = 'silver';
+        else if (likes >= 1500) borderType = 'popular';
         
         return {
           id: p.id,
-          isAd: false,
-          isGif: false,
-          isInfluencer: isInfluencer,
+          isAd: p.content?.startsWith('[AD]'),
+          isGif: p.content?.startsWith('[GIF]'),
+          isInfluencer: likes >= 5000,
           user: {
             id: p.user_id,
             name: p.user_name,
             avatar: p.user_avatar
           },
-          content: p.content,
+          content: p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '',
           location: p.location_name,
           lat: p.latitude,
           lng: p.longitude,
@@ -67,9 +71,11 @@ const Popular = () => {
           commentsCount: 0,
           comments: [],
           image: p.image_url,
+          youtubeUrl: p.youtube_url, // 누락되었던 필드 추가
+          videoUrl: p.video_url,
           isLiked: false,
           createdAt: new Date(p.created_at),
-          borderType: likes >= 1500 ? 'popular' : (isInfluencer ? 'silver' : 'none')
+          borderType: borderType
         };
       }) as Post[];
 
@@ -181,6 +187,8 @@ const Popular = () => {
               isInfluencer={post.isInfluencer}
               category={post.category}
               borderType={post.borderType}
+              youtubeUrl={post.youtubeUrl}
+              videoUrl={post.videoUrl}
               disablePulse={true}
               onLikeToggle={() => handleLikeToggle(post.id)}
               onLocationClick={handleLocationClick}

@@ -95,15 +95,26 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         const tierRoll = Math.random();
         
-        // 등급별 확률 (각 10%, 총 40% 특별 포스팅)
-        if (tierRoll < 0.10) { finalLikes = Math.floor(Math.random() * 35000) + 15000; } // Diamond
-        else if (tierRoll < 0.20) { finalLikes = Math.floor(Math.random() * 5000) + 10000; } // Gold
-        else if (tierRoll < 0.30) { finalLikes = Math.floor(Math.random() * 5000) + 5000; } // Silver
-        else if (tierRoll < 0.40) { finalLikes = Math.floor(Math.random() * 3500) + 1500; } // Popular
-        else { finalLikes = Math.floor(Math.random() * 1489) + 10; } // Normal
+        // 등급별 확률 (각 5%, 총 20% 특별 포스팅)
+        let isSpecial = false;
+        if (tierRoll < 0.05) { 
+          finalLikes = Math.floor(Math.random() * 35000) + 15000; // Diamond
+          isSpecial = true;
+        } else if (tierRoll < 0.10) { 
+          finalLikes = Math.floor(Math.random() * 5000) + 10000; // Gold
+          isSpecial = true;
+        } else if (tierRoll < 0.15) { 
+          finalLikes = Math.floor(Math.random() * 5000) + 5000; // Silver
+          isSpecial = true;
+        } else if (tierRoll < 0.20) { 
+          finalLikes = Math.floor(Math.random() * 3500) + 1500; // Popular
+          isSpecial = true;
+        } else { 
+          finalLikes = Math.floor(Math.random() * 1489) + 10; // Normal
+        }
 
-        // 특별 등급(인기 이상)인 경우 50% 확률로 유튜브 영상 할당
-        if (tierRoll < 0.40 && Math.random() < 0.5) {
+        // 특별 등급(인기 이상)인 경우 정확히 50% 확률로 유튜브 영상 할당
+        if (isSpecial && Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
         }
 
