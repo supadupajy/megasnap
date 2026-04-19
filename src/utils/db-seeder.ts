@@ -79,14 +79,9 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   });
 };
 
-// 좋아요 수치 생성 헬퍼 함수
-const getRandomLikesByTier = () => {
-  const tierRoll = Math.random();
-  if (tierRoll < 0.01) return Math.floor(Math.random() * 20000) + 15000; // Diamond
-  if (tierRoll < 0.03) return Math.floor(Math.random() * 5000) + 10000;  // Gold
-  if (tierRoll < 0.07) return Math.floor(Math.random() * 5000) + 5000;   // Silver
-  if (tierRoll < 0.15) return Math.floor(Math.random() * 3500) + 1500;   // Popular
-  return Math.floor(Math.random() * 1489) + 10;                         // Normal
+// 등급 차별 없이 10 ~ 20,000 사이의 완전 랜덤 수치 생성
+const getRandomLikesFlat = () => {
+  return Math.floor(Math.random() * 19990 + 10);
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
@@ -102,11 +97,13 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        const finalLikes = getRandomLikesByTier();
+        // 등급 로직 제거: 모든 포스팅이 동일한 확률로 랜덤 수치를 가짐
+        const finalLikes = getRandomLikesFlat();
         let finalYoutubeUrl = null;
         let finalImage = p.image;
         
-        if (finalLikes >= 1500 && Math.random() < 0.5) {
+        // 좋아요가 높게 나온 포스팅 중 일부에 유튜브 영상 매칭 (시각적 다양성)
+        if (finalLikes >= 5000 && Math.random() < 0.4) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
         }
@@ -137,20 +134,10 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   } catch (err: any) { console.error("Global seeding failed:", err); throw err; }
 };
 
-/**
- * Supabase RPC 함수를 호출하여 모든 포스팅의 좋아요 수치를 랜덤하게 재설정합니다.
- * 이 방식은 RLS 권한 문제를 우회할 수 있습니다.
- */
 export const randomizeExistingLikes = async () => {
   try {
-    // RPC 함수 호출
     const { data, error } = await supabase.rpc('randomize_all_likes');
-    
-    if (error) {
-      console.error("RPC Error:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || 0;
   } catch (err) {
     console.error("Randomizing likes failed:", err);
