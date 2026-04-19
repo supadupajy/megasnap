@@ -8,7 +8,7 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
-import { getUserById, createMockPosts, GIF_POOL } from '@/lib/mock-data';
+import { getUserById, createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -36,19 +36,13 @@ const UserProfile = () => {
   }, [userId]);
 
   useEffect(() => {
+    // GIF 제거 요청에 따라 모든 포스팅을 일반 포스팅으로 생성
     const rawPosts = createMockPosts(37.5665, 126.9780, 30);
     
-    const userPosts = rawPosts.map((p, idx) => {
-      const isGif = idx < 10;
-      const image = isGif 
-        ? GIF_POOL[Math.floor(Math.random() * GIF_POOL.length)] 
-        : p.image;
-        
+    const userPosts = rawPosts.map((p) => {
       return {
         ...p,
-        isGif,
-        image,
-        images: isGif ? [image, ...p.images.slice(1)] : p.images,
+        isGif: false,
         user: {
           id: user.id,
           name: user.nickname || user.name,
