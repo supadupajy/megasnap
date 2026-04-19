@@ -137,9 +137,8 @@ const Index = () => {
   }, [loadInitialGlobalPosts]);
 
   const autoSeedArea = useCallback(async () => {
-    // 마커가 이미 충분하거나(10개 이상), 줌이 너무 멀거나, 이미 생성 중이면 중단
+    // 마커가 부족하거나(5개 미만), 줌이 너무 멀거나, 이미 생성 중이면 중단
     if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 7) return;
-    if (displayedMarkers.length >= 10) return;
     
     const tileKey = `${mapData.center.lat.toFixed(1)}_${mapData.center.lng.toFixed(1)}`;
     if (mapCache.populatedTiles.has(tileKey)) return;
@@ -152,7 +151,7 @@ const Index = () => {
       if (!profiles || profiles.length === 0) return;
 
       // 한 화면에 약 15~20개가 되도록 생성
-      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 15);
+      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18);
       const insertDataPromises = mockPosts.map(async (p) => {
         const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
         const realAddress = await getRealAddress(p.lat, p.lng);
@@ -180,7 +179,7 @@ const Index = () => {
     } finally {
       isAutoSeeding.current = false;
     }
-  }, [mapData, authUser, getRealAddress, displayedMarkers.length, currentZoom]);
+  }, [mapData, authUser, getRealAddress, currentZoom]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -206,9 +205,15 @@ const Index = () => {
   useEffect(() => {
     if (mapData) {
       syncPostsWithSupabase();
+    }
+  }, [mapData, syncPostsWithSupabase]);
+
+  // 마커 개수가 부족할 때 자동 생성 트리거
+  useEffect(() => {
+    if (mapData && displayedMarkers.length < 5 && !isAutoSeeding.current) {
       autoSeedArea();
     }
-  }, [mapData, syncPostsWithSupabase, autoSeedArea]);
+  }, [mapData, displayedMarkers.length, autoSeedArea]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -410,6 +415,19 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
+              {/* Trending Posts Backdrop */}
+              <AnimatePresence>
+                {isTrendingExpanded && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setIsTrendingExpanded(false)}
+                    className="fixed inset-0 bg-black/10 backdrop-blur-[1px] z-30"
+                  />
+                )}
+              </AnimatePresence>
+
               <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
                 <div className="w-full shrink-0 pointer-events-auto">
                   <TrendingPosts posts={trendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={handleTrendingPostClick} />
