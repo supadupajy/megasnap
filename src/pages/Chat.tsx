@@ -35,11 +35,37 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100%');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
+
+  // 키보드 대응을 위한 VisualViewport 감지
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
+        setViewportHeight(`${window.visualViewport.height}px`);
+        // 높이가 변할 때 메시지 하단으로 스크롤
+        setTimeout(() => scrollToBottom('auto'), 100);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+      handleResize(); // 초기 실행
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      }
+    };
+  }, []);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -111,7 +137,6 @@ const Chat = () => {
     }
   }, [authUser?.id, chatId]);
 
-  // 화면 진입 시 및 메시지 추가 시 스크롤 하단 고정
   useLayoutEffect(() => {
     scrollToBottom('auto');
   }, [messages.length]);
@@ -153,11 +178,10 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    /* 
-      adjustResize 설정이 되어 있으므로, h-full(100%)은 키보드를 제외한 가용 영역이 됩니다.
-      따라서 별도의 높이 계산 없이 Flex 구조만으로 헤더 상단 고정이 가능합니다.
-    */
-    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
+    <div 
+      className="w-full bg-white flex flex-col overflow-hidden fixed top-0 left-0"
+      style={{ height: viewportHeight }}
+    >
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
