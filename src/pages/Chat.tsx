@@ -153,14 +153,14 @@ const Chat = () => {
 
   return (
     <div 
-      className="fixed inset-0 bg-white flex flex-col z-[1000]"
+      className="fixed inset-0 bg-white flex flex-col z-[1000] overflow-hidden"
       style={{ 
-        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 띄워줌
+        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 하단을 띄워줌
         // 모바일 기기에서는 Capacitor가 웹뷰 자체를 리사이징하므로 0px 유지
-        bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
+        paddingBottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
       }}
     >
-      {/* Header - Flex 아이템으로 상단 고정 */}
+      {/* 1. 상단 헤더 (고정) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-50">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -187,10 +187,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List - Flex-1로 가용 공간 모두 차지 및 스크롤 가능 */}
+      {/* 2. 중앙 채팅창 (스크롤 가능) */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -208,7 +208,7 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Flex 아이템으로 하단 고정 */}
+      {/* 3. 하단 메시지 보내기 텍스트박스 (고정) */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
