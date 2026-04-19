@@ -76,7 +76,7 @@ const Index = () => {
     if (hasInitialLoaded.current) return;
     hasInitialLoaded.current = true;
     try {
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(500);
+      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
       if (!error && data) {
         const mapped = data.map(p => {
           const likes = Number(p.likes || 0);
@@ -150,17 +150,8 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // 마커 표시 개수를 100개로 상향하고, 인기순과 최신순을 섞어서 다양성 확보
-    const displayCount = 100; 
-    const sorted = inBoundsCandidates.sort((a, b) => {
-      // 광고는 항상 우선순위
-      if (a.isAd && !b.isAd) return -1;
-      if (!a.isAd && b.isAd) return 1;
-      // 나머지는 좋아요 순으로 정렬하되, 너무 인기 포스팅만 쏠리지 않도록 함
-      return b.likes - a.likes || b.createdAt.getTime() - a.createdAt.getTime();
-    });
-    
-    const finalMarkers = sorted.slice(0, displayCount);
+    // 인기순 정렬 및 개수 제한(slice)을 제거하여 모든 포스팅을 표시
+    const finalMarkers = [...inBoundsCandidates];
     
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
@@ -181,7 +172,7 @@ const Index = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(500);
+    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
     if (data) {
       const mapped = data.map(p => {
         const likes = Number(p.likes || 0);
