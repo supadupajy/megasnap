@@ -135,7 +135,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <div className="h-screen w-screen overflow-hidden bg-white">
+            <div className="h-full w-full overflow-hidden bg-white">
               <AnimatePresence mode="wait">
                 {showSplash ? (
                   <SplashScreen key="splash" />

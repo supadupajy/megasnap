@@ -30,7 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight } = useKeyboard(); // 가상/실제 키보드 높이 가져오기
+  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -50,7 +50,6 @@ const Chat = () => {
     }
   };
 
-  // 메시지 데이터 로드
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
     const { data, error } = await supabase
@@ -116,7 +115,7 @@ const Chat = () => {
 
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length, keyboardHeight]); // 키보드가 올라올 때도 스크롤 하단으로
+  }, [messages.length, keyboardHeight]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -154,8 +153,11 @@ const Chat = () => {
 
   return (
     <div 
-      className="flex flex-col h-full bg-white transition-[padding] duration-300 ease-out"
-      style={{ paddingBottom: `${keyboardHeight}px` }} // 키보드 높이만큼 하단 여백 추가
+      className="flex flex-col h-full bg-white"
+      style={{ 
+        // 웹 시뮬레이터에서는 padding으로 대응, 실제 기기에서는 시스템 리사이징에 맡김
+        paddingBottom: keyboardHeight > 0 && !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
+      }}
     >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
@@ -181,7 +183,7 @@ const Chat = () => {
       {/* Message List */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
