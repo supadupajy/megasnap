@@ -51,7 +51,10 @@ export const YOUTUBE_IDS_50 = [
   "P_9v_X_77E3", "O_9v_X_77E4", "L_9v_X_77E5", "K_9v_X_77E6", "J_9v_X_77E7"
 ];
 
-// 검증된 ID들을 저장할 변수 (초기에는 전체 리스트 사용)
+// 호환성을 위해 YOUTUBE_LINKS 내보내기 추가
+export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map(id => `https://www.youtube.com/shorts/${id}`);
+
+// 검증된 ID들을 저장할 변수
 let validYoutubeIds: string[] = [...YOUTUBE_IDS_50];
 
 // 앱 시작 시 또는 필요 시 호출하여 유효한 영상만 필터링
