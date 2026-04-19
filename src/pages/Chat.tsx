@@ -47,7 +47,6 @@ const Chat = () => {
     }
   };
 
-  // 메시지 로드 및 실시간 구독 로직
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
     const { data, error } = await supabase
@@ -147,7 +146,7 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="relative w-full h-full bg-white overflow-hidden">
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -172,7 +171,7 @@ const Chat = () => {
       {/* Message List */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
+        className="absolute inset-0 pt-[88px] pb-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -190,14 +189,14 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Flex 컨테이너의 마지막 요소로 배치 */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+      {/* TEST: Input Area in the Middle */}
+      <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 p-4 z-[100] pointer-events-none">
         <form 
           onSubmit={handleSend}
-          className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+          className="flex items-center gap-2 bg-white rounded-[24px] px-4 py-2 border-2 border-indigo-600 shadow-2xl pointer-events-auto"
         >
           <Input 
-            placeholder="메시지 보내기..." 
+            placeholder="중간 테스트 입력창..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
@@ -211,6 +210,7 @@ const Chat = () => {
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
         </form>
+        <p className="text-center text-[10px] font-black text-indigo-600 mt-2 uppercase tracking-widest">Middle Position Test Mode</p>
       </div>
     </div>
   );
