@@ -37,9 +37,10 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [inputAreaBottom, setInputAreaBottom] = useState(0);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // ✅ 메시지 추가될 때마다 자동 스크롤
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -50,16 +51,23 @@ const Chat = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ iOS 키보드가 올라올 때도 자동 스크롤
+  // ✅ visualViewport로 키보드 높이 감지 → 입력창을 키보드 바로 위로 올림
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
-    const handleResize = () => scrollToBottom();
-    vp.addEventListener('resize', handleResize);
-    vp.addEventListener('scroll', handleResize);
+
+    const handleViewport = () => {
+      // 키보드 높이 = 전체 높이 - 시각적 뷰포트 높이 - 상단 오프셋
+      const keyboardHeight = window.innerHeight - vp.height - vp.offsetTop;
+      setInputAreaBottom(Math.max(0, keyboardHeight));
+      setTimeout(scrollToBottom, 50);
+    };
+
+    vp.addEventListener('resize', handleViewport);
+    vp.addEventListener('scroll', handleViewport);
     return () => {
-      vp.removeEventListener('resize', handleResize);
-      vp.removeEventListener('scroll', handleResize);
+      vp.removeEventListener('resize', handleViewport);
+      vp.removeEventListener('scroll', handleViewport);
     };
   }, [scrollToBottom]);
 
@@ -70,10 +78,7 @@ const Chat = () => {
       if (!isValidUUID(chatId)) {
         const room = chatStore.getRoom(chatId);
         if (room) {
-          setOtherUser({
-            nickname: room.user.name,
-            avatar_url: room.user.avatar
-          });
+          setOtherUser({ nickname: room.user.name, avatar_url: room.user.avatar });
         } else {
           setOtherUser({
             nickname: `Explorer_${chatId}`,
@@ -128,7 +133,6 @@ const Chat = () => {
 
     fetchMessages();
 
-    // ✅ receiver_id가 나인 메시지만 구독 (내가 보낸 건 낙관적 업데이트로 처리)
     const channel = supabase
       .channel(`chat:${chatId}`)
       .on(
@@ -148,9 +152,7 @@ const Chat = () => {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [authUser, chatId]);
 
   const handleSend = async () => {
@@ -170,11 +172,7 @@ const Chat = () => {
 
     if (isValidUUID(chatId)) {
       const { error } = await supabase.from('messages').insert([
-        {
-          sender_id: authUser.id,
-          receiver_id: chatId,
-          content,
-        },
+        { sender_id: authUser.id, receiver_id: chatId, content },
       ]);
 
       if (error) {
@@ -199,14 +197,18 @@ const Chat = () => {
     );
   }
 
+  // 입력창 높이 추정값 (pt-3 + py-2 + h-10 + pb)
+  const INPUT_AREA_HEIGHT = 72;
+
   return (
-    <div className="flex flex-col bg-white overflow-hidden" style={{ height: '100dvh' }}>
-      {/* ✅ 헤더: flex-shrink-0으로 고정 */}
+    <div
+      className="flex flex-col bg-white overflow-hidden"
+      style={{ height: '100dvh' }}
+    >
       <header
         className="flex-shrink-0 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100"
         style={{
           paddingTop: 'max(32px, env(safe-area-inset-top))',
-          height: 'calc(88px + env(safe-area-inset-top, 0px) - 32px)',
           minHeight: '64px',
         }}
       >
@@ -243,10 +245,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* ✅ 채팅 영역: flex-1로 남은 공간만 차지 */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar"
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar transition-all duration-200"
+        style={{ paddingBottom: `${INPUT_AREA_HEIGHT + inputAreaBottom}px` }}
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -278,12 +280,16 @@ const Chat = () => {
         })}
       </div>
 
-      {/* ✅ 입력창: flex-shrink-0으로 고정 */}
       <div
-        className="flex-shrink-0 px-4 pt-3 bg-white/80 backdrop-blur-md border-t border-gray-100"
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+        className="fixed left-0 right-0 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 transition-all duration-200"
+        style={{
+          bottom: `${inputAreaBottom}px`,
+          paddingBottom: inputAreaBottom > 0
+            ? '12px'
+            : 'max(12px, env(safe-area-inset-bottom))',
+        }}
       >
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner mb-4">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input
             placeholder="메시지 보내기..."
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold"
