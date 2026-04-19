@@ -15,18 +15,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { getYoutubeThumbnail } from '@/lib/utils';
 
-// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼 (일관성 유지)
+// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
 const getTierFromId = (id: string) => {
   let h = 0;
   for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
   const val = Math.abs(h % 1000) / 1000;
   
-  if (val < 0.01) return 'diamond'; // 1%
-  if (val < 0.03) return 'gold';    // 2%
-  if (val < 0.07) return 'silver';  // 4%
-  if (val < 0.15) return 'popular'; // 8%
+  if (val < 0.01) return 'diamond';
+  if (val < 0.03) return 'gold';
+  if (val < 0.07) return 'silver';
+  if (val < 0.15) return 'popular';
   return 'none';
 };
+
+const PAGE_SIZE = 15;
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -35,42 +37,47 @@ const Popular = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  
   const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
   const hasLoaded = useRef(false);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const loadInitialData = useCallback(async () => {
-    if (hasLoaded.current) return;
-    
-    setIsInitialLoading(true);
-    
+  const fetchPopularPosts = useCallback(async (pageNum: number) => {
     try {
-      // 1. 좋아요가 높은 상위 100개를 가져옴
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      // Supabase DB 전체에서 좋아요 순으로 정렬하여 가져옴
       const { data, error } = await supabase
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (error) throw error;
 
-      const realPosts = (data || []).map(p => {
+      if (!data || data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+
+      const mappedPosts = (data || []).map(p => {
         const borderType = getTierFromId(p.id);
         return {
           id: p.id,
-          isAd: p.content?.startsWith('[AD]'),
-          isGif: p.content?.startsWith('[GIF]'),
+          isAd: p.content?.trim().startsWith('[AD]'),
+          isGif: false,
           isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
           user: {
             id: p.user_id,
             name: p.user_name,
             avatar: p.user_avatar
           },
-          content: p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '',
+          content: p.content?.replace(/^\[AD\]\s*/, '') || '',
           location: p.location_name,
           lat: p.latitude,
           lng: p.longitude,
@@ -86,15 +93,8 @@ const Popular = () => {
         };
       }) as Post[];
 
-      // 2. 목 데이터도 섞어서 추가 (기존 20개에서 30개로 상향)
-      let mockPosts = createMockPosts(37.5665, 126.9780, 30);
-      
-      // 3. 전체 리스트를 무작위로 섞음 (Shuffle)
-      let combined = [...realPosts, ...mockPosts].sort(() => Math.random() - 0.5);
-      
-      // 4. 인기 탭의 50%가 유튜브 영상이 되도록 강제 조정
-      const processedPosts = combined.map((p, idx) => {
-        // 짝수 인덱스(50%)이면서 영상이 없는 경우 강제 할당
+      // 50% 유튜브 영상 강제 할당 로직 유지
+      const processedPosts = mappedPosts.map((p, idx) => {
         if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl) {
           const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           return {
@@ -105,16 +105,24 @@ const Popular = () => {
         }
         return p;
       });
-      
-      setPosts(processedPosts);
-      hasLoaded.current = true;
+
+      return processedPosts;
     } catch (err) {
       console.error('[Popular] Fetch Error:', err);
-      setPosts(createMockPosts(37.5665, 126.9780, 45).sort(() => Math.random() - 0.5));
-    } finally {
-      setIsInitialLoading(false);
+      return [];
     }
   }, []);
+
+  const loadInitialData = useCallback(async () => {
+    if (hasLoaded.current) return;
+    setIsInitialLoading(true);
+    
+    const initialPosts = await fetchPopularPosts(0);
+    setPosts(initialPosts);
+    
+    hasLoaded.current = true;
+    setIsInitialLoading(false);
+  }, [fetchPopularPosts]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -126,24 +134,28 @@ const Popular = () => {
     }
   }, [authLoading, authUser, loadInitialData, navigate]);
 
-  const loadMorePosts = useCallback(() => {
-    if (isLoadingMore || isInitialLoading) return;
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
 
-    setTimeout(() => {
-      let newPosts = createMockPosts(37.5665, 126.9780, 20)
-        .sort(() => Math.random() - 0.5);
-      
+    const nextPage = page + 1;
+    const newPosts = await fetchPopularPosts(nextPage);
+    
+    if (newPosts.length > 0) {
       setPosts(prev => [...prev, ...newPosts]);
-      setIsLoadingMore(false);
-    }, 800);
-  }, [isLoadingMore, isInitialLoading]);
+      setPage(nextPage);
+    } else {
+      setHasMore(false);
+    }
+    
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMore, page, fetchPopularPosts]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && posts.length > 0) {
+        if (entry.isIntersecting && posts.length > 0 && hasMore) {
           loadMorePosts();
         }
       },
@@ -151,7 +163,7 @@ const Popular = () => {
     );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [loadMorePosts, posts.length]);
+  }, [loadMorePosts, posts.length, hasMore]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
@@ -170,23 +182,16 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  const handleStartLocationSelection = () => {
-    setIsWriteOpen(false);
-    navigate('/', { state: { startSelection: true } });
-  };
-
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-          <p className="text-xs font-bold text-gray-400">인기 동영상을 섞는 중...</p>
+          <p className="text-xs font-bold text-gray-400">인기 포스팅을 불러오는 중...</p>
         </div>
       </div>
     );
   }
-
-  if (!authUser) return null;
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
@@ -228,10 +233,10 @@ const Popular = () => {
           {isLoadingMore ? (
             <>
               <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">새로운 인기 포스팅을 찾는 중...</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p>
             </>
           ) : (
-            posts.length > 0 && <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+            hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>
           )}
         </div>
       </div>
@@ -239,7 +244,10 @@ const Popular = () => {
       <WritePost 
         isOpen={isWriteOpen} 
         onClose={() => setIsWriteOpen(false)} 
-        onStartLocationSelection={handleStartLocationSelection}
+        onStartLocationSelection={() => {
+          setIsWriteOpen(false);
+          navigate('/', { state: { startSelection: true } });
+        }}
       />
     </div>
   );
