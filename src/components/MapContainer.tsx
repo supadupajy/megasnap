@@ -37,7 +37,6 @@ const MapContainer = ({
   const isProgrammaticMove = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   
-  // 콜백 함수들을 Ref로 관리하여 의존성 배열 문제 해결
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapChangeRef = useRef(onMapChange);
   const onMapClickRef = useRef(onMapClick);
@@ -56,7 +55,6 @@ const MapContainer = ({
     const initMap = () => {
       try {
         const kakao = (window as any).kakao;
-        // Map 생성자까지 로드되었는지 확인
         if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
 
         const options = {
@@ -79,23 +77,11 @@ const MapContainer = ({
             
             setCurrentLevel(level);
             onMapChangeRef.current({
-              bounds: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } },
-              center: { lat:think
-The previous response was cut off in the middle of a `dyad-write` block for `src/components/MapContainer.tsx`. I need to complete that file and then provide any other necessary changes to fix the app startup issue as promised in the previous thought process.
-
-The cutoff point was:
-```tsx
-            onMapChangeRef.current({
-              bounds: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } },
-              center: { lat:
-```
-
-I will continue from there.
-
-Plan:
-1. Complete `src/components/MapContainer.tsx`.
-2. Update `src/globals.css` to remove Leaflet imports as mentioned in the previous thought process.
-3. Provide a concise summary.currentCenter.getLat(), lng: currentCenter.getLng() },
+              bounds: { 
+                sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+                ne: { lat: ne.getLat(), lng: ne.getLng() } 
+              },
+              center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
               level: level
             });
           } catch (e) {
@@ -178,7 +164,10 @@ Plan:
         try {
           const bounds = map.getBounds();
           onMapChangeRef.current({
-            bounds: { sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } },
+            bounds: { 
+              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
+              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
+            },
             center: { lat: targetLat, lng: targetLng },
             level: map.getLevel()
           });
