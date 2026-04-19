@@ -10,7 +10,13 @@ const KeyboardSimulator = () => {
   useEffect(() => {
     const handleFocus = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      const isInput = target.tagName === 'INPUT';
+      const isTextArea = target.tagName === 'TEXTAREA';
+      
+      // 슬라이더(range) 타입은 키보드를 띄우지 않음
+      const isRange = isInput && (target as HTMLInputElement).type === 'range';
+
+      if ((isInput && !isRange) || isTextArea) {
         setIsVisible(true);
         triggerVirtualKeyboard(true);
       }
@@ -20,7 +26,11 @@ const KeyboardSimulator = () => {
       // 다음 포커스가 다른 입력창이 아닐 때만 닫기
       setTimeout(() => {
         const active = document.activeElement;
-        if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+        const isInput = active?.tagName === 'INPUT';
+        const isTextArea = active?.tagName === 'TEXTAREA';
+        const isRange = isInput && (active as HTMLInputElement).type === 'range';
+
+        if (!active || (!(isInput && !isRange) && !isTextArea)) {
           setIsVisible(false);
           triggerVirtualKeyboard(false);
         }
