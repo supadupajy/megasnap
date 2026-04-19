@@ -16,5 +16,6 @@ export function getYoutubeId(url: string) {
 export function getYoutubeThumbnail(url: string) {
   const id = getYoutubeId(url);
   if (!id) return null;
-  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+  // maxresdefault는 일부 영상에서 404가 발생하므로 가장 안정적인 hqdefault 사용
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 }
