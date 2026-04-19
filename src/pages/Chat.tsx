@@ -30,7 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight } = useKeyboard();
+  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -60,13 +60,19 @@ const Chat = () => {
     }
   };
 
-  // 키보드 높이가 변할 때마다 최하단으로 스크롤
+  // 모바일 브라우저의 강제 스크롤 방지 및 하단 유지
   useEffect(() => {
-    if (keyboardHeight > 0) {
-      // 키보드가 올라올 때는 즉시 이동
-      setTimeout(() => scrollToBottom('auto'), 50);
+    if (isKeyboardOpen) {
+      // 브라우저가 입력창을 위해 페이지를 스크롤하는 것을 방지
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      
+      const timer = setTimeout(() => {
+        scrollToBottom('auto');
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [keyboardHeight]);
+  }, [isKeyboardOpen]);
 
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
@@ -213,8 +219,9 @@ const Chat = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden">
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
+    <div className="flex flex-col h-[100dvh] bg-white overflow-hidden">
+      {/* Header - Flex Item */}
+      <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
@@ -234,13 +241,10 @@ const Chat = () => {
         </div>
       </header>
 
+      {/* Message List - Flex-1 (자동 높이 조절) */}
       <div 
         ref={scrollRef} 
-        className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300" 
-        style={{ 
-          // 키보드가 올라왔을 때 입력창 높이(약 80px)만큼 여백을 주어 마지막 메시지가 가려지지 않게 함
-          paddingBottom: keyboardHeight > 0 ? '80px' : '120px' 
-        }}
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -258,7 +262,14 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
+      {/* Input Area - Flex Item (키보드에 의해 밀려 올라감) */}
+      <div 
+        className="p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 shrink-0"
+        style={{ 
+          // 키보드가 없을 때만 하단 여백(Safe Area) 추가
+          paddingBottom: isKeyboardOpen ? '16px' : '40px' 
+        }}
+      >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
             placeholder="메시지 보내기..." 
