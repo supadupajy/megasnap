@@ -1,3 +1,4 @@
+1,500)">
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -11,55 +12,55 @@ const MAJOR_CITIES = [
   { 
     name: "서울", 
     lat: 37.5665, lng: 126.9780, 
-    density: 4500, // 기존 3000에서 1.5배 상향
+    density: 1500, // 4500에서 1500으로 하향 조정하여 쾌적함 유지
     bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } }
   },
   { 
     name: "부산", 
     lat: 35.1796, lng: 129.0756, 
-    density: 1000,
+    density: 800,
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } }
   },
   { 
     name: "인천", 
     lat: 37.4563, lng: 126.7052, 
-    density: 800,
+    density: 600,
     bounds: { sw: { lat: 37.3689, lng: 126.5841 }, ne: { lat: 37.5856, lng: 126.7712 } }
   },
   { 
     name: "대구", 
     lat: 35.8714, lng: 128.6014, 
-    density: 700,
+    density: 500,
     bounds: { sw: { lat: 35.7756, lng: 128.4523 }, ne: { lat: 35.9542, lng: 128.7234 } }
   },
   { 
     name: "대전", 
     lat: 36.3504, lng: 127.3845, 
-    density: 600,
+    density: 400,
     bounds: { sw: { lat: 36.2654, lng: 127.2845 }, ne: { lat: 36.4856, lng: 127.4856 } }
   },
   { 
     name: "광주", 
     lat: 35.1595, lng: 126.8526, 
-    density: 600,
+    density: 400,
     bounds: { sw: { lat: 35.0856, lng: 126.7542 }, ne: { lat: 35.2542, lng: 126.9542 } }
   },
   { 
     name: "울산", 
     lat: 35.5384, lng: 129.3114, 
-    density: 500,
+    density: 300,
     bounds: { sw: { lat: 35.4542, lng: 129.1542 }, ne: { lat: 35.6542, lng: 129.4542 } }
   },
   { 
     name: "수원", 
     lat: 37.2636, lng: 127.0286, 
-    density: 600,
+    density: 400,
     bounds: { sw: { lat: 37.2142, lng: 126.9542 }, ne: { lat: 37.3542, lng: 127.1542 } }
   },
   { 
     name: "제주", 
     lat: 33.4996, lng: 126.5312, 
-    density: 800,
+    density: 600,
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
   }
 ];

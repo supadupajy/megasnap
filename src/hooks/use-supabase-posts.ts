@@ -1,3 +1,4 @@
+300)">
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -77,7 +78,7 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
-    .limit(500);
+    .limit(300); // 500에서 300으로 하향 조정하여 지도 가독성 개선
 
   if (error) throw error;
   return (data || []).map(mapDbToPost);
