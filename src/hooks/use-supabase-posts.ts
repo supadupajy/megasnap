@@ -1,4 +1,3 @@
-300)">
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -18,7 +17,6 @@ const getTierFromId = (id: string) => {
 
 const mapDbToPost = (p: any): Post => {
   const likes = Number(p.likes || 0);
-  // [AD]로 시작하는 콘텐츠는 광고로 인식
   const isAd = p.content?.trim().startsWith('[AD]');
   const borderType = isAd ? 'none' : getTierFromId(p.id);
   const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
@@ -42,7 +40,6 @@ const mapDbToPost = (p: any): Post => {
     likes: likes,
     commentsCount: 0,
     comments: [],
-    // 유튜브 영상이 있으면 썸네일, 없으면 Unsplash 기본 이미지
     image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
@@ -78,7 +75,7 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
-    .limit(300); // 500에서 300으로 하향 조정하여 지도 가독성 개선
+    .limit(300);
 
   if (error) throw error;
   return (data || []).map(mapDbToPost);

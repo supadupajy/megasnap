@@ -1,18 +1,14 @@
-1,500)">
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
 import { createMockPosts, YOUTUBE_LINKS } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
-/**
- * 대한민국 주요 대도시 좌표 및 정밀 영역(Bounds) 목록
- */
 const MAJOR_CITIES = [
   { 
     name: "서울", 
     lat: 37.5665, lng: 126.9780, 
-    density: 1500, // 4500에서 1500으로 하향 조정하여 쾌적함 유지
+    density: 1500,
     bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } }
   },
   { 
@@ -80,7 +76,6 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   });
 };
 
-// 등급 차별 없이 10 ~ 20,000 사이의 완전 랜덤 수치 생성
 const getRandomLikesFlat = () => {
   return Math.floor(Math.random() * 19990 + 10);
 };
@@ -102,7 +97,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = p.image;
         
-        // 데이터 생성 시 50% 확률로 유튜브 영상 매칭
         if (Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
