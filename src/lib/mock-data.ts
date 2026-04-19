@@ -109,6 +109,7 @@ export const createMockPosts = (
     
     let lat, lng;
     if (bounds) {
+      // 그리드 내에서 무작위 위치 선정 (겹침 방지)
       const rowIdx = Math.floor(i / cols);
       const colIdx = i % cols;
       const latStep = (bounds.ne.lat - bounds.sw.lat) / rows;
@@ -144,10 +145,10 @@ export const createMockPosts = (
       } else if (content && (content.includes('강아지') || (categoryRoll >= 0.15 && categoryRoll < 0.35))) {
         images = [ANIMAL_IMAGES[Math.floor(randomFn() * ANIMAL_IMAGES.length)], cokeAdImg];
         category = 'animal';
-      } else if (categoryRoll >= 0.35 && categoryRoll < 0.6) {
+      } else if (categoryRoll >= 0.15 && categoryRoll < 0.4) {
         images = [AD_FOOD_IMAGES[Math.floor(randomFn() * AD_FOOD_IMAGES.length)], cokeAdImg];
         category = 'food';
-      } else if (categoryRoll >= 0.6 && categoryRoll < 0.85) {
+      } else if (categoryRoll >= 0.4 && categoryRoll < 0.7) {
         images = [PLACE_IMAGES[Math.floor(randomFn() * PLACE_IMAGES.length)], cokeAdImg];
         category = 'place';
       } else {
@@ -156,9 +157,7 @@ export const createMockPosts = (
       }
     }
 
-    // 유튜브 썸네일 자동 주입 로직 제거: 
-    // 이제 유튜브 영상이라 하더라도 Unsplash 이미지를 기본 커버로 사용합니다.
-    const finalImage = images[0];
+    const finalImage = hasYoutube ? getYoutubeThumbnail(youtubeUrl!)! : images[0];
 
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
