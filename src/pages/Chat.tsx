@@ -49,15 +49,29 @@ const Chat = () => {
     }
   };
 
-  // 키보드 리사이징 대응
+  // 브라우저의 강제 스크롤 방지 및 리사이징 대응
   useEffect(() => {
+    const preventScroll = () => {
+      // 브라우저가 페이지를 밀어 올리려고 할 때 강제로 최상단으로 고정
+      window.scrollTo(0, 0);
+    };
+
     const handleResize = () => {
+      window.scrollTo(0, 0);
       setTimeout(() => scrollToBottom('auto'), 50);
     };
+
+    window.addEventListener('scroll', preventScroll);
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize);
-      return () => window.visualViewport?.removeEventListener('resize', handleResize);
     }
+
+    return () => {
+      window.removeEventListener('scroll', preventScroll);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
   }, []);
 
   // 메시지 로드 및 구독 로직
@@ -164,12 +178,12 @@ const Chat = () => {
 
   return (
     /* 
-      Grid 레이아웃을 사용하여 상단(88px), 중앙(남은 공간), 하단(자동)을 명확히 구분합니다.
-      fixed inset-0을 통해 화면 전체를 차지하며, 키보드가 올라오면 시스템 리사이징에 의해 1fr 영역이 줄어듭니다.
+      fixed 대신 h-full과 flex-col을 사용하여 부모 컨테이너 안에서만 움직이게 합니다.
+      overscroll-behavior: none을 통해 바디 스크롤 전이를 방지합니다.
     */
-    <div className="fixed inset-0 bg-white grid grid-rows-[88px_1fr_auto] overflow-hidden z-[1000]">
-      {/* 1. 상단 헤더 (88px 고정) */}
-      <header className="pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 z-10">
+    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative" style={{ overscrollBehavior: 'none' }}>
+      {/* 1. 상단 헤더 (shrink-0으로 높이 고정) */}
+      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -195,10 +209,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (남은 공간 모두 차지) */}
+      {/* 2. 중앙 메시지 영역 (flex-1로 남은 공간 차지) */}
       <div 
         ref={scrollRef} 
-        className="px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -216,8 +230,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (내용에 맞게 높이 조절) */}
-      <div className="p-4 bg-white border-t border-gray-100 z-10">
+      {/* 3. 하단 입력창 (shrink-0으로 높이 고정) */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
