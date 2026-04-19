@@ -18,6 +18,7 @@ const FriendList = () => {
 
   useEffect(() => {
     const searchUsers = async () => {
+      // 검색어가 없으면 리스트를 비움
       if (!searchQuery.trim()) {
         setUsers([]);
         return;
@@ -25,11 +26,12 @@ const FriendList = () => {
 
       setIsLoading(true);
       try {
+        // nickname 컬럼을 기준으로 ilike(대소문자 구분 없는 포함 검색) 수행
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url, bio')
-          .or(`nickname.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
-          .neq('id', authUser?.id)
+          .ilike('nickname', `%${searchQuery}%`)
+          .neq('id', authUser?.id) // 본인은 제외
           .limit(20);
 
         if (error) throw error;
@@ -41,6 +43,7 @@ const FriendList = () => {
       }
     };
 
+    // 디바운싱: 타이핑이 멈춘 후 300ms 뒤에 검색 실행
     const timer = setTimeout(() => {
       searchUsers();
     }, 300);
@@ -49,6 +52,7 @@ const FriendList = () => {
   }, [searchQuery, authUser]);
 
   const handleStartChat = (user: any) => {
+    // 채팅방 생성 또는 기존 방 가져오기
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
     navigate(`/chat/${user.id}`);
   };
@@ -78,7 +82,7 @@ const FriendList = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
-              placeholder="닉네임 또는 아이디 검색" 
+              placeholder="닉네임으로 친구 찾기" 
               className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -94,7 +98,7 @@ const FriendList = () => {
 
         <div className="space-y-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            {searchQuery ? '검색 결과' : '검색어를 입력하세요'}
+            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
           </p>
           
           <div className="space-y-1">
@@ -121,6 +125,12 @@ const FriendList = () => {
                 </div>
               </div>
             ))}
+            
+            {!isLoading && searchQuery.trim() && users.length === 0 && (
+              <div className="py-20 text-center">
+                <p className="text-sm text-gray-400 font-bold">해당 닉네임을 가진 사용자가 없습니다.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
