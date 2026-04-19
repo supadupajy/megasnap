@@ -30,7 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
+  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -155,12 +155,11 @@ const Chat = () => {
     <div 
       className="fixed inset-0 bg-white flex flex-col overflow-hidden"
       style={{ 
-        // 키보드가 올라왔을 때 전체 컨테이너의 높이를 조절하여 레이아웃 유지
-        height: isKeyboardOpen ? `calc(100% - ${keyboardHeight}px)` : '100%'
+        bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
       }}
     >
-      {/* Header - Absolute position at the top */}
-      <header className="absolute top-0 left-0 right-0 h-[88px] pt-8 bg-white/95 backdrop-blur-md z-[70] flex items-center justify-between px-4 border-b border-gray-100">
+      {/* Header - Fixed to the very top of the container */}
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/95 backdrop-blur-md z-[60] flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
@@ -180,10 +179,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List - Scrollable area between header and footer */}
+      {/* Message List - Added pt-[88px] to account for fixed header */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar pt-[100px] pb-[100px] bg-white"
+        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar pt-[100px] pb-4 bg-white min-h-0"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -201,8 +200,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Absolute position at the bottom */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-[70]">
+      {/* Input Area */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
