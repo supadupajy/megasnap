@@ -84,9 +84,9 @@ const Settings = () => {
       );
       dismissToast(toastId);
       showSuccess(`${count}개의 포스팅이 전국에 생성되었습니다! ✨`);
-    } catch (err) {
+    } catch (err: any) {
       dismissToast(toastId);
-      showError('데이터 생성 중 오류가 발생했습니다.');
+      showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -99,9 +99,11 @@ const Settings = () => {
       const count = await randomizeExistingLikes();
       dismissToast(toastId);
       showSuccess(`${count}개 포스팅의 등급이 재설정되었습니다! 🎲`);
-    } catch (err) {
+    } catch (err: any) {
       dismissToast(toastId);
-      showError('수치 변경 중 오류가 발생했습니다.');
+      // 실제 에러 메시지를 표시하여 원인 파악
+      showError(`수치 변경 실패: ${err.message || 'RPC 함수를 찾을 수 없거나 권한이 없습니다.'}`);
+      console.error("Randomize Error Details:", err);
     } finally {
       setIsProcessing(false);
     }
