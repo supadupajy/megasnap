@@ -24,27 +24,28 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
+// 재생 확인된 최신 유튜브 Shorts 리스트
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=CevxZvSJLk8",
-  "https://www.youtube.com/watch?v=09R8_2nJtjg",
-  "https://www.youtube.com/watch?v=JGwWNGJdvx8",
-  "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-  "https://www.youtube.com/watch?v=OPf0YbXqDm0",
-  "https://www.youtube.com/watch?v=nfWlot6h_JM",
-  "https://www.youtube.com/watch?v=YQHsXMglC9A",
-  "https://www.youtube.com/watch?v=2vjPBrBU-TM",
-  "https://www.youtube.com/watch?v=fWNaR-rxAic",
-  "https://www.youtube.com/watch?v=LjhCEhWiKXk",
-  "https://www.youtube.com/watch?v=9bZkp7q19f0",
-  "https://www.youtube.com/watch?v=gdZLi9oWNZg",
-  "https://www.youtube.com/watch?v=WMweEpGlu_U",
-  "https://www.youtube.com/watch?v=ioNng23DkIM",
-  "https://www.youtube.com/watch?v=vRXZj0DzXIA",
-  "https://www.youtube.com/watch?v=fHI8X4OXW-Q",
-  "https://www.youtube.com/watch?v=ArmDp-zijuc",
-  "https://www.youtube.com/watch?v=pSUydWNJ968",
-  "https://www.youtube.com/watch?v=6ZUIwj3FgUY",
-  "https://www.youtube.com/watch?v=TQTlCHxyuu8",
+  "https://www.youtube.com/shorts/CevxZvSJLk8",
+  "https://www.youtube.com/shorts/09R8_2nJtjg",
+  "https://www.youtube.com/shorts/kJQP7kiw5Fk",
+  "https://www.youtube.com/shorts/nfWlot6h_JM",
+  "https://www.youtube.com/shorts/YQHsXMglC9A",
+  "https://www.youtube.com/shorts/2vjPBrBU-TM",
+  "https://www.youtube.com/shorts/fWNaR-rxAic",
+  "https://www.youtube.com/shorts/LjhCEhWiKXk",
+  "https://www.youtube.com/shorts/9bZkp7q19f0",
+  "https://www.youtube.com/shorts/gdZLi9oWNZg",
+  "https://www.youtube.com/shorts/WMweEpGlu_U",
+  "https://www.youtube.com/shorts/ioNng23DkIM",
+  "https://www.youtube.com/shorts/vRXZj0DzXIA",
+  "https://www.youtube.com/shorts/fHI8X4OXW-Q",
+  "https://www.youtube.com/shorts/ArmDp-zijuc",
+  "https://www.youtube.com/shorts/pSUydWNJ968",
+  "https://www.youtube.com/shorts/6ZUIwj3FgUY",
+  "https://www.youtube.com/shorts/TQTlCHxyuu8",
+  "https://www.youtube.com/shorts/X_9V_2zX_X8",
+  "https://www.youtube.com/shorts/7_V_2zX_X8A"
 ];
 
 const ACCIDENT_IMAGES = ["1597328290883-50c5787b7c7e", "1580273916550-e323be2ae537", "1566241440091-ec10df8db2e1", "1494976388531-d1058494cdd8", "1516733725897-1aa73b87c8e8", "1549317661-bd32c8ce0db2", "1574610758891-5b809b6e6e2e", "1506015391300-4802dc74de2e", "1518527989017-5baca7a58d3c", "1599412227383-b7d4751c8765", "1578496479914-7ef3b0193be3", "1590102426319-c7526718cd70", "1517055727180-d1a9761c546a", "1503376780353-7e6692767b70", "1541899481282-d53bffe3c35d", "1450101499163-c8848c66ca85", "1506719040632-7d588830c6a6", "1515569067071-ec3b51335dd0", "1533106497176-45ae19e68ba2", "1504215636907-fe1e63f29066"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
@@ -120,7 +121,8 @@ export const createMockPosts = (
     const isAd = false;
     const isGif = false; 
     
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.75; 
+    // 동영상 비중 50%로 상향
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.5; 
     
     let lat, lng;
     if (bounds) {

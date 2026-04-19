@@ -97,13 +97,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        // 등급 로직 제거: 모든 포스팅이 동일한 확률로 랜덤 수치를 가짐
         const finalLikes = getRandomLikesFlat();
         let finalYoutubeUrl = null;
         let finalImage = p.image;
         
-        // 좋아요가 높게 나온 포스팅 중 일부에 유튜브 영상 매칭 (시각적 다양성)
-        if (finalLikes >= 5000 && Math.random() < 0.4) {
+        // 데이터 생성 시 50% 확률로 유튜브 영상 매칭
+        if (Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
         }

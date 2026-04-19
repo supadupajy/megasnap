@@ -8,11 +8,12 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts } from '@/lib/mock-data';
+import { createMockPosts, YOUTUBE_LINKS } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { getYoutubeThumbnail } from '@/lib/utils';
 
 // 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼 (일관성 유지)
 const getTierFromId = (id: string) => {
@@ -89,14 +90,26 @@ const Popular = () => {
       let mockPosts = createMockPosts(37.5665, 126.9780, 20);
       
       // 3. 전체 리스트를 무작위로 섞음 (Shuffle)
-      // 이렇게 하면 "인기 있는" 포스팅들이 매번 다른 순서로 나타남
-      const combined = [...realPosts, ...mockPosts].sort(() => Math.random() - 0.5);
+      let combined = [...realPosts, ...mockPosts].sort(() => Math.random() - 0.5);
       
-      setPosts(combined);
+      // 4. 인기 탭의 50%가 유튜브 영상이 되도록 강제 조정
+      const processedPosts = combined.map((p, idx) => {
+        // 짝수 인덱스(50%)이면서 영상이 없는 경우 강제 할당
+        if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl) {
+          const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          return {
+            ...p,
+            youtubeUrl: ytUrl,
+            image: getYoutubeThumbnail(ytUrl) || p.image
+          };
+        }
+        return p;
+      });
+      
+      setPosts(processedPosts);
       hasLoaded.current = true;
     } catch (err) {
       console.error('[Popular] Fetch Error:', err);
-      // 에러 시 목 데이터라도 셔플해서 보여줌
       setPosts(createMockPosts(37.5665, 126.9780, 30).sort(() => Math.random() - 0.5));
     } finally {
       setIsInitialLoading(false);
