@@ -76,26 +76,34 @@ const Index = () => {
     if (hasInitialLoaded.current) return;
     hasInitialLoaded.current = true;
     try {
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(200);
+      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(500);
       if (!error && data) {
-        const mapped = data.map(p => ({
-          id: p.id,
-          isAd: false,
-          isGif: false,
-          isInfluencer: Number(p.likes || 0) > 5000,
-          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-          content: p.content,
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: Number(p.likes || 0),
-          commentsCount: 0,
-          comments: [],
-          image: p.image_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-        })) as Post[];
+        const mapped = data.map(p => {
+          const likes = Number(p.likes || 0);
+          const isAd = p.content?.startsWith('[AD]');
+          const isGif = p.content?.startsWith('[GIF]');
+          const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
+          
+          return {
+            id: p.id,
+            isAd,
+            isGif,
+            isInfluencer: likes > 5000,
+            user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+            content: cleanContent,
+            location: p.location_name,
+            lat: p.latitude,
+            lng: p.longitude,
+            likes: likes,
+            commentsCount: 0,
+            comments: [],
+            image: p.image_url,
+            youtubeUrl: p.youtube_url,
+            isLiked: false,
+            createdAt: new Date(p.created_at),
+            borderType: likes >= 1500 ? 'popular' : 'none'
+          };
+        }) as Post[];
         setAllPosts(mapped);
         mapCache.posts = mapped;
       }
@@ -128,10 +136,12 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
+    
     const inBoundsCandidates = allPosts.filter(post => {
       if (blockedIds.has(post.user.id)) return false;
       if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('user_filter')) matchesCategory = post.user.id === targetUserId;
@@ -140,9 +150,17 @@ const Index = () => {
       return matchesCategory;
     });
     
-    const displayCount = 30; 
-    const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
-    const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
+    // 마커 표시 개수를 100개로 상향하고, 인기순과 최신순을 섞어서 다양성 확보
+    const displayCount = 100; 
+    const sorted = inBoundsCandidates.sort((a, b) => {
+      // 광고는 항상 우선순위
+      if (a.isAd && !b.isAd) return -1;
+      if (!a.isAd && b.isAd) return 1;
+      // 나머지는 좋아요 순으로 정렬하되, 너무 인기 포스팅만 쏠리지 않도록 함
+      return b.likes - a.likes || b.createdAt.getTime() - a.createdAt.getTime();
+    });
+    
+    const finalMarkers = sorted.slice(0, displayCount);
     
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
@@ -163,26 +181,34 @@ const Index = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(200);
+    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(500);
     if (data) {
-      const mapped = data.map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: Number(p.likes || 0) > 5000,
-        user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
+      const mapped = data.map(p => {
+        const likes = Number(p.likes || 0);
+        const isAd = p.content?.startsWith('[AD]');
+        const isGif = p.content?.startsWith('[GIF]');
+        const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
+        
+        return {
+          id: p.id,
+          isAd,
+          isGif,
+          isInfluencer: likes > 5000,
+          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+          content: cleanContent,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: likes,
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          youtubeUrl: p.youtube_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: likes >= 1500 ? 'popular' : 'none'
+        };
+      }) as Post[];
       setAllPosts(mapped);
       mapCache.posts = mapped;
     }

@@ -12,6 +12,11 @@ const mapDbToPost = (p: any): Post => {
   // 좋아요 수에 따라 인플루언서 여부 결정 (5000개 이상)
   const isInfluencer = likes >= 5000;
 
+  // 내용(Content)에 포함된 태그를 통해 광고/GIF 여부 판단
+  const isAd = p.content?.startsWith('[AD]');
+  const isGif = p.content?.startsWith('[GIF]');
+  const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
+
   let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
   if (isInfluencer) {
     if (likes >= 15000) borderType = 'diamond';
@@ -23,15 +28,15 @@ const mapDbToPost = (p: any): Post => {
 
   return {
     id: p.id,
-    isAd: false,
-    isGif: false,
+    isAd: isAd,
+    isGif: isGif,
     isInfluencer: isInfluencer, 
     user: {
       id: p.user_id,
       name: p.user_name || '탐험가',
       avatar: p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}`,
     },
-    content: p.content || '',
+    content: cleanContent,
     location: p.location_name || '알 수 없는 장소',
     lat: p.latitude,
     lng: p.longitude,
@@ -40,7 +45,7 @@ const mapDbToPost = (p: any): Post => {
     comments: [],
     image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
     videoUrl: p.video_url,
-    youtubeUrl: p.youtube_url, // 유튜브 URL 추가
+    youtubeUrl: p.youtube_url,
     category: 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),

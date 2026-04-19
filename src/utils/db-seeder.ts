@@ -106,8 +106,13 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
+        // 광고나 GIF 여부를 내용에 태그로 추가하여 저장
+        let finalContent = p.content;
+        if (p.isAd) finalContent = `[AD] ${p.content}`;
+        else if (p.isGif) finalContent = `[GIF] ${p.content}`;
+        
         allInsertData.push({
-          content: p.content,
+          content: finalContent,
           location_name: realAddress,
           latitude: p.lat,
           longitude: p.lng,
@@ -123,7 +128,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     }
 
     // 3. Supabase 삽입 (청크 단위)
-    // 데이터 양이 많으므로 청크 사이즈를 50으로 조정
     const chunkSize = 50;
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
