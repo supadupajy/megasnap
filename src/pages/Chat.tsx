@@ -153,12 +153,11 @@ const Chat = () => {
 
   return (
     <div 
-      className="fixed top-0 left-0 right-0 bg-white flex flex-col overflow-hidden"
+      className="fixed inset-0 bg-white flex flex-col overflow-hidden"
       style={{ 
-        // 채팅창 레이어 자체의 바닥을 키보드 높이에 고정
-        bottom: `${keyboardHeight}px`,
-        // 전체 높이를 키보드 제외 영역으로 제한
-        height: `calc(100% - ${keyboardHeight}px)`
+        // 스마트폰(터치 기기)에서는 시스템이 웹뷰 크기를 줄이므로 bottom: 0으로 충분합니다.
+        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 띄워줍니다.
+        bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
       }}
     >
       {/* Header */}
