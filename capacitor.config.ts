@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.chora',
+  appId: 'com.example.chorasnap',
   appName: 'Chora',
   webDir: 'dist'
 };

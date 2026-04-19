@@ -6,7 +6,6 @@ import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { showError } from '@/utils/toast';
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
@@ -18,7 +17,36 @@ export const usePushNotifications = () => {
 
     const registerPush = async () => {
       try {
-        // 1. 권한 확인 및 요청
+        // 1. 리스너를 먼저 등록 (register 호출 전에 등록해야 함)
+        
+        // 토큰 수신 리스너
+        const regListener = await PushNotifications.addListener('registration', async (token) => {
+          console.log('Push registration success, token:', token.value);
+          const { error } = await supabase
+            .from('profiles')
+            .update({ push_token: token.value })
+            .eq('id', user.id);
+          
+          if (error) console.error('Error saving push token:', error);
+        });
+
+        // 등록 실패 리스너
+        const errListener = await PushNotifications.addListener('registrationError', (error) => {
+          console.error('Push registration error:', error.error);
+        });
+
+        // 알림 클릭 리스너
+        const actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          const data = notification.notification.data;
+          console.log('Push action performed:', data);
+          if (data && data.chatId) {
+            navigate(`/chat/${data.chatId}`);
+          } else {
+            navigate('/notifications');
+          }
+        });
+
+        // 2. 권한 확인 및 요청
         let permStatus = await PushNotifications.checkPermissions();
 
         if (permStatus.receive === 'prompt') {
@@ -30,35 +58,8 @@ export const usePushNotifications = () => {
           return;
         }
 
-        // 2. 알림 등록
+        // 3. 이제 알림 등록 호출
         await PushNotifications.register();
-
-        // 3. 토큰 수신 리스너
-        const regListener = await PushNotifications.addListener('registration', async (token) => {
-          console.log('Push registration success, token:', token.value);
-          const { error } = await supabase
-            .from('profiles')
-            .update({ push_token: token.value })
-            .eq('id', user.id);
-          
-          if (error) console.error('Error saving push token:', error);
-        });
-
-        // 4. 등록 실패 리스너
-        const errListener = await PushNotifications.addListener('registrationError', (error) => {
-          console.error('Push registration error:', error.error);
-        });
-
-        // 5. 알림 클릭 리스너
-        const actionListener = await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          const data = notification.notification.data;
-          console.log('Push action performed:', data);
-          if (data && data.chatId) {
-            navigate(`/chat/${data.chatId}`);
-          } else {
-            navigate('/notifications');
-          }
-        });
 
         return () => {
           regListener.remove();
