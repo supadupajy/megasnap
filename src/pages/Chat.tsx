@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
+  const { keyboardHeight, isKeyboardOpen, setIsKeyboardOpenManual } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -149,17 +151,13 @@ const Chat = () => {
     }
   };
 
-  if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
-
   return (
-    /* 
-      APK 환경 최적화:
-      1. fixed 대신 relative/flex 구조를 사용하여 WebView의 높이 변화(adjustResize)를 자연스럽게 따릅니다.
-      2. h-full(또는 100dvh)을 사용하여 키보드가 올라와 WebView가 작아지면 컨테이너도 함께 작아지게 합니다.
-      3. overflow-hidden으로 브라우저의 강제 스크롤을 방지합니다.
-    */
-    <div className="relative flex flex-col w-full h-full bg-white overflow-hidden">
-      {/* 1. 상단 헤더 (고정 높이, 절대 밀려나지 않음) */}
+    <div 
+      className="relative flex flex-col w-full h-full bg-white overflow-hidden"
+      style={{ paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : 0 }}
+      onClick={() => setIsKeyboardOpenManual(false)}
+    >
+      {/* 1. 상단 헤더 */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -186,7 +184,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (flex-1로 남은 공간을 모두 차지) */}
+      {/* 2. 중앙 메시지 영역 */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
@@ -207,11 +205,12 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (키보드가 올라오면 WebView 하단에 자동으로 붙음) */}
+      {/* 3. 하단 입력창 */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+          onClick={(e) => e.stopPropagation()}
         >
           <Input 
             ref={inputRef}
@@ -219,6 +218,7 @@ const Chat = () => {
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
+            onFocus={() => setIsKeyboardOpenManual(true)}
           />
           <Button 
             type="submit"

@@ -1,43 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+// 전역 상태 관리를 위한 간단한 변수 (시뮬레이터 연동용)
+let globalIsKeyboardOpen = false;
+const listeners = new Set<(isOpen: boolean) => void>();
 
 export function useKeyboard() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(globalIsKeyboardOpen);
+
+  const updateState = useCallback((isOpen: boolean) => {
+    globalIsKeyboardOpen = isOpen;
+    setIsKeyboardOpen(isOpen);
+    setKeyboardHeight(isOpen ? 280 : 0); // 안드로이드 평균 키보드 높이 시뮬레이션
+  }, []);
 
   useEffect(() => {
-    // 실제 브라우저/OS의 키보드에 의한 뷰포트 변화 감지
+    const listener = (isOpen: boolean) => {
+      setIsKeyboardOpen(isOpen);
+      setKeyboardHeight(isOpen ? 280 : 0);
+    };
+    listeners.add(listener);
+
+    // 실제 브라우저/OS의 키보드 변화 감지 (모바일 브라우저용)
     if (window.visualViewport) {
       const handleResize = () => {
         const viewport = window.visualViewport;
         if (!viewport) return;
-
-        // 전체 윈도우 높이와 현재 가시 뷰포트 높이의 차이를 키보드 높이로 간주
         const heightDiff = window.innerHeight - viewport.height;
-        
-        // 보통 150px 이상 차이가 나면 키보드가 올라온 것으로 판단
         if (heightDiff > 150) {
-          setKeyboardHeight(heightDiff);
-          setIsKeyboardOpen(true);
-        } else {
-          setKeyboardHeight(0);
-          setIsKeyboardOpen(false);
+          updateState(true);
+        } else if (!globalIsKeyboardOpen) {
+          updateState(false);
         }
       };
-
       window.visualViewport.addEventListener("resize", handleResize);
-      // 초기 상태 체크
-      handleResize();
-      
-      return () => window.visualViewport?.removeEventListener("resize", handleResize);
+      return () => {
+        window.visualViewport?.removeEventListener("resize", handleResize);
+        listeners.delete(listener);
+      };
     }
-  }, []);
+    return () => listeners.delete(listener);
+  }, [updateState]);
 
-  return { keyboardHeight, isKeyboardOpen };
+  const setIsKeyboardOpenManual = (isOpen: boolean) => {
+    updateState(isOpen);
+    listeners.forEach(l => l(isOpen));
+  };
+
+  return { 
+    keyboardHeight, 
+    isKeyboardOpen, 
+    setIsKeyboardOpenManual 
+  };
 }
 
-// 가상 키보드 트리거 함수는 더 이상 필요 없으므로 빈 함수로 대체하거나 제거
 export const triggerVirtualKeyboard = (isOpen: boolean) => {
-  // No-op: 실제 키보드는 input focus 시 자동으로 올라옵니다.
+  globalIsKeyboardOpen = isOpen;
+  listeners.forEach(l => l(isOpen));
 };

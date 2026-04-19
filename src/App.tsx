@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import ExitDialog from "./components/ExitDialog";
+import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
@@ -100,7 +101,7 @@ const AnimatedRoutes = () => {
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></UserProfile>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -140,6 +141,7 @@ const App = () => {
                   <AnimatedRoutes key="main-app" />
                 )}
               </AnimatePresence>
+              <KeyboardSimulator />
             </div>
           </AuthProvider>
         </BrowserRouter>
