@@ -38,7 +38,9 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
+  // 중복 전송 방지를 위한 강력한 제어 장치들
   const isProcessingRef = useRef(false);
+  const lastSentTimeRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +127,7 @@ const Chat = () => {
 
     fetchMessages();
 
-    const channelId = `chat_v3_${[authUser.id, chatId].sort().join('_')}`;
+    const channelId = `chat_v4_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { 
@@ -171,16 +173,20 @@ const Chat = () => {
     }
   }, [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault(); // 폼 제출 기본 동작 방지
-    
-    // 전송 중이거나 입력값이 없으면 즉시 차단
-    if (!inputValue.trim() || !authUser || !chatId || isProcessingRef.current || isSending) return;
-    
+  const handleSend = async () => {
+    const now = Date.now();
     const content = inputValue.trim();
+
+    // 1. 즉각적인 중복 실행 차단 (Ref + 시간차 체크)
+    if (!content || !authUser || !chatId || isProcessingRef.current || (now - lastSentTimeRef.current < 1000)) {
+      return;
+    }
+
+    // 2. 전송 상태 잠금 및 입력창 즉시 초기화
     isProcessingRef.current = true;
+    lastSentTimeRef.current = now;
     setIsSending(true);
-    setInputValue(''); // 입력창 즉시 비우기
+    setInputValue('');
 
     if (isValidUUID(chatId)) {
       try {
@@ -197,9 +203,11 @@ const Chat = () => {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content); // 실패 시에만 입력값 복구
       } finally {
-        // 전송 완료 후 상태 해제
-        isProcessingRef.current = false;
-        setIsSending(false);
+        // 전송 완료 후 상태 해제 (약간의 지연을 두어 연타 방지)
+        setTimeout(() => {
+          isProcessingRef.current = false;
+          setIsSending(false);
+        }, 500);
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
@@ -267,22 +275,28 @@ const Chat = () => {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
-        <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
           />
           <Button 
-            type="submit"
+            onClick={handleSend}
             size="icon" 
             disabled={!inputValue.trim() || isSending} 
             className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
           >
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );
