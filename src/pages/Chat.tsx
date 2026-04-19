@@ -135,7 +135,11 @@ const Chat = () => {
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newMsg = payload.new as Message;
-          // 중복 방지: 내가 보낸 메시지는 이미 handleSend에서 추가했으므로, 상대방이 보낸 것만 추가
+          
+          // 1. 내가 보낸 메시지는 handleSend에서 이미 추가했으므로 무시합니다.
+          if (newMsg.sender_id === authUser.id) return;
+
+          // 2. 상대방이 보낸 메시지인 경우에만 추가합니다.
           if (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) {
             setMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
