@@ -79,7 +79,7 @@ const FriendList = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
               placeholder="닉네임 또는 아이디 검색" 
-              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold"
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
