@@ -137,7 +137,6 @@ const Index = () => {
   }, [loadInitialGlobalPosts]);
 
   const autoSeedArea = useCallback(async () => {
-    // 마커가 부족하거나(8개 미만), 줌이 너무 멀거나, 이미 생성 중이면 중단
     if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 8) return;
     
     const tileKey = `${mapData.center.lat.toFixed(2)}_${mapData.center.lng.toFixed(2)}`;
@@ -153,7 +152,6 @@ const Index = () => {
         return;
       }
 
-      // 한 화면에 약 15~20개가 되도록 생성
       const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18);
       const insertDataPromises = mockPosts.map(async (p) => {
         const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
@@ -175,7 +173,6 @@ const Index = () => {
 
       const finalData = await Promise.all(insertDataPromises);
       
-      // 로컬 상태에 즉시 반영하여 사용자 경험 개선
       const newPosts = finalData.map((d, idx) => ({
         id: `temp_${Date.now()}_${idx}`,
         isAd: false,
@@ -196,11 +193,7 @@ const Index = () => {
       })) as Post[];
 
       setAllPosts(prev => [...prev, ...newPosts]);
-      
-      // DB 저장
       await supabase.from('posts').insert(finalData);
-      
-      // 동기화 트리거
       syncPostsWithSupabase();
     } catch (err) {
       console.error('[AutoSeed] Error:', err);
@@ -236,9 +229,8 @@ const Index = () => {
     }
   }, [mapData, syncPostsWithSupabase]);
 
-  // 마커 개수가 부족할 때 자동 생성 트리거 (더 민감하게 반응)
   useEffect(() => {
-    if (mapData && displayedMarkers.length < 8 && !isAutoSeeding.current) {
+    if (mapData && displayedMarkers.length < 12 && !isAutoSeeding.current) {
       autoSeedArea();
     }
   }, [mapData, displayedMarkers.length, autoSeedArea]);
@@ -254,7 +246,6 @@ const Index = () => {
     const inBoundsCandidates = allPosts.filter(post => {
       const isNotBlocked = !blockedIds.has(post.user.id);
       if (!isNotBlocked) return false;
-      if (post.id === highlightedPostId) return true;
       
       const isWithinBounds = post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng;
       if (!isWithinBounds) return false;
@@ -274,7 +265,8 @@ const Index = () => {
       return matchesCategory;
     });
 
-    const displayCount = 20; 
+    // 표시 개수 제한을 150개로 대폭 늘려 화면 내 포스팅이 사라지지 않게 함
+    const displayCount = 150; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
     
@@ -443,7 +435,6 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              {/* Trending Posts Backdrop - z-index를 높여 확실히 닫히도록 설정 */}
               <AnimatePresence>
                 {isTrendingExpanded && (
                   <motion.div 
