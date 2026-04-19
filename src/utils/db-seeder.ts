@@ -103,7 +103,11 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
 };
 
 const getRandomLikesFlat = () => {
-  return Math.floor(Math.random() * 19990 + 10);
+  const r = Math.random();
+  if (r < 0.5) return Math.floor(Math.random() * 1001); // 0~1000 (50%)
+  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000); // 1000~5000 (30%)
+  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000); // 5000~10000 (10%)
+  return Math.floor(Math.random() * 10001 + 10000); // 10000~20000 (10%)
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
