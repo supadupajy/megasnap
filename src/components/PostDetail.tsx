@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, getYoutubeId } from '@/lib/utils';
+import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
 import {
@@ -155,9 +155,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const category = post.category || 'none';
   
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
+  const youtubeThumbnail = post.youtubeUrl ? getYoutubeThumbnail(post.youtubeUrl) : null;
   
-  // 유튜브 썸네일 로직 제거: 무조건 Unsplash 이미지를 사용
-  const displayImages = post.images?.length ? post.images : [post.image];
+  // 유튜브 썸네일 우선 사용
+  const displayImages = youtubeThumbnail ? [youtubeThumbnail] : (post.images?.length ? post.images : [post.image]);
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 

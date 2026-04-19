@@ -2,6 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { createMockPosts, YOUTUBE_LINKS } from "@/lib/mock-data";
+import { getYoutubeThumbnail } from "@/lib/utils";
 
 /**
  * 대한민국 주요 대도시 좌표 및 정밀 영역(Bounds) 목록
@@ -93,6 +94,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         
         let finalLikes = p.likes;
         let finalYoutubeUrl = null;
+        let finalImage = p.image;
         const tierRoll = Math.random();
         
         // 등급별 확률 (각 5%, 총 20% 특별 포스팅)
@@ -116,6 +118,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         // 특별 등급(인기 이상)인 경우 정확히 50% 확률로 유튜브 영상 할당
         if (isSpecial && Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          // 유튜브 썸네일을 이미지 URL로 설정
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
         }
 
         allInsertData.push({
@@ -123,7 +127,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           location_name: realAddress,
           latitude: p.lat,
           longitude: p.lng,
-          image_url: p.image,
+          image_url: finalImage,
           youtube_url: finalYoutubeUrl,
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
