@@ -35,6 +35,7 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100%');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,27 +50,30 @@ const Chat = () => {
     }
   };
 
-  // 브라우저의 강제 스크롤 방지 및 리사이징 대응
+  // 키보드 대응: VisualViewport의 실제 높이를 컨테이너 높이로 설정
   useEffect(() => {
-    const preventScroll = () => {
-      // 브라우저가 페이지를 밀어 올리려고 할 때 강제로 최상단으로 고정
-      window.scrollTo(0, 0);
+    const handleVisualViewportResize = () => {
+      if (window.visualViewport) {
+        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
+        // 이 높이를 직접 style.height에 할당하여 브라우저의 강제 스크롤을 방지합니다.
+        setViewportHeight(`${window.visualViewport.height}px`);
+        
+        // 키보드가 올라올 때 항상 최하단으로 스크롤
+        setTimeout(() => scrollToBottom('auto'), 50);
+      }
     };
 
-    const handleResize = () => {
-      window.scrollTo(0, 0);
-      setTimeout(() => scrollToBottom('auto'), 50);
-    };
-
-    window.addEventListener('scroll', preventScroll);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('resize', handleVisualViewportResize);
+      window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
+      // 초기 높이 설정
+      handleVisualViewportResize();
     }
 
     return () => {
-      window.removeEventListener('scroll', preventScroll);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
+        window.visualViewport.removeEventListener('scroll', handleVisualViewportResize);
       }
     };
   }, []);
@@ -178,11 +182,15 @@ const Chat = () => {
 
   return (
     /* 
-      fixed 대신 h-full과 flex-col을 사용하여 부모 컨테이너 안에서만 움직이게 합니다.
-      overscroll-behavior: none을 통해 바디 스크롤 전이를 방지합니다.
+      fixed inset-0으로 고정하고, style={{ height: viewportHeight }}를 통해 
+      키보드가 올라온 만큼만 높이를 차지하게 합니다. 
+      이렇게 하면 브라우저가 페이지 전체를 위로 밀어 올리지 않습니다.
     */
-    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative" style={{ overscrollBehavior: 'none' }}>
-      {/* 1. 상단 헤더 (shrink-0으로 높이 고정) */}
+    <div 
+      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000]"
+      style={{ height: viewportHeight }}
+    >
+      {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -209,7 +217,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (flex-1로 남은 공간 차지) */}
+      {/* 2. 중앙 메시지 영역 (남은 공간 차지) */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
@@ -230,7 +238,7 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (shrink-0으로 높이 고정) */}
+      {/* 3. 하단 입력창 (키보드 바로 위 고정) */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
         <form 
           onSubmit={handleSend}
