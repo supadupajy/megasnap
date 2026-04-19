@@ -21,8 +21,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     const allInsertData: any[] = [];
 
     for (const city of MAJOR_CITIES) {
-      // 도시별 생성 개수 제한 (브라우저 과부하 방지)
-      const count = Math.min(city.density, 100); 
+      // 제한을 제거하고 도시별 설정된 density를 그대로 사용합니다.
+      const count = city.density; 
       
       for (let i = 0; i < count; i++) {
         // 무작위 좌표 생성 (범위 내)
@@ -46,7 +46,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
         allInsertData.push({
           content: REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)],
-          location_name: `${city.name} 어딘가`, // API 호출 속도 문제로 단순화 권장
+          location_name: `${city.name} 어딘가`,
           latitude: lat,
           longitude: lng,
           image_url: finalImage,
@@ -55,7 +55,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: Math.floor(Math.random() * 2000),
-          created_at: new Date(Date.now() - Math.random() * 30 * 24 * 3600000).toISOString() // 최근 한달
+          created_at: new Date(Date.now() - Math.random() * 30 * 24 * 3600000).toISOString()
         });
       }
     }
@@ -77,7 +77,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
 /**
  * 기존 모든 포스팅의 좋아요 수치를 무작위로 변경합니다.
- * 인기 탭의 순위를 갱신하기 위해 사용됩니다.
  */
 export const randomizeExistingLikes = async () => {
   try {
