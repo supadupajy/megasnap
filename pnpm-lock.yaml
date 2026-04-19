@@ -26,9 +26,6 @@ importers:
       '@capacitor/geolocation':
         specifier: ^8.2.0
         version: 8.2.0(@capacitor/core@7.6.1)
-      '@capacitor/push-notifications':
-        specifier: ^8.0.3
-        version: 8.0.3(@capacitor/core@7.6.1)
       '@hookform/resolvers':
         specifier: ^3.9.0
         version: 3.10.0(react-hook-form@7.55.0(react@18.3.1))
@@ -314,11 +311,6 @@ packages:
 
   '@capacitor/geolocation@8.2.0':
     resolution: {integrity: sha512-N29QcoIPmme0xSxRkm7+3hjoHp6mBAOarxecvtCCZKyOBeKiJsFUq981cezg2XWBa6fhCXJMCCjQPngKK/dIag==}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
-
-  '@capacitor/push-notifications@8.0.3':
-    resolution: {integrity: sha512-jmBBoJvOzmzem8YoO9dQJBPFiM1bksTNAoV7yksCBN10BybAOtmBF19vFPt/jr2KGAirnPZz0ne2X0OH/rRGtg==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -3016,10 +3008,6 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.6.1
       '@capacitor/synapse': 1.0.4
-
-  '@capacitor/push-notifications@8.0.3(@capacitor/core@7.6.1)':
-    dependencies:
-      '@capacitor/core': 7.6.1
 
   '@capacitor/synapse@1.0.4': {}
 

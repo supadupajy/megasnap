@@ -76,7 +76,7 @@ const Profile = () => {
       setSavedPosts(saved);
     } catch (err) {
       console.error('[Profile] Data load error:', err);
-      hasFetched.current = false;
+      hasFetched.current = false; // 에러 시 재시도 가능하게
     } finally {
       setIsDataLoading(false);
     }
@@ -116,6 +116,7 @@ const Profile = () => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  // 로딩 조건 최적화: 인증 로딩 중이거나, 인증은 됐는데 데이터가 아직 없고 로딩 중일 때만 표시
   if (authLoading || (authUser && isDataLoading && myPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -128,7 +129,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
+    <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px]">
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">

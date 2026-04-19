@@ -48,6 +48,7 @@ const Notifications = () => {
 
       if (!error && data) {
         setNotifications(data as any);
+        // 페이지 진입 시 모든 알림 읽음 처리
         await supabase
           .from('notifications')
           .update({ is_read: true })
@@ -59,6 +60,7 @@ const Notifications = () => {
 
     fetchNotifications();
 
+    // 실시간 구독
     const channel = supabase
       .channel('realtime_notifications')
       .on(
@@ -99,7 +101,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
+    <div className="min-h-screen bg-white pb-24 overflow-x-hidden">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
         <button onClick={() => navigate(-1)} className="mr-4 p-1 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />

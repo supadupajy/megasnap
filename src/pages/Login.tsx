@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Camera, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,17 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  // 컴포넌트 마운트 시 저장된 이메일과 체크박스 상태 불러오기
   useEffect(() => {
     const savedEmail = localStorage.getItem('chora_remembered_email');
     const savedPref = localStorage.getItem('chora_remember_me_pref');
     
-    if (savedEmail) setEmail(savedEmail);
-    if (savedPref === 'true') setRememberMe(true);
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+    if (savedPref === 'true') {
+      setRememberMe(true);
+    }
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -37,18 +42,12 @@ const Login = () => {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-
-        if (data.user && data.session) {
-          showSuccess('회원가입이 완료되었습니다! ✨');
-          navigate('/', { replace: true });
-        } else {
-          showSuccess('인증 이메일이 발송되었습니다. 메일함을 확인해주세요!');
-        }
+        showSuccess('회원가입이 완료되었습니다. 이메일을 확인해주세요!');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -56,6 +55,7 @@ const Login = () => {
         });
         if (error) throw error;
 
+        // 로그인 성공 시 정보 저장 처리
         if (rememberMe) {
           localStorage.setItem('chora_remembered_email', email);
           localStorage.setItem('chora_remember_me_pref', 'true');
@@ -100,15 +100,6 @@ const Login = () => {
         </div>
 
         <div className="bg-white p-8 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
-          {isSignUp && (
-            <div className="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
-                인증 메일이 오지 않는다면 스팸함을 확인하거나, 잠시 후 다시 시도해주세요. (Supabase 무료 플랜 제한)
-              </p>
-            </div>
-          )}
-
           <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">이메일 주소</label>
@@ -145,21 +136,19 @@ const Login = () => {
               </div>
             </div>
 
-            {!isSignUp && (
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="remember" 
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="w-5 h-5 rounded-lg border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                  />
-                  <label htmlFor="remember" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
-                    로그인 정보 저장하기
-                  </label>
-                </div>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="remember" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  className="w-5 h-5 rounded-lg border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                />
+                <label htmlFor="remember" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
+                  로그인 정보 저장하기
+                </label>
               </div>
-            )}
+            </div>
 
             <Button 
               type="submit"
@@ -185,6 +174,13 @@ const Login = () => {
               </button>
             </p>
           </div>
+        </div>
+
+        <div className="text-center space-y-4">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+            By continuing, you agree to Chora's<br />
+            <span className="text-gray-600">Terms of Service</span> and <span className="text-gray-600">Privacy Policy</span>
+          </p>
         </div>
       </motion.div>
     </div>

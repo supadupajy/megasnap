@@ -54,7 +54,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         </div>
       </div>
 
-      {/* 네 번째 메뉴: 친구검색 */}
+      {/* 네 번째 메뉴: 인물검색 */}
       <button 
         onClick={() => navigate('/search')}
         className={cn(
@@ -63,7 +63,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
         )}
       >
         <Search className={cn("w-6 h-6", isActive('/search') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">친구검색</span>
+        <span className="text-[10px] font-bold tracking-tight">인물검색</span>
       </button>
 
       {/* 다섯 번째 메뉴: 내정보 */}

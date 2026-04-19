@@ -32,7 +32,7 @@ const Search = () => {
   }, [searchQuery, users]);
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
+    <div className="min-h-screen bg-white pb-28">
       <Header />
       <div className="pt-[88px] px-4">
         <div className="relative py-6">
@@ -47,6 +47,7 @@ const Search = () => {
           </div>
         </div>
 
+        {/* 광고 배너 추가 */}
         {!searchQuery && <SearchAdBanner />}
 
         <div className="space-y-4">

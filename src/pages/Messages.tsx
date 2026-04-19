@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Search, Edit, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -27,11 +27,11 @@ const Messages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchConversations = async () => {
+  useEffect(() => {
     if (!authUser) return;
-    
-    try {
-      // 1. Supabase 메시지 내역 가져오기
+
+    const fetchConversations = async () => {
+      // 1. Supabase 메시지 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -56,7 +56,7 @@ const Messages = () => {
         }
       }
 
-      // 2. 로컬 chatStore 내역 합치기
+      // 2. 로컬 스토어(Mock) 메시지 가져오기
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -66,22 +66,27 @@ const Messages = () => {
             last_message: lastMsg.text,
             created_at: new Date().toISOString(),
             unread_count: room.unread ? 1 : 0,
-            profile: { nickname: room.user.name, avatar_url: room.user.avatar }
+            profile: {
+              nickname: room.user.name,
+              avatar_url: room.user.avatar
+            }
           });
         }
       }
 
       const convList = Array.from(convMap.values());
-      
-      // 3. 프로필 정보 채우기
+
+      // 3. 프로필 정보 보완 (Supabase 데이터용)
       const results = await Promise.all(
         convList.map(async (conv) => {
           if (conv.profile) return conv;
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('nickname, avatar_url')
             .eq('id', conv.other_id)
-            .maybeSingle();
+            .single();
+          
           return {
             ...conv,
             profile: profile || { nickname: '사용자', avatar_url: null }
@@ -91,29 +96,22 @@ const Messages = () => {
 
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);
-    } catch (err) {
-      console.error('[Messages] Fetch error:', err);
-    } finally {
       setIsLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchConversations();
     const unsubscribe = chatStore.subscribe(fetchConversations);
-    return () => { unsubscribe(); };
+    
+    // 클린업 함수가 boolean을 반환하지 않도록 중괄호로 감싸 void 처리
+    return () => {
+      unsubscribe();
+    };
   }, [authUser]);
 
-  // 검색어에 따른 필터링 (닉네임 또는 마지막 메시지 내용)
-  const filteredConversations = useMemo(() => {
-    const lowerQuery = query.toLowerCase().trim();
-    if (!lowerQuery) return conversations;
-    
-    return conversations.filter(conv => 
-      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
-      conv.last_message.toLowerCase().includes(lowerQuery)
-    );
-  }, [query, conversations]);
+  const filteredConversations = conversations.filter(conv => 
+    conv.profile.nickname?.toLowerCase().includes(query.toLowerCase()) ||
+    conv.last_message.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -132,12 +130,7 @@ const Messages = () => {
       <div className="pt-[88px] px-4 py-4">
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
-            placeholder="대화 상대 또는 메시지 검색" 
-            className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold" 
-            value={query} 
-            onChange={(e) => setQuery(e.target.value)} 
-          />
+          <Input placeholder="대화 상대 또는 메시지 검색" className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
 
         <div className="space-y-4">
@@ -166,13 +159,7 @@ const Messages = () => {
                   </div>
                 );
               })}
-              {filteredConversations.length === 0 && (
-                <div className="py-20 text-center">
-                  <p className="text-sm text-gray-400 font-medium">
-                    {query ? '검색 결과가 없습니다.' : '대화 내역이 없습니다.'}
-                  </p>
-                </div>
-              )}
+              {filteredConversations.length === 0 && <div className="py-20 text-center"><p className="text-sm text-gray-400 font-medium">대화 내역이 없습니다.</p></div>}
             </div>
           )}
         </div>

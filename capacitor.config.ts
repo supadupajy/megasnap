@@ -1,16 +1,9 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.chorasnap',
+  appId: 'com.example.chora',
   appName: 'Chora',
-  webDir: 'dist',
-  plugins: {
-    Keyboard: {
-      resize: "body",
-      style: "light",
-      resizeOnFullScreen: true,
-    },
-  },
+  webDir: 'dist'
 };
 
 export default config;
