@@ -137,10 +137,10 @@ const Index = () => {
   }, [loadInitialGlobalPosts]);
 
   const autoSeedArea = useCallback(async () => {
-    // 마커가 부족하거나(5개 미만), 줌이 너무 멀거나, 이미 생성 중이면 중단
-    if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 7) return;
+    // 마커가 부족하거나(8개 미만), 줌이 너무 멀거나, 이미 생성 중이면 중단
+    if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 8) return;
     
-    const tileKey = `${mapData.center.lat.toFixed(1)}_${mapData.center.lng.toFixed(1)}`;
+    const tileKey = `${mapData.center.lat.toFixed(2)}_${mapData.center.lng.toFixed(2)}`;
     if (mapCache.populatedTiles.has(tileKey)) return;
 
     isAutoSeeding.current = true;
@@ -148,7 +148,10 @@ const Index = () => {
 
     try {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
-      if (!profiles || profiles.length === 0) return;
+      if (!profiles || profiles.length === 0) {
+        isAutoSeeding.current = false;
+        return;
+      }
 
       // 한 화면에 약 15~20개가 되도록 생성
       const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18);
@@ -171,8 +174,33 @@ const Index = () => {
       });
 
       const finalData = await Promise.all(insertDataPromises);
+      
+      // 로컬 상태에 즉시 반영하여 사용자 경험 개선
+      const newPosts = finalData.map((d, idx) => ({
+        id: `temp_${Date.now()}_${idx}`,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: { id: d.user_id, name: d.user_name, avatar: d.user_avatar },
+        content: d.content,
+        location: d.location_name,
+        lat: d.latitude,
+        lng: d.longitude,
+        likes: d.likes,
+        commentsCount: 0,
+        comments: [],
+        image: d.image_url,
+        isLiked: false,
+        createdAt: new Date(d.created_at),
+        borderType: d.likes >= 1500 ? 'popular' : 'none'
+      })) as Post[];
+
+      setAllPosts(prev => [...prev, ...newPosts]);
+      
+      // DB 저장
       await supabase.from('posts').insert(finalData);
       
+      // 동기화 트리거
       syncPostsWithSupabase();
     } catch (err) {
       console.error('[AutoSeed] Error:', err);
@@ -208,9 +236,9 @@ const Index = () => {
     }
   }, [mapData, syncPostsWithSupabase]);
 
-  // 마커 개수가 부족할 때 자동 생성 트리거
+  // 마커 개수가 부족할 때 자동 생성 트리거 (더 민감하게 반응)
   useEffect(() => {
-    if (mapData && displayedMarkers.length < 5 && !isAutoSeeding.current) {
+    if (mapData && displayedMarkers.length < 8 && !isAutoSeeding.current) {
       autoSeedArea();
     }
   }, [mapData, displayedMarkers.length, autoSeedArea]);
@@ -415,7 +443,7 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              {/* Trending Posts Backdrop */}
+              {/* Trending Posts Backdrop - z-index를 높여 확실히 닫히도록 설정 */}
               <AnimatePresence>
                 {isTrendingExpanded && (
                   <motion.div 
@@ -423,7 +451,7 @@ const Index = () => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={() => setIsTrendingExpanded(false)}
-                    className="fixed inset-0 bg-black/10 backdrop-blur-[1px] z-30"
+                    className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[35]"
                   />
                 )}
               </AnimatePresence>
