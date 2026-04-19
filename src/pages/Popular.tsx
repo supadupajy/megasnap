@@ -14,6 +14,19 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
+// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼 (일관성 유지)
+const getTierFromId = (id: string) => {
+  let h = 0;
+  for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+  const val = Math.abs(h % 1000) / 1000;
+  
+  if (val < 0.01) return 'diamond'; // 1%
+  if (val < 0.03) return 'gold';    // 2%
+  if (val < 0.07) return 'silver';  // 4%
+  if (val < 0.15) return 'popular'; // 8%
+  return 'none';
+};
+
 const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
@@ -29,35 +42,28 @@ const Popular = () => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const loadInitialData = useCallback(async (uid: string) => {
+  const loadInitialData = useCallback(async () => {
     if (hasLoaded.current) return;
     
     setIsInitialLoading(true);
-    let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
-
+    
     try {
+      // 1. 좋아요가 높은 상위 100개를 가져옴
       const { data, error } = await supabase
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(40);
+        .limit(100);
 
       if (error) throw error;
 
       const realPosts = (data || []).map(p => {
-        const likes = Number(p.likes || 0);
-        
-        let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
-        if (likes >= 15000) borderType = 'diamond';
-        else if (likes >= 10000) borderType = 'gold';
-        else if (likes >= 5000) borderType = 'silver';
-        else if (likes >= 1500) borderType = 'popular';
-        
+        const borderType = getTierFromId(p.id);
         return {
           id: p.id,
           isAd: p.content?.startsWith('[AD]'),
           isGif: p.content?.startsWith('[GIF]'),
-          isInfluencer: likes >= 5000,
+          isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
           user: {
             id: p.user_id,
             name: p.user_name,
@@ -67,11 +73,11 @@ const Popular = () => {
           location: p.location_name,
           lat: p.latitude,
           lng: p.longitude,
-          likes: likes,
+          likes: Number(p.likes || 0),
           commentsCount: 0,
           comments: [],
           image: p.image_url,
-          youtubeUrl: p.youtube_url, // 누락되었던 필드 추가
+          youtubeUrl: p.youtube_url,
           videoUrl: p.video_url,
           isLiked: false,
           createdAt: new Date(p.created_at),
@@ -79,12 +85,19 @@ const Popular = () => {
         };
       }) as Post[];
 
-      const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
+      // 2. 목 데이터도 섞어서 추가
+      let mockPosts = createMockPosts(37.5665, 126.9780, 20);
+      
+      // 3. 전체 리스트를 무작위로 섞음 (Shuffle)
+      // 이렇게 하면 "인기 있는" 포스팅들이 매번 다른 순서로 나타남
+      const combined = [...realPosts, ...mockPosts].sort(() => Math.random() - 0.5);
+      
       setPosts(combined);
       hasLoaded.current = true;
     } catch (err) {
       console.error('[Popular] Fetch Error:', err);
-      setPosts(mockPosts);
+      // 에러 시 목 데이터라도 셔플해서 보여줌
+      setPosts(createMockPosts(37.5665, 126.9780, 30).sort(() => Math.random() - 0.5));
     } finally {
       setIsInitialLoading(false);
     }
@@ -93,7 +106,7 @@ const Popular = () => {
   useEffect(() => {
     if (!authLoading) {
       if (authUser) {
-        loadInitialData(authUser.id);
+        loadInitialData();
       } else {
         navigate('/login', { replace: true });
       }
@@ -106,8 +119,7 @@ const Popular = () => {
 
     setTimeout(() => {
       let newPosts = createMockPosts(37.5665, 126.9780, 15)
-        .map(p => ({ ...p, likes: Math.floor(Math.random() * 2000) + 1000 }))
-        .sort((a, b) => b.likes - a.likes);
+        .sort(() => Math.random() - 0.5);
       
       setPosts(prev => [...prev, ...newPosts]);
       setIsLoadingMore(false);
@@ -153,7 +165,10 @@ const Popular = () => {
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <p className="text-xs font-bold text-gray-400">인기 동영상을 섞는 중...</p>
+        </div>
       </div>
     );
   }
@@ -200,7 +215,7 @@ const Popular = () => {
           {isLoadingMore ? (
             <>
               <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">인기 포스팅을 더 불러오는 중...</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">새로운 인기 포스팅을 찾는 중...</p>
             </>
           ) : (
             posts.length > 0 && <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
