@@ -28,9 +28,7 @@ const isValidUUID = (uuid: string) => {
   return regex.test(uuid);
 };
 
-// 헤더 높이 상수 (fixed 레이아웃에서 paddingTop 계산용)
 const HEADER_HEIGHT = 88;
-// 입력창 높이 상수
 const INPUT_AREA_HEIGHT = 72;
 
 const Chat = () => {
@@ -42,9 +40,10 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [inputAreaBottom, setInputAreaBottom] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -56,24 +55,48 @@ const Chat = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ visualViewport로 키보드 높이 감지
-  // interactive-widget=resizes-visual 모드에서
-  // 시각적 뷰포트가 줄어드는 만큼을 키보드 높이로 계산
+  // ✅ 핵심: visualViewport 기준으로 헤더와 입력창을 JS로 직접 위치 고정
+  // resizes-content 모드에서 뷰포트가 스크롤되면 offsetTop이 변하는데,
+  // 이 값을 이용해 헤더/입력창을 항상 시각적 뷰포트 안에 고정시킴
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
 
     const handleViewport = () => {
-      const keyboardHeight = window.innerHeight - vp.height - vp.offsetTop;
-      setInputAreaBottom(Math.max(0, keyboardHeight));
+      const offsetTop = vp.offsetTop ?? 0;
+      const keyboardHeight = window.innerHeight - vp.height - offsetTop;
+
+      // 헤더: 시각적 뷰포트 상단에 고정
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(${offsetTop}px)`;
+      }
+
+      // 입력창: 시각적 뷰포트 하단(키보드 바로 위)에 고정
+      if (inputRef.current) {
+        const bottomOffset = Math.max(0, keyboardHeight);
+        inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
+      }
+
+      // 메시지 영역 하단 패딩: 입력창 + 키보드 높이만큼 확보
+      if (scrollRef.current) {
+        const bottomPad = INPUT_AREA_HEIGHT + Math.max(0, keyboardHeight) + 16;
+        scrollRef.current.style.paddingBottom = `${bottomPad}px`;
+      }
+
       setTimeout(scrollToBottom, 50);
     };
+
+    // 초기값 설정
+    handleViewport();
 
     vp.addEventListener('resize', handleViewport);
     vp.addEventListener('scroll', handleViewport);
     return () => {
       vp.removeEventListener('resize', handleViewport);
       vp.removeEventListener('scroll', handleViewport);
+      // 클린업: transform 초기화
+      if (headerRef.current) headerRef.current.style.transform = '';
+      if (inputRef.current) inputRef.current.style.transform = '';
     };
   }, [scrollToBottom]);
 
@@ -204,14 +227,15 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white" style={{ height: '100dvh' }}>
+    <div className="bg-white overflow-hidden" style={{ height: '100dvh' }}>
 
-      {/* ✅ 헤더: fixed top-0으로 뷰포트 스크롤과 무관하게 항상 상단 고정 */}
+      {/* ✅ 헤더: fixed + JS translateY로 시각적 뷰포트 상단에 항상 고정 */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100"
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
         style={{
-          paddingTop: 'max(32px, env(safe-area-inset-top))',
           height: `${HEADER_HEIGHT}px`,
+          paddingTop: 'max(32px, env(safe-area-inset-top))',
         }}
       >
         <div className="flex items-center gap-3">
@@ -247,18 +271,14 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* ✅ 메시지 영역:
-          - paddingTop: 헤더 높이만큼 확보
-          - paddingBottom: 입력창 높이 + 키보드 높이만큼 확보
-          - height: 100dvh로 전체 높이 채움
-          - overflow-y-auto로 메시지만 스크롤 */}
+      {/* ✅ 메시지 영역: 헤더/입력창 높이만큼 padding 확보, 나머지는 스크롤 */}
       <div
         ref={scrollRef}
         className="overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
           height: '100dvh',
           paddingTop: `${HEADER_HEIGHT + 16}px`,
-          paddingBottom: `${INPUT_AREA_HEIGHT + inputAreaBottom + 16}px`,
+          paddingBottom: `${INPUT_AREA_HEIGHT + 16}px`,
         }}
       >
         {messages.map((msg) => {
@@ -291,15 +311,12 @@ const Chat = () => {
         })}
       </div>
 
-      {/* ✅ 입력창: fixed bottom으로 키보드 바로 위에 고정
-          inputAreaBottom = 키보드 높이 → 키보드가 올라오면 같이 올라감 */}
+      {/* ✅ 입력창: fixed bottom-0 + JS translateY로 키보드 바로 위에 고정 */}
       <div
-        className="fixed left-0 right-0 z-50 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 transition-[bottom] duration-200"
+        ref={inputRef}
+        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
-          bottom: `${inputAreaBottom}px`,
-          paddingBottom: inputAreaBottom > 0
-            ? '12px'
-            : 'max(12px, env(safe-area-inset-bottom))',
+          paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
