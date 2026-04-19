@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, Search, Edit, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,10 @@ const Messages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchConversations = async () => {
     if (!authUser) return;
-
-    const fetchConversations = async () => {
+    
+    try {
       // 1. Supabase 메시지 내역 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
@@ -81,7 +81,7 @@ const Messages = () => {
             .from('profiles')
             .select('nickname, avatar_url')
             .eq('id', conv.other_id)
-            .single();
+            .maybeSingle();
           return {
             ...conv,
             profile: profile || { nickname: '사용자', avatar_url: null }
@@ -91,19 +91,29 @@ const Messages = () => {
 
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);
+    } catch (err) {
+      console.error('[Messages] Fetch error:', err);
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchConversations();
     const unsubscribe = chatStore.subscribe(fetchConversations);
     return () => { unsubscribe(); };
   }, [authUser]);
 
   // 검색어에 따른 필터링 (닉네임 또는 마지막 메시지 내용)
-  const filteredConversations = conversations.filter(conv => 
-    conv.profile.nickname?.toLowerCase().includes(query.toLowerCase()) ||
-    conv.last_message.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredConversations = useMemo(() => {
+    const lowerQuery = query.toLowerCase().trim();
+    if (!lowerQuery) return conversations;
+    
+    return conversations.filter(conv => 
+      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
+      conv.last_message.toLowerCase().includes(lowerQuery)
+    );
+  }, [query, conversations]);
 
   return (
     <div className="min-h-screen bg-white pb-24">
