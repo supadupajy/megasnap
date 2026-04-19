@@ -4,6 +4,7 @@ import React from 'react';
 import { Map, Flame, Plus, Search, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface BottomNavProps {
   onWriteClick: () => void;
@@ -12,11 +13,15 @@ interface BottomNavProps {
 const BottomNav = ({ onWriteClick }: BottomNavProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isKeyboardOpen } = useKeyboard();
 
   const isActive = (path: string) => location.pathname === path;
 
+  // 키보드가 올라왔을 때는 하단 메뉴를 숨겨서 화면을 가리지 않게 함
+  if (isKeyboardOpen) return null;
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[100] pb-8">
+    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[100] pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
       {/* 첫 번째 메뉴: 지도 */}
       <button 
         onClick={() => navigate('/')}
