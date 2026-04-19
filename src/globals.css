@@ -26,13 +26,11 @@
     --radius: 0.5rem;
   }
 
-  /* 브라우저의 리사이징을 방해하지 않도록 고정 위치 제거 */
+  /* ✅ 고정 높이와 overflow: hidden 제거하여 dvh가 작동하도록 수정 */
   html, body, #root {
-    height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
     background-color: white;
   }
 }

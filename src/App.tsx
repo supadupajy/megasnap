@@ -35,7 +35,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
@@ -71,17 +71,17 @@ const AnimatedRoutes = () => {
 
   if (loading && location.pathname !== '/login') {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="relative h-full bg-white overflow-hidden">
+    <div className="relative min-h-[100dvh] bg-white">
       {!hideLayout && session && <Header />}
       
-      <main className="h-full relative">
+      <main className="relative">
         <AnimatePresence mode="wait">
           <motion.div 
             key={location.pathname}
@@ -89,7 +89,7 @@ const AnimatedRoutes = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="h-full w-full"
+            className="w-full"
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
@@ -135,7 +135,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <div className="h-full w-full overflow-hidden bg-white">
+            <div className="min-h-[100dvh] w-full bg-white">
               <AnimatePresence mode="wait">
                 {showSplash ? (
                   <SplashScreen key="splash" />
