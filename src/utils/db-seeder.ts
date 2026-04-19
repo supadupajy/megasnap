@@ -79,6 +79,17 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   });
 };
 
+// 좋아요 수치 생성 헬퍼 함수
+const getRandomLikesByTier = () => {
+  const tierRoll = Math.random();
+  // 분포 조정: 다이아몬드(1%), 골드(2%), 실버(4%), 인기(8%), 나머지 일반
+  if (tierRoll < 0.01) return Math.floor(Math.random() * 20000) + 15000; // Diamond (15k~35k)
+  if (tierRoll < 0.03) return Math.floor(Math.random() * 5000) + 10000;  // Gold (10k~15k)
+  if (tierRoll < 0.07) return Math.floor(Math.random() * 5000) + 5000;   // Silver (5k~10k)
+  if (tierRoll < 0.15) return Math.floor(Math.random() * 3500) + 1500;   // Popular (1.5k~5k)
+  return Math.floor(Math.random() * 1489) + 10;                         // Normal (<1.5k)
+};
+
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
@@ -92,31 +103,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        let finalLikes = 0;
+        const finalLikes = getRandomLikesByTier();
         let finalYoutubeUrl = null;
         let finalImage = p.image;
-        const tierRoll = Math.random();
         
-        // 등급별 확률 분배 (각 5%, 총 20% 특별 포스팅)
-        let isSpecial = false;
-        if (tierRoll < 0.05) { 
-          finalLikes = Math.floor(Math.random() * 35000) + 15000; // Diamond (15k+)
-          isSpecial = true;
-        } else if (tierRoll < 0.10) { 
-          finalLikes = Math.floor(Math.random() * 5000) + 10000; // Gold (10k~15k)
-          isSpecial = true;
-        } else if (tierRoll < 0.15) { 
-          finalLikes = Math.floor(Math.random() * 5000) + 5000; // Silver (5k~10k)
-          isSpecial = true;
-        } else if (tierRoll < 0.20) { 
-          finalLikes = Math.floor(Math.random() * 3500) + 1500; // Popular (1.5k~5k)
-          isSpecial = true;
-        } else { 
-          finalLikes = Math.floor(Math.random() * 1489) + 10; // Normal (<1.5k)
-        }
-
-        // 특별 등급(인기 이상)인 경우 정확히 50% 확률로 유튜브 영상 할당
-        if (isSpecial && Math.random() < 0.5) {
+        // 인기 등급 이상인 경우 50% 확률로 유튜브 할당
+        if (finalLikes >= 1500 && Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
         }
@@ -145,4 +137,33 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     }
     return allInsertData.length;
   } catch (err: any) { console.error("Global seeding failed:", err); throw err; }
+};
+
+/**
+ * 기존 모든 포스팅의 좋아요 수치를 랜덤하게 재설정하여 등급을 섞음
+ */
+export const randomizeExistingLikes = async () => {
+  try {
+    const { data: posts, error: fetchError } = await supabase.from('posts').select('id');
+    if (fetchError) throw fetchError;
+    if (!posts) return 0;
+
+    const updates = posts.map(p => ({
+      id: p.id,
+      likes: getRandomLikesByTier()
+    }));
+
+    // 대량 업데이트 (Supabase upsert 사용)
+    const chunkSize = 100;
+    for (let i = 0; i < updates.length; i += chunkSize) {
+      const chunk = updates.slice(i, i + chunkSize);
+      const { error: updateError } = await supabase.from('posts').upsert(chunk);
+      if (updateError) throw updateError;
+    }
+
+    return updates.length;
+  } catch (err) {
+    console.error("Randomizing likes failed:", err);
+    throw err;
+  }
 };

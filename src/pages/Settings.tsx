@@ -14,14 +14,15 @@ import {
   Moon,
   Languages,
   Database,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { seedGlobalPosts } from '@/utils/db-seeder';
+import { seedGlobalPosts, randomizeExistingLikes } from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +64,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -73,10 +74,8 @@ const Settings = () => {
 
   const handleSeedData = async () => {
     if (!user) return;
-    
-    setIsSeeding(true);
+    setIsProcessing(true);
     const toastId = showLoading('대한민국 전역 데이터를 생성 중입니다...');
-    
     try {
       const count = await seedGlobalPosts(
         user.id, 
@@ -89,7 +88,22 @@ const Settings = () => {
       dismissToast(toastId);
       showError('데이터 생성 중 오류가 발생했습니다.');
     } finally {
-      setIsSeeding(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRandomizeLikes = async () => {
+    setIsProcessing(true);
+    const toastId = showLoading('전체 좋아요 수치를 랜덤하게 섞는 중...');
+    try {
+      const count = await randomizeExistingLikes();
+      dismissToast(toastId);
+      showSuccess(`${count}개 포스팅의 등급이 재설정되었습니다! 🎲`);
+    } catch (err) {
+      dismissToast(toastId);
+      showError('수치 변경 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -129,16 +143,33 @@ const Settings = () => {
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <button 
               onClick={handleSeedData}
-              disabled={isSeeding}
+              disabled={isProcessing}
               className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
-                  {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
+                  <Database className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-bold text-indigo-600">전체 지역 데이터 생성</span>
                   <span className="text-[10px] text-gray-400 font-medium">대한민국 전역에 포스팅을 골고루 배치합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+
+            <button 
+              onClick={handleRandomizeLikes}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
+                  <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
+                  <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 등급을 골고루 재설정합니다.</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />
