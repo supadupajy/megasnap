@@ -27,7 +27,43 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 100개의 고유 Unsplash ID (도시, 자연, 음식, 감성 믹스)
+// 대한민국 주요 도시 및 데이터 밀도 설정
+export const MAJOR_CITIES = [
+  { 
+    name: "서울", 
+    lat: 37.5665, lng: 126.9780, 
+    density: 1500,
+    bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } }
+  },
+  { 
+    name: "부산", 
+    lat: 35.1796, lng: 129.0756, 
+    density: 800,
+    bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } }
+  },
+  { 
+    name: "제주", 
+    lat: 33.4996, lng: 126.5312, 
+    density: 600,
+    bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
+  }
+];
+
+// 현실적인 댓글/내용 풀
+export const REALISTIC_COMMENTS = [
+  '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
+  '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
+  '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
+  '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
+  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
+  '친구들이랑 오기 딱 좋은 곳이에요. 추천합니다!',
+  '생각보다 사람이 많지 않아서 여유롭게 즐기다 가요. 😊',
+  '음식이 너무 맛있어서 깜짝 놀랐어요. 가성비 최고!',
+  '주차 공간도 넉넉하고 접근성이 좋네요.',
+  '다음에 부모님 모시고 다시 오고 싶은 곳입니다.'
+];
+
+// 100개의 고유 Unsplash ID
 export const UNSPLASH_IDS_100 = [
   "1444723126603-3e059c60c01e", "1477959858617-67f85cf4f1df", "1464822759023-fed622ff2c3b", "1501785888041-af3ef285b470", "1470071459604-ee21198b2977",
   "1441974231531-c6227db76b6e", "1500673922987-e212871fec22", "1472214103451-9374bd1c798e", "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836",
@@ -51,11 +87,11 @@ export const UNSPLASH_IDS_100 = [
   "1477959858617-67f85cf4f1df", "1444703686981-53221bc092d1", "1465146344425-aaeb1e39e741", "1473442242725-3a2394286246", "1502672260266-56773767a742"
 ];
 
-// 50개의 검증된 K-POP 및 Pop 유튜브 ID (임베드 허용 확인 위주)
+// 50개의 검증된 K-POP 및 Pop 유튜브 ID
 export const YOUTUBE_IDS_50 = [
-  "gdZLi9hhztQ", "WMweEpGlu_U", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo", // BTS, NewJeans, IVE
-  "h4m-pIReA6Y", "0NCP48xaSfs", "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", // Pop: Dua Lipa, Bruno Mars
-  "TQTlCHxyuu8", "POe9SOEKotU", "IHNzOHi8sJs", "9H1vS_9_6_U", "UuV2BmJ1p_I", // Blackpink, Twice
+  "gdZLi9hhztQ", "WMweEpGlu_U", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo",
+  "h4m-pIReA6Y", "0NCP48xaSfs", "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI",
+  "TQTlCHxyuu8", "POe9SOEKotU", "IHNzOHi8sJs", "9H1vS_9_6_U", "UuV2BmJ1p_I",
   "kOHB85vDuow", "fE2h3lGlOsk", "pW_O_XpSHkZ", "Hbb5GPxXF1w", "v7bnOxL4LIo",
   "dQw4w9WgXcQ", "y881t8ilMyc", "60ItHLz5WEA", "3AtDnEC4zak", "9I_fS6U8E2E",
   "L_jWHffIx5E", "7_m9v_X_77E", "X_9v_X_77E8", "V_9v_X_77E1", "B_9v_X_77E2",
@@ -107,7 +143,6 @@ export const createMockPosts = (
     
     let image = "";
     if (isAd) {
-      // 광고용 이미지는 별도 리스트가 없으므로 Unsplash 100개 중 선택
       image = getUnsplashUrl(UNSPLASH_IDS_100[i % UNSPLASH_IDS_100.length]);
     } else if (hasYoutube && youtubeUrl) {
       image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS_100[uniqueIdx]);
