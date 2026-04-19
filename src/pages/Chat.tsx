@@ -6,7 +6,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useKeyboard } from '@/hooks/use-keyboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
@@ -28,7 +27,6 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -98,7 +96,7 @@ const Chat = () => {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, keyboardHeight]);
+  }, [messages]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
@@ -135,9 +133,9 @@ const Chat = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden">
-      {/* 헤더: fixed로 상단 고정 */}
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
+    <div className="flex flex-col bg-white overflow-hidden" style={{ height: '100dvh' }}>
+      {/* 헤더: flex-shrink-0으로 고정 */}
+      <header className="flex-shrink-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 pt-safe">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
@@ -157,8 +155,8 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 메시지 리스트: flex-1로 남은 공간 차지, pt-[100px]로 헤더 공간 확보 */}
-      <div ref={scrollRef} className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300" style={{ paddingBottom: keyboardHeight > 0 ? '20px' : '120px' }}>
+      {/* 메시지 리스트: flex-1로 남은 공간 전부 차지 */}
+      <div ref={scrollRef} className="flex-1 px-4 py-4 overflow-y-auto space-y-4 no-scrollbar">
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
           const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -171,11 +169,24 @@ const Chat = () => {
         })}
       </div>
 
-      {/* 입력창: fixed bottom-0이며 keyboardHeight만큼 translateY로 밀어 올림 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
-          <Input placeholder="메시지 보내기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} />
-          <Button size="icon" onClick={handleSend} disabled={!inputValue.trim()} className={cn("w-10 h-10 rounded-full transition-all shadow-lg", inputValue.trim() ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}><Send className="w-5 h-5" /></Button>
+      {/* 입력창: flex-shrink-0으로 고정 */}
+      <div className="flex-shrink-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 pb-safe">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner mb-4">
+          <Input 
+            placeholder="메시지 보내기..." 
+            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+          />
+          <Button 
+            size="icon" 
+            onClick={handleSend} 
+            disabled={!inputValue.trim()} 
+            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", inputValue.trim() ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
+          >
+            <Send className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </div>
