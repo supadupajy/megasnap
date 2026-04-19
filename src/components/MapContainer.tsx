@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-import { getYoutubeThumbnail } from '@/lib/utils';
 
 interface MapContainerProps {
   posts: any[];
@@ -170,7 +169,6 @@ const MapContainer = ({
     }
   }, [center, isMapReady]);
 
-  // 검색 결과 마커 관리
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao) return;
@@ -197,7 +195,7 @@ const MapContainer = ({
         position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
         content: content,
         yAnchor: 1,
-        zIndex: 11000 // 일반 마커보다 위에 표시
+        zIndex: 11000 
       });
 
       overlay.setMap(mapInstance.current);
@@ -211,7 +209,9 @@ const MapContainer = ({
     const category = post.category || 'none';
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    const displayImage = post.youtubeUrl ? (getYoutubeThumbnail(post.youtubeUrl) || post.image) : post.image;
+    
+    // 유튜브 썸네일 로직 제거: 무조건 Unsplash 이미지를 사용
+    const displayImage = post.image;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
     if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }

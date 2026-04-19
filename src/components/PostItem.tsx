@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
-import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
+import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -106,15 +106,12 @@ const PostItem = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const youtubeId = getYoutubeId(youtubeUrl || '');
-  const youtubeThumb = getYoutubeThumbnail(youtubeUrl || '');
   
-  const displayImages = youtubeThumb 
-    ? [youtubeThumb, ...(images.length > 0 ? images : [image])]
-    : (images.length > 0 ? images : [image]);
+  // 유튜브 썸네일 로직 제거: 무조건 전달받은 image(Unsplash)를 사용
+  const displayImages = images.length > 0 ? images : [image];
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
-  // Intersection Observer for Auto-play
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
 
@@ -126,10 +123,7 @@ const PostItem = ({
           setIsPlayingVideo(false);
         }
       },
-      { 
-        threshold: 0.6, // 60% 이상 보일 때 재생
-        rootMargin: '0px' 
-      }
+      { threshold: 0.6, rootMargin: '0px' }
     );
 
     if (containerRef.current) {
