@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts } from "@/lib/mock-data";
+import { createMockPosts, YOUTUBE_LINKS } from "@/lib/mock-data";
 
 /**
  * 대한민국 주요 대도시 좌표 및 정밀 영역(Bounds) 목록
@@ -63,68 +63,48 @@ const MAJOR_CITIES = [
   }
 ];
 
-/**
- * 좌표를 실제 행정구역 주소로 변환
- */
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
-    if (!kakao?.maps?.services) {
-      resolve("대한민국");
-      return;
-    }
-
+    if (!kakao?.maps?.services) { resolve("대한민국"); return; }
     const geocoder = new kakao.maps.services.Geocoder();
     geocoder.coord2Address(lng, lat, (result: any, status: any) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const addr = result[0].address;
         const region = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`.trim();
         resolve(region || "대한민국");
-      } else {
-        resolve("대한민국");
-      }
+      } else { resolve("대한민국"); }
     });
   });
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
-    // 1. 사용자 풀 준비
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
-    const userPool = (profiles && profiles.length > 0) 
-      ? profiles 
-      : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
-
+    const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
     const allInsertData: any[] = [];
 
-    // 2. 도시별 데이터 생성
     for (const city of MAJOR_CITIES) {
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
-      
       for (let i = 0; i < mockPosts.length; i++) {
         const p = mockPosts[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        // 등급별 균등 확률 적용 (각 5%씩, 총 20% 특별 포스팅)
         let finalLikes = p.likes;
+        let finalYoutubeUrl = null;
         const tierRoll = Math.random();
         
-        if (tierRoll < 0.05) {
-          // Diamond (15,000+)
-          finalLikes = Math.floor(Math.random() * 35000) + 15000;
-        } else if (tierRoll < 0.10) {
-          // Gold (10,000 - 14,999)
-          finalLikes = Math.floor(Math.random() * 5000) + 10000;
-        } else if (tierRoll < 0.15) {
-          // Silver (5,000 - 9,999)
-          finalLikes = Math.floor(Math.random() * 5000) + 5000;
-        } else if (tierRoll < 0.20) {
-          // Popular (1,500 - 4,999)
-          finalLikes = Math.floor(Math.random() * 3500) + 1500;
-        } else {
-          // Normal (10 - 1,499)
-          finalLikes = Math.floor(Math.random() * 1489) + 10;
+        // 등급별 확률 (각 10%, 총 40% 특별 포스팅)
+        if (tierRoll < 0.10) { finalLikes = Math.floor(Math.random() * 35000) + 15000; } // Diamond
+        else if (tierRoll < 0.20) { finalLikes = Math.floor(Math.random() * 5000) + 10000; } // Gold
+        else if (tierRoll < 0.30) { finalLikes = Math.floor(Math.random() * 5000) + 5000; } // Silver
+        else if (tierRoll < 0.40) { finalLikes = Math.floor(Math.random() * 3500) + 1500; } // Popular
+        else { finalLikes = Math.floor(Math.random() * 1489) + 10; } // Normal
+
+        // 특별 등급(인기 이상)인 경우 50% 확률로 유튜브 영상 할당
+        if (tierRoll < 0.40 && Math.random() < 0.5) {
+          finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
         }
 
         allInsertData.push({
@@ -133,7 +113,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           latitude: p.lat,
           longitude: p.lng,
           image_url: p.image,
-          youtube_url: p.youtubeUrl || null,
+          youtube_url: finalYoutubeUrl,
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
@@ -143,17 +123,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
     }
 
-    // 3. Supabase 삽입 (청크 단위)
     const chunkSize = 50;
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
       const { error } = await supabase.from('posts').insert(chunk);
       if (error) throw error;
     }
-
     return allInsertData.length;
-  } catch (err: any) {
-    console.error("Global seeding failed:", err);
-    throw err;
-  }
+  } catch (err: any) { console.error("Global seeding failed:", err); throw err; }
 };

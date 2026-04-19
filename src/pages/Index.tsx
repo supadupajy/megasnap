@@ -61,6 +61,45 @@ const Index = () => {
   const isSyncing = useRef(false);
   const hasInitialLoaded = useRef(false);
 
+  const mapDbToPost = (p: any): Post => {
+    const likes = Number(p.likes || 0);
+    const isInfluencer = likes >= 5000;
+    const isPopular = likes >= 1500;
+    const isAd = p.content?.startsWith('[AD]');
+    const isGif = p.content?.startsWith('[GIF]');
+    const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
+    
+    let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
+    if (isInfluencer) {
+      if (likes >= 15000) borderType = 'diamond';
+      else if (likes >= 10000) borderType = 'gold';
+      else borderType = 'silver';
+    } else if (isPopular) {
+      borderType = 'popular';
+    }
+
+    return {
+      id: p.id,
+      isAd,
+      isGif,
+      isInfluencer,
+      user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+      content: cleanContent,
+      location: p.location_name,
+      lat: p.latitude,
+      lng: p.longitude,
+      likes: likes,
+      commentsCount: 0,
+      comments: [],
+      image: p.image_url,
+      youtubeUrl: p.youtube_url,
+      videoUrl: p.video_url,
+      isLiked: false,
+      createdAt: new Date(p.created_at),
+      borderType
+    };
+  };
+
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) return;
     throttleTimer.current = setTimeout(() => {
@@ -78,32 +117,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
       if (!error && data) {
-        const mapped = data.map(p => {
-          const likes = Number(p.likes || 0);
-          const isAd = p.content?.startsWith('[AD]');
-          const isGif = p.content?.startsWith('[GIF]');
-          const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
-          
-          return {
-            id: p.id,
-            isAd,
-            isGif,
-            isInfluencer: likes > 5000,
-            user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-            content: cleanContent,
-            location: p.location_name,
-            lat: p.latitude,
-            lng: p.longitude,
-            likes: likes,
-            commentsCount: 0,
-            comments: [],
-            image: p.image_url,
-            youtubeUrl: p.youtube_url,
-            isLiked: false,
-            createdAt: new Date(p.created_at),
-            borderType: likes >= 1500 ? 'popular' : 'none'
-          };
-        }) as Post[];
+        const mapped = data.map(mapDbToPost);
         setAllPosts(mapped);
         mapCache.posts = mapped;
       }
@@ -150,9 +164,7 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // 인기순 정렬 및 개수 제한(slice)을 제거하여 모든 포스팅을 표시
     const finalMarkers = [...inBoundsCandidates];
-    
     if (highlightedPostId) {
       const highlightedPost = allPosts.find(p => p.id === highlightedPostId);
       if (highlightedPost && !finalMarkers.some(p => p.id === highlightedPostId)) finalMarkers.unshift(highlightedPost);
@@ -174,32 +186,7 @@ const Index = () => {
     setIsRefreshing(true);
     const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
     if (data) {
-      const mapped = data.map(p => {
-        const likes = Number(p.likes || 0);
-        const isAd = p.content?.startsWith('[AD]');
-        const isGif = p.content?.startsWith('[GIF]');
-        const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
-        
-        return {
-          id: p.id,
-          isAd,
-          isGif,
-          isInfluencer: likes > 5000,
-          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-          content: cleanContent,
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: likes,
-          commentsCount: 0,
-          comments: [],
-          image: p.image_url,
-          youtubeUrl: p.youtube_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: likes >= 1500 ? 'popular' : 'none'
-        };
-      }) as Post[];
+      const mapped = data.map(mapDbToPost);
       setAllPosts(mapped);
       mapCache.posts = mapped;
     }
