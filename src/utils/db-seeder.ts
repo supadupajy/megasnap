@@ -3,6 +3,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
 import { verifyYoutubeUrl } from "./youtube-utils";
+import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
   { 
@@ -129,20 +130,22 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = "";
         
-        // 이미지는 무조건 Unsplash 사용
         if (isAd) {
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
         } else {
-          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
-          
           // 유튜브 영상 추가 시 유효성 검증
           if (Math.random() < 0.5) {
             const candidateUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-            // 실시간 검증 (oEmbed API)
             const isValid = await verifyYoutubeUrl(candidateUrl);
             if (isValid) {
               finalYoutubeUrl = candidateUrl;
+              // 유튜브 영상인 경우 썸네일을 메인 이미지로 사용
+              finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
+            } else {
+              finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
             }
+          } else {
+            finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
           }
         }
 
@@ -155,7 +158,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           location_name: realAddress,
           latitude: p.lat,
           longitude: p.lng,
-          image_url: finalImage, // Unsplash 이미지
+          image_url: finalImage,
           youtube_url: finalYoutubeUrl,
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",

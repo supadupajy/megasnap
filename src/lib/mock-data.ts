@@ -26,7 +26,6 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 검증된 플레이 가능한 유튜브 링크 50개
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
   "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
@@ -55,7 +54,6 @@ export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7"
 ];
 
-// 고유한 Unsplash 이미지 ID 70개
 export const UNSPLASH_IDS = [
   "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", 
   "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e",
@@ -128,7 +126,7 @@ export const createMockPosts = (
     if (isAd) {
       image = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(randomFn() * FOOD_UNSPLASH_IDS.length)]);
     } else if (hasYoutube && youtubeUrl) {
-      // 유튜브 영상인 경우 마커와 리스트에서 썸네일 사용
+      // 유튜브 영상인 경우 마커와 메인 이미지 모두 썸네일 사용
       image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
     } else {
       // 일반 포스팅은 무조건 Unsplash 사용

@@ -24,8 +24,10 @@ const mapDbToPost = (p: any): Post => {
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
   
-  // 유튜브 썸네일 추출
-  const ytThumbnail = p.youtube_url ? getYoutubeThumbnail(p.youtube_url) : undefined;
+  // 유튜브 영상인 경우 썸네일을 우선 사용, 아니면 DB의 image_url 사용
+  const finalImage = p.youtube_url 
+    ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
+    : p.image_url;
 
   return {
     id: p.id,
@@ -44,8 +46,7 @@ const mapDbToPost = (p: any): Post => {
     likes: likes,
     commentsCount: 0,
     comments: [],
-    image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
-    thumbnailUrl: ytThumbnail, // 마커용 썸네일
+    image: finalImage,
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
     category: 'none',
