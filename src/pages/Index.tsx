@@ -125,7 +125,7 @@ const Index = () => {
   useEffect(() => { loadInitialGlobalPosts(); }, [loadInitialGlobalPosts]);
 
   const autoSeedArea = useCallback(async () => {
-    if (!mapData?.center || isAutoSeeding.current || !authUser || currentZoom > 8) return;
+    if (!mapData?.center || !mapData?.bounds || isAutoSeeding.current || !authUser || currentZoom > 8) return;
     const tileKey = `${mapData.center.lat.toFixed(2)}_${mapData.center.lng.toFixed(2)}`;
     if (mapCache.populatedTiles.has(tileKey)) return;
     isAutoSeeding.current = true;
@@ -133,7 +133,10 @@ const Index = () => {
     try {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
       if (!profiles || profiles.length === 0) { isAutoSeeding.current = false; return; }
-      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18);
+      
+      // 영역 정보를 전달하여 분산 배치 활성화
+      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 18, undefined, mapData.bounds);
+      
       const insertDataPromises = mockPosts.map(async (p) => {
         const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
         const realAddress = await getRealAddress(p.lat, p.lng);
