@@ -93,9 +93,9 @@ const Popular = () => {
         };
       }) as Post[];
 
-      // 50% 유튜브 영상 강제 할당 로직 유지
+      // 50% 유튜브 영상 강제 할당 로직 (광고는 제외)
       const processedPosts = mappedPosts.map((p, idx) => {
-        if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl) {
+        if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl && !p.isAd) {
           const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           return {
             ...p,

@@ -70,6 +70,7 @@ export const createMockPosts = (
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
+    // 광고는 유튜브 제외
     const hasYoutube = !isAd && randomFn() > 0.5; 
     const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
