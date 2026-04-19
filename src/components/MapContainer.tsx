@@ -120,7 +120,13 @@ const MapContainer = ({
       }
     };
 
-    const timer = setInterval(() => { if (initMap()) clearInterval(timer); }, 100);
+    const timer = setInterval(() => { 
+      try {
+        if (initMap()) clearInterval(timer); 
+      } catch (e) {
+        console.error('Map init interval error:', e);
+      }
+    }, 100);
     return () => clearInterval(timer);
   }, []);
 
@@ -283,7 +289,7 @@ const MapContainer = ({
         content.onclick = (e) => { 
           e.stopPropagation(); 
           if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
-          onMarkerClickRef.current(post); 
+          if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
         };
         const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1, zIndex: baseZIndex });
         overlay.setMap(mapInstance.current);
