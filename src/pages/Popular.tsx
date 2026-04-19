@@ -86,8 +86,8 @@ const Popular = () => {
         };
       }) as Post[];
 
-      // 2. 목 데이터도 섞어서 추가
-      let mockPosts = createMockPosts(37.5665, 126.9780, 20);
+      // 2. 목 데이터도 섞어서 추가 (기존 20개에서 30개로 상향)
+      let mockPosts = createMockPosts(37.5665, 126.9780, 30);
       
       // 3. 전체 리스트를 무작위로 섞음 (Shuffle)
       let combined = [...realPosts, ...mockPosts].sort(() => Math.random() - 0.5);
@@ -110,7 +110,7 @@ const Popular = () => {
       hasLoaded.current = true;
     } catch (err) {
       console.error('[Popular] Fetch Error:', err);
-      setPosts(createMockPosts(37.5665, 126.9780, 30).sort(() => Math.random() - 0.5));
+      setPosts(createMockPosts(37.5665, 126.9780, 45).sort(() => Math.random() - 0.5));
     } finally {
       setIsInitialLoading(false);
     }
@@ -131,7 +131,7 @@ const Popular = () => {
     setIsLoadingMore(true);
 
     setTimeout(() => {
-      let newPosts = createMockPosts(37.5665, 126.9780, 15)
+      let newPosts = createMockPosts(37.5665, 126.9780, 20)
         .sort(() => Math.random() - 0.5);
       
       setPosts(prev => [...prev, ...newPosts]);

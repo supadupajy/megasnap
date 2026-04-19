@@ -1,3 +1,4 @@
+4500)">
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +12,7 @@ const MAJOR_CITIES = [
   { 
     name: "서울", 
     lat: 37.5665, lng: 126.9780, 
-    density: 3000,
+    density: 4500, // 기존 3000에서 1.5배 상향
     bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } }
   },
   { 
