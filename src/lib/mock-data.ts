@@ -18,7 +18,7 @@ export const YOUTUBE_LINKS = [
   "https://www.youtube.com/watch?v=9bZkp7q19f0", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "https://www.youtube.com/watch?v=JGwWNGJdvx8", "https://www.youtube.com/watch?v=OPf0YbXqDm0", "https://www.youtube.com/watch?v=hT_nvWreIhg", "https://www.youtube.com/watch?v=nfWlot6h_JM", "https://www.youtube.com/watch?v=kffacxfA7G4", "https://www.youtube.com/watch?v=CevxZvSJLk8", "https://www.youtube.com/watch?v=09R8_2nJtjg", "https://www.youtube.com/watch?v=YQHsXMglC9A", "https://www.youtube.com/watch?v=2vjPBrBU-TM", "https://www.youtube.com/watch?v=7wtfhZwyrcc", "https://www.youtube.com/watch?v=YykjpeuMNEk", "https://www.youtube.com/watch?v=u31qwQUeGuM", "https://www.youtube.com/watch?v=TUVcZfQe-Kw", "https://www.youtube.com/watch?v=DyDfgMOUjCI", "https://www.youtube.com/watch?v=RlPNh_PB6Ww", "https://www.youtube.com/watch?v=fRh_vgS2dFE"
 ];
 
-// 카테고리별 이미지 풀 (생략 없이 유지)
+// 카테고리별 이미지 풀
 const ACCIDENT_IMAGES = ["1597328290883-50c5787b7c7e", "1580273916550-e323be2ae537", "1566241440091-ec10df8db2e1", "1494976388531-d1058494cdd8", "1516733725897-1aa73b87c8e8", "1549317661-bd32c8ce0db2", "1574610758891-5b809b6e6e2e", "1506015391300-4802dc74de2e", "1518527989017-5baca7a58d3c", "1599412227383-b7d4751c8765", "1578496479914-7ef3b0193be3", "1590102426319-c7526718cd70", "1517055727180-d1a9761c546a", "1503376780353-7e6692767b70", "1541899481282-d53bffe3c35d", "1450101499163-c8848c66ca85", "1506719040632-7d588830c6a6", "1515569067071-ec3b51335dd0", "1533106497176-45ae19e68ba2", "1504215636907-fe1e63f29066"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 const AD_FOOD_IMAGES = ["1504674900247-0877df9cc836", "1567620905732-2d1ec7bb7445", "1565299624946-b28f40a0ae38", "1482049016688-2d3e1b311543", "1484723088339-0b2833a2595d", "1540189549336-e6e99c3679fe", "1476514525535-07fb3b4ae5f1", "1473093226795-af9932fe5855", "1512621776951-a57141f2eefd", "1467003909585-2f8a72700288", "1555939594-58d7cb561ad1", "1565958011703-44f9829ba187", "1493770348161-369560ae357d", "1504754524776-8f4f37790ca0", "1498837167922-ddd27525d352", "1513104890138-7c749659a591", "1432139555190-58524dae6a55", "1546069901-ba9599a7e63c", "1565299507177-b0ac66763828", "1567306301408-9b74779a11af"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
 const ANIMAL_IMAGES = ["1517841905240-472988babdf9", "1514888286974-6c03e2ca1dba", "1543466835-00a7907e9de1", "1537151608828-ea2b11777ee8", "1583511655857-d19b40a7a54e", "1474511320721-9a53616e108a", "1530281700549-e82e7bf110d6", "1552053831-71594a27632d", "1518791841217-8f162f1e1131", "1548199973-03cce0bbc87b", "1561037404-61cd46aa615b", "1516734212186-a967f81ad0d7", "1533738363-b7f9aef128ce", "1519052537078-e6302a4968d4", "1507146426996-ef05306b995a", "1535268647677-300dbf3d78d1", "1544568100-847a948585b9", "1425082661705-1834bfd09dca", "1513245543132-31f507417b26", "1516222338250-863216ce01ea"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
@@ -156,16 +156,9 @@ export const createMockPosts = (
       }
     }
 
-    let finalImage = images[0];
-    
-    // 유튜브 포스팅인 경우 썸네일을 대표 이미지로 설정
-    if (youtubeUrl) {
-      const thumb = getYoutubeThumbnail(youtubeUrl);
-      if (thumb) {
-        finalImage = thumb;
-        images = [thumb, ...images];
-      }
-    }
+    // 유튜브 썸네일 자동 주입 로직 제거: 
+    // 이제 유튜브 영상이라 하더라도 Unsplash 이미지를 기본 커버로 사용합니다.
+    const finalImage = images[0];
 
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
