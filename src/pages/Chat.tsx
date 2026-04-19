@@ -29,7 +29,7 @@ const isValidUUID = (uuid: string) => {
 };
 
 const HEADER_HEIGHT = 88;
-const INPUT_AREA_HEIGHT = 64;
+const INPUT_AREA_HEIGHT = 80; // 높이를 64에서 80으로 늘려 여유 공간 확보
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -171,7 +171,7 @@ const Chat = () => {
 
       setMessages(data || []);
       setIsLoading(false);
-      markAsRead(); // 초기 로드 시 읽음 처리
+      markAsRead();
     };
 
     fetchMessages();
@@ -190,7 +190,7 @@ const Chat = () => {
           const newMsg = payload.new as Message;
           if (newMsg.sender_id === chatId) {
             setMessages((prev) => [...prev, newMsg]);
-            markAsRead(); // 새 메시지 수신 시 읽음 처리
+            markAsRead();
           }
         }
       )
@@ -327,7 +327,7 @@ const Chat = () => {
         className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
           height: `${INPUT_AREA_HEIGHT}px`,
-          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+          paddingBottom: 'max(20px, env(safe-area-inset-bottom))', // 하단 여백을 8px에서 20px로 늘림
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
