@@ -75,8 +75,8 @@ const FriendList = () => {
         <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">새로운 메시지</h1>
       </header>
 
-      <div className="pt-[88px] px-4">
-        <div className="relative py-6">
+      <div className="pt-[88px]">
+        <div className="sticky top-[88px] z-40 bg-white px-4 py-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
@@ -94,7 +94,7 @@ const FriendList = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
             {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
           </p>

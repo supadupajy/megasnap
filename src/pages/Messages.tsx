@@ -229,8 +229,8 @@ const Messages = () => {
         </button>
       </header>
 
-      <div className="pt-[88px] px-4">
-        <div className="relative py-6">
+      <div className="pt-[88px]">
+        <div className="sticky top-[88px] z-40 bg-white px-4 py-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
@@ -247,7 +247,7 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 px-4">
           <div className="space-y-4">
             <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
               {query ? '대화 목록 검색 결과' : '최근 메시지'}
