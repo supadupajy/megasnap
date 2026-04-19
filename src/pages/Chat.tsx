@@ -136,12 +136,15 @@ const Chat = () => {
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newMsg = payload.new as Message;
+          // 현재 대화방의 메시지인지 확인
           if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
               (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
             setMessages(prev => {
+              // 중복 방지
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
+            // 상대방이 보낸 메시지라면 읽음 처리
             if (newMsg.sender_id === chatId) markAsRead();
           }
         } else if (payload.eventType === 'UPDATE') {
@@ -185,7 +188,7 @@ const Chat = () => {
       
       if (error) {
         showError('메시지 전송에 실패했습니다.');
-        setInputValue(content); // 실패 시 입력값 복구
+        setInputValue(content);
       } else if (data) {
         // 낙관적 업데이트: 실시간 이벤트를 기다리지 않고 즉시 추가
         setMessages(prev => {
