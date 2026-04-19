@@ -25,14 +25,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
 
       - name: Install dependencies
-        # lock 파일이 없어도 설치를 진행하도록 설정
         run: pnpm install --no-frozen-lockfile
 
       - name: Build
-        # 빌드 시 환경 변수 오류 방지
         run: pnpm run build
 
       - name: Setup Pages
