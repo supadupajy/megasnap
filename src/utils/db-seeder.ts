@@ -92,33 +92,32 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        let finalLikes = p.likes;
+        let finalLikes = 0;
         let finalYoutubeUrl = null;
         let finalImage = p.image;
         const tierRoll = Math.random();
         
-        // 등급별 확률 (각 5%, 총 20% 특별 포스팅)
+        // 등급별 확률 분배 (각 5%, 총 20% 특별 포스팅)
         let isSpecial = false;
         if (tierRoll < 0.05) { 
-          finalLikes = Math.floor(Math.random() * 35000) + 15000; // Diamond
+          finalLikes = Math.floor(Math.random() * 35000) + 15000; // Diamond (15k+)
           isSpecial = true;
         } else if (tierRoll < 0.10) { 
-          finalLikes = Math.floor(Math.random() * 5000) + 10000; // Gold
+          finalLikes = Math.floor(Math.random() * 5000) + 10000; // Gold (10k~15k)
           isSpecial = true;
         } else if (tierRoll < 0.15) { 
-          finalLikes = Math.floor(Math.random() * 5000) + 5000; // Silver
+          finalLikes = Math.floor(Math.random() * 5000) + 5000; // Silver (5k~10k)
           isSpecial = true;
         } else if (tierRoll < 0.20) { 
-          finalLikes = Math.floor(Math.random() * 3500) + 1500; // Popular
+          finalLikes = Math.floor(Math.random() * 3500) + 1500; // Popular (1.5k~5k)
           isSpecial = true;
         } else { 
-          finalLikes = Math.floor(Math.random() * 1489) + 10; // Normal
+          finalLikes = Math.floor(Math.random() * 1489) + 10; // Normal (<1.5k)
         }
 
         // 특별 등급(인기 이상)인 경우 정확히 50% 확률로 유튜브 영상 할당
         if (isSpecial && Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          // 유튜브 썸네일을 이미지 URL로 설정
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
         }
 

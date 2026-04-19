@@ -7,24 +7,18 @@ import { Post } from "@/types";
 // DB 데이터를 앱에서 사용하는 Post 타입으로 변환하는 헬퍼 함수
 const mapDbToPost = (p: any): Post => {
   const likes = Number(p.likes || 0);
-  // 좋아요 수에 따라 인기 포스팅 여부 결정 (1500개 이상)
-  const isPopular = likes >= 1500;
-  // 좋아요 수에 따라 인플루언서 여부 결정 (5000개 이상)
-  const isInfluencer = likes >= 5000;
+  
+  // 등급 판정 로직 (1.5k / 5k / 10k / 15k)
+  let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
+  if (likes >= 15000) borderType = 'diamond';
+  else if (likes >= 10000) borderType = 'gold';
+  else if (likes >= 5000) borderType = 'silver';
+  else if (likes >= 1500) borderType = 'popular';
 
-  // 내용(Content)에 포함된 태그를 통해 광고/GIF 여부 판단
+  const isInfluencer = likes >= 5000;
   const isAd = p.content?.startsWith('[AD]');
   const isGif = p.content?.startsWith('[GIF]');
   const cleanContent = p.content?.replace(/^\[(AD|GIF)\]\s*/, '') || '';
-
-  let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
-  if (isInfluencer) {
-    if (likes >= 15000) borderType = 'diamond';
-    else if (likes >= 10000) borderType = 'gold';
-    else borderType = 'silver';
-  } else if (isPopular) {
-    borderType = 'popular';
-  }
 
   return {
     id: p.id,
