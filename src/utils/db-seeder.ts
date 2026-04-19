@@ -5,60 +5,61 @@ import { createMockPosts } from "@/lib/mock-data";
 
 /**
  * 대한민국 주요 대도시 좌표 및 정밀 영역(Bounds) 목록
+ * 기존 대비 밀도를 5배 상향 조정함
  */
 const MAJOR_CITIES = [
   { 
     name: "서울", 
     lat: 37.5665, lng: 126.9780, 
-    density: 150, // 서울 전역을 덮기 위해 밀도 대폭 상향
+    density: 750, // 150 * 5
     bounds: { sw: { lat: 37.4285, lng: 126.7644 }, ne: { lat: 37.7014, lng: 127.1838 } }
   },
   { 
     name: "부산", 
     lat: 35.1796, lng: 129.0756, 
-    density: 50,
+    density: 250, // 50 * 5
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2335 } }
   },
   { 
     name: "인천", 
     lat: 37.4563, lng: 126.7052, 
-    density: 40,
+    density: 200, // 40 * 5
     bounds: { sw: { lat: 37.3689, lng: 126.5841 }, ne: { lat: 37.5856, lng: 126.7712 } }
   },
   { 
     name: "대구", 
     lat: 35.8714, lng: 128.6014, 
-    density: 35,
+    density: 175, // 35 * 5
     bounds: { sw: { lat: 35.7756, lng: 128.4523 }, ne: { lat: 35.9542, lng: 128.7234 } }
   },
   { 
     name: "대전", 
     lat: 36.3504, lng: 127.3845, 
-    density: 30,
+    density: 150, // 30 * 5
     bounds: { sw: { lat: 36.2654, lng: 127.2845 }, ne: { lat: 36.4856, lng: 127.4856 } }
   },
   { 
     name: "광주", 
     lat: 35.1595, lng: 126.8526, 
-    density: 30,
+    density: 150, // 30 * 5
     bounds: { sw: { lat: 35.0856, lng: 126.7542 }, ne: { lat: 35.2542, lng: 126.9542 } }
   },
   { 
     name: "울산", 
     lat: 35.5384, lng: 129.3114, 
-    density: 25,
+    density: 125, // 25 * 5
     bounds: { sw: { lat: 35.4542, lng: 129.1542 }, ne: { lat: 35.6542, lng: 129.4542 } }
   },
   { 
     name: "수원", 
     lat: 37.2636, lng: 127.0286, 
-    density: 30,
+    density: 150, // 30 * 5
     bounds: { sw: { lat: 37.2142, lng: 126.9542 }, ne: { lat: 37.3542, lng: 127.1542 } }
   },
   { 
     name: "제주", 
     lat: 33.4996, lng: 126.5312, 
-    density: 40,
+    density: 200, // 40 * 5
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
   }
 ];
@@ -78,7 +79,6 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
     geocoder.coord2Address(lng, lat, (result: any, status: any) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         const addr = result[0].address;
-        // 시/도 + 구/군 + 동/면/리 조합
         const region = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`.trim();
         resolve(region || "대한민국");
       } else {
@@ -100,10 +100,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
     // 2. 도시별 데이터 생성
     for (const city of MAJOR_CITIES) {
-      // 격자 구조를 사용하여 영역 내에 고르게 분포된 목업 데이터 생성
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       
-      // 각 포스팅의 실제 주소를 비동기로 가져옴 (성능을 위해 순차 처리)
       for (const p of mockPosts) {
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         const realAddress = await getAddressFromCoords(p.lat, p.lng);
@@ -125,7 +123,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     }
 
     // 3. Supabase 삽입 (청크 단위)
-    const chunkSize = 40;
+    // 데이터 양이 많으므로 청크 사이즈를 50으로 조정
+    const chunkSize = 50;
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
       const { error } = await supabase.from('posts').insert(chunk);
