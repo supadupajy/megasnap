@@ -60,6 +60,7 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const isAutoSeeding = useRef(false);
+  const hasInitialLoaded = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) return;
@@ -92,6 +93,50 @@ const Index = () => {
       });
     });
   }, []);
+
+  // 초기 전역 데이터 로딩 (인기 리스트 및 초기 마커용)
+  const loadInitialGlobalPosts = useCallback(async () => {
+    if (hasInitialLoaded.current) return;
+    hasInitialLoaded.current = true;
+
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('likes', { ascending: false })
+        .limit(100);
+
+      if (!error && data) {
+        const mapped = data.map(p => ({
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+          content: p.content,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
+        })) as Post[];
+        
+        setAllPosts(mapped);
+        mapCache.posts = mapped;
+      }
+    } catch (err) {
+      console.error('[InitialLoad] Error:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInitialGlobalPosts();
+  }, [loadInitialGlobalPosts]);
 
   // 지도를 옮길 때 자동으로 포스팅 생성
   const autoSeedArea = useCallback(async () => {
