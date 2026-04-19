@@ -39,7 +39,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     const unsubscribe = postDraftStore.subscribe(() => {
       setDraft(postDraftStore.get());
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

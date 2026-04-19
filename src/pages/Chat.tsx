@@ -49,18 +49,6 @@ const Chat = () => {
     }
   };
 
-  // 키보드가 올라오거나 화면 크기가 변할 때 하단 스크롤 유지
-  useEffect(() => {
-    const handleResize = () => {
-      setTimeout(() => scrollToBottom('auto'), 100);
-    };
-    
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-      return () => window.visualViewport?.removeEventListener('resize', handleResize);
-    }
-  }, []);
-
   // 메시지 로드 및 구독 로직
   useEffect(() => {
     const fetchOtherUser = async () => {
@@ -154,6 +142,7 @@ const Chat = () => {
         inputRef.current?.focus();
       }
     } else {
+      chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
       isProcessingRef.current = false;
       setIsSending(false);
@@ -164,19 +153,15 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    /* 
-      h-full(100%)은 adjustResize에 의해 키보드 영역을 제외한 높이로 자동 조절됩니다.
-      flex-col 구조를 통해 헤더와 푸터는 양 끝에 붙고, 메시지 영역만 유동적으로 변합니다.
-    */
-    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
-      {/* 1. 상단 헤더 (고정) */}
-      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
+    <div className="flex flex-col bg-white overflow-hidden" style={{ height: '100dvh' }}>
+      {/* 헤더: flex-shrink-0으로 고정 */}
+      <header className="flex-shrink-0 h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 pt-safe">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
+            <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${chatId}`)}>
               <img 
                 src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} 
                 alt="user" 
@@ -184,7 +169,7 @@ const Chat = () => {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black text-gray-900">{otherUser?.nickname || otherUser?.name || '사용자'}</span>
+              <span className="text-sm font-black text-gray-900">{otherUser?.nickname || '사용자'}</span>
               <span className="text-[10px] text-indigo-600 font-bold">현재 활동 중</span>
             </div>
           </div>
@@ -196,10 +181,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 (유동적 길이 조절) */}
+      {/* 메시지 리스트: flex-1로 남은 공간 전부 차지 */}
       <div 
         ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar bg-white"
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -217,8 +202,8 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (키보드 바로 위에 고정) */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
+      {/* 입력창: flex-shrink-0으로 고정 */}
+      <div className="flex-shrink-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 pb-safe">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
