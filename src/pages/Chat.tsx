@@ -38,6 +38,10 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
+  // 실제 스마트폰 뷰포트 대응을 위한 상태
+  const [realHeight, setRealHeight] = useState('100%');
+  const [offsetTop, setOffsetTop] = useState('0px');
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +54,46 @@ const Chat = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
+
+  // 스마트폰 브라우저의 강제 스크롤(밀림) 방지 및 뷰포트 동기화
+  useEffect(() => {
+    const handleViewport = () => {
+      if (window.visualViewport) {
+        const vv = window.visualViewport;
+        // 브라우저가 페이지를 밀어 올렸을 때 발생하는 offset을 상쇄하기 위해 top을 조절
+        setRealHeight(`${vv.height}px`);
+        setOffsetTop(`${vv.offsetTop}px`);
+        
+        // 브라우저가 강제로 스크롤을 시도하면 즉시 0으로 복구
+        if (window.scrollY !== 0) {
+          window.scrollTo(0, 0);
+        }
+      }
+    };
+
+    const preventNativeScroll = () => {
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewport);
+      window.visualViewport.addEventListener('scroll', handleViewport);
+    }
+    window.addEventListener('scroll', preventNativeScroll);
+
+    // 초기 실행
+    handleViewport();
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewport);
+        window.visualViewport.removeEventListener('scroll', handleViewport);
+      }
+      window.removeEventListener('scroll', preventNativeScroll);
+    };
+  }, []);
 
   // 키보드 상태 변화 시 스크롤 조절
   useEffect(() => {
@@ -162,12 +206,19 @@ const Chat = () => {
 
   return (
     /* 
-      프리뷰 시뮬레이션을 위해 style.bottom에 keyboardHeight를 적용합니다.
-      실제 모바일에서는 VisualViewport가 작동하고, 프리뷰에서는 가상 키보드 높이만큼 바닥에서 밀려 올라갑니다.
+      스마트폰 대응 핵심:
+      1. fixed inset-0으로 고정
+      2. height를 visualViewport.height로 설정하여 키보드 영역 제외
+      3. top을 visualViewport.offsetTop으로 설정하여 브라우저의 강제 밀림(scroll)을 상쇄
+      4. 프리뷰 시뮬레이션을 위해 keyboardHeight도 함께 고려
     */
     <div 
-      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000] transition-[bottom] duration-300 ease-out"
-      style={{ bottom: `${keyboardHeight}px` }}
+      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000]"
+      style={{ 
+        height: realHeight,
+        top: offsetTop,
+        bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'auto'
+      }}
     >
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
