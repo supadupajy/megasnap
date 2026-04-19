@@ -1,5 +1,4 @@
 import { Post, User, Comment } from '@/types';
-import { getYoutubeThumbnail } from './utils';
 
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -12,11 +11,6 @@ const seededRandom = (seed: string) => {
     return ((hash - 1) / 2147483646) * 0.999999999999999;
   };
 };
-
-// K-pop & Pop YouTube Links
-export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=9bZkp7q19f0", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "https://www.youtube.com/watch?v=JGwWNGJdvx8", "https://www.youtube.com/watch?v=OPf0YbXqDm0", "https://www.youtube.com/watch?v=hT_nvWreIhg", "https://www.youtube.com/watch?v=nfWlot6h_JM", "https://www.youtube.com/watch?v=kffacxfA7G4", "https://www.youtube.com/watch?v=CevxZvSJLk8", "https://www.youtube.com/watch?v=09R8_2nJtjg", "https://www.youtube.com/watch?v=YQHsXMglC9A", "https://www.youtube.com/watch?v=2vjPBrBU-TM", "https://www.youtube.com/watch?v=7wtfhZwyrcc", "https://www.youtube.com/watch?v=YykjpeuMNEk", "https://www.youtube.com/watch?v=u31qwQUeGuM", "https://www.youtube.com/watch?v=TUVcZfQe-Kw", "https://www.youtube.com/watch?v=DyDfgMOUjCI", "https://www.youtube.com/watch?v=RlPNh_PB6Ww", "https://www.youtube.com/watch?v=fRh_vgS2dFE"
-];
 
 // 카테고리별 이미지 풀 (100종의 Unsplash 이미지)
 const ACCIDENT_IMAGES = ["1597328290883-50c5787b7c7e", "1580273916550-e323be2ae537", "1566241440091-ec10df8db2e1", "1494976388531-d1058494cdd8", "1516733725897-1aa73b87c8e8", "1549317661-bd32c8ce0db2", "1574610758891-5b809b6e6e2e", "1506015391300-4802dc74de2e", "1518527989017-5baca7a58d3c", "1599412227383-b7d4751c8765", "1578496479914-7ef3b0193be3", "1590102426319-c7526718cd70", "1517055727180-d1a9761c546a", "1503376780353-7e6692767b70", "1541899481282-d53bffe3c35d", "1450101499163-c8848c66ca85", "1506719040632-7d588830c6a6", "1515569067071-ec3b51335dd0", "1533106497176-45ae19e68ba2", "1504215636907-fe1e63f29066"].map(id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`);
@@ -45,6 +39,10 @@ const generateRandomComments = (count: number, randomFn: () => number = Math.ran
 const AD_FOOD_CONTENT = ["배고플 땐 역시 배달의민족! 지금 주문하면 첫 주문 1만원 할인 🍔", "오늘 저녁은 육즙 가득한 프리미엄 스테이크 어떠세요? 🥩"];
 const CONTENT_POOL = ["오늘 날씨가 너무 좋아서 산책 나왔어요! ☀️", "여기 분위기 진짜 대박... 꼭 와보세요! ✨", "맛있는 점심 먹고 힐링 중입니다 🍱", "주말 여행지로 강력 추천합니다! 🚗", "야경이 정말 아름다운 곳이에요 🌙"];
 const LOCATIONS = ['서울 성수동', '제주 애월', '부산 해운대', '강릉 안목해변', '경주 황리단길'];
+
+export const YOUTUBE_LINKS = [
+  "https://www.youtube.com/watch?v=9bZkp7q19f0", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "https://www.youtube.com/watch?v=JGwWNGJdvx8", "https://www.youtube.com/watch?v=OPf0YbXqDm0", "https://www.youtube.com/watch?v=hT_nvWreIhg", "https://www.youtube.com/watch?v=nfWlot6h_JM", "https://www.youtube.com/watch?v=kffacxfA7G4", "https://www.youtube.com/watch?v=CevxZvSJLk8", "https://www.youtube.com/watch?v=09R8_2nJtjg", "https://www.youtube.com/watch?v=YQHsXMglC9A", "https://www.youtube.com/watch?v=2vjPBrBU-TM", "https://www.youtube.com/watch?v=7wtfhZwyrcc", "https://www.youtube.com/watch?v=YykjpeuMNEk", "https://www.youtube.com/watch?v=u31qwQUeGuM", "https://www.youtube.com/watch?v=TUVcZfQe-Kw", "https://www.youtube.com/watch?v=DyDfgMOUjCI", "https://www.youtube.com/watch?v=RlPNh_PB6Ww", "https://www.youtube.com/watch?v=fRh_vgS2dFE"
+];
 
 export const createMockUser = (id: string, randomFn: () => number = Math.random, forceInfluencer: boolean = false): User => {
   const finalId = id === 'me' ? 'Dyad_Explorer' : id;
@@ -89,9 +87,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let isAd = false;
 
     if (!specificUserId) {
-      if (typeRoll < 0.10) isInfluencer = true; // 10% 확률로 인플루언서
-      else if (typeRoll < 0.25) isPopular = true; // 15% 확률로 인기 포스팅
-      else if (typeRoll < 0.30) isAd = true; // 5% 확률로 광고
+      if (typeRoll < 0.03) isInfluencer = true; // 3% 확률로 인플루언서
+      else if (typeRoll < 0.06) isPopular = true; // 3% 확률로 인기 포스팅
+      else if (typeRoll < 0.11) isAd = true; // 5% 확률로 광고
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
