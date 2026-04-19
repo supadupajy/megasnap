@@ -116,13 +116,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const isAd = post.isAd;
   const isPopular = !isAd && post.borderType === 'popular';
-  const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const youtubeThumbnail = post.youtubeUrl ? getYoutubeThumbnail(post.youtubeUrl) : null;
   
   const displayImages = useMemo(() => {
-    if (isAd) return [post.image]; // 광고는 무조건 이미지 1개
+    if (isAd) return [post.image];
     if (youtubeThumbnail) return [youtubeThumbnail];
     const img1 = post.images?.length ? post.images[0] : post.image;
     const img3 = (post.images?.length > 1 && post.images[1] !== AD_IMAGE) ? post.images[1] : THIRD_PLACEHOLDER;
@@ -161,6 +160,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return (<div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}><Icon className="w-3.5 h-3.5" /> <span className="text-[10px] font-black">{label}</span></div>);
   };
 
+  const getBorderClass = () => {
+    if (isMine) return 'my-post-border-container';
+    if (isAd) return 'ad-border-container';
+    if (post.borderType === 'popular') return 'popular-border-container';
+    if (post.borderType === 'diamond') return 'diamond-border-container';
+    if (post.borderType === 'gold') return 'gold-border-container';
+    if (post.borderType === 'silver') return 'silver-border-container';
+    return '';
+  };
+
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   return (
@@ -184,7 +193,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="text-gray-400 p-1 outline-none"><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
                 </div>
                 <div className="px-4">
-                  <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : "")))}>
+                  <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
                     <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
                       {isPlayingVideo ? (
                         youtubeId ? (
