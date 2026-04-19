@@ -125,37 +125,32 @@ const Chat = () => {
 
     fetchMessages();
 
-    // 실시간 구독 채널 생성
+    // 실시간 구독 채널 생성 (고유한 이름 사용)
+    const channelId = `chat_room_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
-      .channel(`chat:${chatId}`)
+      .channel(channelId)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'messages' 
       }, (payload) => {
-        const newMsg = payload.new as Message;
-        const oldMsg = payload.old as Message;
-
-        // 메시지 추가 (INSERT)
         if (payload.eventType === 'INSERT') {
+          const newMsg = payload.new as Message;
           if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
               (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
-            setMessages(prev => [...prev, newMsg]);
+            setMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
             if (newMsg.sender_id === chatId) markAsRead();
           }
-        } 
-        // 읽음 상태 업데이트 (UPDATE)
-        else if (payload.eventType === 'UPDATE') {
-          setMessages(prev => prev.map(m => m.id === newMsg.id ? newMsg : m));
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedMsg = payload.new as Message;
+          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
         }
       })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Realtime subscribed!');
-        }
-      });
+      .subscribe();
 
-    // 앱이 포그라운드로 돌아올 때 데이터 동기화
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchMessages();
@@ -188,12 +183,18 @@ const Chat = () => {
         is_read: false
       }]).select().single();
       
-      if (error) showError('메시지 전송에 실패했습니다.');
-      // Realtime이 작동하면 여기서 setMessages를 안 해도 자동으로 추가되지만, 
-      // 사용자 경험을 위해 즉시 추가할 수도 있습니다.
+      if (error) {
+        showError('메시지 전송에 실패했습니다.');
+        setInputValue(content); // 실패 시 입력값 복구
+      } else if (data) {
+        // 낙관적 업데이트: 실시간 이벤트를 기다리지 않고 즉시 추가
+        setMessages(prev => {
+          if (prev.some(m => m.id === data.id)) return prev;
+          return [...prev, data as Message];
+        });
+      }
     } else {
       chatStore.addMessage(chatId, content, 'me');
-      // 로컬 스토어 업데이트 로직...
     }
   };
 
