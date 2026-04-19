@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Search, Loader2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Search, Loader2, MessageSquare, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,7 +17,8 @@ const FriendList = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
       setUsers([]);
       return;
     }
@@ -28,9 +29,9 @@ const FriendList = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nickname, avatar_url, bio')
-        .ilike('nickname', `%${query}%`)
+        .ilike('nickname', `%${trimmedQuery}%`)
         .neq('id', authUser?.id) // 본인은 제외
-        .limit(20);
+        .limit(30);
 
       if (error) throw error;
       setUsers(data || []);
@@ -42,9 +43,10 @@ const FriendList = () => {
   }, [authUser]);
 
   useEffect(() => {
+    // 반응성을 위해 디바운스 시간을 150ms로 단축
     const timer = setTimeout(() => {
       searchUsers(searchQuery);
-    }, 300);
+    }, 150);
 
     return () => clearTimeout(timer);
   }, [searchQuery, searchUsers]);

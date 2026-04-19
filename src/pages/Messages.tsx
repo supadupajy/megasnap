@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, Search, Edit, Loader2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Conversation {
   other_id: string;
@@ -25,13 +26,15 @@ const Messages = () => {
   const { user: authUser } = useAuth();
   const [query, setQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
+  // 1. 기존 대화 목록 가져오기
   useEffect(() => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
-      // 1. Supabase에서 실제 메시지 내역 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -56,7 +59,6 @@ const Messages = () => {
         }
       }
 
-      // 2. 로컬 chatStore(Mock 유저와의 대화 등) 병합
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -75,18 +77,14 @@ const Messages = () => {
       }
 
       const convList = Array.from(convMap.values());
-
-      // 3. 각 대화 상대의 프로필 정보 가져오기
       const results = await Promise.all(
         convList.map(async (conv) => {
           if (conv.profile) return conv;
-
           const { data: profile } = await supabase
             .from('profiles')
             .select('nickname, avatar_url')
             .eq('id', conv.other_id)
             .single();
-          
           return {
             ...conv,
             profile: profile || { nickname: '사용자', avatar_url: null }
@@ -100,14 +98,44 @@ const Messages = () => {
     };
 
     fetchConversations();
-    
     const unsubscribe = chatStore.subscribe(fetchConversations);
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [authUser]);
 
-  // 닉네임 또는 마지막 메시지 내용으로 실시간 필터링
+  // 2. 전체 유저 실시간 DB 검색 (닉네임 기준)
+  useEffect(() => {
+    const searchGlobalUsers = async () => {
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length < 1) {
+        setGlobalSearchResults([]);
+        return;
+      }
+
+      setIsSearchingGlobal(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_url, bio')
+          .ilike('nickname', `%${trimmedQuery}%`)
+          .neq('id', authUser?.id)
+          .limit(5);
+
+        if (!error && data) {
+          // 이미 대화 중인 유저는 제외하고 표시
+          const existingIds = new Set(conversations.map(c => c.other_id));
+          setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
+        }
+      } catch (err) {
+        console.error('Global search error:', err);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    };
+
+    const timer = setTimeout(searchGlobalUsers, 200);
+    return () => clearTimeout(timer);
+  }, [query, authUser, conversations]);
+
   const filteredConversations = useMemo(() => {
     const lowerQuery = query.toLowerCase().trim();
     if (!lowerQuery) return conversations;
@@ -116,6 +144,11 @@ const Messages = () => {
       conv.last_message.toLowerCase().includes(lowerQuery)
     );
   }, [query, conversations]);
+
+  const handleStartChat = (user: any) => {
+    chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
+    navigate(`/chat/${user.id}`);
+  };
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
@@ -140,13 +173,19 @@ const Messages = () => {
             value={query} 
             onChange={(e) => setQuery(e.target.value)} 
           />
+          {isSearchingGlobal && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+            </div>
+          )}
         </div>
 
-        <div className="space-y-4">
-          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">최근 메시지</h2>
-          {isLoading ? (
-            <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 text-indigo-600 animate-spin" /></div>
-          ) : (
+        <div className="space-y-6">
+          {/* 기존 대화 목록 */}
+          <div className="space-y-4">
+            <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
+              {query ? '대화 목록 검색 결과' : '최근 메시지'}
+            </h2>
             <div className="space-y-1">
               {filteredConversations.map((conv) => {
                 const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -168,17 +207,42 @@ const Messages = () => {
                   </div>
                 );
               })}
-              
-              {filteredConversations.length === 0 && !isLoading && (
-                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <MessageSquare className="w-8 h-8 text-gray-200" />
+            </div>
+          </div>
+
+          {/* 새로운 유저 검색 결과 (DB 조회) */}
+          {query.trim() && globalSearchResults.length > 0 && (
+            <div className="space-y-4 pt-2 border-t border-gray-50">
+              <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
+                <UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기
+              </h2>
+              <div className="space-y-1">
+                {globalSearchResults.map((user) => (
+                  <div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all">
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
+                      <Avatar className="w-full h-full border-2 border-white">
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                    {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
-                  </p>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (
+            <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <MessageSquare className="w-8 h-8 text-gray-200" />
+              </div>
+              <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
+              </p>
             </div>
           )}
         </div>
