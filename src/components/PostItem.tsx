@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -56,6 +56,7 @@ interface PostItemProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; // Coke Ad
 
 const PostItem = ({ 
   id,
@@ -67,7 +68,7 @@ const PostItem = ({
   comments: initialComments = [],
   image, 
   images = [],
-  adImageIndex,
+  adImageIndex: initialAdIndex,
   lat,
   lng,
   isLiked: initialIsLiked, 
@@ -108,8 +109,14 @@ const PostItem = ({
   const youtubeId = getYoutubeId(youtubeUrl || '');
   const youtubeThumbnail = youtubeUrl ? getYoutubeThumbnail(youtubeUrl) : null;
   
-  // 유튜브 썸네일이 있으면 최우선으로 사용, 없으면 전달받은 이미지 사용
-  const displayImages = youtubeThumbnail ? [youtubeThumbnail] : (images.length > 0 ? images : [image]);
+  // 이미지를 항상 3개로 구성 (원본, 광고, 원본)
+  const displayImages = useMemo(() => {
+    if (youtubeThumbnail) return [youtubeThumbnail];
+    const base = images.length > 0 ? images[0] : image;
+    return [base, AD_IMAGE, base];
+  }, [youtubeThumbnail, images, image]);
+
+  const adIndex = 1; // 항상 2번째 이미지를 광고로 설정
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
@@ -373,7 +380,7 @@ const PostItem = ({
                   {displayImages.map((img, idx) => (
                     <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
                       <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
-                      {idx === adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                      {idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
                     </div>
                   ))}
                 </div>

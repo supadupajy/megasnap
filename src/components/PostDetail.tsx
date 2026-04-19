@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ interface PostDetailProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; // Coke Ad
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick, onDelete }: PostDetailProps) => {
   const navigate = useNavigate();
@@ -157,8 +158,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const youtubeThumbnail = post.youtubeUrl ? getYoutubeThumbnail(post.youtubeUrl) : null;
   
-  // 유튜브 썸네일 우선 사용
-  const displayImages = youtubeThumbnail ? [youtubeThumbnail] : (post.images?.length ? post.images : [post.image]);
+  // 이미지를 항상 3개로 구성 (원본, 광고, 원본)
+  const displayImages = useMemo(() => {
+    if (youtubeThumbnail) return [youtubeThumbnail];
+    const base = post.images?.length ? post.images[0] : post.image;
+    return [base, AD_IMAGE, base];
+  }, [youtubeThumbnail, post.images, post.image]);
+
+  const adIndex = 1; // 항상 2번째 이미지를 광고로 설정
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
@@ -233,7 +240,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 <div className="px-4">
                   <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : "")))}>
                     <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-                      {isPlayingVideo ? (youtubeId ? (<iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>) : (<video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />)) : (<div className="relative w-full h-full"><div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === post.adImageIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>{(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}{displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}</div>)}
+                      {isPlayingVideo ? (youtubeId ? (<iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>) : (<video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />)) : (<div className="relative w-full h-full"><div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>{(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}{displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}</div>)}
                     </div>
                   </div>
                 </div>
