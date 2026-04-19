@@ -30,7 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
+  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -152,8 +152,16 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
-      {/* Header - Fixed at top */}
+    <div 
+      className="fixed top-0 left-0 right-0 bg-white flex flex-col overflow-hidden"
+      style={{ 
+        // 채팅창 레이어 자체의 바닥을 키보드 높이에 고정
+        bottom: `${keyboardHeight}px`,
+        // 전체 높이를 키보드 제외 영역으로 제한
+        height: `calc(100% - ${keyboardHeight}px)`
+      }}
+    >
+      {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
@@ -174,7 +182,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List - Flex-1 will shrink when keyboard opens */}
+      {/* Message List */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
@@ -195,35 +203,27 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area & Keyboard Spacer */}
-      <div 
-        className="bg-white border-t border-gray-100 shrink-0 transition-[padding] duration-300 ease-out"
-        style={{ 
-          // 실제 기기에서는 시스템 리사이징이 작동하므로 웹 시뮬레이터 환경에서만 패딩 적용
-          paddingBottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
-        }}
-      >
-        <div className="p-4">
-          <form 
-            onSubmit={handleSend}
-            className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+      {/* Input Area */}
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+        <form 
+          onSubmit={handleSend}
+          className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+        >
+          <Input 
+            placeholder="메시지 보내기..." 
+            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+          />
+          <Button 
+            type="submit"
+            size="icon" 
+            disabled={!inputValue.trim() || isSending} 
+            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
           >
-            <Input 
-              placeholder="메시지 보내기..." 
-              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
-              value={inputValue} 
-              onChange={(e) => setInputValue(e.target.value)} 
-            />
-            <Button 
-              type="submit"
-              size="icon" 
-              disabled={!inputValue.trim() || isSending} 
-              className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
-            >
-              {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-            </Button>
-          </form>
-        </div>
+            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          </Button>
+        </form>
       </div>
     </div>
   );
