@@ -56,7 +56,7 @@ interface PostItemProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
-const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; // Coke Ad
+const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; 
 const THIRD_PLACEHOLDER = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80";
 
 const PostItem = ({ 
@@ -111,11 +111,12 @@ const PostItem = ({
   const youtubeThumbnail = youtubeUrl ? getYoutubeThumbnail(youtubeUrl) : null;
   
   const displayImages = useMemo(() => {
+    if (isAd) return [image]; // 광고는 무조건 이미지 1개
     if (youtubeThumbnail) return [youtubeThumbnail];
     const img1 = images.length > 0 ? images[0] : image;
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
-  }, [youtubeThumbnail, images, image]);
+  }, [isAd, youtubeThumbnail, images, image]);
 
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
@@ -270,7 +271,7 @@ const PostItem = ({
               )
             ) : (
               <div className="relative w-full h-full">
-                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img, idx) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />{idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
+                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img, idx) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />{idx === adIndex && !isAd && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
                 {(videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
                 {displayImages.length > 1 && !(videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_, idx) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
               </div>
@@ -282,7 +283,30 @@ const PostItem = ({
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button></div>
-          <div className="flex flex-col items-end gap-2"><div className="flex items-center gap-3"><button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>{renderCategoryBadge()}{lat !== undefined && lng !== undefined && (<button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"><Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span></button>)}</div>{isAd && (<a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"><ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span></a>)}</div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
+              {renderCategoryBadge()}
+              {lat !== undefined && lng !== undefined && (
+                <button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
+                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                  <span className="text-[10px] font-black">위치보기</span>
+                </button>
+              )}
+            </div>
+            {isAd && (
+              <a 
+                href="https://s.baemin.com/t3000fBqlbHGL" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                <span className="text-[10px] font-black">주문하기</span>
+              </a>
+            )}
+          </div>
         </div>
         <div className="space-y-1"><p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p><div className="flex gap-2 items-start"><div className="flex items-center gap-1.5 shrink-0"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div><p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p></div><form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} /><button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>{lastComment && (<div className="flex gap-2 items-start mt-1"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>)}<button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button><AnimatePresence>{showComments && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2 mt-2">{localComments.slice(0, -1).map((c, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{c.user}</span><span className="text-sm text-gray-500">{c.text}</span></div>))}</motion.div>)}</AnimatePresence></div>
       </div>

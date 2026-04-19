@@ -46,6 +46,12 @@ const UNSPLASH_IDS = [
   "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836", "1517841905240-472988babdf9"
 ];
 
+// 광고용 음식 이미지 풀
+const FOOD_UNSPLASH_IDS = [
+  "1504674900247-0877df9cc836", "1512621776951-a57141f2eefd", "1476224489176-e88e5948482b",
+  "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929"
+];
+
 const getUnsplashUrl = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
 
 export const createMockPosts = (
@@ -60,12 +66,10 @@ export const createMockPosts = (
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 10개 중 1개는 광고로 설정
     const isAd = i % 10 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
-    // 광고가 아닐 때 50% 확률로 유튜브 영상
     const hasYoutube = !isAd && randomFn() > 0.5; 
     const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
@@ -79,9 +83,13 @@ export const createMockPosts = (
     }
     
     const content = isAd ? "[AD] 지금 바로 경험해보세요!" : "멋진 장소입니다! ✨";
-    const image = hasYoutube 
-      ? getYoutubeThumbnail(youtubeUrl!)! 
-      : getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
+    
+    // 광고는 무조건 음식 사진, 일반은 유튜브 썸네일 혹은 풍경 사진
+    const image = isAd 
+      ? getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(randomFn() * FOOD_UNSPLASH_IDS.length)])
+      : (hasYoutube 
+          ? getYoutubeThumbnail(youtubeUrl!)! 
+          : getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]));
 
     return {
       id,
