@@ -30,7 +30,8 @@ export interface Post {
   likes: number;
   commentsCount: number;
   comments: Comment[];
-  image: string;
+  image: string; // 메인 이미지 (Unsplash 고정)
+  thumbnailUrl?: string; // 지도 마커용 이미지 (유튜브 썸네일 등)
   images?: string[];
   adImageIndex?: number;
   isLiked: boolean;

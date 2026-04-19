@@ -232,7 +232,9 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    const displayImage = post.image;
+    
+    // 마커 이미지는 thumbnailUrl(유튜브 썸네일 등)을 우선 사용
+    const displayImage = post.thumbnailUrl || post.image;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
     if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
@@ -266,7 +268,7 @@ const MapContainer = ({
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = currentLevel === 7 ? 0.5 : (currentLevel === 8 ? 0.25 : 1);
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${post.thumbnailUrl}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');

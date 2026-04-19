@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
+import { getYoutubeThumbnail } from "@/lib/utils";
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -22,6 +23,9 @@ const mapDbToPost = (p: any): Post => {
   const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
+  
+  // 유튜브 썸네일 추출
+  const ytThumbnail = p.youtube_url ? getYoutubeThumbnail(p.youtube_url) : undefined;
 
   return {
     id: p.id,
@@ -41,6 +45,7 @@ const mapDbToPost = (p: any): Post => {
     commentsCount: 0,
     comments: [],
     image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
+    thumbnailUrl: ytThumbnail, // 마커용 썸네일
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
     category: 'none',
