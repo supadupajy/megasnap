@@ -136,17 +136,20 @@ const Chat = () => {
         if (payload.eventType === 'INSERT') {
           const newMsg = payload.new as Message;
           
-          // 1. 내가 보낸 메시지는 handleSend에서 이미 추가했으므로 무시합니다.
-          if (newMsg.sender_id === authUser.id) return;
-
-          // 2. 상대방이 보낸 메시지인 경우에만 추가합니다.
-          if (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) {
-            setMessages(prev => {
-              if (prev.some(m => m.id === newMsg.id)) return prev;
+          // 중복 체크: 이미 목록에 있는 ID면 추가하지 않음
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            
+            // 내가 보낸 메시지든 상대가 보낸 메시지든, 이 채팅방에 해당하는 메시지만 추가
+            const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
+                               (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
+            
+            if (isRelevant) {
+              if (newMsg.receiver_id === authUser.id) markAsRead();
               return [...prev, newMsg];
-            });
-            markAsRead();
-          }
+            }
+            return prev;
+          });
         } else if (payload.eventType === 'UPDATE') {
           const updatedMsg = payload.new as Message;
           setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
@@ -190,8 +193,11 @@ const Chat = () => {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content);
       } else if (data) {
-        // 내가 보낸 메시지는 즉시 화면에 추가 (낙관적 업데이트)
-        setMessages(prev => [...prev, data as Message]);
+        // 낙관적 업데이트 시에도 중복 체크
+        setMessages(prev => {
+          if (prev.some(m => m.id === data.id)) return prev;
+          return [...prev, data as Message];
+        });
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
