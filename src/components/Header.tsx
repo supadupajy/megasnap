@@ -10,51 +10,48 @@ import { useAuth } from '@/components/AuthProvider';
 const Header = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     if (!authUser) return;
 
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const { count, error } = await supabase
+        // 1. 알림 개수 (좋아요, 팔로우 등)
+        const { count: notifCount } = await supabase
           .from('notifications')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', authUser.id)
           .eq('is_read', false);
         
-        if (!error) setUnreadCount(count || 0);
+        setUnreadNotifCount(notifCount || 0);
+
+        // 2. 메시지 개수
+        const { count: msgCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', authUser.id)
+          .eq('is_read', false);
+        
+        setUnreadMsgCount(msgCount || 0);
       } catch (err) {
-        console.error('[Header] Failed to fetch unread count:', err);
+        console.error('[Header] Failed to fetch counts:', err);
       }
     };
 
-    fetchUnreadCount();
+    fetchCounts();
 
-    // 채널 이름에 랜덤 문자열을 추가하여 매 렌더링/구독마다 고유함을 보장
     const uniqueId = Math.random().toString(36).substring(2, 9);
-    const channelName = `header_notifs_${authUser.id}_${uniqueId}`;
-    const channel = supabase.channel(channelName);
+    const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
 
     channel
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'notifications', 
-          filter: `user_id=eq.${authUser.id}` 
-        },
-        () => {
-          fetchUnreadCount();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${authUser.id}` }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sender_id=eq.${authUser.id}` }, fetchCounts)
       .subscribe();
 
-    return () => {
-      // 컴포넌트 언마운트 시 채널 제거
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [authUser]);
 
   return (
@@ -74,17 +71,22 @@ const Header = () => {
           onClick={() => navigate('/notifications')}
         >
           <Bell className="w-6 h-6 text-gray-600" />
-          {unreadCount > 0 && (
+          {unreadNotifCount > 0 && (
             <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
             </span>
           )}
         </button>
         <button 
-          className="p-1 hover:bg-gray-50 rounded-full transition-colors"
+          className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
           onClick={() => navigate('/messages')}
         >
           <MessageSquare className="w-6 h-6 text-gray-600" />
+          {unreadMsgCount > 0 && (
+            <span className="absolute top-0 right-0 w-4 h-4 bg-indigo-600 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
+              {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+            </span>
+          )}
         </button>
       </div>
     </header>

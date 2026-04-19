@@ -36,6 +36,27 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 메시지 읽음 처리 함수
+  const markAsRead = async () => {
+    if (!authUser || !chatId || !isValidUUID(chatId)) {
+      if (chatId) chatStore.markAsRead(chatId);
+      return;
+    }
+
+    try {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', authUser.id)
+        .eq('sender_id', chatId)
+        .eq('is_read', false);
+      
+      chatStore.markAsRead(chatId);
+    } catch (err) {
+      console.error('Error marking messages as read:', err);
+    }
+  };
+
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
@@ -77,6 +98,7 @@ const Chat = () => {
         }));
         setMessages(formatted);
       }
+      markAsRead();
       setIsLoading(false);
       return;
     }
@@ -89,6 +111,7 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       setMessages(data || []);
+      markAsRead(); // 초기 로드 시 읽음 처리
       setIsLoading(false);
     };
 
@@ -96,10 +119,18 @@ const Chat = () => {
 
     const channel = supabase
       .channel(`chat:${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, 
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages', 
+        filter: `receiver_id=eq.${authUser.id}` 
+      }, 
       (payload) => {
         const newMsg = payload.new as Message;
-        if (newMsg.sender_id === chatId) setMessages((prev) => [...prev, newMsg]);
+        if (newMsg.sender_id === chatId) {
+          setMessages((prev) => [...prev, newMsg]);
+          markAsRead(); // 새 메시지 수신 시 읽음 처리
+        }
       }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -136,7 +167,6 @@ const Chat = () => {
         setMessages((prev) => prev.filter(m => m.id !== tempId));
       }
     } else {
-      // Mock User인 경우 로컬 스토어에 저장
       chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
     }
