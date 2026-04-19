@@ -59,7 +59,6 @@ const Index = () => {
 
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
-  const isAutoSeeding = useRef(false);
   const hasInitialLoaded = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
@@ -73,30 +72,11 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation]);
 
-  const getRealAddress = useCallback(async (lat: number, lng: number): Promise<string> => {
-    const kakao = (window as any).kakao;
-    if (!kakao?.maps?.services) return '대한민국 어딘가';
-    const geocoder = new kakao.maps.services.Geocoder();
-    return new Promise((resolve) => {
-      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-        if (status === kakao.maps.services.Status.OK && result[0]) {
-          const addr = result[0].address;
-          const city = addr.region_1depth_name || '';
-          const district = addr.region_2depth_name || '';
-          const neighborhood = addr.region_3depth_name || '';
-          resolve(`${city} ${district} ${neighborhood}`.trim());
-        } else {
-          resolve('대한민국 어딘가');
-        }
-      });
-    });
-  }, []);
-
   const loadInitialGlobalPosts = useCallback(async () => {
     if (hasInitialLoaded.current) return;
     hasInitialLoaded.current = true;
     try {
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(100);
+      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(200);
       if (!error && data) {
         const mapped = data.map(p => ({
           id: p.id,
@@ -124,49 +104,6 @@ const Index = () => {
 
   useEffect(() => { loadInitialGlobalPosts(); }, [loadInitialGlobalPosts]);
 
-  const autoSeedArea = useCallback(async () => {
-    if (!mapData?.center || !mapData?.bounds || isAutoSeeding.current || !authUser || currentZoom > 8) return;
-    
-    const tileKey = `${mapData.center.lat.toFixed(2)}_${mapData.center.lng.toFixed(2)}`;
-    // 이미 방문한 타일이라도 마커가 부족하면(15개 미만) 추가 생성을 허용
-    if (mapCache.populatedTiles.has(tileKey) && displayedMarkers.length >= 15) return;
-    
-    isAutoSeeding.current = true;
-    mapCache.populatedTiles.add(tileKey);
-    
-    try {
-      const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
-      if (!profiles || profiles.length === 0) { isAutoSeeding.current = false; return; }
-      
-      const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 20, undefined, mapData.bounds);
-      
-      const insertDataPromises = mockPosts.map(async (p) => {
-        const randomUser = profiles[Math.floor(Math.random() * profiles.length)];
-        const realAddress = await getRealAddress(p.lat, p.lng);
-        return {
-          content: p.content,
-          location_name: realAddress,
-          latitude: p.lat,
-          longitude: p.lng,
-          image_url: p.image,
-          user_id: randomUser.id,
-          user_name: randomUser.nickname,
-          user_avatar: randomUser.avatar_url,
-          likes: p.likes,
-          created_at: p.createdAt.toISOString()
-        };
-      });
-      const finalData = await Promise.all(insertDataPromises);
-      const newPosts = mockPosts.map((p, idx) => ({
-        ...p,
-        id: `temp_${Date.now()}_${idx}`,
-        user: { id: finalData[idx].user_id, name: finalData[idx].user_name, avatar: finalData[idx].user_avatar }
-      })) as Post[];
-      setAllPosts(prev => [...prev, ...newPosts]);
-      await supabase.from('posts').insert(finalData);
-    } catch (err) { console.error('[AutoSeed] Error:', err); } finally { isAutoSeeding.current = false; }
-  }, [mapData, authUser, getRealAddress, currentZoom, displayedMarkers.length]);
-
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
     isSyncing.current = true;
@@ -184,13 +121,6 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
-  
-  // 마커가 15개 미만일 때 자동 생성 로직 트리거 (레벨 6 이하 기준)
-  useEffect(() => { 
-    if (mapData && currentZoom <= 6 && displayedMarkers.length < 15 && !isAutoSeeding.current) {
-      autoSeedArea(); 
-    }
-  }, [mapData, displayedMarkers.length, autoSeedArea, currentZoom]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;

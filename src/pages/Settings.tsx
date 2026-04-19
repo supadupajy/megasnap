@@ -12,13 +12,16 @@ import {
   LogOut,
   ChevronRight,
   Moon,
-  Languages
+  Languages,
+  Database,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { seedGlobalPosts } from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,13 +61,36 @@ const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     showSuccess('로그아웃 되었습니다.');
     navigate('/login');
+  };
+
+  const handleSeedData = async () => {
+    if (!user) return;
+    
+    setIsSeeding(true);
+    const toastId = showLoading('대한민국 전역 데이터를 생성 중입니다...');
+    
+    try {
+      const count = await seedGlobalPosts(
+        user.id, 
+        profile?.nickname || '탐험가', 
+        profile?.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`
+      );
+      dismissToast(toastId);
+      showSuccess(`${count}개의 포스팅이 전국에 생성되었습니다! ✨`);
+    } catch (err) {
+      dismissToast(toastId);
+      showError('데이터 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   return (
@@ -99,10 +125,24 @@ const Settings = () => {
         </div>
 
         <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">지원</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={HelpCircle} label="고객 센터" />
-            <SettingItem icon={Info} label="정보" />
+            <button 
+              onClick={handleSeedData}
+              disabled={isSeeding}
+              className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
+                  {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-bold text-indigo-600">전체 지역 데이터 생성</span>
+                  <span className="text-[10px] text-gray-400 font-medium">대한민국 전역에 포스팅을 골고루 배치합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
         </div>
 
