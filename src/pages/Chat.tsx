@@ -36,6 +36,7 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -55,16 +56,14 @@ const Chat = () => {
     }
 
     try {
-      const { error } = await supabase
+      await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
         .eq('is_read', false);
       
-      if (!error) {
-        chatStore.markAsRead(chatId);
-      }
+      chatStore.markAsRead(chatId);
     } catch (err) {
       console.error('[Chat] markAsRead error:', err);
     }
@@ -125,48 +124,45 @@ const Chat = () => {
 
     fetchMessages();
 
-    const channelId = `chat_room_${[authUser.id, chatId].sort().join('_')}`;
+    // 고유한 채널 ID 생성
+    const channelId = `chat_${[authUser.id, chatId].sort().join('_')}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { 
-        event: '*', 
+        event: 'INSERT', 
         schema: 'public', 
         table: 'messages' 
       }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newMsg = payload.new as Message;
-          
-          // 중복 체크: 이미 목록에 있는 ID면 추가하지 않음
+        const newMsg = payload.new as Message;
+        
+        // 이 채팅방과 관련된 메시지인지 확인
+        const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
+                           (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
+        
+        if (isRelevant) {
           setMessages(prev => {
+            // 중복 ID 체크 (혹시 모를 상황 대비)
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            
-            // 내가 보낸 메시지든 상대가 보낸 메시지든, 이 채팅방에 해당하는 메시지만 추가
-            const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
-                               (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
-            
-            if (isRelevant) {
-              if (newMsg.receiver_id === authUser.id) markAsRead();
-              return [...prev, newMsg];
-            }
-            return prev;
+            return [...prev, newMsg];
           });
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedMsg = payload.new as Message;
-          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+          
+          if (newMsg.receiver_id === authUser.id) {
+            markAsRead();
+          }
         }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages'
+      }, (payload) => {
+        const updatedMsg = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
       })
       .subscribe();
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchMessages();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => { 
       supabase.removeChannel(channel);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [authUser, chatId]);
 
@@ -177,31 +173,42 @@ const Chat = () => {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || !authUser || !chatId) return;
+    if (!inputValue.trim() || !authUser || !chatId || isSending) return;
+    
     const content = inputValue.trim();
     setInputValue('');
+    setIsSending(true);
 
     if (isValidUUID(chatId)) {
-      const { data, error } = await supabase.from('messages').insert([{
+      // DB에 저장만 합니다. 화면 업데이트는 Realtime 리스너가 처리합니다.
+      const { error } = await supabase.from('messages').insert([{
         sender_id: authUser.id,
         receiver_id: chatId,
         content: content,
         is_read: false
-      }]).select().single();
+      }]);
       
       if (error) {
         showError('메시지 전송에 실패했습니다.');
         setInputValue(content);
-      } else if (data) {
-        // 낙관적 업데이트 시에도 중복 체크
-        setMessages(prev => {
-          if (prev.some(m => m.id === data.id)) return prev;
-          return [...prev, data as Message];
-        });
       }
     } else {
       chatStore.addMessage(chatId, content, 'me');
+      // 로컬 스토어는 리얼타임이 없으므로 수동 업데이트
+      const room = chatStore.getRoom(chatId);
+      if (room) {
+        const formatted = room.messages.map(m => ({
+          id: m.id.toString(),
+          content: m.text,
+          sender_id: m.sender === 'me' ? authUser.id : chatId,
+          receiver_id: m.sender === 'me' ? chatId : authUser.id,
+          created_at: new Date().toISOString(),
+          is_read: true
+        }));
+        setMessages(formatted);
+      }
     }
+    setIsSending(false);
   };
 
   const handleBack = () => {
@@ -252,8 +259,21 @@ const Chat = () => {
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
-          <Input placeholder="메시지 보내기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} />
-          <Button size="icon" onClick={handleSend} disabled={!inputValue.trim()} className={cn("w-10 h-10 rounded-full transition-all shadow-lg", inputValue.trim() ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}><Send className="w-5 h-5" /></Button>
+          <Input 
+            placeholder="메시지 보내기..." 
+            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+          />
+          <Button 
+            size="icon" 
+            onClick={handleSend} 
+            disabled={!inputValue.trim() || isSending} 
+            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
+          >
+            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          </Button>
         </div>
       </div>
     </div>
