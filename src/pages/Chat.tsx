@@ -38,11 +38,25 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
-  // 중복 전송 방지를 위한 강력한 제어 장치들
   const isProcessingRef = useRef(false);
-  const lastSentTimeRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 메시지 목록을 ID 기준으로 병합하여 중복을 원천 차단하는 함수
+  const mergeMessages = (current: Message[], incoming: Message | Message[]) => {
+    const incomingArr = Array.isArray(incoming) ? incoming : [incoming];
+    const map = new Map<string, Message>();
+    
+    // 기존 메시지 먼저 담기
+    current.forEach(m => map.set(m.id, m));
+    // 새로운 메시지 담기 (동일 ID가 있으면 덮어씌워짐 = 중복 방지)
+    incomingArr.forEach(m => map.set(m.id, m));
+    
+    // 시간순 정렬하여 배열로 반환
+    return Array.from(map.values()).sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  };
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -82,7 +96,7 @@ const Chat = () => {
       .order('created_at', { ascending: true });
 
     if (!error && data) {
-      setMessages(data);
+      setMessages(prev => mergeMessages(prev, data));
       await markAsRead();
       setTimeout(() => scrollToBottom('auto'), 100);
     }
@@ -127,7 +141,8 @@ const Chat = () => {
 
     fetchMessages();
 
-    const channelId = `chat_v4_${[authUser.id, chatId].sort().join('_')}`;
+    // 고유한 채널 ID 생성 (타임스탬프 포함하여 중복 구독 방지)
+    const channelId = `chat_${[authUser.id, chatId].sort().join('_')}_${Date.now()}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { 
@@ -136,20 +151,12 @@ const Chat = () => {
         table: 'messages' 
       }, (payload) => {
         const newMsg = payload.new as Message;
-        
         const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
                            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
         
         if (isRelevant) {
-          setMessages(prev => {
-            // ID 중복 체크를 통해 UI 중복 노출 방지
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          
-          if (newMsg.receiver_id === authUser.id) {
-            markAsRead();
-          }
+          setMessages(prev => mergeMessages(prev, newMsg));
+          if (newMsg.receiver_id === authUser.id) markAsRead();
         }
       })
       .on('postgres_changes', {
@@ -158,33 +165,28 @@ const Chat = () => {
         table: 'messages'
       }, (payload) => {
         const updatedMsg = payload.new as Message;
-        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+        setMessages(prev => mergeMessages(prev, updatedMsg));
       })
       .subscribe();
 
     return () => { 
       supabase.removeChannel(channel);
     };
-  }, [authUser, chatId]);
+  }, [authUser?.id, chatId]); // authUser 전체가 아닌 id만 의존성에 추가하여 불필요한 재구독 방지
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
       scrollToBottom('smooth');
     }
-  }, [messages]);
+  }, [messages.length]);
 
   const handleSend = async () => {
     const now = Date.now();
     const content = inputValue.trim();
 
-    // 1. 즉각적인 중복 실행 차단 (Ref + 시간차 체크)
-    if (!content || !authUser || !chatId || isProcessingRef.current || (now - lastSentTimeRef.current < 1000)) {
-      return;
-    }
+    if (!content || !authUser || !chatId || isProcessingRef.current) return;
 
-    // 2. 전송 상태 잠금 및 입력창 즉시 초기화
     isProcessingRef.current = true;
-    lastSentTimeRef.current = now;
     setIsSending(true);
     setInputValue('');
 
@@ -198,12 +200,10 @@ const Chat = () => {
         }]);
         
         if (error) throw error;
-        // 성공 시 화면 업데이트는 Realtime 리스너가 처리함
       } catch (err) {
         showError('메시지 전송에 실패했습니다.');
-        setInputValue(content); // 실패 시에만 입력값 복구
+        setInputValue(content);
       } finally {
-        // 전송 완료 후 상태 해제 (약간의 지연을 두어 연타 방지)
         setTimeout(() => {
           isProcessingRef.current = false;
           setIsSending(false);
