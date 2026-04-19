@@ -1,8 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
-import { verifyYoutubeUrl } from "./youtube-utils";
+import { createMockPosts, YOUTUBE_IDS_POOL, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
@@ -88,6 +87,16 @@ const AD_COMMENTS = [
   '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
 ];
 
+// 배열을 무작위로 섞는 헬퍼 함수
+const shuffleArray = <T>(array: T[]): T[] => {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+};
+
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
@@ -105,54 +114,64 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
 
 const getRandomLikesFlat = () => {
   const r = Math.random();
-  if (r < 0.5) return Math.floor(Math.random() * 1001); // 0~1000 (50%)
-  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000); // 1000~5000 (30%)
-  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000); // 5000~10000 (10%)
-  return Math.floor(Math.random() * 10001 + 10000); // 10000~20000 (10%)
+  if (r < 0.5) return Math.floor(Math.random() * 1001);
+  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000);
+  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000);
+  return Math.floor(Math.random() * 10001 + 10000);
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   console.log("🚀 [Seeder] 전역 데이터 생성 프로세스를 시작합니다...");
   
   try {
-    console.log("👥 [Seeder] 사용자 프로필 목록을 가져오는 중...");
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
-    console.log(`✅ [Seeder] ${userPool.length}명의 사용자 풀이 준비되었습니다.`);
-
-    const allInsertData: any[] = [];
+    
+    // 리소스 풀 셔플 및 카운터 초기화 (Round-robin 보장)
+    const shuffledUnsplash = shuffleArray(UNSPLASH_IDS);
+    const shuffledFood = shuffleArray(FOOD_UNSPLASH_IDS);
+    const shuffledYoutube = shuffleArray(YOUTUBE_IDS_POOL);
+    
+    let unsplashCounter = 0;
+    let foodCounter = 0;
+    let youtubeCounter = 0;
     let globalIndex = 0;
 
+    const allInsertData: any[] = [];
+
     for (const city of MAJOR_CITIES) {
-      console.log(`📍 [Seeder] ${city.name} 지역 데이터 생성 중... (목표: ${city.density}개)`);
+      console.log(`📍 [Seeder] ${city.name} 지역 데이터 생성 중...`);
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       
       for (let i = 0; i < mockPosts.length; i++) {
         const p = mockPosts[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         
-        // 주소 변환은 속도를 위해 50개마다 한 번씩만 실제 호출하고 나머지는 도시 이름으로 대체 (API 제한 방지)
         let realAddress = city.name;
-        if (i % 50 === 0) {
-          realAddress = await getAddressFromCoords(p.lat, p.lng);
-        }
+        if (i % 50 === 0) realAddress = await getAddressFromCoords(p.lat, p.lng);
         
-        const finalLikes = getRandomLikesFlat();
-        const isAd = p.isAd;
+        const isAd = i % 20 === 0;
+        const isYoutube = !isAd && (i % 2 === 0);
         
         let finalYoutubeUrl = null;
         let finalImage = "";
         
         if (isAd) {
-          finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
+          // 음식 이미지 풀 순환
+          const foodId = shuffledFood[foodCounter % shuffledFood.length];
+          finalImage = getUnsplashUrl(foodId);
+          foodCounter++;
+        } else if (isYoutube) {
+          // 유튜브 풀 순환
+          const ytId = shuffledYoutube[youtubeCounter % shuffledYoutube.length];
+          finalYoutubeUrl = `https://www.youtube.com/shorts/${ytId}`;
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || "";
+          youtubeCounter++;
         } else {
-          if (globalIndex % 2 === 0) {
-            const candidateUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
-            finalYoutubeUrl = candidateUrl;
-            finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
-          } else {
-            finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
-          }
+          // 일반 Unsplash 풀 순환 (500개 모두 쓸 때까지 중복 없음)
+          const unsplashId = shuffledUnsplash[unsplashCounter % shuffledUnsplash.length];
+          finalImage = getUnsplashUrl(unsplashId);
+          unsplashCounter++;
         }
 
         const finalContent = isAd 
@@ -169,50 +188,35 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: finalLikes,
+          likes: getRandomLikesFlat(),
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
 
         globalIndex++;
-        
-        if (globalIndex % 500 === 0) {
-          console.log(`   - 진행 상황: ${globalIndex}개 생성 완료...`);
-        }
+        if (globalIndex % 500 === 0) console.log(`   - 진행 상황: ${globalIndex}개 생성 완료...`);
       }
     }
 
-    console.log(`📦 [Seeder] 총 ${allInsertData.length}개의 데이터 생성이 완료되었습니다.`);
-    console.log("📤 [Seeder] 데이터베이스에 저장을 시작합니다 (Chunk 단위)...");
-
+    console.log(`📤 [Seeder] 총 ${allInsertData.length}개 데이터를 DB에 저장합니다...`);
     const chunkSize = 50;
-    const totalChunks = Math.ceil(allInsertData.length / chunkSize);
-    
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
-      const currentChunkNum = Math.floor(i / chunkSize) + 1;
-      
       const { error } = await supabase.from('posts').insert(chunk);
       if (error) throw error;
-      
-      if (currentChunkNum % 10 === 0 || currentChunkNum === totalChunks) {
-        console.log(`   - DB 저장 중: ${currentChunkNum}/${totalChunks} 청크 완료...`);
-      }
     }
 
     console.log("✨ [Seeder] 모든 데이터가 성공적으로 저장되었습니다!");
     return allInsertData.length;
   } catch (err: any) { 
-    console.error("❌ [Seeder] 데이터 생성 중 오류 발생:", err); 
+    console.error("❌ [Seeder] 오류 발생:", err); 
     throw err; 
   }
 };
 
 export const randomizeExistingLikes = async () => {
-  console.log("🎲 [Seeder] 전체 좋아요 수치 랜덤화 작업을 시작합니다...");
   try {
     const { data, error } = await supabase.rpc('randomize_all_likes');
     if (error) throw error;
-    console.log(`✅ [Seeder] ${data}개 포스팅의 수치가 성공적으로 변경되었습니다.`);
     return data || 0;
   } catch (err) {
     console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
