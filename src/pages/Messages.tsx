@@ -101,7 +101,11 @@ const Messages = () => {
 
     fetchConversations();
     const unsubscribe = chatStore.subscribe(fetchConversations);
-    return () => unsubscribe();
+    
+    // 클린업 함수가 boolean을 반환하지 않도록 중괄호로 감싸 void 처리
+    return () => {
+      unsubscribe();
+    };
   }, [authUser]);
 
   const filteredConversations = conversations.filter(conv => 
