@@ -255,7 +255,7 @@ const Chat = () => {
     <div className="bg-white overflow-hidden" style={{ height: '100dvh' }}>
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 h-[88px] z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
+        className="fixed top-0 left-0 right-0 h-[88px] z-50 bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
         style={{
           paddingTop: 'max(32px, env(safe-area-inset-top))',
         }}
