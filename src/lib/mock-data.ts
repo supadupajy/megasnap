@@ -1,6 +1,7 @@
 "use client";
 
 import { Post, User, Comment } from '@/types';
+import { getYoutubeThumbnail } from './utils';
 
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -25,7 +26,7 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 검증된 플레이 가능한 유튜브 링크 50개 (Shorts 및 일반 영상)
+// 검증된 플레이 가능한 유튜브 링크 50개
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg",
   "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
@@ -54,7 +55,7 @@ export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7"
 ];
 
-// 완전히 고유한 Unsplash 이미지 ID 70개
+// 고유한 Unsplash 이미지 ID 70개
 export const UNSPLASH_IDS = [
   "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", 
   "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e",
@@ -77,10 +78,9 @@ export const UNSPLASH_IDS = [
   "1500382017468-9049fed747ef", "1490730141103-6ac27d95654e", "1519681393784-d120267933ba",
   "1486406146926-c627a92ad1ab", "1449034446853-66c86144b0ad", "1470252649378-9c29740c9fa8",
   "1501183638710-841dd1904471", "1493552152660-f915ab47ae9d", "1511576661531-b3fb3e44e831",
-  "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9", "1505144248183-4b55149ecf1e",
-  "1477959858617-67f85cf4f1df", "1444703686981-331c5bbdfc86", "1465146344425-f00d5f5c8f07",
-  "1473442242725-d8364c7541e8", "1502672260266-1c1ef2d93688", "1501949997128-24859584bb55",
-  "1496715976403-7e36d14a12eb"
+  "1534067783941-51c9c23ecefd", "1502082553048-f009c37129b9", "1477959858617-67f85cf4f1df",
+  "1444703686981-331c5bbdfc86", "1465146344425-f00d5f5c8f07", "1473442242725-d8364c7541e8",
+  "1502672260266-1c1ef2d93688", "1501949997128-24859584bb55", "1496715976403-7e36d14a12eb"
 ];
 
 export const FOOD_UNSPLASH_IDS = [
@@ -124,11 +124,14 @@ export const createMockPosts = (
       ? "특별한 혜택을 만나보세요! ✨"
       : "오늘의 멋진 순간을 기록합니다. 📍";
     
-    // 이미지는 무조건 Unsplash 사용 (유튜브 썸네일 배제)
     let image = "";
     if (isAd) {
       image = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(randomFn() * FOOD_UNSPLASH_IDS.length)]);
+    } else if (hasYoutube && youtubeUrl) {
+      // 유튜브 영상인 경우 마커와 리스트에서 썸네일 사용
+      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
     } else {
+      // 일반 포스팅은 무조건 Unsplash 사용
       image = getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
     }
 

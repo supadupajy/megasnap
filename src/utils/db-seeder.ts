@@ -2,6 +2,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
+import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
   { 
@@ -128,14 +129,16 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = "";
         
-        // 이미지는 무조건 Unsplash 사용 (유튜브 썸네일 배제)
         if (isAd) {
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
+          finalYoutubeUrl = null;
+        } else if (Math.random() < 0.5) {
+          finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          // 유튜브 영상인 경우 썸네일을 대표 이미지로 저장
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
         } else {
           finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
-          if (Math.random() < 0.5) {
-            finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          }
+          finalYoutubeUrl = null;
         }
 
         const finalContent = isAd 
