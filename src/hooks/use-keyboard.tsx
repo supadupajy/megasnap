@@ -41,6 +41,8 @@ export function useKeyboard() {
       const { isOpen, height } = e.detail;
       setKeyboardHeight(height);
       setIsKeyboardOpen(isOpen);
+      
+      // ✅ 이 부분이 body에 클래스를 추가/제거하고 있습니다.
       if (isOpen) {
         document.body.classList.add('virtual-keyboard-active');
       } else {
