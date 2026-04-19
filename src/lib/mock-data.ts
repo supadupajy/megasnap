@@ -69,8 +69,8 @@ export const createMockUser = (id: string, randomFn: () => number = Math.random,
   
   if (forceInfluencer) {
     const tierRoll = randomFn();
-    if (tierRoll > 0.8) followers = Math.floor(randomFn() * 5000000) + 10000000; 
-    else if (tierRoll > 0.5) followers = Math.floor(randomFn() * 4000000) + 1000000; 
+    if (tierRoll > 0.66) followers = Math.floor(randomFn() * 5000000) + 10000000; 
+    else if (tierRoll > 0.33) followers = Math.floor(randomFn() * 4000000) + 1000000; 
     else followers = Math.floor(randomFn() * 900000) + 100000; 
   }
 
@@ -111,10 +111,10 @@ export const createMockPosts = (
     let isPopular = false;
     let isAd = false;
 
-    // 인플루언서 및 인기 포스팅 확률 상향 (각 10%)
+    // 인플루언서 및 인기 포스팅 확률 조정 (각 5%)
     if (!specificUserId) {
-      if (typeRoll < 0.10) isInfluencer = true; 
-      else if (typeRoll < 0.20) isPopular = true; 
+      if (typeRoll < 0.05) isInfluencer = true; 
+      else if (typeRoll < 0.10) isPopular = true; 
     }
 
     const isGif = false; 
@@ -171,8 +171,8 @@ export const createMockPosts = (
       : createMockUser(id, randomFn, isInfluencer);
 
     const likes = isInfluencer 
-      ? Math.floor(randomFn() * 10000) + 5000 
-      : (isPopular ? Math.floor(randomFn() * 3000) + 1500 : Math.floor(randomFn() * 500) + 10);
+      ? Math.floor(randomFn() * 45000) + 5000 
+      : (isPopular ? Math.floor(randomFn() * 3500) + 1500 : Math.floor(randomFn() * 1489) + 10);
 
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
     if (isInfluencer && user.followers) {
