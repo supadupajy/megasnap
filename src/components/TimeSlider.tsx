@@ -11,18 +11,20 @@ interface TimeSliderProps {
 }
 
 const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
-  // 1부터 24까지의 시간
+  // 1부터 24까지의 시간 (시각적 마커용)
   const hours = Array.from({ length: 24 }, (_, i) => i + 1);
 
   return (
     <div className="fixed right-4 bottom-[285px] h-[260px] w-9 flex flex-col items-center z-50 pointer-events-none">
       <div className="pointer-events-auto h-full w-full bg-white/90 backdrop-blur-xl rounded-full shadow-2xl border border-white/40 flex flex-col items-center py-4 gap-3 overflow-hidden">
+        {/* Header */}
         <div className="flex flex-col items-center gap-0.5 shrink-0">
           <Clock className="w-3.5 h-3.5 text-indigo-600" />
           <span className="text-[6px] font-black text-gray-400 uppercase tracking-tighter">Time</span>
         </div>
 
-        <div className="flex-1 w-full px-2 relative flex flex-col items-center min-h-0">
+        {/* Slider Area */}
+        <div className="relative w-full h-[160px] px-2 flex flex-col items-center">
           {/* Track Background */}
           <div className="absolute inset-y-0 w-1.5 bg-gray-100 rounded-full left-1/2 -translate-x-1/2" />
           
@@ -34,7 +36,11 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           />
 
-          {/* Vertical Input - 투명하게 겹쳐서 실제 조작 담당 */}
+          {/* 
+            실제 조작용 Input: 
+            가로형 슬라이더를 생성한 뒤 -90도 회전시켜 세로로 만듭니다.
+            이 방식이 브라우저 호환성이 가장 좋으며 레이아웃 이탈을 방지합니다.
+          */}
           <input
             type="range"
             min="1"
@@ -42,11 +48,13 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
             step="1"
             value={value}
             onChange={(e) => onChange(parseInt(e.target.value))}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none z-20"
+            className="absolute w-[160px] h-9 opacity-0 cursor-pointer appearance-none z-20 m-0"
             style={{ 
-              WebkitAppearance: 'slider-vertical',
-              writingMode: 'bt-lr'
-            } as any}
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%) rotate(-90deg)',
+              WebkitAppearance: 'none'
+            }}
           />
 
           {/* Markers (Visual only) */}
@@ -63,6 +71,7 @@ const TimeSlider = ({ value, onChange }: TimeSliderProps) => {
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex flex-col items-center shrink-0">
           <span className="text-[13px] font-black text-indigo-600 leading-none">{value}</span>
           <span className="text-[7px] font-black text-gray-400 uppercase">HR</span>
