@@ -6,15 +6,26 @@ import { Post } from "@/types";
 
 // DB 데이터를 앱에서 사용하는 Post 타입으로 변환하는 헬퍼 함수
 const mapDbToPost = (p: any): Post => {
-  // 좋아요 수에 따라 인기 포스팅 여부 결정 (프론트엔드 로직)
   const likes = Number(p.likes || 0);
-  const borderType = likes >= 1500 ? 'popular' : 'none';
+  // 좋아요 수에 따라 인기 포스팅 여부 결정 (1500개 이상)
+  const isPopular = likes >= 1500;
+  // 좋아요 수에 따라 인플루언서 여부 결정 (5000개 이상)
+  const isInfluencer = likes >= 5000;
+
+  let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
+  if (isInfluencer) {
+    if (likes >= 15000) borderType = 'diamond';
+    else if (likes >= 10000) borderType = 'gold';
+    else borderType = 'silver';
+  } else if (isPopular) {
+    borderType = 'popular';
+  }
 
   return {
     id: p.id,
     isAd: false,
-    isGif: false, // DB에 컬럼이 없으므로 기본값 설정
-    isInfluencer: false, 
+    isGif: false,
+    isInfluencer: isInfluencer, 
     user: {
       id: p.user_id,
       name: p.user_name || '탐험가',
@@ -29,7 +40,7 @@ const mapDbToPost = (p: any): Post => {
     comments: [],
     image: p.image_url || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&auto=format&fit=crop',
     videoUrl: p.video_url,
-    category: 'none', // DB에 컬럼이 없으므로 기본값 설정
+    category: 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),
     borderType: borderType,
