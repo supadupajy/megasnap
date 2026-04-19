@@ -152,21 +152,20 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div 
-      className="fixed inset-0 bg-white flex flex-col overflow-hidden"
-      style={{ 
-        // 스마트폰(터치 기기)에서는 시스템이 웹뷰 크기를 줄이므로 bottom: 0으로 충분합니다.
-        // 웹 시뮬레이터 환경에서만 수동으로 keyboardHeight만큼 띄워줍니다.
-        bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
-      }}
-    >
-      {/* Header */}
-      <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
+    <div className="fixed inset-0 bg-white overflow-hidden">
+      {/* Header - 화면 최상단에 완전히 고정 */}
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/95 backdrop-blur-md z-[100] flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
+            <ChevronLeft className="w-6 h-6 text-gray-800" />
+          </button>
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
-              <img src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} alt="user" className="w-full h-full rounded-full object-cover border-2 border-white" />
+              <img 
+                src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} 
+                alt="user" 
+                className="w-full h-full rounded-full object-cover border-2 border-white" 
+              />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-black text-gray-900">{otherUser?.nickname || otherUser?.name || '사용자'}</span>
@@ -181,48 +180,57 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List */}
+      {/* Chat Content Container - 헤더 아래부터 시작하며 키보드에 따라 높이 조절 */}
       <div 
-        ref={scrollRef} 
-        className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
+        className="fixed left-0 right-0 flex flex-col overflow-hidden"
+        style={{ 
+          top: '88px',
+          bottom: !('ontouchstart' in window) ? `${keyboardHeight}px` : '0px'
+        }}
       >
-        {messages.map((msg) => {
-          const isMe = msg.sender_id === authUser?.id;
-          const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          return (
-            <div key={msg.id} className={cn("flex flex-col max-w-[85%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
-              <div className={cn("px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm", isMe ? "bg-indigo-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 rounded-tl-none")}>{msg.content}</div>
-              <div className="flex items-center gap-1 mt-1 px-1">
-                {isMe && <span className="text-[8px] font-black text-indigo-600">{msg.is_read ? '' : '1'}</span>}
-                <span className="text-[9px] text-gray-400 font-bold">{time}</span>
-              </div>
-            </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-100 shrink-0">
-        <form 
-          onSubmit={handleSend}
-          className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
+        {/* Message List */}
+        <div 
+          ref={scrollRef} 
+          className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
         >
-          <Input 
-            placeholder="메시지 보내기..." 
-            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
-            value={inputValue} 
-            onChange={(e) => setInputValue(e.target.value)} 
-          />
-          <Button 
-            type="submit"
-            size="icon" 
-            disabled={!inputValue.trim() || isSending} 
-            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
+          {messages.map((msg) => {
+            const isMe = msg.sender_id === authUser?.id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return (
+              <div key={msg.id} className={cn("flex flex-col max-w-[85%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
+                <div className={cn("px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm", isMe ? "bg-indigo-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 rounded-tl-none")}>{msg.content}</div>
+                <div className="flex items-center gap-1 mt-1 px-1">
+                  {isMe && <span className="text-[8px] font-black text-indigo-600">{msg.is_read ? '' : '1'}</span>}
+                  <span className="text-[9px] text-gray-400 font-bold">{time}</span>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+          <form 
+            onSubmit={handleSend}
+            className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
           >
-            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </Button>
-        </form>
+            <Input 
+              placeholder="메시지 보내기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
+              value={inputValue} 
+              onChange={(e) => setInputValue(e.target.value)} 
+            />
+            <Button 
+              type="submit"
+              size="icon" 
+              disabled={!inputValue.trim() || isSending} 
+              className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
+            >
+              {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );
