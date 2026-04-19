@@ -35,28 +35,30 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState('100%');
+  
+  // 실제 가용 화면 높이를 추적
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isProcessingRef = useRef(false);
 
-  // 키보드 대응을 위한 VisualViewport 감지
+  // 키보드 대응을 위한 VisualViewport 감지 및 높이 강제 설정
   useEffect(() => {
     const handleResize = () => {
       if (window.visualViewport) {
-        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
+        // 키보드가 올라오면 visualViewport.height가 줄어든 가용 높이를 반환합니다.
         setViewportHeight(`${window.visualViewport.height}px`);
-        // 높이가 변할 때 메시지 하단으로 스크롤
-        setTimeout(() => scrollToBottom('auto'), 100);
+        // 높이 변경 시 메시지 하단으로 즉시 스크롤
+        setTimeout(() => scrollToBottom('auto'), 50);
       }
     };
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize);
       window.visualViewport.addEventListener('scroll', handleResize);
-      handleResize(); // 초기 실행
+      handleResize();
     }
 
     return () => {
@@ -178,11 +180,15 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
+    /* 
+      전체 컨테이너를 fixed로 고정하고, 높이를 visualViewport.height로 강제합니다.
+      이렇게 하면 키보드가 올라올 때 컨테이너 자체가 물리적으로 줄어듭니다.
+    */
     <div 
-      className="w-full bg-white flex flex-col overflow-hidden fixed top-0 left-0"
+      className="fixed inset-0 w-full bg-white flex flex-col overflow-hidden z-[1000]"
       style={{ height: viewportHeight }}
     >
-      {/* 1. 상단 헤더 (고정 높이) */}
+      {/* 1. 상단 헤더 (고정 높이, 절대 줄어들지 않음) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -209,7 +215,11 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 채팅창 (유동 높이) */}
+      {/* 
+        2. 가운데 메시지 영역 (유동 높이)
+        컨테이너 높이가 줄어들면 이 영역의 길이(height)가 자동으로 줄어듭니다.
+        min-h-0을 주어 내용물에 상관없이 줄어들 수 있게 합니다.
+      */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
@@ -230,7 +240,7 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 (고정 높이) */}
+      {/* 3. 하단 입력창 (고정 높이, 절대 줄어들지 않음) */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
