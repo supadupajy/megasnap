@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus } from 'lucide-react';
+import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import BottomNav from '@/components/BottomNav';
@@ -9,7 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import DeleteChatDialog from '@/components/DeleteChatDialog';
 
 interface Conversation {
   other_id: string;
@@ -30,76 +32,79 @@ const Messages = () => {
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+  
+  // 삭제 관련 상태
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const fetchConversations = async () => {
+    if (!authUser) return;
+    try {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const convMap = new Map<string, any>();
+      if (messages) {
+        for (const msg of messages) {
+          const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
+          if (!convMap.has(otherId)) {
+            convMap.set(otherId, {
+              other_id: otherId,
+              last_message: msg.content,
+              created_at: msg.created_at,
+              unread_count: (!msg.is_read && msg.receiver_id === authUser.id) ? 1 : 0
+            });
+          } else if (!msg.is_read && msg.receiver_id === authUser.id) {
+            convMap.get(otherId).unread_count += 1;
+          }
+        }
+      }
+
+      const localRooms = chatStore.getRooms();
+      for (const room of localRooms) {
+        if (!convMap.has(room.id) && room.messages.length > 0) {
+          const lastMsg = room.messages[room.messages.length - 1];
+          convMap.set(room.id, {
+            other_id: room.id,
+            last_message: lastMsg.text,
+            created_at: new Date().toISOString(),
+            unread_count: room.unread ? 1 : 0,
+            profile: { nickname: room.user.name, avatar_url: room.user.avatar }
+          });
+        }
+      }
+
+      const convList = Array.from(convMap.values());
+      const results = await Promise.all(
+        convList.map(async (conv) => {
+          if (conv.profile) return conv;
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('nickname, avatar_url')
+            .eq('id', conv.other_id)
+            .single();
+          return {
+            ...conv,
+            profile: profile || { nickname: '사용자', avatar_url: null }
+          };
+        })
+      );
+
+      results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setConversations(results);
+    } catch (err: any) {
+      console.error('Fetch conversations error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!authUser) return;
-
-    const fetchConversations = async () => {
-      try {
-        const { data: messages, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const convMap = new Map<string, any>();
-        if (messages) {
-          for (const msg of messages) {
-            const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
-            if (!convMap.has(otherId)) {
-              convMap.set(otherId, {
-                other_id: otherId,
-                last_message: msg.content,
-                created_at: msg.created_at,
-                unread_count: (!msg.is_read && msg.receiver_id === authUser.id) ? 1 : 0
-              });
-            } else if (!msg.is_read && msg.receiver_id === authUser.id) {
-              convMap.get(otherId).unread_count += 1;
-            }
-          }
-        }
-
-        const localRooms = chatStore.getRooms();
-        for (const room of localRooms) {
-          if (!convMap.has(room.id) && room.messages.length > 0) {
-            const lastMsg = room.messages[room.messages.length - 1];
-            convMap.set(room.id, {
-              other_id: room.id,
-              last_message: lastMsg.text,
-              created_at: new Date().toISOString(),
-              unread_count: room.unread ? 1 : 0,
-              profile: { nickname: room.user.name, avatar_url: room.user.avatar }
-            });
-          }
-        }
-
-        const convList = Array.from(convMap.values());
-        const results = await Promise.all(
-          convList.map(async (conv) => {
-            if (conv.profile) return conv;
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('nickname, avatar_url')
-              .eq('id', conv.other_id)
-              .single();
-            return {
-              ...conv,
-              profile: profile || { nickname: '사용자', avatar_url: null }
-            };
-          })
-        );
-
-        results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setConversations(results);
-      } catch (err: any) {
-        console.error('Fetch conversations error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchConversations();
     const unsubscribe = chatStore.subscribe(fetchConversations);
     return () => unsubscribe();
@@ -115,7 +120,6 @@ const Messages = () => {
 
       setIsSearchingGlobal(true);
       try {
-        // bio 컬럼을 제외하고 검색
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url')
@@ -131,9 +135,6 @@ const Messages = () => {
         }
       } catch (err: any) {
         console.error('Supabase search error:', err);
-        if (err.code === '42501') {
-          showError('데이터베이스 접근 권한이 없습니다.');
-        }
       } finally {
         setIsSearchingGlobal(false);
       }
@@ -155,6 +156,35 @@ const Messages = () => {
   const handleStartChat = (user: any) => {
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
     navigate(`/chat/${user.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, otherId: string) => {
+    e.stopPropagation();
+    setDeleteTargetId(otherId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!authUser || !deleteTargetId) return;
+
+    try {
+      // 실제 DB에서 해당 유저와의 메시지 삭제 (단순 구현을 위해 전체 삭제)
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`);
+
+      if (error) throw error;
+
+      setConversations(prev => prev.filter(c => c.other_id !== deleteTargetId));
+      showSuccess('대화가 삭제되었습니다.');
+    } catch (err) {
+      console.error('Delete chat error:', err);
+      showError('대화 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+    }
   };
 
   return (
@@ -193,26 +223,53 @@ const Messages = () => {
               {query ? '대화 목록 검색 결과' : '최근 메시지'}
             </h2>
             <div className="space-y-1">
-              {filteredConversations.map((conv) => {
-                const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                return (
-                  <div key={conv.other_id} onClick={() => navigate(`/chat/${conv.other_id}`)} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all">
-                    <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
-                      <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <p className={`text-sm ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
-                        <span className="text-[10px] text-gray-400 font-medium">{time}</span>
+              <AnimatePresence initial={false}>
+                {filteredConversations.map((conv) => {
+                  const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <div key={conv.other_id} className="relative group overflow-hidden rounded-[24px]">
+                      {/* 삭제 버튼 배경 */}
+                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
+                        <button 
+                          onClick={(e) => handleDeleteClick(e, conv.other_id)}
+                          className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+                        >
+                          <Trash2 className="w-6 h-6" />
+                          <span className="text-[10px] font-bold">삭제</span>
+                        </button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
-                        {conv.unread_count > 0 && <div className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
-                      </div>
+
+                      {/* 대화 아이템 (스와이프 가능) */}
+                      <motion.div
+                        drag="x"
+                        dragConstraints={{ left: -80, right: 0 }}
+                        dragElastic={0.1}
+                        onDragEnd={(_, info) => {
+                          if (info.offset.x > 50) {
+                            // 오른쪽으로 밀면 제자리 (필요시 구현)
+                          }
+                        }}
+                        className="relative bg-white flex items-center gap-4 p-3 cursor-pointer z-10"
+                        onClick={() => navigate(`/chat/${conv.other_id}`)}
+                      >
+                        <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
+                          <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className={`text-sm ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
+                            <span className="text-[10px] text-gray-400 font-medium">{time}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
+                            {conv.unread_count > 0 && <div className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
+                          </div>
+                        </div>
+                      </motion.div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -252,6 +309,13 @@ const Messages = () => {
           )}
         </div>
       </div>
+      
+      <DeleteChatDialog 
+        isOpen={isDeleteDialogOpen} 
+        onClose={() => setIsDeleteDialogOpen(false)} 
+        onConfirm={confirmDelete} 
+      />
+      
       <BottomNav onWriteClick={() => {}} />
     </div>
   );
