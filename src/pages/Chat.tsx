@@ -6,7 +6,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useKeyboard } from '@/hooks/use-keyboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
@@ -30,7 +29,6 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
-  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -41,7 +39,6 @@ const Chat = () => {
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -51,51 +48,15 @@ const Chat = () => {
     }
   };
 
-  // 모바일 브라우저의 VisualViewport 물리적 좌표 강제 동기화
+  // 키보드가 올라와서 뷰포트 높이가 변할 때마다 스크롤 하단 고정
   useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    const handleViewportChange = () => {
-      if (containerRef.current) {
-        // 브라우저의 기본 스크롤을 무시하고 가시 영역에 컨테이너를 박제
-        containerRef.current.style.height = `${viewport.height}px`;
-        containerRef.current.style.top = `${viewport.offsetTop}px`;
-        
-        // 브라우저가 입력창을 시야에 넣으려고 페이지를 스크롤하는 것을 방지
-        window.scrollTo(0, 0);
-      }
+    const handleResize = () => {
+      setTimeout(() => scrollToBottom('auto'), 100);
     };
-
-    viewport.addEventListener('resize', handleViewportChange);
-    viewport.addEventListener('scroll', handleViewportChange);
     
-    // 초기 실행
-    handleViewportChange();
-
-    return () => {
-      viewport.removeEventListener('resize', handleViewportChange);
-      viewport.removeEventListener('scroll', handleViewportChange);
-    };
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
   }, []);
-
-  // 웹 시뮬레이터 대응 (터치 기기가 아닐 때)
-  useEffect(() => {
-    if (keyboardHeight > 0 && !('ontouchstart' in window)) {
-      if (containerRef.current) {
-        containerRef.current.style.height = `calc(100vh - ${keyboardHeight}px)`;
-        containerRef.current.style.top = '0px';
-      }
-    } else if (!isKeyboardOpen && !window.visualViewport) {
-      if (containerRef.current) {
-        containerRef.current.style.height = '100dvh';
-        containerRef.current.style.top = '0px';
-      }
-    }
-    
-    const timer = setTimeout(() => scrollToBottom('auto'), 100);
-    return () => clearTimeout(timer);
-  }, [keyboardHeight, isKeyboardOpen]);
 
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
@@ -252,11 +213,7 @@ const Chat = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div 
-      ref={containerRef}
-      className="fixed left-0 right-0 flex flex-col bg-white overflow-hidden z-[1000]"
-      style={{ height: '100dvh', top: 0 }}
-    >
+    <div className="fixed inset-0 flex flex-col bg-white overflow-hidden z-[1000]">
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -300,22 +257,13 @@ const Chat = () => {
       </div>
 
       {/* Input Area */}
-      <div 
-        className="p-4 bg-white border-t border-gray-100 shrink-0"
-        style={{ 
-          paddingBottom: isKeyboardOpen ? '12px' : 'calc(12px + env(safe-area-inset-bottom, 24px))' 
-        }}
-      >
+      <div className="p-4 bg-white border-t border-gray-100 shrink-0 pb-[env(safe-area-inset-bottom,24px)]">
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            onFocus={() => {
-              // 포커스 시 브라우저의 강제 스크롤 방지
-              setTimeout(() => window.scrollTo(0, 0), 0);
-            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault();
