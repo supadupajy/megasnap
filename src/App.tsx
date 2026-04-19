@@ -55,7 +55,9 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
+  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(
+    path => location.pathname.startsWith(path)
+  );
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -79,19 +81,22 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    /* Chat 페이지일 때는 부모가 높이를 잡지 않고 자식(Chat.tsx)의 100dvh에 맡김 */
-    <div className={`relative bg-white ${!isChatPage ? "min-h-[100dvh]" : ""}`}>
+    // ✅ Chat일 때: h-[100dvh] + overflow-hidden으로 자식에게 높이 위임
+    // ✅ 그 외: 기존대로 min-h-[100dvh]
+    <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
       {!hideLayout && session && <Header />}
-      
-      <main className="relative">
+
+      {/* ✅ Chat일 때 main도 높이를 꽉 채워야 motion.div까지 전달됨 */}
+      <main className={`relative ${isChatPage ? "h-full" : ""}`}>
         <AnimatePresence mode="wait">
-          <motion.div 
+          <motion.div
             key={location.pathname}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="w-full"
+            // ✅ Chat일 때 motion.div도 h-full로 높이 전달, overflow-hidden으로 차단
+            className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
@@ -113,10 +118,10 @@ const AnimatedRoutes = () => {
 
       <KeyboardSimulator />
 
-      <ExitDialog 
-        isOpen={showExitDialog} 
-        onClose={() => setShowExitDialog(false)} 
-        onConfirm={() => CapApp.exitApp()} 
+      <ExitDialog
+        isOpen={showExitDialog}
+        onClose={() => setShowExitDialog(false)}
+        onConfirm={() => CapApp.exitApp()}
       />
     </div>
   );
@@ -137,7 +142,8 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <div className="min-h-[100dvh] w-full bg-white">
+            {/* ✅ 최상위 wrapper: Chat일 때를 대비해 overflow-hidden 추가 */}
+            <div className="min-h-[100dvh] w-full bg-white overflow-hidden">
               <AnimatePresence mode="wait">
                 {showSplash ? (
                   <SplashScreen key="splash" />
