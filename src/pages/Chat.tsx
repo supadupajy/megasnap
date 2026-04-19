@@ -29,7 +29,7 @@ const isValidUUID = (uuid: string) => {
 };
 
 const HEADER_HEIGHT = 88;
-const INPUT_AREA_HEIGHT = 72;
+const INPUT_AREA_HEIGHT = 64; // 높이를 72에서 64로 축소
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -55,9 +55,6 @@ const Chat = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ 핵심: visualViewport 기준으로 헤더와 입력창을 JS로 직접 위치 고정
-  // resizes-content 모드에서 뷰포트가 스크롤되면 offsetTop이 변하는데,
-  // 이 값을 이용해 헤더/입력창을 항상 시각적 뷰포트 안에 고정시킴
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
@@ -66,27 +63,24 @@ const Chat = () => {
       const offsetTop = vp.offsetTop ?? 0;
       const keyboardHeight = window.innerHeight - vp.height - offsetTop;
 
-      // 헤더: 시각적 뷰포트 상단에 고정
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
-      // 입력창: 시각적 뷰포트 하단(키보드 바로 위)에 고정
       if (inputRef.current) {
         const bottomOffset = Math.max(0, keyboardHeight);
         inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
       }
 
-      // 메시지 영역 하단 패딩: 입력창 + 키보드 높이만큼 확보
       if (scrollRef.current) {
-        const bottomPad = INPUT_AREA_HEIGHT + Math.max(0, keyboardHeight) + 16;
+        // 하단 여백을 입력창 높이보다 넉넉하게(24px 추가) 설정하여 겹침 방지
+        const bottomPad = INPUT_AREA_HEIGHT + Math.max(0, keyboardHeight) + 24;
         scrollRef.current.style.paddingBottom = `${bottomPad}px`;
       }
 
       setTimeout(scrollToBottom, 50);
     };
 
-    // 초기값 설정
     handleViewport();
 
     vp.addEventListener('resize', handleViewport);
@@ -94,7 +88,6 @@ const Chat = () => {
     return () => {
       vp.removeEventListener('resize', handleViewport);
       vp.removeEventListener('scroll', handleViewport);
-      // 클린업: transform 초기화
       if (headerRef.current) headerRef.current.style.transform = '';
       if (inputRef.current) inputRef.current.style.transform = '';
     };
@@ -228,13 +221,10 @@ const Chat = () => {
 
   return (
     <div className="bg-white overflow-hidden" style={{ height: '100dvh' }}>
-
-      {/* ✅ 헤더: fixed + JS translateY로 시각적 뷰포트 상단에 항상 고정 */}
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
+        className="fixed top-0 left-0 right-0 h-[88px] z-50 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
         style={{
-          height: `${HEADER_HEIGHT}px`,
           paddingTop: 'max(32px, env(safe-area-inset-top))',
         }}
       >
@@ -271,14 +261,13 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* ✅ 메시지 영역: 헤더/입력창 높이만큼 padding 확보, 나머지는 스크롤 */}
       <div
         ref={scrollRef}
         className="overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
           height: '100dvh',
           paddingTop: `${HEADER_HEIGHT + 16}px`,
-          paddingBottom: `${INPUT_AREA_HEIGHT + 16}px`,
+          paddingBottom: `${INPUT_AREA_HEIGHT + 24}px`,
         }}
       >
         {messages.map((msg) => {
@@ -311,18 +300,18 @@ const Chat = () => {
         })}
       </div>
 
-      {/* ✅ 입력창: fixed bottom-0 + JS translateY로 키보드 바로 위에 고정 */}
       <div
         ref={inputRef}
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
+        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
-          paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+          height: `${INPUT_AREA_HEIGHT}px`,
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
         }}
       >
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
           <Input
             placeholder="메시지 보내기..."
-            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold"
+            className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-8 font-bold"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -332,13 +321,13 @@ const Chat = () => {
             onClick={handleSend}
             disabled={!inputValue.trim()}
             className={cn(
-              'w-10 h-10 rounded-full transition-all shadow-lg',
+              'w-8 h-8 rounded-full transition-all shadow-lg',
               inputValue.trim()
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                 : 'bg-gray-200 text-gray-400'
             )}
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4" />
           </Button>
         </div>
       </div>
