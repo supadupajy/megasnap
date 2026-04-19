@@ -82,12 +82,11 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
 // 좋아요 수치 생성 헬퍼 함수
 const getRandomLikesByTier = () => {
   const tierRoll = Math.random();
-  // 분포 조정: 다이아몬드(1%), 골드(2%), 실버(4%), 인기(8%), 나머지 일반
-  if (tierRoll < 0.01) return Math.floor(Math.random() * 20000) + 15000; // Diamond (15k~35k)
-  if (tierRoll < 0.03) return Math.floor(Math.random() * 5000) + 10000;  // Gold (10k~15k)
-  if (tierRoll < 0.07) return Math.floor(Math.random() * 5000) + 5000;   // Silver (5k~10k)
-  if (tierRoll < 0.15) return Math.floor(Math.random() * 3500) + 1500;   // Popular (1.5k~5k)
-  return Math.floor(Math.random() * 1489) + 10;                         // Normal (<1.5k)
+  if (tierRoll < 0.01) return Math.floor(Math.random() * 20000) + 15000; // Diamond
+  if (tierRoll < 0.03) return Math.floor(Math.random() * 5000) + 10000;  // Gold
+  if (tierRoll < 0.07) return Math.floor(Math.random() * 5000) + 5000;   // Silver
+  if (tierRoll < 0.15) return Math.floor(Math.random() * 3500) + 1500;   // Popular
+  return Math.floor(Math.random() * 1489) + 10;                         // Normal
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
@@ -107,7 +106,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = p.image;
         
-        // 인기 등급 이상인 경우 50% 확률로 유튜브 할당
         if (finalLikes >= 1500 && Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
@@ -140,28 +138,20 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 };
 
 /**
- * 기존 모든 포스팅의 좋아요 수치를 랜덤하게 재설정하여 등급을 섞음
+ * Supabase RPC 함수를 호출하여 모든 포스팅의 좋아요 수치를 랜덤하게 재설정합니다.
+ * 이 방식은 RLS 권한 문제를 우회할 수 있습니다.
  */
 export const randomizeExistingLikes = async () => {
   try {
-    const { data: posts, error: fetchError } = await supabase.from('posts').select('id');
-    if (fetchError) throw fetchError;
-    if (!posts) return 0;
-
-    const updates = posts.map(p => ({
-      id: p.id,
-      likes: getRandomLikesByTier()
-    }));
-
-    // 대량 업데이트 (Supabase upsert 사용)
-    const chunkSize = 100;
-    for (let i = 0; i < updates.length; i += chunkSize) {
-      const chunk = updates.slice(i, i + chunkSize);
-      const { error: updateError } = await supabase.from('posts').upsert(chunk);
-      if (updateError) throw updateError;
+    // RPC 함수 호출
+    const { data, error } = await supabase.rpc('randomize_all_likes');
+    
+    if (error) {
+      console.error("RPC Error:", error);
+      throw error;
     }
 
-    return updates.length;
+    return data || 0;
   } catch (err) {
     console.error("Randomizing likes failed:", err);
     throw err;
