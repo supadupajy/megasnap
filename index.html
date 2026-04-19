@@ -2,11 +2,10 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- interactive-widget=resizes-content 설정을 통해 키보드가 올라올 때 화면이 밀리지 않고 크기가 조절되도록 함 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- ✅ resizes-visual: 키보드가 올라올 때 시각적 뷰포트만 줄어들고 레이아웃은 유지 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
     <title>Chora</title>
     <style>
-      /* dvh 작동을 방해하는 height: 100% 및 overflow: hidden 제거 */
       html, body, #root { 
         width: 100%;
         margin: 0; 
@@ -19,7 +18,6 @@
     <!-- Kakao Maps API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer"></script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
