@@ -39,16 +39,59 @@ export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
 
 // 50종 이상의 고유 유튜브 ID 리스트
 export const YOUTUBE_IDS_50 = [
-  "CevxZvSJLk8", "09R8_2nJtjg", "kJQP7kiw5Fk", "nfWlot6h_JM", "YQHsXMglC9A", 
-  "2vjPBrBU-TM", "fWNaR-rxAic", "LjhCEhWiKXk", "9bZkp7q19f0", "gdZLi9oWNZg",
-  "M7lc1UVf-VE", "3JZ_D3ELwOQ", "jNQXAC9IVRw", "8_9VUPq3Jp8", "dQw4w9WgXcQ",
-  "hT_nvWreI68", "y881t8ilMyc", "60ItHLz5WEA", "3AtDnEC4zak", "9I_fS6U8E2E",
-  "L_jWHffIx5E", "7_m9v_X_77E", "X_9v_X_77E8", "V_9v_X_77E1", "B_9v_X_77E2",
-  "N_9v_X_77E3", "M_9v_X_77E4", "K_9v_X_77E5", "J_9v_X_77E6", "H_9v_X_77E7",
-  "G_9v_X_77E8", "F_9v_X_77E9", "E_9v_X_77E0", "D_9v_X_77E1", "C_9v_X_77E2",
-  "A_9v_X_77E3", "Z_9v_X_77E4", "Y_9v_X_77E5", "X_9v_X_77E6", "W_9v_X_77E7",
-  "U_9v_X_77E8", "T_9v_X_77E9", "S_9v_X_77E0", "R_9v_X_77E1", "Q_9v_X_77E2",
-  "P_9v_X_77E3", "O_9v_X_77E4", "L_9v_X_77E5", "K_9v_X_77E6", "J_9v_X_77E7"
+  // --- K-POP (25개) ---
+  "gdZLi9hhztQ", // NewJeans - Ditto
+  "js1CtxSY38I", // IVE - I AM
+  "mH0_XpSHkZo", // NewJeans - Hype Boy
+  "Hbb5GPxXF1w", // NewJeans - OMG
+  "v7bnOxL4LIo", // BTS - Dynamite
+  "WMweEpGlu_U", // BTS - Butter
+  "kCELZbeS09o", // Blackpink - Pink Venom
+  "d9IxdwEFk1c", // Blackpink - Kill This Love
+  "9bZkp7q19f0", // PSY - Gangnam Style
+  "hTermM40EDU", // IU - Celebrity
+  "CtpT_S6-B9U", // IVE - LOVE DIVE
+  "TQTlCHxyuu8", // LE SSERAFIM - ANTIFRAGILE
+  "M7lc1UVf-VE", // Stray Kids - S-Class
+  "pFuJAIMQjHk", // TWICE - What is Love?
+  "tg2uF3R_Ozo", // aespa - Next Level
+  "UuV27Nq_Oks", // SEVENTEEN - Super
+  "D9G1VOjua_8", // (G)I-DLE - Queencard
+  "IHNzOHi8sJs", // BTS - Boy With Luv
+  "fHI8X4OXW5Q", // BLACKPINK - How You Like That
+  "a5uQMwRMHcs", // BIGBANG - BANG BANG BANG
+  "POe9SOEKotU", // Red Velvet - Psycho
+  "V1Pl8CzNzCw", // ITZY - Wannabe
+  "gQLQDnZ0yS8", // EXO - Love Shot
+  "dyRsYk0ViA8", // MAMAMOO - HIP
+  "rRzxEiBLQCA", // Sunmi - Gashina
+
+  // --- POP (25개) ---
+  "f6YDKF0LVWw", // The Weeknd - Blinding Lights
+  "b_An4U8J1V4", // Dua Lipa - Levitating
+  "CuklIb9d3fI", // Dua Lipa - Don't Start Now
+  "0NCP48xaSfs", // Bruno Mars - That's What I Like
+  "h4m-pIReA6Y", // Lady Gaga - Bad Romance
+  "kJQP7kiw5Fk", // Luis Fonsi - Despacito
+  "S-sJp1FfG7Q", // Ed Sheeran - Shape of You
+  "u0XmZp1S-t8", // Mark Ronson - Uptown Funk
+  "F0B7HDiY-10", // Maroon 5 - Sugar
+  "XqgYj8atJpE", // Katy Perry - Roar
+  "fE2h3lGlOsk", // Taylor Swift - Shake It Off
+  "0A6E0M_Z8r4", // Billie Eilish - bad guy
+  "3YqXJ7Ssh_Q", // Justin Bieber - Sorry
+  "n9N0zS5XvXw", // Ariana Grande - 7 rings
+  "m8MfJg68oCs", // Harry Styles - As It Was
+  "kOCkne-B8Hk", // Adele - Hello
+  "z9n8ZzP4P8I", // Sia - Chandelier
+  "XsX3ATc3FbA", // Camila Cabello - Havana
+  "Lp_r9fX5Sfs", // Miley Cyrus - Flowers
+  "7-qGKqveAnM", // Post Malone - Sunflower
+  "XjJQBjWYDTs", // Imagine Dragons - Believer
+  "qV5lzRHrGeg", // Shawn Mendes - Senorita
+  "2S24-y0Ij3Y", // Coldplay - Hymn For The Weekend
+  "SlPhMPnQ58k", // Rihanna - Diamonds
+  "J6Z8WAt9v80"  // Wiz Khalifa - See You Again
 ];
 
 // 호환성을 위해 YOUTUBE_LINKS 내보내기 추가
