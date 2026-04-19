@@ -48,6 +48,7 @@ const Chat = () => {
     }
   };
 
+  // 메시지 읽음 처리 함수
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -55,18 +56,24 @@ const Chat = () => {
     }
 
     try {
-      const { error } = await supabase
+      // 내가 수신자이고, 상대방이 발신자인 읽지 않은 메시지들을 업데이트
+      const { data, error } = await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .select(); // 업데이트된 행을 반환받아 확인
       
-      if (!error) {
+      if (error) {
+        console.error('[Chat] Update is_read error:', error);
+        // RLS 정책 문제일 가능성이 높음
+      } else {
+        console.log(`[Chat] Marked ${data?.length || 0} messages as read`);
         chatStore.markAsRead(chatId);
       }
     } catch (err) {
-      console.error('Error marking messages as read:', err);
+      console.error('[Chat] markAsRead exception:', err);
     }
   };
 
@@ -131,7 +138,8 @@ const Chat = () => {
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
           setMessages((prev) => [...prev, newMsg]);
           if (newMsg.sender_id === chatId) {
-            await markAsRead();
+            // 새 메시지가 오면 즉시 읽음 처리 시도
+            setTimeout(markAsRead, 100);
           }
         }
       })
@@ -141,7 +149,13 @@ const Chat = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // 윈도우 포커스 시 다시 읽음 처리 (탭 전환 등 대응)
+    window.addEventListener('focus', markAsRead);
+
+    return () => { 
+      supabase.removeChannel(channel);
+      window.removeEventListener('focus', markAsRead);
+    };
   }, [authUser, chatId]);
 
   useLayoutEffect(() => {
