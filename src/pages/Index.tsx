@@ -126,15 +126,18 @@ const Index = () => {
 
   const autoSeedArea = useCallback(async () => {
     if (!mapData?.center || !mapData?.bounds || isAutoSeeding.current || !authUser || currentZoom > 8) return;
+    
     const tileKey = `${mapData.center.lat.toFixed(2)}_${mapData.center.lng.toFixed(2)}`;
-    if (mapCache.populatedTiles.has(tileKey)) return;
+    // 이미 방문한 타일이라도 마커가 부족하면(15개 미만) 추가 생성을 허용
+    if (mapCache.populatedTiles.has(tileKey) && displayedMarkers.length >= 15) return;
+    
     isAutoSeeding.current = true;
     mapCache.populatedTiles.add(tileKey);
+    
     try {
       const { data: profiles } = await supabase.from('profiles').select('*').limit(50);
       if (!profiles || profiles.length === 0) { isAutoSeeding.current = false; return; }
       
-      // 영역 정보를 전달하여 분산 배치 활성화 (최대 20개 생성)
       const mockPosts = createMockPosts(mapData.center.lat, mapData.center.lng, 20, undefined, mapData.bounds);
       
       const insertDataPromises = mockPosts.map(async (p) => {
@@ -162,7 +165,7 @@ const Index = () => {
       setAllPosts(prev => [...prev, ...newPosts]);
       await supabase.from('posts').insert(finalData);
     } catch (err) { console.error('[AutoSeed] Error:', err); } finally { isAutoSeeding.current = false; }
-  }, [mapData, authUser, getRealAddress, currentZoom]);
+  }, [mapData, authUser, getRealAddress, currentZoom, displayedMarkers.length]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -181,7 +184,13 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
-  useEffect(() => { if (mapData && displayedMarkers.length < 10 && !isAutoSeeding.current) autoSeedArea(); }, [mapData, displayedMarkers.length, autoSeedArea]);
+  
+  // 마커가 15개 미만일 때 자동 생성 로직 트리거 (레벨 6 이하 기준)
+  useEffect(() => { 
+    if (mapData && currentZoom <= 6 && displayedMarkers.length < 15 && !isAutoSeeding.current) {
+      autoSeedArea(); 
+    }
+  }, [mapData, displayedMarkers.length, autoSeedArea, currentZoom]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
@@ -201,7 +210,6 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // 한 화면에 최대 30개 마커로 상향 조정
     const displayCount = 30; 
     const stableSort = (a: Post, b: Post) => b.likes - a.likes || a.id.localeCompare(b.id);
     const finalMarkers = inBoundsCandidates.sort(stableSort).slice(0, displayCount);
