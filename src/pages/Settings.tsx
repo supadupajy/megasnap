@@ -98,10 +98,9 @@ const Settings = () => {
     try {
       const count = await randomizeExistingLikes();
       dismissToast(toastId);
-      showSuccess(`${count}개 포스팅의 등급이 재설정되었습니다! 🎲`);
+      showSuccess(`${count}개 포스팅의 좋아요가 무작위로 변경되었습니다! 🎲`);
     } catch (err: any) {
       dismissToast(toastId);
-      // 실제 에러 메시지를 표시하여 원인 파악
       showError(`수치 변경 실패: ${err.message || 'RPC 함수를 찾을 수 없거나 권한이 없습니다.'}`);
       console.error("Randomize Error Details:", err);
     } finally {
@@ -171,7 +170,7 @@ const Settings = () => {
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
-                  <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 등급을 골고루 재설정합니다.</span>
+                  <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />
