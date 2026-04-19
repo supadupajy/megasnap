@@ -36,10 +36,15 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
-  // 뷰포트 상태 관리
-  const [viewport, setViewport] = useState({
-    height: window.innerHeight,
-    offsetTop: 0
+  // 가시 영역 스타일 상태
+  const [containerStyle, setContainerStyle] = useState<React.CSSProperties>({
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    flexDirection: 'column'
   });
   
   const isProcessingRef = useRef(false);
@@ -54,37 +59,47 @@ const Chat = () => {
     }
   };
 
-  // VisualViewport를 사용하여 키보드 대응 좌표 강제 계산
+  // VisualViewport를 사용하여 브라우저의 강제 스크롤을 무력화하고 좌표를 고정
   useEffect(() => {
-    const updateViewport = () => {
-      if (window.visualViewport) {
-        setViewport({
-          height: window.visualViewport.height,
-          offsetTop: window.visualViewport.offsetTop
-        });
-        // 브라우저의 자동 스크롤 시도 즉시 차단
-        window.scrollTo(0, 0);
-      }
+    const updateLayout = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+
+      // 브라우저가 화면을 밀어올린 만큼(offsetTop) 컨테이너를 다시 아래로 내리고,
+      // 키보드를 제외한 높이(height)만큼만 컨테이너 크기를 조절합니다.
+      setContainerStyle({
+        position: 'fixed',
+        top: vv.offsetTop,
+        left: vv.offsetLeft,
+        width: vv.width,
+        height: vv.height,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'white',
+        zIndex: 1000
+      });
+
+      // 브라우저의 자동 스크롤 시도를 즉시 원복
+      window.scrollTo(0, 0);
     };
 
-    window.visualViewport?.addEventListener('resize', updateViewport);
-    window.visualViewport?.addEventListener('scroll', updateViewport);
+    window.visualViewport?.addEventListener('resize', updateLayout);
+    window.visualViewport?.addEventListener('scroll', updateLayout);
     
     // 초기 실행
-    updateViewport();
+    updateLayout();
 
-    // 입력창 포커스 시 브라우저 스크롤 방지
-    const handleFocusIn = (e: FocusEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') {
-        setTimeout(updateViewport, 50);
-      }
+    // 입력창 포커스 시 브라우저가 화면을 밀어올리는 것을 방지하기 위한 추가 조치
+    const handleFocus = () => {
+      requestAnimationFrame(updateLayout);
+      setTimeout(updateLayout, 100);
     };
 
-    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusin', handleFocus);
     return () => {
-      window.visualViewport?.removeEventListener('resize', updateViewport);
-      window.visualViewport?.removeEventListener('scroll', updateViewport);
-      window.removeEventListener('focusin', handleFocusIn);
+      window.visualViewport?.removeEventListener('resize', updateLayout);
+      window.visualViewport?.removeEventListener('scroll', updateLayout);
+      window.removeEventListener('focusin', handleFocus);
     };
   }, []);
 
@@ -243,13 +258,7 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div 
-      className="fixed left-0 right-0 flex flex-col bg-white overflow-hidden z-[1000]"
-      style={{ 
-        top: `${viewport.offsetTop}px`,
-        height: `${viewport.height}px`
-      }}
-    >
+    <div style={containerStyle}>
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">

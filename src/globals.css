@@ -31,7 +31,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    position: fixed;
+    position: fixed; /* 페이지 전체를 고정하여 브라우저가 밀어올리지 못하게 함 */
     top: 0;
     left: 0;
     right: 0;
@@ -59,7 +59,7 @@
   }
 }
 
-/* Moving Gradient Border Animation */
+/* ... (기존 애니메이션 스타일 유지) */
 @property --angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -72,7 +72,6 @@
   }
 }
 
-/* My Post Indigo */
 .my-post-border-container {
   position: relative;
   padding: 4px;
@@ -82,7 +81,6 @@
   box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
 }
 
-/* HOT Red */
 .popular-border-container {
   position: relative;
   padding: 4px;
@@ -91,7 +89,6 @@
   animation: rotate-border 1.5s linear infinite;
 }
 
-/* Silver Influencer (100k - 999k) */
 .silver-border-container {
   position: relative;
   padding: 4px;
@@ -101,7 +98,6 @@
   box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
 }
 
-/* Gold Influencer (1M - 5M) */
 .gold-border-container {
   position: relative;
   padding: 4px;
@@ -111,7 +107,6 @@
   box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
 }
 
-/* Diamond Influencer (10M+) */
 .diamond-border-container {
   position: relative;
   padding: 4px;
@@ -121,7 +116,6 @@
   box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
 }
 
-/* AD Blue */
 .ad-border-container {
   position: relative;
   padding: 4px;
@@ -131,7 +125,6 @@
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
 
-/* Animations */
 @keyframes ad-breathing {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.4)); }
   50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.7)); }
@@ -164,7 +157,6 @@
   transform: skewX(-25deg); animation: shine-sweep 4s infinite; z-index: 20;
 }
 
-/* Marker Highlight Ping Animation */
 @keyframes marker-ping {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
   100% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
@@ -189,7 +181,6 @@
   animation: marker-ping 2s ease-out infinite;
 }
 
-/* Search Result Marker Ping */
 @keyframes search-ping {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
   100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
@@ -209,7 +200,6 @@
   animation: search-ping 1.5s ease-out infinite;
 }
 
-/* Marker Container & Scaling Logic */
 .marker-container {
   position: relative;
   width: 56px;
