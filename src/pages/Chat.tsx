@@ -35,6 +35,7 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,22 +49,28 @@ const Chat = () => {
     }
   };
 
-  // 브라우저의 강제 스크롤 시도를 원천 차단
+  // VisualViewport API를 사용하여 실제 가시 영역 높이 추적
   useEffect(() => {
-    const preventScroll = () => {
-      if (window.scrollY !== 0) {
+    const handleVisualViewportResize = () => {
+      if (window.visualViewport) {
+        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
+        setViewportHeight(window.visualViewport.height);
+        // 브라우저의 강제 스크롤 방지
         window.scrollTo(0, 0);
+        setTimeout(() => scrollToBottom('auto'), 50);
       }
     };
 
-    window.addEventListener('scroll', preventScroll, { passive: false });
-    window.visualViewport?.addEventListener('resize', () => scrollToBottom('auto'));
-    window.visualViewport?.addEventListener('scroll', preventScroll);
+    window.visualViewport?.addEventListener('resize', handleVisualViewportResize);
+    window.visualViewport?.addEventListener('scroll', () => window.scrollTo(0, 0));
+    
+    // 초기 높이 설정
+    if (window.visualViewport) {
+      setViewportHeight(window.visualViewport.height);
+    }
 
     return () => {
-      window.removeEventListener('scroll', preventScroll);
-      window.visualViewport?.removeEventListener('resize', () => scrollToBottom('auto'));
-      window.visualViewport?.removeEventListener('scroll', preventScroll);
+      window.visualViewport?.removeEventListener('resize', handleVisualViewportResize);
     };
   }, []);
 
@@ -222,7 +229,10 @@ const Chat = () => {
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div 
+      className="fixed inset-0 flex flex-col bg-white overflow-hidden z-[1000]"
+      style={{ height: `${viewportHeight}px` }}
+    >
       {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
