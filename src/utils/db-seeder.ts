@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts, YOUTUBE_LINKS } from "@/lib/mock-data";
+import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
@@ -61,14 +61,6 @@ const MAJOR_CITIES = [
   }
 ];
 
-// 광고용 음식 이미지 풀
-const FOOD_UNSPLASH_IDS = [
-  "1504674900247-0877df9cc836", "1512621776951-a57141f2eefd", "1476224489176-e88e5948482b",
-  "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929"
-];
-
-const getUnsplashUrl = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
-
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
@@ -105,17 +97,19 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const isAd = p.isAd;
         
         let finalYoutubeUrl = null;
-        let finalImage = p.image;
+        let finalImage = "";
         
-        // 광고가 아닐 때만 유튜브 할당
-        if (!isAd && Math.random() < 0.5) {
-          finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || p.image;
-        }
-
-        // 광고는 무조건 음식 사진 강제
         if (isAd) {
+          // 광고는 무조건 음식 사진
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
+          finalYoutubeUrl = null;
+        } else if (Math.random() < 0.5) {
+          // 50% 확률로 유튜브 포스팅
+          finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[0]);
+        } else {
+          // 나머지는 일반 풍경 사진
+          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
           finalYoutubeUrl = null;
         }
 

@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts, YOUTUBE_LINKS } from '@/lib/mock-data';
+import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,9 +67,17 @@ const Popular = () => {
 
       const mappedPosts = (data || []).map(p => {
         const borderType = getTierFromId(p.id);
+        const isAd = p.content?.trim().startsWith('[AD]');
+        
+        // DB 데이터 매핑 시 유튜브 URL이 없는데 썸네일이 들어있는 경우를 대비해 보정
+        let finalImage = p.image_url;
+        if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
+          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
+        }
+
         return {
           id: p.id,
-          isAd: p.content?.trim().startsWith('[AD]'),
+          isAd: isAd,
           isGif: false,
           isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
           user: {
@@ -84,7 +92,7 @@ const Popular = () => {
           likes: Number(p.likes || 0),
           commentsCount: 0,
           comments: [],
-          image: p.image_url,
+          image: finalImage,
           youtubeUrl: p.youtube_url,
           videoUrl: p.video_url,
           isLiked: false,
