@@ -151,23 +151,20 @@ const Chat = () => {
 
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
-  // 실제 터치 기기인지 확인
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
   return (
     /* 
-      전체 컨테이너: fixed inset-0를 사용하여 화면 전체를 채우되, 
-      flex-col 구조로 내부 요소들을 배치합니다.
-      웹 시뮬레이터에서만 keyboardHeight를 padding으로 사용합니다.
+      핵심 로직: 전체 컨테이너의 높이를 (100% - 키보드 높이)로 설정합니다.
+      이렇게 하면 키보드가 올라올 때 화면 자체가 물리적으로 줄어드는 효과를 줍니다.
     */
     <div 
-      className="fixed inset-0 bg-white flex flex-col z-[1000] overflow-hidden"
+      className="fixed top-0 left-0 right-0 bg-white flex flex-col z-[1000] overflow-hidden"
       style={{ 
-        paddingBottom: !isTouchDevice ? `${keyboardHeight}px` : '0px'
+        height: `calc(100% - ${keyboardHeight}px)`,
+        transition: 'height 0.1s ease-out' // 키보드 애니메이션과 맞추기 위한 미세한 트랜지션
       }}
     >
-      {/* 1. 상단 헤더: shrink-0으로 높이를 고정하고 상단에 위치 */}
-      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
+      {/* 1. 상단 헤더 (고정) */}
+      <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-50">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -193,7 +190,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 채팅창: flex-1로 남은 공간을 모두 차지하며, 화면이 줄어들면 같이 줄어듭니다. */}
+      {/* 2. 중앙 채팅창 (스크롤 가능) */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white min-h-0"
@@ -214,7 +211,7 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창: shrink-0으로 높이를 유지하며 항상 최하단에 위치 */}
+      {/* 3. 하단 입력창 (고정) */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
