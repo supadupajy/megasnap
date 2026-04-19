@@ -79,7 +79,7 @@ const Messages = () => {
       // 3. 프로필 정보 보완 (Supabase 데이터용)
       const results = await Promise.all(
         convList.map(async (conv) => {
-          if (conv.profile) return conv; // 이미 로컬에서 가져온 경우
+          if (conv.profile) return conv;
 
           const { data: profile } = await supabase
             .from('profiles')
@@ -94,20 +94,14 @@ const Messages = () => {
         })
       );
 
-      // 최신순 정렬
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
       setConversations(results);
       setIsLoading(false);
     };
 
     fetchConversations();
-    
-    // 로컬 스토어 변경 감지
     const unsubscribe = chatStore.subscribe(fetchConversations);
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [authUser]);
 
   const filteredConversations = conversations.filter(conv => 

@@ -18,7 +18,6 @@ const FriendList = () => {
 
   useEffect(() => {
     const searchUsers = async () => {
-      // 검색어가 너무 짧으면 검색하지 않음 (최소 1자 이상)
       if (!searchQuery.trim()) {
         setUsers([]);
         return;
@@ -26,14 +25,13 @@ const FriendList = () => {
 
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url, bio')
           .or(`nickname.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`)
-          .neq('id', authUser?.id) // 본인은 제외
+          .neq('id', authUser?.id)
           .limit(20);
 
-        if (error) throw error;
         setUsers(data || []);
       } catch (err) {
         console.error('User search error:', err);
@@ -42,81 +40,40 @@ const FriendList = () => {
       }
     };
 
-    // 디바운스 처리 (300ms)
-    const timer = setTimeout(() => {
-      searchUsers();
-    }, 300);
-
+    const timer = setTimeout(() => searchUsers(), 300);
     return () => clearTimeout(timer);
   }, [searchQuery, authUser]);
 
   const handleStartChat = (user: any) => {
-    // 채팅방 생성 또는 기존 방 가져오기
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
-    // 채팅창으로 이동
     navigate(`/chat/${user.id}`);
-  };
-
-  const handleBack = () => {
-    if (window.history.length > 1 && window.history.state?.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/messages');
-    }
   };
 
   return (
     <div className="min-h-screen bg-white pb-10">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
-        <button 
-          onClick={handleBack} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
         <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">새로운 메시지</h1>
       </header>
 
       <div className="pt-[88px] px-4">
-        {/* Search */}
         <div className="relative py-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input 
-              placeholder="닉네임 또는 아이디 검색" 
-              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
-            {isLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-              </div>
-            )}
+            <Input placeholder="닉네임 또는 아이디 검색" className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoFocus />
+            {isLoading && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
           </div>
         </div>
 
-        {/* User List */}
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            {searchQuery ? '검색 결과' : '검색어를 입력하세요'}
-          </p>
-          
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{searchQuery ? '검색 결과' : '검색어를 입력하세요'}</p>
           <div className="space-y-1">
             {users.map((user) => (
-              <div 
-                key={user.id} 
-                onClick={() => handleStartChat(user)}
-                className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
-              >
+              <div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
                 <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
                   <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                     <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
-                      {user.nickname?.[0] || '?'}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -126,26 +83,9 @@ const FriendList = () => {
                   </div>
                   <p className="text-xs text-gray-500 truncate">{user.bio || '안녕하세요! Chora 탐험가입니다.'}</p>
                 </div>
-                <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center">
-                  <UserPlus className="w-4 h-4 text-indigo-600" />
-                </div>
+                <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center"><UserPlus className="w-4 h-4 text-indigo-600" /></div>
               </div>
             ))}
-            
-            {searchQuery && !isLoading && users.length === 0 && (
-              <div className="py-20 text-center flex flex-col items-center gap-2">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
-                  <Search className="w-8 h-8 text-gray-200" />
-                </div>
-                <p className="text-sm text-gray-400 font-bold">검색 결과가 없습니다.</p>
-              </div>
-            )}
-
-            {!searchQuery && (
-              <div className="py-20 text-center flex flex-col items-center gap-2">
-                <p className="text-sm text-gray-400 font-bold">친구의 닉네임을 검색하여<br/>대화를 시작해보세요!</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

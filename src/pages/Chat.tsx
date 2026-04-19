@@ -47,17 +47,8 @@ const Chat = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('nickname, avatar_url')
-        .eq('id', chatId)
-        .single();
-      
-      if (!error && data) {
-        setOtherUser(data);
-      } else {
-        setOtherUser({ nickname: '사용자', avatar_url: null });
-      }
+      const { data } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', chatId).single();
+      setOtherUser(data || { nickname: '사용자', avatar_url: null });
       setIsLoading(false);
     };
     fetchOtherUser();
@@ -136,15 +127,9 @@ const Chat = () => {
         setMessages((prev) => prev.filter(m => m.id !== tempId));
       }
     } else {
-      // Mock User인 경우 로컬 스토어에 저장
       chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
     }
-  };
-
-  const handleBack = () => {
-    if (window.history.length > 1 && window.history.state?.idx > 0) navigate(-1);
-    else navigate('/messages');
   };
 
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
@@ -153,13 +138,13 @@ const Chat = () => {
     <div className="flex flex-col h-screen bg-white overflow-hidden">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${chatId}`)}>
               <img src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`} alt="user" className="w-full h-full rounded-full object-cover border-2 border-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black text-gray-900">{otherUser?.nickname || otherUser?.name || '사용자'}</span>
+              <span className="text-sm font-black text-gray-900">{otherUser?.nickname || '사용자'}</span>
               <span className="text-[10px] text-indigo-600 font-bold">현재 활동 중</span>
             </div>
           </div>
@@ -182,7 +167,6 @@ const Chat = () => {
             </div>
           );
         })}
-        {messages.length === 0 && <div className="flex flex-col items-center justify-center py-20 text-center"><div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4"><Send className="w-8 h-8 text-indigo-600 opacity-20" /></div><p className="text-sm text-gray-400 font-bold">대화를 시작해보세요!</p></div>}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
