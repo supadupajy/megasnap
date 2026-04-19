@@ -21,7 +21,6 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import ExitDialog from "./components/ExitDialog";
-import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
@@ -108,8 +107,6 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
-
-      <KeyboardSimulator />
 
       <ExitDialog 
         isOpen={showExitDialog} 
