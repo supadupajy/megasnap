@@ -34,10 +34,11 @@ const Popular = () => {
     if (hasLoaded.current) return;
     
     setIsInitialLoading(true);
+    // 목업 데이터 생성 시 인플루언서와 인기 포스팅이 섞이도록 함
     let mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
 
     mockPosts = mockPosts.map((post, index) => {
-      if (index % 2 === 0) {
+      if (index % 3 === 0 && !post.youtubeUrl) {
         const youtubeUrl = YOUTUBE_LINKS[index % YOUTUBE_LINKS.length];
         const thumb = getYoutubeThumbnail(youtubeUrl);
         return {
@@ -58,28 +59,34 @@ const Popular = () => {
 
       if (error) throw error;
 
-      const realPosts = (data || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
-        },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
+      const realPosts = (data || []).map(p => {
+        const likes = Number(p.likes || 0);
+        // 인플루언서 여부는 DB에 없으므로 좋아요 수로 임시 판단하거나 기본값 설정
+        const isInfluencer = likes > 5000; 
+        
+        return {
+          id: p.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: isInfluencer,
+          user: {
+            id: p.user_id,
+            name: p.user_name,
+            avatar: p.user_avatar
+          },
+          content: p.content,
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: likes,
+          commentsCount: 0,
+          comments: [],
+          image: p.image_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: likes >= 1500 ? 'popular' : (isInfluencer ? 'silver' : 'none')
+        };
+      }) as Post[];
 
       const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
       setPosts(combined);
@@ -108,11 +115,11 @@ const Popular = () => {
 
     setTimeout(() => {
       let newPosts = createMockPosts(37.5665, 126.9780, 15)
-        .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
+        .map(p => ({ ...p, likes: Math.floor(Math.random() * 2000) + 1000 }))
         .sort((a, b) => b.likes - a.likes);
       
       newPosts = newPosts.map((post, index) => {
-        if (index % 2 === 0) {
+        if (index % 3 === 0 && !post.youtubeUrl) {
           const youtubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           const thumb = getYoutubeThumbnail(youtubeUrl);
           return { ...post, youtubeUrl, image: thumb || post.image };

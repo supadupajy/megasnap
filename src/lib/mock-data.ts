@@ -182,9 +182,10 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let isAd = false;
 
     if (!specificUserId) {
-      if (typeRoll < 0.02) isInfluencer = true;
-      else if (typeRoll < 0.04) isPopular = true;
-      else if (typeRoll < 0.05) isAd = true;
+      // 확률 대폭 상향: 인플루언서 10%, 인기 15%
+      if (typeRoll < 0.10) isInfluencer = true;
+      else if (typeRoll < 0.25) isPopular = true;
+      else if (typeRoll < 0.30) isAd = true;
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
@@ -241,8 +242,9 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       ? createMockUser(specificUserId, randomFn) 
       : createMockUser(isAd ? "sponsored" : id, randomFn, isInfluencer);
 
+    // 특별한 포스팅은 좋아요 수를 높게 설정하여 테두리가 확실히 나타나게 함
     const likes = (isPopular || isInfluencer) 
-      ? Math.floor(randomFn() * 2000) + 800 
+      ? Math.floor(randomFn() * 3000) + 1500 
       : Math.floor(randomFn() * 500) + 10;
 
     let borderType: 'popular' | 'silver' | 'gold' | 'diamond' | 'none' = 'none';
