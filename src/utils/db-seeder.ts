@@ -23,21 +23,17 @@ const MAJOR_CITIES = [
     lat: 33.4996, lng: 126.5312, 
     density: 600,
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } }
-  },
-  // ... 인천, 대구, 대전, 광주, 울산, 수원 등 포함
+  }
 ];
 
-// 2. 현실적인 댓글/내용 풀
 const REALISTIC_COMMENTS = [
   '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
   '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
   '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
   '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
-  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
-  // ... 더 많은 댓글 데이터
+  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!'
 ];
 
-// 3. 좌표를 주소 문자열로 변환 (카카오 API 활용)
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
@@ -53,10 +49,8 @@ const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   });
 };
 
-// 4. 메인 생성 함수
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
-    // 유저 풀 확보 (다양한 작성자 연출)
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
     
@@ -64,7 +58,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     let globalIndex = 0;
 
     for (const city of MAJOR_CITIES) {
-      // 각 도시별 밀도만큼 데이터 생성
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       
       for (let i = 0; i < mockPosts.length; i++) {
@@ -75,7 +68,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = "";
         
-        // 50:50 비율로 유튜브 영상과 일반 이미지 믹스
         if (globalIndex % 2 === 0) {
           const ytUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
           finalYoutubeUrl = ytUrl;
@@ -94,7 +86,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: Math.floor(Math.random() * 20000), // 0~2만 사이 좋아요
+          likes: Math.floor(Math.random() * 20000),
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
 
@@ -102,7 +94,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
     }
 
-    // 5. 대량 삽입 (Chunk 단위로 나누어 전송)
     const chunkSize = 50;
     for (let i = 0; i < allInsertData.length; i += chunkSize) {
       const chunk = allInsertData.slice(i, i + chunkSize);
@@ -114,5 +105,43 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   } catch (err: any) { 
     console.error("Global seeding failed:", err); 
     throw err; 
+  }
+};
+
+/**
+ * 기존 모든 포스팅의 좋아요 수치를 무작위로 변경합니다.
+ * 인기 탭의 순위를 갱신하기 위해 사용됩니다.
+ */
+export const randomizeExistingLikes = async () => {
+  try {
+    // 1. 모든 포스팅 ID 가져오기
+    const { data: posts, error: fetchError } = await supabase
+      .from('posts')
+      .select('id');
+    
+    if (fetchError) throw fetchError;
+    if (!posts || posts.length === 0) return 0;
+
+    // 2. Chunk 단위로 업데이트 수행 (성능 및 안정성)
+    const chunkSize = 20;
+    for (let i = 0; i < posts.length; i += chunkSize) {
+      const chunk = posts.slice(i, i + chunkSize);
+      
+      // 각 포스팅에 대해 개별 업데이트 프로미스 생성
+      const updatePromises = chunk.map(post => 
+        supabase
+          .from('posts')
+          .update({ likes: Math.floor(Math.random() * 25000) }) // 0~25,000 사이 랜덤
+          .eq('id', post.id)
+      );
+
+      // 병렬 실행
+      await Promise.all(updatePromises);
+    }
+    
+    return posts.length;
+  } catch (err: any) {
+    console.error("Randomizing likes failed:", err);
+    throw err;
   }
 };
