@@ -229,20 +229,22 @@ const Messages = () => {
         </button>
       </header>
 
-      <div className="pt-[88px] px-4 py-4">
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
-            placeholder="대화 상대 또는 메시지 검색" 
-            className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold" 
-            value={query} 
-            onChange={(e) => setQuery(e.target.value)} 
-          />
-          {isSearchingGlobal && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-            </div>
-          )}
+      <div className="pt-[88px] px-4">
+        <div className="relative py-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input 
+              placeholder="대화 상대 또는 메시지 검색" 
+              className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold" 
+              value={query} 
+              onChange={(e) => setQuery(e.target.value)} 
+            />
+            {isSearchingGlobal && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
