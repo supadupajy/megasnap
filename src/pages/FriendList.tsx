@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Search, UserPlus, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, Search, Loader2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,43 +16,40 @@ const FriendList = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // nickname 컬럼을 기준으로 ilike(대소문자 구분 없는 포함 검색) 수행
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar_url, bio')
+        .ilike('nickname', `%${query}%`)
+        .neq('id', authUser?.id) // 본인은 제외
+        .limit(20);
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err) {
+      console.error('User search error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authUser]);
+
   useEffect(() => {
-    const searchUsers = async () => {
-      // 검색어가 없으면 리스트를 비움
-      if (!searchQuery.trim()) {
-        setUsers([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        // nickname 컬럼을 기준으로 ilike(대소문자 구분 없는 포함 검색) 수행
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url, bio')
-          .ilike('nickname', `%${searchQuery}%`)
-          .neq('id', authUser?.id) // 본인은 제외
-          .limit(20);
-
-        if (error) throw error;
-        setUsers(data || []);
-      } catch (err) {
-        console.error('User search error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // 디바운싱: 타이핑이 멈춘 후 300ms 뒤에 검색 실행
     const timer = setTimeout(() => {
-      searchUsers();
+      searchUsers(searchQuery);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, authUser]);
+  }, [searchQuery, searchUsers]);
 
   const handleStartChat = (user: any) => {
-    // 채팅방 생성 또는 기존 방 가져오기
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
     navigate(`/chat/${user.id}`);
   };
@@ -127,7 +124,10 @@ const FriendList = () => {
             ))}
             
             {!isLoading && searchQuery.trim() && users.length === 0 && (
-              <div className="py-20 text-center">
+              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-gray-200" />
+                </div>
                 <p className="text-sm text-gray-400 font-bold">해당 닉네임을 가진 사용자가 없습니다.</p>
               </div>
             )}

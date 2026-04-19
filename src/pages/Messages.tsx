@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Search, Edit, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronLeft, Search, Edit, Loader2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import BottomNav from '@/components/BottomNav';
@@ -31,6 +31,7 @@ const Messages = () => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
+      // 1. Supabase에서 실제 메시지 내역 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -55,6 +56,7 @@ const Messages = () => {
         }
       }
 
+      // 2. 로컬 chatStore(Mock 유저와의 대화 등) 병합
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -74,6 +76,7 @@ const Messages = () => {
 
       const convList = Array.from(convMap.values());
 
+      // 3. 각 대화 상대의 프로필 정보 가져오기
       const results = await Promise.all(
         convList.map(async (conv) => {
           if (conv.profile) return conv;
@@ -92,7 +95,6 @@ const Messages = () => {
       );
 
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
       setConversations(results);
       setIsLoading(false);
     };
@@ -105,10 +107,15 @@ const Messages = () => {
     };
   }, [authUser]);
 
-  const filteredConversations = conversations.filter(conv => 
-    conv.profile.nickname?.toLowerCase().includes(query.toLowerCase()) ||
-    conv.last_message.toLowerCase().includes(query.toLowerCase())
-  );
+  // 닉네임 또는 마지막 메시지 내용으로 실시간 필터링
+  const filteredConversations = useMemo(() => {
+    const lowerQuery = query.toLowerCase().trim();
+    if (!lowerQuery) return conversations;
+    return conversations.filter(conv => 
+      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
+      conv.last_message.toLowerCase().includes(lowerQuery)
+    );
+  }, [query, conversations]);
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
@@ -161,6 +168,17 @@ const Messages = () => {
                   </div>
                 );
               })}
+              
+              {filteredConversations.length === 0 && !isLoading && (
+                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <MessageSquare className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                    {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
