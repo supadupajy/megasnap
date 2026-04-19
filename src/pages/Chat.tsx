@@ -40,7 +40,6 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 스크롤을 최하단으로 이동시키는 함수
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
@@ -49,7 +48,6 @@ const Chat = () => {
     }
   };
 
-  // 메시지 읽음 처리 함수
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -57,7 +55,6 @@ const Chat = () => {
     }
 
     try {
-      // 1. DB 업데이트 (상대방이 나에게 보낸 메시지들)
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -66,7 +63,6 @@ const Chat = () => {
         .eq('is_read', false);
       
       if (!error) {
-        // 2. 로컬 스토어 업데이트 (헤더 뱃지 동기화용)
         chatStore.markAsRead(chatId);
       }
     } catch (err) {
@@ -74,31 +70,22 @@ const Chat = () => {
     }
   };
 
-  // 상대방 정보 로드
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
-      
       if (!isValidUUID(chatId)) {
         const room = chatStore.getRoom(chatId);
         setOtherUser(room?.user || { nickname: `Explorer_${chatId}`, avatar_url: `https://i.pravatar.cc/150?u=${chatId}` });
         setIsLoading(false);
         return;
       }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('nickname, avatar_url')
-        .eq('id', chatId)
-        .single();
-      
+      const { data } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', chatId).single();
       setOtherUser(data || { nickname: '사용자', avatar_url: null });
       setIsLoading(false);
     };
     fetchOtherUser();
   }, [chatId]);
 
-  // 메시지 로드 및 실시간 구독
   useEffect(() => {
     if (!authUser || !chatId) return;
 
@@ -130,43 +117,25 @@ const Chat = () => {
       setMessages(data || []);
       await markAsRead();
       setIsLoading(false);
-      // 초기 로드 시 즉시 스크롤
       setTimeout(() => scrollToBottom('auto'), 50);
     };
 
     fetchMessages();
 
-    // 실시간 구독
     const channel = supabase
       .channel(`chat_room_${chatId}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages'
-      }, 
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, 
       async (payload) => {
         const newMsg = payload.new as Message;
-        // 현재 대화방의 메시지인 경우
         if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
-          
-          setMessages((prev) => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          
-          // 내가 받은 메시지라면 즉시 읽음 처리
+          setMessages((prev) => [...prev, newMsg]);
           if (newMsg.sender_id === chatId) {
             await markAsRead();
           }
         }
       })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `sender_id=eq.${authUser.id}` // 내가 보낸 메시지를 상대방이 읽었을 때 (1 표시 제거용)
-      }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
         const updatedMsg = payload.new as Message;
         setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
       })
@@ -175,14 +144,12 @@ const Chat = () => {
     return () => { supabase.removeChannel(channel); };
   }, [authUser, chatId]);
 
-  // 메시지 목록이 변경될 때마다 스크롤 (레이아웃 완료 후)
   useLayoutEffect(() => {
     if (messages.length > 0) {
       scrollToBottom('smooth');
     }
   }, [messages]);
 
-  // 키보드가 올라올 때 스크롤
   useEffect(() => {
     if (keyboardHeight > 0) {
       setTimeout(() => scrollToBottom('smooth'), 100);
@@ -191,7 +158,6 @@ const Chat = () => {
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
-
     const content = inputValue.trim();
     setInputValue('');
 
@@ -202,14 +168,9 @@ const Chat = () => {
         content: content,
         is_read: false
       }]).select().single();
-
-      if (error) {
-        showError('메시지 전송에 실패했습니다.');
-      } else if (data) {
-        setMessages(prev => [...prev, data as Message]);
-      }
+      if (error) showError('메시지 전송에 실패했습니다.');
+      else if (data) setMessages(prev => [...prev, data as Message]);
     } else {
-      chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
       const room = chatStore.getRoom(chatId);
       if (room) {

@@ -17,7 +17,7 @@ const Header = () => {
   const fetchCounts = useCallback(async () => {
     if (!authUser) return;
     try {
-      // 1. 알림 개수
+      // 1. 알림 개수 (읽지 않은 것)
       const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -26,7 +26,7 @@ const Header = () => {
       
       setUnreadNotifCount(notifCount || 0);
 
-      // 2. Supabase 메시지 개수 (내가 받은 메시지 중 읽지 않은 것)
+      // 2. Supabase 메시지 개수 (내가 수신자이고 읽지 않은 것)
       const { count: dbMsgCount } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
@@ -47,7 +47,7 @@ const Header = () => {
 
     fetchCounts();
 
-    // 실시간 업데이트 구독
+    // 실시간 업데이트 구독 (필터를 제거하여 UPDATE 이벤트를 확실히 수신)
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
 
@@ -55,15 +55,24 @@ const Header = () => {
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${authUser.id}` 
-      }, fetchCounts)
+        table: 'notifications'
+      }, (payload: any) => {
+        // 내 알림인 경우에만 갱신
+        if (payload.new?.user_id === authUser.id || payload.old?.user_id === authUser.id) {
+          fetchCounts();
+        }
+      })
       .on('postgres_changes', { 
-        event: '*', // INSERT 뿐만 아니라 UPDATE(읽음 처리)도 감지해야 함
+        event: '*', 
         schema: 'public', 
-        table: 'messages', 
-        filter: `receiver_id=eq.${authUser.id}` 
-      }, fetchCounts)
+        table: 'messages'
+      }, (payload: any) => {
+        // 내가 수신자이거나 발신자인 메시지의 변화(읽음 처리 포함)가 생기면 갱신
+        const msg = payload.new || payload.old;
+        if (msg?.receiver_id === authUser.id || msg?.sender_id === authUser.id) {
+          fetchCounts();
+        }
+      })
       .subscribe();
 
     // 로컬 스토어 구독
