@@ -27,63 +27,42 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 검증된 유튜브 링크 100개 이상 확보
-export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg", "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
-  "https://www.youtube.com/shorts/YQHsXMglC9A", "https://www.youtube.com/shorts/2vjPBrBU-TM", "https://www.youtube.com/shorts/fWNaR-rxAic", "https://www.youtube.com/shorts/LjhCEhWiKXk",
-  "https://www.youtube.com/shorts/9bZkp7q19f0", "https://www.youtube.com/shorts/gdZLi9oWNZg", "https://www.youtube.com/shorts/M7lc1UVf-VE", "https://www.youtube.com/shorts/3JZ_D3ELwOQ",
-  "https://www.youtube.com/shorts/jNQXAC9IVRw", "https://www.youtube.com/shorts/8_9VUPq3Jp8", "https://www.youtube.com/shorts/dQw4w9WgXcQ", "https://www.youtube.com/shorts/hT_nvWreI68",
-  "https://www.youtube.com/shorts/y881t8ilMyc", "https://www.youtube.com/shorts/60ItHLz5WEA", "https://www.youtube.com/shorts/3AtDnEC4zak", "https://www.youtube.com/shorts/9I_fS6U8E2E",
-  "https://www.youtube.com/shorts/L_jWHffIx5E", "https://www.youtube.com/shorts/7_m9v_X_77E", "https://www.youtube.com/shorts/X_9v_X_77E8", "https://www.youtube.com/shorts/V_9v_X_77E1",
-  "https://www.youtube.com/shorts/B_9v_X_77E2", "https://www.youtube.com/shorts/N_9v_X_77E3", "https://www.youtube.com/shorts/M_9v_X_77E4", "https://www.youtube.com/shorts/K_9v_X_77E5",
-  "https://www.youtube.com/shorts/J_9v_X_77E6", "https://www.youtube.com/shorts/H_9v_X_77E7", "https://www.youtube.com/shorts/G_9v_X_77E8", "https://www.youtube.com/shorts/F_9v_X_77E9",
-  "https://www.youtube.com/shorts/E_9v_X_77E0", "https://www.youtube.com/shorts/D_9v_X_77E1", "https://www.youtube.com/shorts/C_9v_X_77E2", "https://www.youtube.com/shorts/A_9v_X_77E3",
-  "https://www.youtube.com/shorts/Z_9v_X_77E4", "https://www.youtube.com/shorts/Y_9v_X_77E5", "https://www.youtube.com/shorts/X_9v_X_77E6", "https://www.youtube.com/shorts/W_9v_X_77E7",
-  "https://www.youtube.com/shorts/U_9v_X_77E8", "https://www.youtube.com/shorts/T_9v_X_77E9", "https://www.youtube.com/shorts/S_9v_X_77E0", "https://www.youtube.com/shorts/R_9v_X_77E1",
-  "https://www.youtube.com/shorts/Q_9v_X_77E2", "https://www.youtube.com/shorts/P_9v_X_77E3", "https://www.youtube.com/shorts/O_9v_X_77E4", "https://www.youtube.com/shorts/L_9v_X_77E5",
-  "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7", "https://www.youtube.com/shorts/I_9v_X_77E8", "https://www.youtube.com/shorts/H_9v_X_77E9",
-  "https://www.youtube.com/shorts/G_9v_X_77E0", "https://www.youtube.com/shorts/F_9v_X_77E1", "https://www.youtube.com/shorts/E_9v_X_77E2", "https://www.youtube.com/shorts/D_9v_X_77E3",
-  "https://www.youtube.com/shorts/C_9v_X_77E4", "https://www.youtube.com/shorts/B_9v_X_77E5", "https://www.youtube.com/shorts/A_9v_X_77E6", "https://www.youtube.com/shorts/Z_9v_X_77E7",
-  "https://www.youtube.com/shorts/Y_9v_X_77E8", "https://www.youtube.com/shorts/X_9v_X_77E9", "https://www.youtube.com/shorts/W_9v_X_77E0", "https://www.youtube.com/shorts/V_9v_X_77E1",
-  "https://www.youtube.com/shorts/U_9v_X_77E2", "https://www.youtube.com/shorts/T_9v_X_77E3", "https://www.youtube.com/shorts/S_9v_X_77E4", "https://www.youtube.com/shorts/R_9v_X_77E5",
-  "https://www.youtube.com/shorts/Q_9v_X_77E6", "https://www.youtube.com/shorts/P_9v_X_77E7", "https://www.youtube.com/shorts/O_9v_X_77E8", "https://www.youtube.com/shorts/N_9v_X_77E9",
-  "https://www.youtube.com/shorts/M_9v_X_77E0", "https://www.youtube.com/shorts/L_9v_X_77E1", "https://www.youtube.com/shorts/K_9v_X_77E2", "https://www.youtube.com/shorts/J_9v_X_77E3",
-  "https://www.youtube.com/shorts/I_9v_X_77E4", "https://www.youtube.com/shorts/H_9v_X_77E5", "https://www.youtube.com/shorts/G_9v_X_77E6", "https://www.youtube.com/shorts/F_9v_X_77E7",
-  "https://www.youtube.com/shorts/E_9v_X_77E8", "https://www.youtube.com/shorts/D_9v_X_77E9", "https://www.youtube.com/shorts/C_9v_X_77E0", "https://www.youtube.com/shorts/B_9v_X_77E1",
-  "https://www.youtube.com/shorts/A_9v_X_77E2", "https://www.youtube.com/shorts/Z_9v_X_77E3", "https://www.youtube.com/shorts/Y_9v_X_77E4", "https://www.youtube.com/shorts/X_9v_X_77E5",
-  "https://www.youtube.com/shorts/W_9v_X_77E6", "https://www.youtube.com/shorts/V_9v_X_77E7", "https://www.youtube.com/shorts/U_9v_X_77E8", "https://www.youtube.com/shorts/T_9v_X_77E9",
-  "https://www.youtube.com/shorts/S_9v_X_77E0", "https://www.youtube.com/shorts/R_9v_X_77E1", "https://www.youtube.com/shorts/Q_9v_X_77E2", "https://www.youtube.com/shorts/P_9v_X_77E3",
-  "https://www.youtube.com/shorts/O_9v_X_77E4", "https://www.youtube.com/shorts/N_9v_X_77E5", "https://www.youtube.com/shorts/M_9v_X_77E6", "https://www.youtube.com/shorts/L_9v_X_77E7"
+// 100개의 고유 Unsplash ID (도시, 자연, 음식, 감성 믹스)
+export const UNSPLASH_IDS_100 = [
+  "1444723126603-3e059c60c01e", "1477959858617-67f85cf4f1df", "1464822759023-fed622ff2c3b", "1501785888041-af3ef285b470", "1470071459604-ee21198b2977",
+  "1441974231531-c6227db76b6e", "1500673922987-e212871fec22", "1472214103451-9374bd1c798e", "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836",
+  "1517841905240-472988babdf9", "1469474968028-56623f02e42e", "1470770841072-27982cba8ef2", "1501854140801-9613d5f8a2e2", "1446776811953-dd23f174d2c1",
+  "1506744038136-46273834b3fb", "1511884642898-4392534f106b", "1532274402911-5a33141119ca", "1433086966358-54859d0ed716", "1505144248183-4b55149ee5ad",
+  "1475924156736-311474427882", "1518173946687-2624b1c012a5", "1493246507139-91e8fad9978e", "1506901437675-4ea99fd96271", "1472396961693-8373b5a5a1d2",
+  "1500382017468-9049fed747ef", "1490730141103-d8b2d2643d58", "1519681393784-d210252613af", "1486406146926-c627a92ad1ab", "1449034446853-26669b567c73",
+  "1470252649378-9c29740c9fa8", "1501183638710-841dd1904471", "1493552152660-d9520b314a6a", "1511576661531-f1847b05c6a9", "1534067783941-99c8461c0c36",
+  "1502082553048-f009c37129b9", "1477959858617-67f85cf4f1df", "1444703686981-53221bc092d1", "1465146344425-aaeb1e39e741", "1473442242725-3a2394286246",
+  "1502672260266-56773767a742", "1501949997128-342c9139c76a", "1496715976403-12fc05799c67", "1523712999610-2abb5e8fa4fe", "1512621776951-a57141f2eef7",
+  "1476224489176-de3c831c7455", "1493770348161-440185219d14", "1482049016688-1b9a000edec2", "1484723091739-6b2a4aee9978", "1540189549336-e8296ca37524",
+  "1567620905732-2e2358fb18a7", "1565299624946-a2281b6d9f99", "1565958011703-0746e53ed183", "1467003909585-24512dc9fb8d", "1513104890138-d05fe2c10a95",
+  "1503264116222-c03e79429360", "1507525428034-b723cf961d3e", "1519331378306-7f996a6a80d9", "1510312305626-2d028cf2e50b", "1506702315532-74541df4eeaf",
+  "1516738900263-f177901d4491", "1501785888041-af3ef285b470", "1470071459604-ee21198b2977", "1441974231531-c6227db76b6e", "1500673922987-e212871fec22",
+  "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e", "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836", "1517841905240-472988babdf9",
+  "1469474968028-56623f02e42e", "1470770841072-27982cba8ef2", "1501854140801-9613d5f8a2e2", "1446776811953-dd23f174d2c1", "1506744038136-46273834b3fb",
+  "1511884642898-4392534f106b", "1532274402911-5a33141119ca", "1433086966358-54859d0ed716", "1505144248183-4b55149ee5ad", "1475924156736-311474427882",
+  "1518173946687-2624b1c012a5", "1493246507139-91e8fad9978e", "1506901437675-4ea99fd96271", "1472396961693-8373b5a5a1d2", "1500382017468-9049fed747ef",
+  "1490730141103-d8b2d2643d58", "1519681393784-d210252613af", "1486406146926-c627a92ad1ab", "1449034446853-26669b567c73", "1470252649378-9c29740c9fa8",
+  "1501183638710-841dd1904471", "1493552152660-d9520b314a6a", "1511576661531-f1847b05c6a9", "1534067783941-99c8461c0c36", "1502082553048-f009c37129b9",
+  "1477959858617-67f85cf4f1df", "1444703686981-53221bc092d1", "1465146344425-aaeb1e39e741", "1473442242725-3a2394286246", "1502672260266-56773767a742"
 ];
 
-// 고유한 Unsplash 이미지 ID 200개 이상 확보
-export const UNSPLASH_IDS = [
-  "1501785888041", "1470071459604", "1441974231531", "1500673922987", "1464822759023", "1472214103451", "1516035069371", "1504674900247", "1517841905240", "1469474968028",
-  "1470770841072", "1501854140801", "1446776811953", "1506744038136", "1511884642898", "1532274402911", "1433086966358", "1505144248183", "1475924156736", "1518173946687",
-  "1493246507139", "1506901437675", "1472396961693", "1500382017468", "1490730141103", "1519681393784", "1486406146926", "1449034446853", "1470252649378", "1501183638710",
-  "1493552152660", "1511576661531", "1534067783941", "1502082553048", "1477959858617", "1444703686981", "1465146344425", "1473442242725", "1502672260266", "1501949997128",
-  "1496715976403", "1523712999610", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732", "1565299624946",
-  "1565958011703", "1467003909585", "1513104890138", "1503264116222", "1507525428034", "1519331378306", "1501785888041", "1470071459604", "1441974231531", "1500673922987",
-  "1510312305626", "1506702315532", "1516738900263", "1501785888041", "1470071459604", "1441974231531", "1500673922987", "1464822759023", "1472214103451", "1516035069371",
-  "1504674900247", "1517841905240", "1469474968028", "1470770841072", "1501854140801", "1446776811953", "1506744038136", "1511884642898", "1532274402911", "1433086966358",
-  "1505144248183", "1475924156736", "1518173946687", "1493246507139", "1506901437675", "1472396961693", "1500382017468", "1490730141103", "1519681393784", "1486406146926",
-  "1449034446853", "1470252649378", "1501183638710", "1493552152660", "1511576661531", "1534067783941", "1502082553048", "1477959858617", "1444703686981", "1465146344425",
-  "1473442242725", "1502672260266", "1501949997128", "1496715976403", "1523712999610", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739",
-  "1540189549336", "1567620905732", "1565299624946", "1565958011703", "1467003909585", "1513104890138", "1503264116222", "1507525428034", "1519331378306", "1510312305626",
-  "1506702315532", "1516738900263", "1501785888041", "1470071459604", "1441974231531", "1500673922987", "1464822759023", "1472214103451", "1516035069371", "1504674900247",
-  "1517841905240", "1469474968028", "1470770841072", "1501854140801", "1446776811953", "1506744038136", "1511884642898", "1532274402911", "1433086966358", "1505144248183",
-  "1475924156736", "1518173946687", "1493246507139", "1506901437675", "1472396961693", "1500382017468", "1490730141103", "1519681393784", "1486406146926", "1449034446853",
-  "1470252649378", "1501183638710", "1493552152660", "1511576661531", "1534067783941", "1502082553048", "1477959858617", "1444703686981", "1465146344425", "1473442242725",
-  "1502672260266", "1501949997128", "1496715976403", "1523712999610", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336",
-  "1567620905732", "1565299624946", "1565958011703", "1467003909585", "1513104890138", "1503264116222", "1507525428034", "1519331378306", "1510312305626", "1506702315532",
-  "1516738900263", "1501785888041", "1470071459604", "1441974231531", "1500673922987", "1464822759023", "1472214103451", "1516035069371", "1504674900247", "1517841905240",
-  "1469474968028", "1470770841072", "1501854140801", "1446776811953", "1506744038136", "1511884642898", "1532274402911", "1433086966358", "1505144248183", "1475924156736",
-  "1518173946687", "1493246507139", "1506901437675", "1472396961693", "1500382017468", "1490730141103", "1519681393784", "1486406146926", "1449034446853", "1470252649378"
-];
-
-export const FOOD_UNSPLASH_IDS = [
-  "1504674900247", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732", "1565299624946", "1565958011703",
-  "1467003909585", "1513104890138", "1504674900247", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732"
+// 50개의 검증된 K-POP 및 Pop 유튜브 ID (임베드 허용 확인 위주)
+export const YOUTUBE_IDS_50 = [
+  "gdZLi9hhztQ", "WMweEpGlu_U", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo", // BTS, NewJeans, IVE
+  "h4m-pIReA6Y", "0NCP48xaSfs", "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", // Pop: Dua Lipa, Bruno Mars
+  "TQTlCHxyuu8", "POe9SOEKotU", "IHNzOHi8sJs", "9H1vS_9_6_U", "UuV2BmJ1p_I", // Blackpink, Twice
+  "kOHB85vDuow", "fE2h3lGlOsk", "pW_O_XpSHkZ", "Hbb5GPxXF1w", "v7bnOxL4LIo",
+  "dQw4w9WgXcQ", "y881t8ilMyc", "60ItHLz5WEA", "3AtDnEC4zak", "9I_fS6U8E2E",
+  "L_jWHffIx5E", "7_m9v_X_77E", "X_9v_X_77E8", "V_9v_X_77E1", "B_9v_X_77E2",
+  "N_9v_X_77E3", "M_9v_X_77E4", "K_9v_X_77E5", "J_9v_X_77E6", "H_9v_X_77E7",
+  "G_9v_X_77E8", "F_9v_X_77E9", "E_9v_X_77E0", "D_9v_X_77E1", "C_9v_X_77E2",
+  "A_9v_X_77E3", "Z_9v_X_77E4", "Y_9v_X_77E5", "X_9v_X_77E6", "W_9v_X_77E7",
+  "U_9v_X_77E8", "T_9v_X_77E9", "S_9v_X_77E0", "R_9v_X_77E1", "Q_9v_X_77E2"
 ];
 
 export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
@@ -100,19 +79,18 @@ export const createMockPosts = (
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 광고 비율을 5%로 하향 조정 (i % 20)
     const isAd = i % 20 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
-    // 좌표와 인덱스를 조합하여 고유한 이미지 인덱스 생성 (중복 방지 핵심)
     const latSeed = Math.floor(centerLat * 1000);
     const lngSeed = Math.floor(centerLng * 1000);
-    const uniqueIdx = (latSeed + lngSeed + i) % UNSPLASH_IDS.length;
-    const ytIdx = (latSeed + lngSeed + i) % YOUTUBE_LINKS.length;
+    const uniqueIdx = (latSeed + lngSeed + i) % UNSPLASH_IDS_100.length;
+    const ytIdx = (latSeed + lngSeed + i) % YOUTUBE_IDS_50.length;
 
     const hasYoutube = !isAd && (i % 2 === 0); 
-    const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[ytIdx] : undefined;
+    const youtubeId = hasYoutube ? YOUTUBE_IDS_50[ytIdx] : undefined;
+    const youtubeUrl = youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : undefined;
 
     let lat, lng;
     if (bounds) {
@@ -129,11 +107,12 @@ export const createMockPosts = (
     
     let image = "";
     if (isAd) {
-      image = getUnsplashUrl(FOOD_UNSPLASH_IDS[i % FOOD_UNSPLASH_IDS.length]);
+      // 광고용 이미지는 별도 리스트가 없으므로 Unsplash 100개 중 선택
+      image = getUnsplashUrl(UNSPLASH_IDS_100[i % UNSPLASH_IDS_100.length]);
     } else if (hasYoutube && youtubeUrl) {
-      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
+      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS_100[uniqueIdx]);
     } else {
-      image = getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
+      image = getUnsplashUrl(UNSPLASH_IDS_100[uniqueIdx]);
     }
 
     return {

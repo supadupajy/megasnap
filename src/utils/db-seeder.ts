@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
+import { createMockPosts, YOUTUBE_IDS_50, UNSPLASH_IDS_100, getUnsplashUrl } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
 // 1. 대한민국 주요 도시 및 데이터 밀도 설정
@@ -69,11 +69,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         
         if (globalIndex % 2 === 0) {
-          const ytUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
+          const ytId = YOUTUBE_IDS_50[globalIndex % YOUTUBE_IDS_50.length];
+          const ytUrl = `https://www.youtube.com/watch?v=${ytId}`;
           finalYoutubeUrl = ytUrl;
-          finalImage = getYoutubeThumbnail(ytUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
+          finalImage = getYoutubeThumbnail(ytUrl) || getUnsplashUrl(UNSPLASH_IDS_100[globalIndex % UNSPLASH_IDS_100.length]);
         } else {
-          finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
+          finalImage = getUnsplashUrl(UNSPLASH_IDS_100[globalIndex % UNSPLASH_IDS_100.length]);
         }
 
         allInsertData.push({
@@ -108,13 +109,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   }
 };
 
-/**
- * 기존 모든 포스팅의 좋아요 수치를 무작위로 변경합니다.
- * 인기 탭의 순위를 갱신하기 위해 사용됩니다.
- */
 export const randomizeExistingLikes = async () => {
   try {
-    // 1. 모든 포스팅 ID 가져오기
     const { data: posts, error: fetchError } = await supabase
       .from('posts')
       .select('id');
@@ -122,20 +118,15 @@ export const randomizeExistingLikes = async () => {
     if (fetchError) throw fetchError;
     if (!posts || posts.length === 0) return 0;
 
-    // 2. Chunk 단위로 업데이트 수행 (성능 및 안정성)
     const chunkSize = 20;
     for (let i = 0; i < posts.length; i += chunkSize) {
       const chunk = posts.slice(i, i + chunkSize);
-      
-      // 각 포스팅에 대해 개별 업데이트 프로미스 생성
       const updatePromises = chunk.map(post => 
         supabase
           .from('posts')
-          .update({ likes: Math.floor(Math.random() * 25000) }) // 0~25,000 사이 랜덤
+          .update({ likes: Math.floor(Math.random() * 25000) })
           .eq('id', post.id)
       );
-
-      // 병렬 실행
       await Promise.all(updatePromises);
     }
     
