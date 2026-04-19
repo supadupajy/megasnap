@@ -51,7 +51,6 @@ const Chat = () => {
     }
   };
 
-  // 메시지 로드 및 구독 로직
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
@@ -115,7 +114,7 @@ const Chat = () => {
 
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length]);
+  }, [messages.length, isKeyboardOpen]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -155,9 +154,7 @@ const Chat = () => {
     <div 
       className="relative flex flex-col w-full h-full bg-white overflow-hidden"
       style={{ paddingBottom: isKeyboardOpen ? `${keyboardHeight}px` : 0 }}
-      onClick={() => setIsKeyboardOpenManual(false)}
     >
-      {/* 1. 상단 헤더 */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors">
@@ -184,10 +181,10 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 2. 중앙 메시지 영역 */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4 bg-white"
+        onClick={() => setIsKeyboardOpenManual(false)}
       >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -205,12 +202,10 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. 하단 입력창 */}
       <div className="p-4 bg-white border-t border-gray-100 shrink-0">
         <form 
           onSubmit={handleSend}
           className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner"
-          onClick={(e) => e.stopPropagation()}
         >
           <Input 
             ref={inputRef}
@@ -219,6 +214,10 @@ const Chat = () => {
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
             onFocus={() => setIsKeyboardOpenManual(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsKeyboardOpenManual(true);
+            }}
           />
           <Button 
             type="submit"
