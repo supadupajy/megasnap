@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -29,13 +30,13 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
+  const { keyboardHeight, isKeyboardOpen } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState('100%');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,33 +51,12 @@ const Chat = () => {
     }
   };
 
-  // 키보드 대응: VisualViewport의 실제 높이를 컨테이너 높이로 설정
+  // 키보드 상태 변화 시 스크롤 조절
   useEffect(() => {
-    const handleVisualViewportResize = () => {
-      if (window.visualViewport) {
-        // 키보드가 올라오면 visualViewport.height가 줄어듭니다.
-        // 이 높이를 직접 style.height에 할당하여 브라우저의 강제 스크롤을 방지합니다.
-        setViewportHeight(`${window.visualViewport.height}px`);
-        
-        // 키보드가 올라올 때 항상 최하단으로 스크롤
-        setTimeout(() => scrollToBottom('auto'), 50);
-      }
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleVisualViewportResize);
-      window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
-      // 초기 높이 설정
-      handleVisualViewportResize();
+    if (isKeyboardOpen) {
+      setTimeout(() => scrollToBottom('auto'), 100);
     }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
-        window.visualViewport.removeEventListener('scroll', handleVisualViewportResize);
-      }
-    };
-  }, []);
+  }, [isKeyboardOpen]);
 
   // 메시지 로드 및 구독 로직
   useEffect(() => {
@@ -182,13 +162,12 @@ const Chat = () => {
 
   return (
     /* 
-      fixed inset-0으로 고정하고, style={{ height: viewportHeight }}를 통해 
-      키보드가 올라온 만큼만 높이를 차지하게 합니다. 
-      이렇게 하면 브라우저가 페이지 전체를 위로 밀어 올리지 않습니다.
+      프리뷰 시뮬레이션을 위해 style.bottom에 keyboardHeight를 적용합니다.
+      실제 모바일에서는 VisualViewport가 작동하고, 프리뷰에서는 가상 키보드 높이만큼 바닥에서 밀려 올라갑니다.
     */
     <div 
-      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000]"
-      style={{ height: viewportHeight }}
+      className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[1000] transition-[bottom] duration-300 ease-out"
+      style={{ bottom: `${keyboardHeight}px` }}
     >
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0 z-10">
