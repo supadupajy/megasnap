@@ -3,71 +3,57 @@
 import { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // 웹 브라우저가 아닌 실제 앱 환경에서만 동작
     if (Capacitor.getPlatform() === 'web' || !user) return;
 
     const registerPush = async () => {
       try {
-        // 1. 권한 확인 및 요청
         let permStatus = await PushNotifications.checkPermissions();
 
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
         }
 
-        if (permStatus.receive !== 'granted') {
-          console.warn('Push notification permission denied');
-          return;
-        }
+        if (permStatus.receive !== 'granted') return;
 
-        // 2. 푸시 서비스 등록
         await PushNotifications.register();
 
-        // 3. 등록 성공 시 토큰 수신
+        // 토큰 등록
         PushNotifications.addListener('registration', async (token) => {
-          console.log('Push registration success, token:', token.value);
-          
-          // 4. Supabase profiles 테이블에 토큰 저장
-          const { error } = await supabase
+          await supabase
             .from('profiles')
             .update({ push_token: token.value })
             .eq('id', user.id);
-
-          if (error) console.error('Error saving push token:', error);
         });
 
-        // 등록 실패 시
-        PushNotifications.addListener('registrationError', (error) => {
-          console.error('Push registration error:', error);
-        });
-
-        // 앱이 열려있을 때 알림 수신 시
-        PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('Push received:', notification);
-        });
-
-        // 사용자가 알림을 클릭했을 때
+        // 알림 클릭 시 동작
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('Push action performed:', notification);
+          const data = notification.notification.data;
+          // 알림 데이터에 chatId가 있으면 해당 방으로 이동
+          if (data && data.chatId) {
+            navigate(`/chat/${data.chatId}`);
+          } else {
+            navigate('/notifications');
+          }
         });
 
       } catch (err) {
-        console.error('Push notification setup failed:', err);
+        console.error('Push setup error:', err);
       }
     };
 
     registerPush();
 
-    // 클린업: 리스너 제거
     return () => {
       PushNotifications.removeAllListeners();
     };
-  }, [user]);
+  }, [user, navigate]);
 };
