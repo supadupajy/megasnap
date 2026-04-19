@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Navigation, Utensils, Car, TreePine, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
-import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
+import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -108,15 +108,14 @@ const PostItem = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const youtubeId = getYoutubeId(youtubeUrl || '');
-  const youtubeThumbnail = youtubeUrl ? getYoutubeThumbnail(youtubeUrl) : null;
   
   const displayImages = useMemo(() => {
     if (isAd) return [image];
-    if (youtubeThumbnail) return [youtubeThumbnail];
+    // 유튜브 썸네일 로직 제거: 무조건 전달받은 image(Unsplash) 사용
     const img1 = images.length > 0 ? images[0] : image;
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
-  }, [isAd, youtubeThumbnail, images, image]);
+  }, [isAd, images, image]);
 
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
