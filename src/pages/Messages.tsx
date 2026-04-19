@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { showError } from '@/utils/toast';
 
 interface Conversation {
   other_id: string;
@@ -30,71 +31,73 @@ const Messages = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
-  // 1. 기존 대화 목록 가져오기
   useEffect(() => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
-        .order('created_at', { ascending: false });
+      try {
+        const { data: messages, error } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+          .order('created_at', { ascending: false });
 
-      const convMap = new Map<string, any>();
-      
-      if (!error && messages) {
-        for (const msg of messages) {
-          const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
-          if (!convMap.has(otherId)) {
-            convMap.set(otherId, {
-              other_id: otherId,
-              last_message: msg.content,
-              created_at: msg.created_at,
-              unread_count: (!msg.is_read && msg.receiver_id === authUser.id) ? 1 : 0
-            });
-          } else if (!msg.is_read && msg.receiver_id === authUser.id) {
-            convMap.get(otherId).unread_count += 1;
+        if (error) throw error;
+
+        const convMap = new Map<string, any>();
+        if (messages) {
+          for (const msg of messages) {
+            const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
+            if (!convMap.has(otherId)) {
+              convMap.set(otherId, {
+                other_id: otherId,
+                last_message: msg.content,
+                created_at: msg.created_at,
+                unread_count: (!msg.is_read && msg.receiver_id === authUser.id) ? 1 : 0
+              });
+            } else if (!msg.is_read && msg.receiver_id === authUser.id) {
+              convMap.get(otherId).unread_count += 1;
+            }
           }
         }
-      }
 
-      const localRooms = chatStore.getRooms();
-      for (const room of localRooms) {
-        if (!convMap.has(room.id) && room.messages.length > 0) {
-          const lastMsg = room.messages[room.messages.length - 1];
-          convMap.set(room.id, {
-            other_id: room.id,
-            last_message: lastMsg.text,
-            created_at: new Date().toISOString(),
-            unread_count: room.unread ? 1 : 0,
-            profile: {
-              nickname: room.user.name,
-              avatar_url: room.user.avatar
-            }
-          });
+        const localRooms = chatStore.getRooms();
+        for (const room of localRooms) {
+          if (!convMap.has(room.id) && room.messages.length > 0) {
+            const lastMsg = room.messages[room.messages.length - 1];
+            convMap.set(room.id, {
+              other_id: room.id,
+              last_message: lastMsg.text,
+              created_at: new Date().toISOString(),
+              unread_count: room.unread ? 1 : 0,
+              profile: { nickname: room.user.name, avatar_url: room.user.avatar }
+            });
+          }
         }
+
+        const convList = Array.from(convMap.values());
+        const results = await Promise.all(
+          convList.map(async (conv) => {
+            if (conv.profile) return conv;
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('nickname, avatar_url')
+              .eq('id', conv.other_id)
+              .single();
+            return {
+              ...conv,
+              profile: profile || { nickname: '사용자', avatar_url: null }
+            };
+          })
+        );
+
+        results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setConversations(results);
+      } catch (err: any) {
+        console.error('Fetch conversations error:', err);
+      } finally {
+        setIsLoading(false);
       }
-
-      const convList = Array.from(convMap.values());
-      const results = await Promise.all(
-        convList.map(async (conv) => {
-          if (conv.profile) return conv;
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('nickname, avatar_url')
-            .eq('id', conv.other_id)
-            .single();
-          return {
-            ...conv,
-            profile: profile || { nickname: '사용자', avatar_url: null }
-          };
-        })
-      );
-
-      results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setConversations(results);
-      setIsLoading(false);
     };
 
     fetchConversations();
@@ -102,7 +105,6 @@ const Messages = () => {
     return () => unsubscribe();
   }, [authUser]);
 
-  // 2. 전체 유저 실시간 DB 검색 (닉네임 기준)
   useEffect(() => {
     const searchGlobalUsers = async () => {
       const trimmedQuery = query.trim();
@@ -113,26 +115,38 @@ const Messages = () => {
 
       setIsSearchingGlobal(true);
       try {
+        // profiles 테이블에서 nickname 검색
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url, bio')
           .ilike('nickname', `%${trimmedQuery}%`)
           .neq('id', authUser?.id)
-          .limit(5);
+          .limit(10);
 
-        if (!error && data) {
-          // 이미 대화 중인 유저는 제외하고 표시
+        if (error) {
+          console.error('Supabase search error:', error);
+          // RLS 에러인 경우 콘솔에 상세 출력
+          if (error.code === '42501') {
+            console.warn('RLS Policy issue: profiles table is not readable.');
+          }
+          throw error;
+        }
+
+        if (data) {
           const existingIds = new Set(conversations.map(c => c.other_id));
           setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
         }
-      } catch (err) {
-        console.error('Global search error:', err);
+      } catch (err: any) {
+        // 에러 발생 시 사용자에게 알림 (개발 중 확인용)
+        if (err.code === '42501') {
+          showError('데이터베이스 접근 권한이 없습니다. (RLS 확인 필요)');
+        }
       } finally {
         setIsSearchingGlobal(false);
       }
     };
 
-    const timer = setTimeout(searchGlobalUsers, 200);
+    const timer = setTimeout(searchGlobalUsers, 300);
     return () => clearTimeout(timer);
   }, [query, authUser, conversations]);
 
@@ -181,7 +195,6 @@ const Messages = () => {
         </div>
 
         <div className="space-y-6">
-          {/* 기존 대화 목록 */}
           <div className="space-y-4">
             <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
               {query ? '대화 목록 검색 결과' : '최근 메시지'}
@@ -210,7 +223,6 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* 새로운 유저 검색 결과 (DB 조회) */}
           {query.trim() && globalSearchResults.length > 0 && (
             <div className="space-y-4 pt-2 border-t border-gray-50">
               <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
