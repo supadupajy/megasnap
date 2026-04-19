@@ -1,4 +1,5 @@
 import { Post, User, Comment } from '@/types';
+import { getYoutubeThumbnail } from './utils';
 
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -11,6 +12,28 @@ const seededRandom = (seed: string) => {
     return ((hash - 1) / 2147483646) * 0.999999999999999;
   };
 };
+
+// K-pop & Pop YouTube Links
+export const YOUTUBE_LINKS = [
+  "https://www.youtube.com/watch?v=9bZkp7q19f0", // PSY - GANGNAM STYLE
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson - Uptown Funk
+  "https://www.youtube.com/watch?v=hT_nvWreIhg", // OneRepublic - Counting Stars
+  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
+  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
+  "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
+  "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
+  "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
+  "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
+  "https://www.youtube.com/watch?v=7wtfhZwyrcc", // Imagine Dragons - Believer
+  "https://www.youtube.com/watch?v=YykjpeuMNEk", // Coldplay - Hymn For The Weekend
+  "https://www.youtube.com/watch?v=u31qwQUeGuM", // BLACKPINK - Kill This Love
+  "https://www.youtube.com/watch?v=TUVcZfQe-Kw", // BLACKPINK - DDU-DU DDU-DU
+  "https://www.youtube.com/watch?v=DyDfgMOUjCI", // BTS - Dynamite
+  "https://www.youtube.com/watch?v=RlPNh_PB6Ww", // BTS - Butter
+  "https://www.youtube.com/watch?v=fRh_vgS2dFE"  // NewJeans - OMG
+];
 
 // 카테고리별 20개씩, 총 100개의 고유 이미지
 const ACCIDENT_IMAGES = [
@@ -161,6 +184,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; // 30% 확률로 유튜브 영상 생성
     
     const lat = centerLat + (randomFn() - 0.5) * 0.04;
     const lng = centerLng + (randomFn() - 0.5) * 0.04;
@@ -168,6 +192,7 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     let content = CONTENT_POOL[Math.floor(randomFn() * CONTENT_POOL.length)] || "멋진 장소입니다! ✨";
     let category: 'food' | 'accident' | 'place' | 'animal' | 'none' = 'none';
     let images: string[] = [];
+    let youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
     const cokeAdImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
@@ -200,6 +225,10 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
     }
 
     let finalImage = images[0];
+    if (youtubeUrl) {
+      const thumb = getYoutubeThumbnail(youtubeUrl);
+      if (thumb) finalImage = thumb;
+    }
 
     const randomCount = Math.floor(randomFn() * 16) + 10;
     const comments = generateRandomComments(randomCount, randomFn);
@@ -242,7 +271,8 @@ export const createMockPosts = (centerLat: number, centerLng: number, count: num
       adImageIndex: 1,
       isLiked: randomFn() > 0.5,
       createdAt,
-      borderType
+      borderType,
+      youtubeUrl
     };
   });
 };

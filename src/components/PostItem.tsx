@@ -114,6 +114,7 @@ const PostItem = ({
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
+  // Intersection Observer for Auto-play
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
 
@@ -126,7 +127,7 @@ const PostItem = ({
         }
       },
       { 
-        threshold: 0.6,
+        threshold: 0.6, // 60% 이상 보일 때 재생
         rootMargin: '0px' 
       }
     );
