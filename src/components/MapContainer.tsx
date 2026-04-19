@@ -233,7 +233,6 @@ const MapContainer = ({
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
-    // 마커 이미지는 post.image를 그대로 사용 (이미 썸네일이 매핑되어 있음)
     const displayImage = post.image;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
@@ -254,7 +253,8 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    if (currentLevel >= 9) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
+    // 줌 레벨 제한을 9에서 11로 상향
+    if (currentLevel >= 11) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => { if (!currentPostIds.has(id)) { overlay.setMap(null); overlaysRef.current.delete(id); } });

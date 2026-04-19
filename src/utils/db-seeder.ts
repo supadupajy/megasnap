@@ -15,13 +15,14 @@ const validateYoutubeVideo = async (id: string): Promise<boolean> => {
   }
 };
 
+const CATEGORIES = ['food', 'accident', 'place', 'animal'];
+
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   try {
     // 1. 유튜브 영상 사전 검증 (Clean List 만들기)
     console.log("유튜브 영상 정책 검토 중...");
     const validYoutubeIds: string[] = [];
     
-    // 병렬로 체크하여 속도 향상
     const checkPromises = YOUTUBE_IDS_50.map(async (id) => {
       const isValid = await validateYoutubeVideo(id);
       if (isValid) validYoutubeIds.push(id);
@@ -50,13 +51,11 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         let finalYoutubeUrl = null;
 
-        // 유튜브 영상으로 결정되었고, 검증된 리스트가 있는 경우
         if (isYoutube && validYoutubeIds.length > 0) {
           const videoId = validYoutubeIds[i % validYoutubeIds.length];
           finalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
           finalImage = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
         } else {
-          // 유튜브가 아니거나 검증된 영상이 없으면 Unsplash 이미지 사용
           const imageId = UNSPLASH_IDS_100[i % UNSPLASH_IDS_100.length];
           finalImage = getUnsplashUrl(imageId);
         }
@@ -72,10 +71,10 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: Math.floor(Math.random() * 5000),
+          category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)], // 랜덤 카테고리 추가
           created_at: new Date(Date.now() - Math.random() * 60 * 24 * 3600000).toISOString()
         });
 
-        // 100개 단위 배치 삽입
         if (cityInsertData.length >= 100) {
           const { error } = await supabase.from('posts').insert(cityInsertData);
           if (error) throw error;
@@ -97,9 +96,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   }
 };
 
-/**
- * 기존 모든 포스팅의 좋아요 수치를 무작위로 변경합니다.
- */
 export const randomizeExistingLikes = async () => {
   try {
     const { data: posts, error: fetchError } = await supabase
