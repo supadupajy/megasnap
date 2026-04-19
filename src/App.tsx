@@ -101,7 +101,7 @@ const AnimatedRoutes = () => {
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></UserProfile>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
