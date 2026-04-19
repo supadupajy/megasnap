@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
@@ -54,9 +54,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (isOpen && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
-    }
+    if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [currentIndex, isOpen]);
 
   useEffect(() => {
@@ -65,17 +63,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
-      
       const post = posts[initialIndex];
-      if (post) {
-        setLocalComments(post.comments || []);
-        setIsSaved(post.isSaved || false);
-      }
+      if (post) { setLocalComments(post.comments || []); setIsSaved(post.isSaved || false); }
     }
-    if (!isOpen) {
-      setHasInitialized(false);
-      setIsPlayingVideo(false);
-    }
+    if (!isOpen) { setHasInitialized(false); setIsPlayingVideo(false); }
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
@@ -93,22 +84,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   useEffect(() => {
     const currentPost = posts[currentIndex];
     if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsPlayingVideo(true);
-        } else {
-          setIsPlayingVideo(false);
-        }
-      },
-      { threshold: 0.6 }
-    );
-
-    if (videoContainerRef.current) {
-      observer.observe(videoContainerRef.current);
-    }
-
+    const observer = new IntersectionObserver(([entry]) => { setIsPlayingVideo(entry.isIntersecting); }, { threshold: 0.6 });
+    if (videoContainerRef.current) observer.observe(videoContainerRef.current);
     return () => observer.disconnect();
   }, [currentIndex, isOpen, posts]);
 
@@ -121,30 +98,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const handleAddComment = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!commentInput.trim() || !authUser) return;
-
     setIsSubmittingComment(true);
     const newCommentText = commentInput.trim();
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-
     try {
-      const { error } = await supabase.from('comments').insert({
-        post_id: post.id,
-        user_id: authUser.id,
-        user_name: displayName,
-        user_avatar: profile?.avatar_url,
-        content: newCommentText
-      });
-
+      const { error } = await supabase.from('comments').insert({ post_id: post.id, user_id: authUser.id, user_name: displayName, user_avatar: profile?.avatar_url, content: newCommentText });
       if (error) throw error;
-
       setLocalComments([...localComments, { user: displayName, text: newCommentText }]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
-    } catch (err) {
-      showError('댓글 등록에 실패했습니다.');
-    } finally {
-      setIsSubmittingComment(false);
-    }
+    } catch (err) { showError('댓글 등록에 실패했습니다.'); } finally { setIsSubmittingComment(false); }
   };
 
   if (!isOpen || posts.length === 0) return null;
@@ -155,21 +118,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const isPopular = !isAd && post.borderType === 'popular';
   const isInfluencer = !isAd && post.isInfluencer;
   const category = post.category || 'none';
-  
   const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const youtubeThumbnail = post.youtubeUrl ? getYoutubeThumbnail(post.youtubeUrl) : null;
   
-  // 이미지를 항상 3개로 구성 (원본, 광고, 고유한 세번째 이미지)
   const displayImages = useMemo(() => {
     if (youtubeThumbnail) return [youtubeThumbnail];
     const img1 = post.images?.length ? post.images[0] : post.image;
-    // 세번째 이미지가 중복되지 않도록 images[1]이 있으면 사용하고, 없으면 고유한 플레이스홀더 사용
     const img3 = (post.images?.length > 1 && post.images[1] !== AD_IMAGE) ? post.images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
   }, [youtubeThumbnail, post.images, post.image]);
 
-  const adIndex = 1; // 항상 2번째 이미지를 광고로 설정
-
+  const adIndex = 1;
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -181,26 +140,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (post.id.length > 20) {
-        const { error } = await supabase.from('posts').delete().eq('id', post.id);
-        if (error) throw error;
-      }
+      if (post.id.length > 20) { await supabase.from('posts').delete().eq('id', post.id); }
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(post.id);
       onClose();
-    } catch (err) {
-      console.error('Error deleting post:', err);
-      showError('삭제 중 오류가 발생했습니다.');
-    } finally {
-      setIsDeleteDialogOpen(false);
-    }
+    } catch (err) { showError('삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); }
   };
 
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
-    let Icon = null;
-    let bgColor = "";
-    let label = "";
+    let Icon = null; let bgColor = ""; let label = "";
     switch (category) {
       case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
       case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
@@ -208,12 +157,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
     if (!Icon) return null;
-    return (
-      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-[10px] font-black">{label}</span>
-      </div>
-    );
+    return (<div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}><Icon className="w-3.5 h-3.5" /><span className="text-[10px] font-black">{label}</span></div>);
   };
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
@@ -221,9 +165,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
-      <div className="absolute top-4 right-6 z-[1100]">
-        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button>
-      </div>
+      <div className="absolute top-4 right-6 z-[1100]"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button></div>
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
         <div className="w-full max-w-[420px] h-[82vh] flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative pointer-events-auto" onClick={onClose}>
           <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
@@ -243,7 +185,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                 <div className="px-4">
                   <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", isInfluencer ? "influencer-border-container" : (isAd ? "ad-border-container" : (isPopular ? "popular-border-container" : "")))}>
                     <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
-                      {isPlayingVideo ? (youtubeId ? (<iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>) : (<video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />)) : (<div className="relative w-full h-full"><div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>{(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}{displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}</div>)}
+                      {isPlayingVideo ? (
+                        youtubeId ? (
+                          <div className="relative w-full h-full">
+                            <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                            <button onClick={(e) => { e.stopPropagation(); window.open(post.youtubeUrl, '_blank'); }} className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-white/20 active:scale-95 transition-all z-20"><ExternalLink className="w-3 h-3" /> 유튜브에서 보기</button>
+                          </div>
+                        ) : (
+                          <video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />
+                        )
+                      ) : (
+                        <div className="relative w-full h-full">
+                          <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
+                          {(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
+                          {displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

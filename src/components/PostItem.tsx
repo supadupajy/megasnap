@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Flame, Star, Navigation, Utensils, Car, TreePine, Sparkles, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
 import { cn, getYoutubeId, getYoutubeThumbnail } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -110,58 +110,35 @@ const PostItem = ({
   const youtubeId = getYoutubeId(youtubeUrl || '');
   const youtubeThumbnail = youtubeUrl ? getYoutubeThumbnail(youtubeUrl) : null;
   
-  // 이미지를 항상 3개로 구성 (원본, 광고, 고유한 세번째 이미지)
   const displayImages = useMemo(() => {
     if (youtubeThumbnail) return [youtubeThumbnail];
     const img1 = images.length > 0 ? images[0] : image;
-    // 세번째 이미지가 중복되지 않도록 images[1]이 있으면 사용하고, 없으면 고유한 플레이스홀더 사용
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
   }, [youtubeThumbnail, images, image]);
 
-  const adIndex = 1; // 항상 2번째 이미지를 광고로 설정
-
+  const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsPlayingVideo(true);
-        } else {
-          setIsPlayingVideo(false);
-        }
-      },
-      { threshold: 0.6, rootMargin: '0px' }
+      ([entry]) => { setIsPlayingVideo(entry.isIntersecting); },
+      { threshold: 0.6 }
     );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
+    if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [videoUrl, youtubeId]);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    if (onImageError) {
-      onImageError(id);
-    } else {
-      (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
-    }
+    if (onImageError) onImageError(id);
+    else (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
   };
 
   useEffect(() => {
     const checkLikeStatus = async () => {
       if (!authUser || !id || id.length < 20) return;
-      const { data } = await supabase
-        .from('likes')
-        .select('id')
-        .eq('post_id', id)
-        .eq('user_id', authUser.id)
-        .single();
-      
+      const { data } = await supabase.from('likes').select('id').eq('post_id', id).eq('user_id', authUser.id).single();
       if (data) setIsLiked(true);
     };
     checkLikeStatus();
@@ -169,17 +146,11 @@ const PostItem = ({
 
   const handleLikeToggleLocal = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!authUser) {
-      showError('로그인이 필요합니다.');
-      return;
-    }
-
+    if (!authUser) { showError('로그인이 필요합니다.'); return; }
     const prevLiked = isLiked;
     const prevCount = likesCount;
-
     setIsLiked(!prevLiked);
     setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
-
     try {
       if (prevLiked) {
         await supabase.from('likes').delete().eq('post_id', id).eq('user_id', authUser.id);
@@ -188,11 +159,7 @@ const PostItem = ({
         await supabase.from('likes').insert({ post_id: id, user_id: authUser.id });
         await supabase.rpc('increment_likes', { post_id: id });
       }
-    } catch (err) {
-      setIsLiked(prevLiked);
-      setLikesCount(prevCount);
-    }
-
+    } catch (err) { setIsLiked(prevLiked); setLikesCount(prevCount); }
     if (onLikeToggle) onLikeToggle(e);
   };
 
@@ -200,30 +167,16 @@ const PostItem = ({
     e.preventDefault();
     e.stopPropagation();
     if (!commentInput.trim() || !authUser) return;
-
     setIsSubmittingComment(true);
     const newCommentText = commentInput.trim();
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-
     try {
-      const { error } = await supabase.from('comments').insert({
-        post_id: id,
-        user_id: authUser.id,
-        user_name: displayName,
-        user_avatar: profile?.avatar_url,
-        content: newCommentText
-      });
-
+      const { error } = await supabase.from('comments').insert({ post_id: id, user_id: authUser.id, user_name: displayName, user_avatar: profile?.avatar_url, content: newCommentText });
       if (error) throw error;
-
       setLocalComments([...localComments, { user: displayName, text: newCommentText }]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
-    } catch (err) {
-      showError('댓글 등록에 실패했습니다.');
-    } finally {
-      setIsSubmittingComment(false);
-    }
+    } catch (err) { showError('댓글 등록에 실패했습니다.'); } finally { setIsSubmittingComment(false); }
   };
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -240,9 +193,7 @@ const PostItem = ({
 
   const handleLocationClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (lat !== undefined && lng !== undefined && onLocationClick) {
-      onLocationClick(e, lat, lng);
-    }
+    if (lat !== undefined && lng !== undefined && onLocationClick) onLocationClick(e, lat, lng);
   };
 
   const handleSaveToggle = (e: React.MouseEvent) => {
@@ -259,19 +210,12 @@ const PostItem = ({
       }
       showSuccess('포스팅이 삭제되었습니다.');
       if (onDelete) onDelete(id);
-    } catch (err) {
-      console.error('Error deleting post:', err);
-      showError('삭제 중 오류가 발생했습니다.');
-    } finally {
-      setIsDeleteDialogOpen(false);
-    }
+    } catch (err) { showError('삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); }
   };
 
   const renderCategoryBadge = () => {
     if (category === 'none') return null;
-    let Icon = null;
-    let bgColor = "";
-    let label = "";
+    let Icon = null; let bgColor = ""; let label = "";
     switch (category) {
       case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
       case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
@@ -300,57 +244,16 @@ const PostItem = ({
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   return (
-    <div 
-      ref={containerRef}
-      onClick={onClick}
-      className={cn(
-        "bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50",
-        (borderType !== 'none' && !disablePulse) && "animate-influencer-float"
-      )}
-    >
+    <div ref={containerRef} onClick={onClick} className={cn("bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50", (borderType !== 'none' && !disablePulse) && "animate-influencer-float")}>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} />
-          </div>
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} /></div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>
-              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-            </div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
-              <MapPin className="w-3 h-3" />
-              <span className="text-[10px] font-medium">{location}</span>
-            </div>
+            <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{location}</span></div>
           </div>
         </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}>
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
-            {isMine ? (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                <Trash2 className="w-4 h-4 text-red-600" />
-                <span className="text-sm font-bold text-red-600">삭제하기</span>
-              </DropdownMenuItem>
-            ) : (
-              <>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                  <AlertCircle className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-bold text-gray-700">신고</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                  <Ban className="w-4 h-4 text-red-600" />
-                  <span className="text-sm font-bold text-red-600">차단</span>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
       </div>
 
       <div className="px-4">
@@ -358,49 +261,18 @@ const PostItem = ({
           <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
             {isPlayingVideo ? (
               youtubeId ? (
-                <iframe
-                  className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&origin=${window.location.origin}`}
-                  title="YouTube video player"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+                <div className="relative w-full h-full">
+                  <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                  <button onClick={(e) => { e.stopPropagation(); window.open(youtubeUrl, '_blank'); }} className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-white/20 active:scale-95 transition-all z-20"><ExternalLink className="w-3 h-3" /> 유튜브에서 보기</button>
+                </div>
               ) : (
-                <video 
-                  src={videoUrl} 
-                  className="w-full h-full object-cover" 
-                  controls={true}
-                  autoPlay 
-                  playsInline
-                  loop
-                  onClick={(e) => e.stopPropagation()}
-                />
+                <video src={videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />
               )
             ) : (
               <div className="relative w-full h-full">
-                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                  {displayImages.map((img, idx) => (
-                    <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                      <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
-                      {idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
-                    </div>
-                  ))}
-                </div>
-                {(videoUrl || youtubeId) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
-                      <Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" />
-                    </div>
-                  </div>
-                )}
-                {displayImages.length > 1 && !(videoUrl || youtubeId) && (
-                  <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">
-                    {displayImages.map((_, idx) => (
-                      <div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />
-                    ))}
-                  </div>
-                )}
+                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img, idx) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />{idx === adIndex && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
+                {(videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
+                {displayImages.length > 1 && !(videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_, idx) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
               </div>
             )}
           </div>
@@ -409,86 +281,11 @@ const PostItem = ({
 
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-4 pt-1.5">
-            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
-              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button>
-            <button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-3">
-              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
-              {renderCategoryBadge()}
-              {lat !== undefined && lng !== undefined && (
-                <button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
-                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span>
-                </button>
-              )}
-            </div>
-            {isAd && (
-              <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
-                <ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span>
-              </a>
-            )}
-          </div>
+          <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button></div>
+          <div className="flex flex-col items-end gap-2"><div className="flex items-center gap-3"><button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>{renderCategoryBadge()}{lat !== undefined && lng !== undefined && (<button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100"><Navigation className="w-3.5 h-3.5 fill-indigo-600" /><span className="text-[10px] font-black">위치보기</span></button>)}</div>{isAd && (<a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"><ShoppingBag className="w-3.5 h-3.5 fill-white" /><span className="text-[10px] font-black">주문하기</span></a>)}</div>
         </div>
-
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p>
-          <div className="flex gap-2 items-start">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-            </div>
-            <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
-          </div>
-
-          <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-            <Input 
-              placeholder="댓글 달기..." 
-              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
-              value={commentInput} 
-              onChange={(e) => setCommentInput(e.target.value)}
-              disabled={isSubmittingComment}
-            />
-            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-
-          {lastComment && (
-            <div className="flex gap-2 items-start mt-1">
-              <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-              <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-            </div>
-          )}
-
-          <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-            <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-          </button>
-          
-          <AnimatePresence>
-            {showComments && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden space-y-2 mt-2"
-              >
-                {localComments.slice(0, -1).map((c, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                    <span className="text-sm text-gray-500">{c.text}</span>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <div className="space-y-1"><p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p><div className="flex gap-2 items-start"><div className="flex items-center gap-1.5 shrink-0"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div><p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p></div><form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} /><button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>{lastComment && (<div className="flex gap-2 items-start mt-1"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>)}<button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button><AnimatePresence>{showComments && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2 mt-2">{localComments.slice(0, -1).map((c, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{c.user}</span><span className="text-sm text-gray-500">{c.text}</span></div>))}</motion.div>)}</AnimatePresence></div>
       </div>
-
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </div>
   );

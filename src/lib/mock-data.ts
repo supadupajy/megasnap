@@ -26,7 +26,7 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 재생 확인된 최신 유튜브 Shorts 리스트 (임베드 허용 확인됨)
+// 임베드 재생이 원활한 공식 채널 및 인기 쇼츠 리스트
 export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/CevxZvSJLk8",
   "https://www.youtube.com/shorts/09R8_2nJtjg",
