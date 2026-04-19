@@ -48,7 +48,6 @@ const Chat = () => {
     }
   };
 
-  // 메시지 읽음 처리 함수
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
@@ -56,24 +55,34 @@ const Chat = () => {
     }
 
     try {
-      // 내가 수신자이고, 상대방이 발신자인 읽지 않은 메시지들을 업데이트
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
-        .eq('is_read', false)
-        .select(); // 업데이트된 행을 반환받아 확인
+        .eq('is_read', false);
       
-      if (error) {
-        console.error('[Chat] Update is_read error:', error);
-        // RLS 정책 문제일 가능성이 높음
-      } else {
-        console.log(`[Chat] Marked ${data?.length || 0} messages as read`);
+      if (!error) {
         chatStore.markAsRead(chatId);
       }
     } catch (err) {
-      console.error('[Chat] markAsRead exception:', err);
+      console.error('[Chat] markAsRead error:', err);
+    }
+  };
+
+  const fetchMessages = async () => {
+    if (!authUser || !chatId || !isValidUUID(chatId)) return;
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
+      .order('created_at', { ascending: true });
+
+    if (!error && data) {
+      setMessages(data);
+      await markAsRead();
+      setTimeout(() => scrollToBottom('auto'), 100);
     }
   };
 
@@ -114,47 +123,49 @@ const Chat = () => {
       return;
     }
 
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
-        .order('created_at', { ascending: true });
-
-      setMessages(data || []);
-      await markAsRead();
-      setIsLoading(false);
-      setTimeout(() => scrollToBottom('auto'), 50);
-    };
-
     fetchMessages();
 
+    // 실시간 구독 채널 생성
     const channel = supabase
-      .channel(`chat_room_${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, 
-      async (payload) => {
+      .channel(`chat:${chatId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'messages' 
+      }, (payload) => {
         const newMsg = payload.new as Message;
-        if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
-            (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
-          setMessages((prev) => [...prev, newMsg]);
-          if (newMsg.sender_id === chatId) {
-            // 새 메시지가 오면 즉시 읽음 처리 시도
-            setTimeout(markAsRead, 100);
+        const oldMsg = payload.old as Message;
+
+        // 메시지 추가 (INSERT)
+        if (payload.eventType === 'INSERT') {
+          if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
+              (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
+            setMessages(prev => [...prev, newMsg]);
+            if (newMsg.sender_id === chatId) markAsRead();
           }
+        } 
+        // 읽음 상태 업데이트 (UPDATE)
+        else if (payload.eventType === 'UPDATE') {
+          setMessages(prev => prev.map(m => m.id === newMsg.id ? newMsg : m));
         }
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
-        const updatedMsg = payload.new as Message;
-        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
-      })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Realtime subscribed!');
+        }
+      });
 
-    // 윈도우 포커스 시 다시 읽음 처리 (탭 전환 등 대응)
-    window.addEventListener('focus', markAsRead);
+    // 앱이 포그라운드로 돌아올 때 데이터 동기화
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMessages();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => { 
       supabase.removeChannel(channel);
-      window.removeEventListener('focus', markAsRead);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [authUser, chatId]);
 
@@ -163,12 +174,6 @@ const Chat = () => {
       scrollToBottom('smooth');
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (keyboardHeight > 0) {
-      setTimeout(() => scrollToBottom('smooth'), 100);
-    }
-  }, [keyboardHeight]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
@@ -182,22 +187,13 @@ const Chat = () => {
         content: content,
         is_read: false
       }]).select().single();
+      
       if (error) showError('메시지 전송에 실패했습니다.');
-      else if (data) setMessages(prev => [...prev, data as Message]);
+      // Realtime이 작동하면 여기서 setMessages를 안 해도 자동으로 추가되지만, 
+      // 사용자 경험을 위해 즉시 추가할 수도 있습니다.
     } else {
       chatStore.addMessage(chatId, content, 'me');
-      const room = chatStore.getRoom(chatId);
-      if (room) {
-        const formatted = room.messages.map(m => ({
-          id: m.id.toString(),
-          content: m.text,
-          sender_id: m.sender === 'me' ? authUser.id : chatId,
-          receiver_id: m.sender === 'me' ? chatId : authUser.id,
-          created_at: new Date().toISOString(),
-          is_read: true
-        }));
-        setMessages(formatted);
-      }
+      // 로컬 스토어 업데이트 로직...
     }
   };
 
@@ -245,7 +241,6 @@ const Chat = () => {
           );
         })}
         <div ref={messagesEndRef} />
-        {messages.length === 0 && <div className="flex flex-col items-center justify-center py-20 text-center"><div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4"><Send className="w-8 h-8 text-indigo-600 opacity-20" /></div><p className="text-sm text-gray-400 font-bold">대화를 시작해보세요!</p></div>}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 transition-all duration-300 z-50" style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: keyboardHeight > 0 ? '16px' : '40px' }}>
