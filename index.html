@@ -2,17 +2,17 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- ✅ resizes-visual: 키보드가 올라올 때 시각적 뷰포트만 줄어들고 레이아웃은 유지 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
+    <!-- ✅ resizes-content로 되돌림 + JS로 헤더 위치를 직접 제어하는 방식으로 전환 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Chora</title>
     <style>
-      html, body, #root { 
+      html, body, #root {
         width: 100%;
-        margin: 0; 
-        padding: 0; 
+        margin: 0;
+        padding: 0;
         background-color: white;
       }
-      
+
       .kakao-overlay { position: absolute; pointer-events: auto; }
     </style>
     <!-- Kakao Maps API -->
