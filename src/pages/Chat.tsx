@@ -42,17 +42,11 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 메시지 목록을 ID 기준으로 병합하여 중복을 원천 차단하는 함수
   const mergeMessages = (current: Message[], incoming: Message | Message[]) => {
     const incomingArr = Array.isArray(incoming) ? incoming : [incoming];
     const map = new Map<string, Message>();
-    
-    // 기존 메시지 먼저 담기
     current.forEach(m => map.set(m.id, m));
-    // 새로운 메시지 담기 (동일 ID가 있으면 덮어씌워짐 = 중복 방지)
     incomingArr.forEach(m => map.set(m.id, m));
-    
-    // 시간순 정렬하여 배열로 반환
     return Array.from(map.values()).sort((a, b) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
@@ -66,12 +60,19 @@ const Chat = () => {
     }
   };
 
+  // 키보드 높이가 변할 때마다 최하단으로 스크롤
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      // 키보드가 올라올 때는 즉시 이동
+      setTimeout(() => scrollToBottom('auto'), 50);
+    }
+  }, [keyboardHeight]);
+
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
       if (chatId) chatStore.markAsRead(chatId);
       return;
     }
-
     try {
       await supabase
         .from('messages')
@@ -79,7 +80,6 @@ const Chat = () => {
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
         .eq('is_read', false);
-      
       chatStore.markAsRead(chatId);
     } catch (err) {
       console.error('[Chat] markAsRead error:', err);
@@ -88,13 +88,11 @@ const Chat = () => {
 
   const fetchMessages = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) return;
-    
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
       .order('created_at', { ascending: true });
-
     if (!error && data) {
       setMessages(prev => mergeMessages(prev, data));
       await markAsRead();
@@ -120,7 +118,6 @@ const Chat = () => {
 
   useEffect(() => {
     if (!authUser || !chatId) return;
-
     if (!isValidUUID(chatId)) {
       const room = chatStore.getRoom(chatId);
       if (room) {
@@ -138,41 +135,26 @@ const Chat = () => {
       setIsLoading(false);
       return;
     }
-
     fetchMessages();
-
-    // 고유한 채널 ID 생성 (타임스탬프 포함하여 중복 구독 방지)
     const channelId = `chat_${[authUser.id, chatId].sort().join('_')}_${Date.now()}`;
     const channel = supabase
       .channel(channelId)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages' 
-      }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMsg = payload.new as Message;
         const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
                            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
-        
         if (isRelevant) {
           setMessages(prev => mergeMessages(prev, newMsg));
           if (newMsg.receiver_id === authUser.id) markAsRead();
         }
       })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages'
-      }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
         const updatedMsg = payload.new as Message;
         setMessages(prev => mergeMessages(prev, updatedMsg));
       })
       .subscribe();
-
-    return () => { 
-      supabase.removeChannel(channel);
-    };
-  }, [authUser?.id, chatId]); // authUser 전체가 아닌 id만 의존성에 추가하여 불필요한 재구독 방지
+    return () => { supabase.removeChannel(channel); };
+  }, [authUser?.id, chatId]);
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
@@ -181,15 +163,11 @@ const Chat = () => {
   }, [messages.length]);
 
   const handleSend = async () => {
-    const now = Date.now();
     const content = inputValue.trim();
-
     if (!content || !authUser || !chatId || isProcessingRef.current) return;
-
     isProcessingRef.current = true;
     setIsSending(true);
     setInputValue('');
-
     if (isValidUUID(chatId)) {
       try {
         const { error } = await supabase.from('messages').insert([{
@@ -198,7 +176,6 @@ const Chat = () => {
           content: content,
           is_read: false
         }]);
-        
         if (error) throw error;
       } catch (err) {
         showError('메시지 전송에 실패했습니다.');
@@ -257,7 +234,14 @@ const Chat = () => {
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300" style={{ paddingBottom: keyboardHeight > 0 ? '20px' : '120px' }}>
+      <div 
+        ref={scrollRef} 
+        className="flex-1 pt-[100px] px-4 overflow-y-auto space-y-4 no-scrollbar transition-all duration-300" 
+        style={{ 
+          // 키보드가 올라왔을 때 입력창 높이(약 80px)만큼 여백을 주어 마지막 메시지가 가려지지 않게 함
+          paddingBottom: keyboardHeight > 0 ? '80px' : '120px' 
+        }}
+      >
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
           const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
