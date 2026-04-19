@@ -20,7 +20,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSupabasePosts, fetchPostsInBounds } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -66,11 +66,11 @@ const Index = () => {
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      if (data.level !== undefined && data.level !== currentZoom) setCurrentZoom(data.level);
+      if (data.level !== undefined) setCurrentZoom(data.level);
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
     }, 100);
-  }, [isSelectingLocation, currentZoom]);
+  }, [isSelectingLocation]);
 
   // 실제 주소를 가져오는 헬퍼 함수
   const getRealAddress = useCallback(async (lat: number, lng: number): Promise<string> => {
@@ -97,7 +97,6 @@ const Index = () => {
   const autoSeedArea = useCallback(async () => {
     if (!mapData?.center || isAutoSeeding.current || !authUser) return;
     
-    // 현재 위치를 기반으로 타일 키 생성 (소수점 1자리까지 반올림하여 약 10km 단위 체크)
     const tileKey = `${mapData.center.lat.toFixed(1)}_${mapData.center.lng.toFixed(1)}`;
     if (mapCache.populatedTiles.has(tileKey)) return;
 
@@ -130,26 +129,14 @@ const Index = () => {
       const finalData = await Promise.all(insertDataPromises);
       await supabase.from('posts').insert(finalData);
       
-      // 생성 후 즉시 동기화
-      const { sw, ne } = mapData.bounds;
-      const dbPosts = await fetchPostsInBounds(sw, ne);
-      setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-        const combined = [...prev, ...newUnique];
-        mapCache.posts = combined;
-        return combined;
-      });
+      // 생성 후 즉시 동기화 트리거
+      syncPostsWithSupabase();
     } catch (err) {
       console.error('[AutoSeed] Error:', err);
     } finally {
       isAutoSeeding.current = false;
     }
   }, [mapData, authUser, getRealAddress]);
-
-  useEffect(() => {
-    if (mapData) autoSeedArea();
-  }, [mapData, autoSeedArea]);
 
   const syncPostsWithSupabase = useCallback(async () => {
     if (!mapData?.bounds || isSyncing.current) return;
@@ -173,8 +160,11 @@ const Index = () => {
   }, [mapData]);
 
   useEffect(() => {
-    syncPostsWithSupabase();
-  }, [mapData, syncPostsWithSupabase]);
+    if (mapData) {
+      syncPostsWithSupabase();
+      autoSeedArea();
+    }
+  }, [mapData, syncPostsWithSupabase, autoSeedArea]);
 
   // 마커 표시 로직 (최대 20개 제한)
   useEffect(() => {
@@ -343,8 +333,10 @@ const Index = () => {
   };
 
   const filteredAllPosts = useMemo(() => allPosts.filter(p => !blockedIds.has(p.user.id)), [allPosts, blockedIds]);
+  
+  // 인기 포스팅 리스트: 전체 데이터에서 좋아요 순으로 추출
   const trendingPosts = useMemo(() => {
-    return filteredAllPosts
+    return [...filteredAllPosts]
       .filter(p => !p.isAd)
       .sort((a, b) => b.likes - a.likes || a.id.localeCompare(b.id))
       .slice(0, 20)
