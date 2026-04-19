@@ -24,6 +24,7 @@ import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
+import { initializeYoutubePool } from "./lib/mock-data";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,8 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // 유튜브 풀 초기화 실행
+    initializeYoutubePool();
     const timer = setTimeout(() => { setShowSplash(false); }, 1500);
     return () => clearTimeout(timer);
   }, []);

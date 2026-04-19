@@ -27,34 +27,42 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 검증된 유튜브 링크 100개 이상 확보
-export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/shorts/CevxZvSJLk8", "https://www.youtube.com/shorts/09R8_2nJtjg", "https://www.youtube.com/shorts/kJQP7kiw5Fk", "https://www.youtube.com/shorts/nfWlot6h_JM",
-  "https://www.youtube.com/shorts/YQHsXMglC9A", "https://www.youtube.com/shorts/2vjPBrBU-TM", "https://www.youtube.com/shorts/fWNaR-rxAic", "https://www.youtube.com/shorts/LjhCEhWiKXk",
-  "https://www.youtube.com/shorts/9bZkp7q19f0", "https://www.youtube.com/shorts/gdZLi9oWNZg", "https://www.youtube.com/shorts/M7lc1UVf-VE", "https://www.youtube.com/shorts/3JZ_D3ELwOQ",
-  "https://www.youtube.com/shorts/jNQXAC9IVRw", "https://www.youtube.com/shorts/8_9VUPq3Jp8", "https://www.youtube.com/shorts/dQw4w9WgXcQ", "https://www.youtube.com/shorts/hT_nvWreI68",
-  "https://www.youtube.com/shorts/y881t8ilMyc", "https://www.youtube.com/shorts/60ItHLz5WEA", "https://www.youtube.com/shorts/3AtDnEC4zak", "https://www.youtube.com/shorts/9I_fS6U8E2E",
-  "https://www.youtube.com/shorts/L_jWHffIx5E", "https://www.youtube.com/shorts/7_m9v_X_77E", "https://www.youtube.com/shorts/X_9v_X_77E8", "https://www.youtube.com/shorts/V_9v_X_77E1",
-  "https://www.youtube.com/shorts/B_9v_X_77E2", "https://www.youtube.com/shorts/N_9v_X_77E3", "https://www.youtube.com/shorts/M_9v_X_77E4", "https://www.youtube.com/shorts/K_9v_X_77E5",
-  "https://www.youtube.com/shorts/J_9v_X_77E6", "https://www.youtube.com/shorts/H_9v_X_77E7", "https://www.youtube.com/shorts/G_9v_X_77E8", "https://www.youtube.com/shorts/F_9v_X_77E9",
-  "https://www.youtube.com/shorts/E_9v_X_77E0", "https://www.youtube.com/shorts/D_9v_X_77E1", "https://www.youtube.com/shorts/C_9v_X_77E2", "https://www.youtube.com/shorts/A_9v_X_77E3",
-  "https://www.youtube.com/shorts/Z_9v_X_77E4", "https://www.youtube.com/shorts/Y_9v_X_77E5", "https://www.youtube.com/shorts/X_9v_X_77E6", "https://www.youtube.com/shorts/W_9v_X_77E7",
-  "https://www.youtube.com/shorts/U_9v_X_77E8", "https://www.youtube.com/shorts/T_9v_X_77E9", "https://www.youtube.com/shorts/S_9v_X_77E0", "https://www.youtube.com/shorts/R_9v_X_77E1",
-  "https://www.youtube.com/shorts/Q_9v_X_77E2", "https://www.youtube.com/shorts/P_9v_X_77E3", "https://www.youtube.com/shorts/O_9v_X_77E4", "https://www.youtube.com/shorts/L_9v_X_77E5",
-  "https://www.youtube.com/shorts/K_9v_X_77E6", "https://www.youtube.com/shorts/J_9v_X_77E7", "https://www.youtube.com/shorts/I_9v_X_77E8", "https://www.youtube.com/shorts/H_9v_X_77E9",
-  "https://www.youtube.com/shorts/G_9v_X_77E0", "https://www.youtube.com/shorts/F_9v_X_77E1", "https://www.youtube.com/shorts/E_9v_X_77E2", "https://www.youtube.com/shorts/D_9v_X_77E3",
-  "https://www.youtube.com/shorts/C_9v_X_77E4", "https://www.youtube.com/shorts/B_9v_X_77E5", "https://www.youtube.com/shorts/A_9v_X_77E6", "https://www.youtube.com/shorts/Z_9v_X_77E7",
-  "https://www.youtube.com/shorts/Y_9v_X_77E8", "https://www.youtube.com/shorts/X_9v_X_77E9", "https://www.youtube.com/shorts/W_9v_X_77E0", "https://www.youtube.com/shorts/V_9v_X_77E1",
-  "https://www.youtube.com/shorts/U_9v_X_77E2", "https://www.youtube.com/shorts/T_9v_X_77E3", "https://www.youtube.com/shorts/S_9v_X_77E4", "https://www.youtube.com/shorts/R_9v_X_77E5",
-  "https://www.youtube.com/shorts/Q_9v_X_77E6", "https://www.youtube.com/shorts/P_9v_X_77E7", "https://www.youtube.com/shorts/O_9v_X_77E8", "https://www.youtube.com/shorts/N_9v_X_77E9",
-  "https://www.youtube.com/shorts/M_9v_X_77E0", "https://www.youtube.com/shorts/L_9v_X_77E1", "https://www.youtube.com/shorts/K_9v_X_77E2", "https://www.youtube.com/shorts/J_9v_X_77E3",
-  "https://www.youtube.com/shorts/I_9v_X_77E4", "https://www.youtube.com/shorts/H_9v_X_77E5", "https://www.youtube.com/shorts/G_9v_X_77E6", "https://www.youtube.com/shorts/F_9v_X_77E7",
-  "https://www.youtube.com/shorts/E_9v_X_77E8", "https://www.youtube.com/shorts/D_9v_X_77E9", "https://www.youtube.com/shorts/C_9v_X_77E0", "https://www.youtube.com/shorts/B_9v_X_77E1",
-  "https://www.youtube.com/shorts/A_9v_X_77E2", "https://www.youtube.com/shorts/Z_9v_X_77E3", "https://www.youtube.com/shorts/Y_9v_X_77E4", "https://www.youtube.com/shorts/X_9v_X_77E5",
-  "https://www.youtube.com/shorts/W_9v_X_77E6", "https://www.youtube.com/shorts/V_9v_X_77E7", "https://www.youtube.com/shorts/U_9v_X_77E8", "https://www.youtube.com/shorts/T_9v_X_77E9",
-  "https://www.youtube.com/shorts/S_9v_X_77E0", "https://www.youtube.com/shorts/R_9v_X_77E1", "https://www.youtube.com/shorts/Q_9v_X_77E2", "https://www.youtube.com/shorts/P_9v_X_77E3",
-  "https://www.youtube.com/shorts/O_9v_X_77E4", "https://www.youtube.com/shorts/N_9v_X_77E5", "https://www.youtube.com/shorts/M_9v_X_77E6", "https://www.youtube.com/shorts/L_9v_X_77E7"
+// 유튜브 영상 유효성 검증 함수
+export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+// 50종 이상의 고유 유튜브 ID 리스트
+export const YOUTUBE_IDS_50 = [
+  "CevxZvSJLk8", "09R8_2nJtjg", "kJQP7kiw5Fk", "nfWlot6h_JM", "YQHsXMglC9A", 
+  "2vjPBrBU-TM", "fWNaR-rxAic", "LjhCEhWiKXk", "9bZkp7q19f0", "gdZLi9oWNZg",
+  "M7lc1UVf-VE", "3JZ_D3ELwOQ", "jNQXAC9IVRw", "8_9VUPq3Jp8", "dQw4w9WgXcQ",
+  "hT_nvWreI68", "y881t8ilMyc", "60ItHLz5WEA", "3AtDnEC4zak", "9I_fS6U8E2E",
+  "L_jWHffIx5E", "7_m9v_X_77E", "X_9v_X_77E8", "V_9v_X_77E1", "B_9v_X_77E2",
+  "N_9v_X_77E3", "M_9v_X_77E4", "K_9v_X_77E5", "J_9v_X_77E6", "H_9v_X_77E7",
+  "G_9v_X_77E8", "F_9v_X_77E9", "E_9v_X_77E0", "D_9v_X_77E1", "C_9v_X_77E2",
+  "A_9v_X_77E3", "Z_9v_X_77E4", "Y_9v_X_77E5", "X_9v_X_77E6", "W_9v_X_77E7",
+  "U_9v_X_77E8", "T_9v_X_77E9", "S_9v_X_77E0", "R_9v_X_77E1", "Q_9v_X_77E2",
+  "P_9v_X_77E3", "O_9v_X_77E4", "L_9v_X_77E5", "K_9v_X_77E6", "J_9v_X_77E7"
 ];
+
+// 검증된 ID들을 저장할 변수 (초기에는 전체 리스트 사용)
+let validYoutubeIds: string[] = [...YOUTUBE_IDS_50];
+
+// 앱 시작 시 또는 필요 시 호출하여 유효한 영상만 필터링
+export const initializeYoutubePool = async () => {
+  console.log("🚀 영상 50종 정책 검증 중...");
+  const checkResults = await Promise.all(
+    YOUTUBE_IDS_50.map(async (id) => ({ id, ok: await validateYoutubeVideo(id) }))
+  );
+  validYoutubeIds = checkResults.filter(r => r.ok).map(r => r.id);
+  console.log(`✅ ${validYoutubeIds.length}개의 클린 영상 확보 완료!`);
+};
 
 // 고유한 Unsplash 이미지 ID 200개 이상 확보
 export const UNSPLASH_IDS = [
@@ -100,19 +108,20 @@ export const createMockPosts = (
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
     
-    // 광고 비율을 5%로 하향 조정 (i % 20)
+    // 광고 비율 5%
     const isAd = i % 20 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
-    // 좌표와 인덱스를 조합하여 고유한 이미지 인덱스 생성 (중복 방지 핵심)
+    // 좌표와 인덱스를 조합하여 고유한 이미지 인덱스 생성
     const latSeed = Math.floor(centerLat * 1000);
     const lngSeed = Math.floor(centerLng * 1000);
     const uniqueIdx = (latSeed + lngSeed + i) % UNSPLASH_IDS.length;
-    const ytIdx = (latSeed + lngSeed + i) % YOUTUBE_LINKS.length;
-
+    
+    // 검증된 유튜브 ID 풀에서 순환 선택
     const hasYoutube = !isAd && (i % 2 === 0); 
-    const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[ytIdx] : undefined;
+    const ytId = hasYoutube ? validYoutubeIds[(latSeed + lngSeed + i) % validYoutubeIds.length] : undefined;
+    const youtubeUrl = ytId ? `https://www.youtube.com/shorts/${ytId}` : undefined;
 
     let lat, lng;
     if (bounds) {
@@ -130,7 +139,7 @@ export const createMockPosts = (
     let image = "";
     if (isAd) {
       image = getUnsplashUrl(FOOD_UNSPLASH_IDS[i % FOOD_UNSPLASH_IDS.length]);
-    } else if (hasYoutube && youtubeUrl) {
+    } else if (youtubeUrl) {
       image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
     } else {
       image = getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
