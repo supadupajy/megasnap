@@ -31,6 +31,7 @@ const Messages = () => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
+      // 1. Supabase 메시지 내역 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -55,6 +56,7 @@ const Messages = () => {
         }
       }
 
+      // 2. 로컬 chatStore 내역 합치기
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -70,6 +72,8 @@ const Messages = () => {
       }
 
       const convList = Array.from(convMap.values());
+      
+      // 3. 프로필 정보 채우기
       const results = await Promise.all(
         convList.map(async (conv) => {
           if (conv.profile) return conv;
@@ -95,6 +99,7 @@ const Messages = () => {
     return () => { unsubscribe(); };
   }, [authUser]);
 
+  // 검색어에 따른 필터링 (닉네임 또는 마지막 메시지 내용)
   const filteredConversations = conversations.filter(conv => 
     conv.profile.nickname?.toLowerCase().includes(query.toLowerCase()) ||
     conv.last_message.toLowerCase().includes(query.toLowerCase())
@@ -117,7 +122,12 @@ const Messages = () => {
       <div className="pt-[88px] px-4 py-4">
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="대화 상대 또는 메시지 검색" className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input 
+            placeholder="대화 상대 또는 메시지 검색" 
+            className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold" 
+            value={query} 
+            onChange={(e) => setQuery(e.target.value)} 
+          />
         </div>
 
         <div className="space-y-4">
@@ -146,7 +156,13 @@ const Messages = () => {
                   </div>
                 );
               })}
-              {filteredConversations.length === 0 && <div className="py-20 text-center"><p className="text-sm text-gray-400 font-medium">대화 내역이 없습니다.</p></div>}
+              {filteredConversations.length === 0 && (
+                <div className="py-20 text-center">
+                  <p className="text-sm text-gray-400 font-medium">
+                    {query ? '검색 결과가 없습니다.' : '대화 내역이 없습니다.'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
