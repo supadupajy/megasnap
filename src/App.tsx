@@ -24,11 +24,15 @@ import ExitDialog from "./components/ExitDialog";
 import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { usePushNotifications } from "./hooks/use-push-notifications";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
+  
+  // 푸시 알림 훅 호출 (로그인된 상태에서만 동작)
+  usePushNotifications();
 
   if (loading) {
     return (
