@@ -29,7 +29,7 @@ const isValidUUID = (uuid: string) => {
 };
 
 const HEADER_HEIGHT = 88;
-const INPUT_AREA_HEIGHT = 64; // 높이를 72에서 64로 축소
+const INPUT_AREA_HEIGHT = 64;
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -50,6 +50,28 @@ const Chat = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
+
+  // 메시지 읽음 처리 함수
+  const markAsRead = useCallback(async () => {
+    if (!authUser || !chatId || !isValidUUID(chatId)) {
+      if (chatId) chatStore.markAsRead(chatId);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', authUser.id)
+        .eq('sender_id', chatId)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      chatStore.markAsRead(chatId);
+    } catch (err) {
+      console.error('[Chat] Failed to mark as read:', err);
+    }
+  }, [authUser, chatId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -73,7 +95,6 @@ const Chat = () => {
       }
 
       if (scrollRef.current) {
-        // 하단 여백을 입력창 높이보다 넉넉하게(24px 추가) 설정하여 겹침 방지
         const bottomPad = INPUT_AREA_HEIGHT + Math.max(0, keyboardHeight) + 24;
         scrollRef.current.style.paddingBottom = `${bottomPad}px`;
       }
@@ -88,8 +109,6 @@ const Chat = () => {
     return () => {
       vp.removeEventListener('resize', handleViewport);
       vp.removeEventListener('scroll', handleViewport);
-      if (headerRef.current) headerRef.current.style.transform = '';
-      if (inputRef.current) inputRef.current.style.transform = '';
     };
   }, [scrollToBottom]);
 
@@ -135,6 +154,7 @@ const Chat = () => {
           created_at: new Date().toISOString(),
         }));
         setMessages(formatted);
+        markAsRead();
       }
       setIsLoading(false);
       return;
@@ -151,6 +171,7 @@ const Chat = () => {
 
       setMessages(data || []);
       setIsLoading(false);
+      markAsRead(); // 초기 로드 시 읽음 처리
     };
 
     fetchMessages();
@@ -169,13 +190,14 @@ const Chat = () => {
           const newMsg = payload.new as Message;
           if (newMsg.sender_id === chatId) {
             setMessages((prev) => [...prev, newMsg]);
+            markAsRead(); // 새 메시지 수신 시 읽음 처리
           }
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [authUser, chatId]);
+  }, [authUser, chatId, markAsRead]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
