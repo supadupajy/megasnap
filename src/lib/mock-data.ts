@@ -13,9 +13,33 @@ const seededRandom = (seed: string) => {
   };
 };
 
-// K-pop & Pop YouTube Links
+/**
+ * 재생이 보장된 공식 K-pop 및 Pop 유튜브 링크 (공식 MV 위주)
+ */
 export const YOUTUBE_LINKS = [
-  "https://www.youtube.com/watch?v=9bZkp7q19f0", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "https://www.youtube.com/watch?v=JGwWNGJdvx8", "https://www.youtube.com/watch?v=OPf0YbXqDm0", "https://www.youtube.com/watch?v=hT_nvWreIhg", "https://www.youtube.com/watch?v=nfWlot6h_JM", "https://www.youtube.com/watch?v=kffacxfA7G4", "https://www.youtube.com/watch?v=CevxZvSJLk8", "https://www.youtube.com/watch?v=09R8_2nJtjg", "https://www.youtube.com/watch?v=YQHsXMglC9A", "https://www.youtube.com/watch?v=2vjPBrBU-TM", "https://www.youtube.com/watch?v=7wtfhZwyrcc", "https://www.youtube.com/watch?v=YykjpeuMNEk", "https://www.youtube.com/watch?v=u31qwQUeGuM", "https://www.youtube.com/watch?v=TUVcZfQe-Kw", "https://www.youtube.com/watch?v=DyDfgMOUjCI", "https://www.youtube.com/watch?v=RlPNh_PB6Ww", "https://www.youtube.com/watch?v=fRh_vgS2dFE"
+  // K-POP
+  "https://www.youtube.com/watch?v=ArmDp-zijuc", // NewJeans - OMG
+  "https://www.youtube.com/watch?v=pSUydWNJ968", // NewJeans - Ditto
+  "https://www.youtube.com/watch?v=fJS5er6p28E", // IVE - I AM
+  "https://www.youtube.com/watch?v=6ZUIwj3FgUY", // IVE - LOVE DIVE
+  "https://www.youtube.com/watch?v=gdZLi9oWNZg", // BTS - Dynamite
+  "https://www.youtube.com/watch?v=WMweEpGlu_U", // BTS - Butter
+  "https://www.youtube.com/watch?v=POe9SOEKotU", // LE SSERAFIM - Perfect Night
+  "https://www.youtube.com/watch?v=4TWR90JKlpg", // BLACKPINK - How You Like That
+  "https://www.youtube.com/watch?v=TQTlCHxyuu8", // aespa - Drama
+  "https://www.youtube.com/watch?v=Os_heh8vPfs", // aespa - Next Level
+  
+  // POP
+  "https://www.youtube.com/watch?v=hT_nvWreIhg", // Charlie Puth - Dangerously
+  "https://www.youtube.com/watch?v=kJQP7kiw5Fk", // Luis Fonsi - Despacito
+  "https://www.youtube.com/watch?v=JGwWNGJdvx8", // Ed Sheeran - Shape of You
+  "https://www.youtube.com/watch?v=OPf0YbXqDm0", // Mark Ronson - Uptown Funk
+  "https://www.youtube.com/watch?v=nfWlot6h_JM", // Taylor Swift - Shake It Off
+  "https://www.youtube.com/watch?v=kffacxfA7G4", // Justin Bieber - Baby
+  "https://www.youtube.com/watch?v=CevxZvSJLk8", // Katy Perry - Roar
+  "https://www.youtube.com/watch?v=09R8_2nJtjg", // Maroon 5 - Sugar
+  "https://www.youtube.com/watch?v=YQHsXMglC9A", // Adele - Hello
+  "https://www.youtube.com/watch?v=2vjPBrBU-TM", // Sia - Chandelier
 ];
 
 // 카테고리별 이미지 풀
@@ -105,7 +129,8 @@ export const createMockPosts = (
     }
 
     const isGif = !isAd && randomFn() > 0.85; 
-    const hasYoutube = !isAd && !isGif && randomFn() > 0.7; 
+    // 유튜브 영상 비중 대폭 확대 (광고/GIF가 아닐 경우 80% 확률로 유튜브)
+    const hasYoutube = !isAd && !isGif && randomFn() > 0.2; 
     
     let lat, lng;
     if (bounds) {
