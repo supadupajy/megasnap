@@ -39,14 +39,38 @@ export const YOUTUBE_LINKS = [
   "https://www.youtube.com/shorts/gdZLi9oWNZg"
 ];
 
-// Unsplash 이미지 풀 (풍경/도시)
+const REALISTIC_COMMENTS = [
+  '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
+  '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
+  '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
+  '주말 나들이로 딱 좋은 곳인 것 같아요. 강력 추천!',
+  '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
+  '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
+  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
+  '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
+  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
+  '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
+  '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
+  '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
+  '여기 진짜 뷰 맛집이네요. 눈이 호강하는 기분입니다. 🌊',
+  '디테일 하나하나 신경 쓴 게 느껴지는 멋진 공간이에요.',
+  '혼자 와서 조용히 생각 정리하기에도 너무 좋을 것 같아요.'
+];
+
+const AD_COMMENTS = [
+  '[AD] 지금 바로 특별한 혜택을 만나보세요! 놓치면 후회합니다.',
+  '[AD] 당신만을 위한 프리미엄 서비스를 경험할 시간입니다.',
+  '[AD] 인기 폭발! 지금 가장 핫한 아이템을 확인해보세요.',
+  '[AD] 오늘만 진행되는 특별 프로모션, 지금 확인하세요!',
+  '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
+];
+
 export const UNSPLASH_IDS = [
   "1501785888041-af3ef285b470", "1470071459604-3b5ec3a7fe05", "1441974231531-c6227db76b6e", 
   "1500673922987-e212871fec22", "1464822759023-fed622ff2c3b", "1472214103451-9374bd1c798e",
   "1516035069371-29a1b244cc32", "1504674900247-0877df9cc836", "1517841905240-472988babdf9"
 ];
 
-// 광고용 음식 이미지 풀
 export const FOOD_UNSPLASH_IDS = [
   "1504674900247-0877df9cc836", "1512621776951-a57141f2eefd", "1476224489176-e88e5948482b",
   "1493770348161-369560ae357d", "1482049016688-2d3e1b311543", "1484723091739-30a097e8f929"
@@ -70,7 +94,6 @@ export const createMockPosts = (
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
-    // 광고는 유튜브 제외, 일반 포스팅 중 50% 확률로 유튜브 설정
     const hasYoutube = !isAd && randomFn() > 0.5; 
     const youtubeUrl = hasYoutube ? YOUTUBE_LINKS[Math.floor(randomFn() * YOUTUBE_LINKS.length)] : undefined;
 
@@ -83,18 +106,16 @@ export const createMockPosts = (
       lng = centerLng + (randomFn() - 0.5) * 0.1;
     }
     
-    const content = isAd ? "[AD] 지금 바로 경험해보세요!" : "멋진 장소입니다! ✨";
+    const content = isAd 
+      ? AD_COMMENTS[Math.floor(randomFn() * AD_COMMENTS.length)]
+      : REALISTIC_COMMENTS[Math.floor(randomFn() * REALISTIC_COMMENTS.length)];
     
-    // 이미지 할당 로직 엄격화
     let image = "";
     if (isAd) {
-      // 광고는 무조건 음식 사진
       image = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(randomFn() * FOOD_UNSPLASH_IDS.length)]);
     } else if (hasYoutube && youtubeUrl) {
-      // 유튜브 포스팅은 무조건 유튜브 썸네일
       image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[0]);
     } else {
-      // 일반 포스팅은 무조건 풍경 사진
       image = getUnsplashUrl(UNSPLASH_IDS[Math.floor(randomFn() * UNSPLASH_IDS.length)]);
     }
 

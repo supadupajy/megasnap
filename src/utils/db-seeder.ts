@@ -61,6 +61,32 @@ const MAJOR_CITIES = [
   }
 ];
 
+const REALISTIC_COMMENTS = [
+  '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
+  '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
+  '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
+  '주말 나들이로 딱 좋은 곳인 것 같아요. 강력 추천!',
+  '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
+  '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
+  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
+  '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
+  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
+  '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
+  '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
+  '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
+  '여기 진짜 뷰 맛집이네요. 눈이 호강하는 기분입니다. 🌊',
+  '디테일 하나하나 신경 쓴 게 느껴지는 멋진 공간이에요.',
+  '혼자 와서 조용히 생각 정리하기에도 너무 좋을 것 같아요.'
+];
+
+const AD_COMMENTS = [
+  '[AD] 지금 바로 특별한 혜택을 만나보세요! 놓치면 후회합니다.',
+  '[AD] 당신만을 위한 프리미엄 서비스를 경험할 시간입니다.',
+  '[AD] 인기 폭발! 지금 가장 핫한 아이템을 확인해보세요.',
+  '[AD] 오늘만 진행되는 특별 프로모션, 지금 확인하세요!',
+  '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
+];
+
 const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
   return new Promise((resolve) => {
     const kakao = (window as any).kakao;
@@ -100,21 +126,22 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         
         if (isAd) {
-          // 광고는 무조건 음식 사진
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
           finalYoutubeUrl = null;
         } else if (Math.random() < 0.5) {
-          // 50% 확률로 유튜브 포스팅
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[0]);
         } else {
-          // 나머지는 일반 풍경 사진
           finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
           finalYoutubeUrl = null;
         }
 
+        const finalContent = isAd 
+          ? AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)]
+          : REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
+
         allInsertData.push({
-          content: p.content,
+          content: finalContent,
           location_name: realAddress,
           latitude: p.lat,
           longitude: p.lng,
