@@ -16,7 +16,9 @@ interface Message {
   id: string;
   content: string;
   sender_id: string;
+  receiver_id: string;
   created_at: string;
+  is_read: boolean;
 }
 
 const isValidUUID = (uuid: string) => {
@@ -34,12 +36,12 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   const markAsRead = async () => {
@@ -49,14 +51,17 @@ const Chat = () => {
     }
 
     try {
-      await supabase
+      // 상대방이 나에게 보낸 읽지 않은 메시지들을 모두 읽음 처리
+      const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
         .eq('is_read', false);
       
-      chatStore.markAsRead(chatId);
+      if (!error) {
+        chatStore.markAsRead(chatId);
+      }
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
@@ -73,17 +78,13 @@ const Chat = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('nickname, avatar_url')
         .eq('id', chatId)
         .single();
       
-      if (!error && data) {
-        setOtherUser(data);
-      } else {
-        setOtherUser({ nickname: '사용자', avatar_url: null });
-      }
+      setOtherUser(data || { nickname: '사용자', avatar_url: null });
       setIsLoading(false);
     };
     fetchOtherUser();
@@ -99,7 +100,9 @@ const Chat = () => {
           id: m.id.toString(),
           content: m.text,
           sender_id: m.sender === 'me' ? authUser.id : chatId,
-          created_at: new Date().toISOString()
+          receiver_id: m.sender === 'me' ? chatId : authUser.id,
+          created_at: new Date().toISOString(),
+          is_read: true
         }));
         setMessages(formatted);
       }
@@ -118,12 +121,12 @@ const Chat = () => {
       setMessages(data || []);
       await markAsRead();
       setIsLoading(false);
-      setTimeout(scrollToBottom, 100);
+      setTimeout(() => scrollToBottom('auto'), 100);
     };
 
     fetchMessages();
 
-    // 실시간 구독: 내가 받거나 보낸 메시지 모두 감지
+    // 실시간 구독
     const channel = supabase
       .channel(`chat_room_${chatId}`)
       .on('postgres_changes', { 
@@ -133,12 +136,10 @@ const Chat = () => {
       }, 
       async (payload) => {
         const newMsg = payload.new as Message;
-        // 현재 대화방의 메시지인 경우에만 추가
         if ((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || 
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId)) {
           
           setMessages((prev) => {
-            // 중복 방지 (낙관적 업데이트 대응)
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
@@ -146,17 +147,35 @@ const Chat = () => {
           if (newMsg.sender_id === chatId) {
             await markAsRead();
           }
-          setTimeout(scrollToBottom, 50);
         }
-      }).subscribe();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `sender_id=eq.${authUser.id}` // 내가 보낸 메시지를 상대방이 읽었을 때
+      }, (payload) => {
+        const updatedMsg = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+      })
+      .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [authUser, chatId]);
 
-  // 메시지 변경이나 키보드 상태 변경 시 스크롤
+  // 메시지 목록이 변경될 때마다 스크롤
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, keyboardHeight]);
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  // 키보드가 올라올 때 스크롤
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      setTimeout(() => scrollToBottom('smooth'), 100);
+    }
+  }, [keyboardHeight]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
@@ -169,26 +188,26 @@ const Chat = () => {
         sender_id: authUser.id,
         receiver_id: chatId,
         content: content,
+        is_read: false
       }]).select().single();
 
       if (error) {
         showError('메시지 전송에 실패했습니다.');
       } else if (data) {
-        // 실시간 리스너에서 처리되지만, 더 빠른 반응을 위해 수동 추가 (중복은 리스너에서 체크)
         setMessages(prev => [...prev, data as Message]);
-        setTimeout(scrollToBottom, 50);
       }
     } else {
       chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
-      // 로컬 스토어 메시지 반영
       const room = chatStore.getRoom(chatId);
       if (room) {
         const formatted = room.messages.map(m => ({
           id: m.id.toString(),
           content: m.text,
           sender_id: m.sender === 'me' ? authUser.id : chatId,
-          created_at: new Date().toISOString()
+          receiver_id: m.sender === 'me' ? chatId : authUser.id,
+          created_at: new Date().toISOString(),
+          is_read: true
         }));
         setMessages(formatted);
       }
@@ -231,10 +250,14 @@ const Chat = () => {
           return (
             <div key={msg.id} className={cn("flex flex-col max-w-[85%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
               <div className={cn("px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm", isMe ? "bg-indigo-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 rounded-tl-none")}>{msg.content}</div>
-              <span className="text-[9px] text-gray-400 mt-1 px-1 font-bold">{time}</span>
+              <div className="flex items-center gap-1 mt-1 px-1">
+                {isMe && <span className="text-[8px] font-black text-indigo-600">{msg.is_read ? '' : '1'}</span>}
+                <span className="text-[9px] text-gray-400 font-bold">{time}</span>
+              </div>
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
         {messages.length === 0 && <div className="flex flex-col items-center justify-center py-20 text-center"><div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4"><Send className="w-8 h-8 text-indigo-600 opacity-20" /></div><p className="text-sm text-gray-400 font-bold">대화를 시작해보세요!</p></div>}
       </div>
 

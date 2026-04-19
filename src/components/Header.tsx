@@ -17,7 +17,7 @@ const Header = () => {
   const fetchCounts = useCallback(async () => {
     if (!authUser) return;
     try {
-      // 1. 알림 개수 (좋아요, 팔로우 등)
+      // 1. 알림 개수
       const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -26,7 +26,7 @@ const Header = () => {
       
       setUnreadNotifCount(notifCount || 0);
 
-      // 2. Supabase 메시지 개수
+      // 2. Supabase 메시지 개수 (내가 받은 메시지 중 읽지 않은 것)
       const { count: dbMsgCount } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
@@ -47,7 +47,6 @@ const Header = () => {
 
     fetchCounts();
 
-    // Supabase 실시간 리스너
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
 
@@ -59,20 +58,13 @@ const Header = () => {
         filter: `user_id=eq.${authUser.id}` 
       }, fetchCounts)
       .on('postgres_changes', { 
-        event: '*', 
+        event: '*', // INSERT, UPDATE, DELETE 모두 감지
         schema: 'public', 
         table: 'messages', 
         filter: `receiver_id=eq.${authUser.id}` 
       }, fetchCounts)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'messages', 
-        filter: `sender_id=eq.${authUser.id}` 
-      }, fetchCounts)
       .subscribe();
 
-    // 로컬 스토어 구독 (채팅방 진입 시 markAsRead 호출 대응)
     const unsubscribeChatStore = chatStore.subscribe(fetchCounts);
 
     return () => { 
