@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
+import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
+  const { keyboardHeight } = useKeyboard();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
@@ -114,7 +116,7 @@ const Chat = () => {
   // 화면 진입 시 및 메시지 추가 시 스크롤 하단 고정
   useLayoutEffect(() => {
     scrollToBottom('auto');
-  }, [messages.length]);
+  }, [messages.length, keyboardHeight]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -153,13 +155,23 @@ const Chat = () => {
 
   if (isLoading) return <div className="h-full flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
 
+  // 실제 터치 기기인지 확인 (웹 시뮬레이터와 실제 기기 구분)
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
   return (
     /* 
-      핵심: fixed inset-0 대신 h-full w-full flex flex-col을 사용합니다.
-      Capacitor의 resize: "body" 설정에 의해 키보드가 올라오면 body 높이가 줄어들고, 
-      이 컨테이너도 자동으로 그 줄어든 높이에 맞춰 크기가 재조정됩니다.
+      핵심: 키보드가 올라오면 keyboardHeight만큼 전체 높이를 줄입니다.
+      이렇게 하면 헤더가 위로 밀려나지 않고 항상 상단에 위치하게 됩니다.
     */
-    <div className="h-full w-full bg-white flex flex-col overflow-hidden relative">
+    <div 
+      className="w-full bg-white flex flex-col overflow-hidden relative"
+      style={{ 
+        // 키보드가 올라오면 전체 높이에서 키보드 높이를 뺌
+        height: isTouchDevice ? `calc(100% - ${keyboardHeight}px)` : '100%',
+        // 웹 시뮬레이터 환경 대응
+        paddingBottom: !isTouchDevice && keyboardHeight > 0 ? `${keyboardHeight}px` : '0px'
+      }}
+    >
       {/* 1. 상단 헤더 (고정 높이) */}
       <header className="h-[88px] pt-8 bg-white/95 backdrop-blur-md flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
