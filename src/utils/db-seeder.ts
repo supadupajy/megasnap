@@ -129,12 +129,13 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalYoutubeUrl = null;
         let finalImage = "";
         
+        // 로직 수정: 유튜브가 있으면 썸네일, 없으면 무조건 Unsplash
         if (isAd) {
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[Math.floor(Math.random() * FOOD_UNSPLASH_IDS.length)]);
           finalYoutubeUrl = null;
         } else if (Math.random() < 0.5) {
           finalYoutubeUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
-          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[0]);
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
         } else {
           finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
           finalYoutubeUrl = null;
