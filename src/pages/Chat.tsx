@@ -37,20 +37,12 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
   
   const isProcessingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const mergeMessages = (current: Message[], incoming: Message | Message[]) => {
-    const incomingArr = Array.isArray(incoming) ? incoming : [incoming];
-    const map = new Map<string, Message>();
-    current.forEach(m => map.set(m.id, m));
-    incomingArr.forEach(m => map.set(m.id, m));
-    return Array.from(map.values()).sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-  };
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
@@ -60,13 +52,43 @@ const Chat = () => {
     }
   };
 
-  // 키보드 상태나 메시지가 변경될 때 하단 유지
+  // 모바일 브라우저의 VisualViewport 대응
   useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollToBottom(isKeyboardOpen ? 'auto' : 'smooth');
-    }, 100);
+    const handleVisualViewportResize = () => {
+      if (window.visualViewport) {
+        // 실제 모바일 기기에서는 visualViewport 높이를 직접 사용
+        setViewportHeight(`${window.visualViewport.height}px`);
+        // 브라우저의 강제 스크롤 방지
+        window.scrollTo(0, 0);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleVisualViewportResize);
+      window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
+      handleVisualViewportResize();
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
+        window.visualViewport.removeEventListener('scroll', handleVisualViewportResize);
+      }
+    };
+  }, []);
+
+  // 웹 시뮬레이터(가상 키보드) 대응
+  useEffect(() => {
+    if (keyboardHeight > 0 && !('ontouchstart' in window)) {
+      // 터치 기기가 아닌 환경(웹 시뮬레이터)에서만 keyboardHeight 적용
+      setViewportHeight(`calc(100vh - ${keyboardHeight}px)`);
+    } else if (!isKeyboardOpen) {
+      setViewportHeight('100dvh');
+    }
+    
+    const timer = setTimeout(() => scrollToBottom('auto'), 100);
     return () => clearTimeout(timer);
-  }, [isKeyboardOpen, messages.length, keyboardHeight]);
+  }, [keyboardHeight, isKeyboardOpen]);
 
   const markAsRead = async () => {
     if (!authUser || !chatId || !isValidUUID(chatId)) {
@@ -94,7 +116,15 @@ const Chat = () => {
       .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
       .order('created_at', { ascending: true });
     if (!error && data) {
-      setMessages(prev => mergeMessages(prev, data));
+      setMessages(prev => {
+        const incomingArr = Array.isArray(data) ? data : [data];
+        const map = new Map<string, Message>();
+        prev.forEach(m => map.set(m.id, m));
+        incomingArr.forEach(m => map.set(m.id, m));
+        return Array.from(map.values()).sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
       await markAsRead();
     }
   };
@@ -143,17 +173,26 @@ const Chat = () => {
         const isRelevant = (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
                            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id);
         if (isRelevant) {
-          setMessages(prev => mergeMessages(prev, newMsg));
+          setMessages(prev => {
+            const map = new Map<string, Message>();
+            prev.forEach(m => map.set(m.id, m));
+            map.set(newMsg.id, newMsg);
+            return Array.from(map.values()).sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+          });
           if (newMsg.receiver_id === authUser.id) markAsRead();
         }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
-        const updatedMsg = payload.new as Message;
-        setMessages(prev => mergeMessages(prev, updatedMsg));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [authUser?.id, chatId]);
+
+  useLayoutEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom('smooth');
+    }
+  }, [messages.length]);
 
   const handleSend = async () => {
     const content = inputValue.trim();
@@ -207,13 +246,11 @@ const Chat = () => {
 
   return (
     <div 
-      className="flex flex-col h-[100dvh] bg-white overflow-hidden transition-all duration-300"
-      style={{ 
-        // 웹 시뮬레이터에서 키보드가 올라올 때 화면 전체를 위로 밀어줌
-        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px' 
-      }}
+      ref={containerRef}
+      className="fixed inset-0 flex flex-col bg-white overflow-hidden"
+      style={{ height: viewportHeight }}
     >
-      {/* Header - Flex Item (Fixed 제거) */}
+      {/* Header */}
       <header className="h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={handleBack} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
@@ -234,7 +271,7 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Message List - Flex-1 (자동 높이 조절) */}
+      {/* Message List */}
       <div 
         ref={scrollRef} 
         className="flex-1 px-4 overflow-y-auto space-y-4 no-scrollbar py-4"
@@ -255,13 +292,10 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - Flex Item (Fixed 제거, 자연스럽게 하단 위치) */}
+      {/* Input Area */}
       <div 
         className="p-4 bg-white border-t border-gray-100 shrink-0"
-        style={{ 
-          // 실제 모바일 기기에서 키보드가 없을 때만 하단 여백 추가
-          paddingBottom: isKeyboardOpen ? '16px' : '40px' 
-        }}
+        style={{ paddingBottom: isKeyboardOpen ? '16px' : '40px' }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner">
           <Input 
@@ -269,6 +303,10 @@ const Chat = () => {
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
+            onFocus={() => {
+              // 포커스 시 브라우저의 강제 스크롤 방지
+              setTimeout(() => window.scrollTo(0, 0), 0);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault();
