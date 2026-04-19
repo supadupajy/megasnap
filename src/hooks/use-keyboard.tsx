@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react";
 
-// 가상 키보드 상태를 위한 전역 이벤트 시스템
-const KBD_EVENT = 'chora_virtual_keyboard';
-
 export function useKeyboard() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   useEffect(() => {
-    // 1. 실제 모바일 브라우저의 VisualViewport 감지
+    // 실제 모바일 브라우저의 VisualViewport 감지
     if (window.visualViewport) {
       const handleResize = () => {
         const viewport = window.visualViewport;
@@ -22,11 +19,8 @@ export function useKeyboard() {
           setKeyboardHeight(heightDiff);
           setIsKeyboardOpen(true);
         } else {
-          // 가상 키보드 이벤트가 없을 때만 초기화
-          if (!document.body.classList.contains('virtual-keyboard-active')) {
-            setKeyboardHeight(0);
-            setIsKeyboardOpen(false);
-          }
+          setKeyboardHeight(0);
+          setIsKeyboardOpen(false);
         }
       };
 
@@ -35,32 +29,10 @@ export function useKeyboard() {
     }
   }, []);
 
-  useEffect(() => {
-    // 2. 웹 프리뷰용 가상 키보드 이벤트 감지
-    const handleVirtualKbd = (e: any) => {
-      const { isOpen, height } = e.detail;
-      setKeyboardHeight(height);
-      setIsKeyboardOpen(isOpen);
-      
-      // ✅ 이 부분이 body에 클래스를 추가/제거하고 있습니다.
-      if (isOpen) {
-        document.body.classList.add('virtual-keyboard-active');
-      } else {
-        document.body.classList.remove('virtual-keyboard-active');
-      }
-    };
-
-    window.addEventListener(KBD_EVENT, handleVirtualKbd);
-    return () => window.removeEventListener(KBD_EVENT, handleVirtualKbd);
-  }, []);
-
   return { keyboardHeight, isKeyboardOpen };
 }
 
-// 입력창 포커스 시 이벤트를 발생시키는 헬퍼
-export const triggerVirtualKeyboard = (isOpen: boolean) => {
-  const event = new CustomEvent(KBD_EVENT, { 
-    detail: { isOpen, height: isOpen ? 300 : 0 } 
-  });
-  window.dispatchEvent(event);
+// 가상 키보드 트리거 함수는 인터페이스 유지를 위해 빈 함수로 남겨둠
+export const triggerVirtualKeyboard = (_isOpen: boolean) => {
+  // 가상 키보드 시뮬레이션 중단
 };

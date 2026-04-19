@@ -21,7 +21,6 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import ExitDialog from "./components/ExitDialog";
-import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
@@ -81,12 +80,9 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    // ✅ Chat일 때: h-[100dvh] + overflow-hidden으로 자식에게 높이 위임
-    // ✅ 그 외: 기존대로 min-h-[100dvh]
     <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
       {!hideLayout && session && <Header />}
 
-      {/* ✅ Chat일 때 main도 높이를 꽉 채워야 motion.div까지 전달됨 */}
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -95,7 +91,6 @@ const AnimatedRoutes = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            // ✅ Chat일 때 motion.div도 h-full로 높이 전달, overflow-hidden으로 차단
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
             <Routes location={location}>
@@ -115,8 +110,6 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
-
-      <KeyboardSimulator />
 
       <ExitDialog
         isOpen={showExitDialog}
@@ -142,7 +135,6 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            {/* ✅ 최상위 wrapper: Chat일 때를 대비해 overflow-hidden 추가 */}
             <div className="min-h-[100dvh] w-full bg-white overflow-hidden">
               <AnimatePresence mode="wait">
                 {showSplash ? (
