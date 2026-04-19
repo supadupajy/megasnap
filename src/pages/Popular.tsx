@@ -8,11 +8,27 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts } from '@/lib/mock-data';
+import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { getYoutubeThumbnail } from '@/lib/utils';
+
+// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
+const getTierFromId = (id: string) => {
+  let h = 0;
+  for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+  const val = Math.abs(h % 1000) / 1000;
+  
+  if (val < 0.01) return 'diamond';
+  if (val < 0.03) return 'gold';
+  if (val < 0.07) return 'silver';
+  if (val < 0.15) return 'popular';
+  return 'none';
+};
+
+const PAGE_SIZE = 15;
 
 const Popular = () => {
   const navigate = useNavigate();
@@ -21,92 +37,133 @@ const Popular = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  
-  // 로딩 상태를 false로 시작하여 조건부로 활성화
   const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
   const hasLoaded = useRef(false);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const loadInitialData = useCallback(async (uid: string) => {
-    if (hasLoaded.current) return;
-    
-    setIsInitialLoading(true);
-    const mockPosts = createMockPosts(37.5665, 126.9780, 20).sort((a, b) => b.likes - a.likes);
-
+  const fetchPopularPosts = useCallback(async (pageNum: number) => {
     try {
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      // Supabase DB 전체에서 좋아요 순으로 정렬하여 가져옴
       const { data, error } = await supabase
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(20);
+        .range(from, to);
 
       if (error) throw error;
 
-      const realPosts = (data || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name,
-          avatar: p.user_avatar
-        },
-        content: p.content,
-        location: p.location_name,
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: Number(p.likes || 0) >= 1500 ? 'popular' : 'none'
-      })) as Post[];
+      if (!data || data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
 
-      const combined = [...realPosts, ...mockPosts].sort((a, b) => b.likes - a.likes);
-      setPosts(combined);
-      hasLoaded.current = true;
+      const mappedPosts = (data || []).map(p => {
+        const borderType = getTierFromId(p.id);
+        const isAd = p.content?.trim().startsWith('[AD]');
+        
+        // DB 데이터 매핑 시 유튜브 URL이 없는데 썸네일이 들어있는 경우를 대비해 보정
+        let finalImage = p.image_url;
+        if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
+          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
+        }
+
+        return {
+          id: p.id,
+          isAd: isAd,
+          isGif: false,
+          isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+          user: {
+            id: p.user_id,
+            name: p.user_name,
+            avatar: p.user_avatar
+          },
+          content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+          location: p.location_name,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          commentsCount: 0,
+          comments: [],
+          image: finalImage,
+          youtubeUrl: p.youtube_url,
+          videoUrl: p.video_url,
+          isLiked: false,
+          createdAt: new Date(p.created_at),
+          borderType: borderType
+        };
+      }) as Post[];
+
+      // 50% 유튜브 영상 강제 할당 로직 (광고는 제외)
+      const processedPosts = mappedPosts.map((p, idx) => {
+        if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl && !p.isAd) {
+          const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          return {
+            ...p,
+            youtubeUrl: ytUrl,
+            image: getYoutubeThumbnail(ytUrl) || p.image
+          };
+        }
+        return p;
+      });
+
+      return processedPosts;
     } catch (err) {
       console.error('[Popular] Fetch Error:', err);
-      setPosts(mockPosts);
-    } finally {
-      setIsInitialLoading(false);
+      return [];
     }
   }, []);
+
+  const loadInitialData = useCallback(async () => {
+    if (hasLoaded.current) return;
+    setIsInitialLoading(true);
+    
+    const initialPosts = await fetchPopularPosts(0);
+    setPosts(initialPosts);
+    
+    hasLoaded.current = true;
+    setIsInitialLoading(false);
+  }, [fetchPopularPosts]);
 
   useEffect(() => {
     if (!authLoading) {
       if (authUser) {
-        loadInitialData(authUser.id);
+        loadInitialData();
       } else {
         navigate('/login', { replace: true });
       }
     }
   }, [authLoading, authUser, loadInitialData, navigate]);
 
-  const loadMorePosts = useCallback(() => {
-    if (isLoadingMore || isInitialLoading) return;
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
 
-    setTimeout(() => {
-      const newPosts = createMockPosts(37.5665, 126.9780, 15)
-        .map(p => ({ ...p, likes: Math.floor(Math.random() * 1000) + 500 }))
-        .sort((a, b) => b.likes - a.likes);
+    const nextPage = page + 1;
+    const newPosts = await fetchPopularPosts(nextPage);
+    
+    if (newPosts.length > 0) {
       setPosts(prev => [...prev, ...newPosts]);
-      setIsLoadingMore(false);
-    }, 800);
-  }, [isLoadingMore, isInitialLoading]);
+      setPage(nextPage);
+    } else {
+      setHasMore(false);
+    }
+    
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMore, page, fetchPopularPosts]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && posts.length > 0) {
+        if (entry.isIntersecting && posts.length > 0 && hasMore) {
           loadMorePosts();
         }
       },
@@ -114,7 +171,7 @@ const Popular = () => {
     );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [loadMorePosts, posts.length]);
+  }, [loadMorePosts, posts.length, hasMore]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
@@ -133,19 +190,19 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  // 로딩 조건 최적화
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <p className="text-xs font-bold text-gray-400">인기 포스팅을 불러오는 중...</p>
+        </div>
       </div>
     );
   }
 
-  if (!authUser) return null;
-
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <Header />
       <div className="pt-[88px]">
         <StoryBar />
@@ -171,6 +228,8 @@ const Popular = () => {
               isInfluencer={post.isInfluencer}
               category={post.category}
               borderType={post.borderType}
+              youtubeUrl={post.youtubeUrl}
+              videoUrl={post.videoUrl}
               disablePulse={true}
               onLikeToggle={() => handleLikeToggle(post.id)}
               onLocationClick={handleLocationClick}
@@ -182,15 +241,22 @@ const Popular = () => {
           {isLoadingMore ? (
             <>
               <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">인기 포스팅을 더 불러오는 중...</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p>
             </>
           ) : (
-            posts.length > 0 && <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+            hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>
           )}
         </div>
       </div>
       <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
+      <WritePost 
+        isOpen={isWriteOpen} 
+        onClose={() => setIsWriteOpen(false)} 
+        onStartLocationSelection={() => {
+          setIsWriteOpen(false);
+          navigate('/', { state: { startSelection: true } });
+        }}
+      />
     </div>
   );
 };

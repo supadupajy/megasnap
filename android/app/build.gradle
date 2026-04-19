@@ -3,6 +3,15 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.example.chorasnap"
     compileSdk rootProject.ext.compileSdkVersion
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def appName = "Chora"
+            def buildType = variant.buildType.name
+            def versionName = variant.versionName
+
+            outputFileName = "${appName}_${buildType}_v${versionName}.apk"
+        }
+    }
     defaultConfig {
         applicationId "com.example.chorasnap"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -36,6 +45,11 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    
+    // Firebase BoM 및 Analytics 추가
+    implementation platform('com.google.firebase:firebase-bom:33.9.0')
+    implementation 'com.google.firebase:firebase-analytics'
+
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

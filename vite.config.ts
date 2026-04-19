@@ -4,7 +4,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig(() => ({
-  base: "/",
+  // GitHub Pages의 다양한 경로 대응을 위해 상대 경로 사용
+  base: "./",
   server: {
     host: "::",
     port: 8080,
@@ -13,7 +14,6 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Force react to resolve to the same instance
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },

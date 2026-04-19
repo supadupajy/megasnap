@@ -15,7 +15,9 @@ interface Message {
   id: string;
   content: string;
   sender_id: string;
+  receiver_id: string;
   created_at: string;
+  is_read: boolean;
 }
 
 const isValidUUID = (uuid: string) => {
@@ -32,19 +34,20 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<any>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchOtherUser = async () => {
       if (!chatId) return;
-      
       if (!isValidUUID(chatId)) {
         const room = chatStore.getRoom(chatId);
         setOtherUser(room?.user || { nickname: `Explorer_${chatId}`, avatar_url: `https://i.pravatar.cc/150?u=${chatId}` });
         setIsLoading(false);
         return;
       }
-
       const { data } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', chatId).single();
       setOtherUser(data || { nickname: '사용자', avatar_url: null });
       setIsLoading(false);
@@ -54,79 +57,79 @@ const Chat = () => {
 
   useEffect(() => {
     if (!authUser || !chatId) return;
-
-    if (!isValidUUID(chatId)) {
-      const room = chatStore.getRoom(chatId);
-      if (room) {
-        const formatted = room.messages.map(m => ({
-          id: m.id.toString(),
-          content: m.text,
-          sender_id: m.sender === 'me' ? authUser.id : chatId,
-          created_at: new Date().toISOString()
-        }));
-        setMessages(formatted);
-      }
-      setIsLoading(false);
-      return;
-    }
-
+    
     const fetchMessages = async () => {
+      if (!isValidUUID(chatId)) {
+        const room = chatStore.getRoom(chatId);
+        if (room) {
+          setMessages(room.messages.map(m => ({
+            id: m.id.toString(),
+            content: m.text,
+            sender_id: m.sender === 'me' ? authUser.id : chatId,
+            receiver_id: m.sender === 'me' ? chatId : authUser.id,
+            created_at: new Date().toISOString(),
+            is_read: true
+          })));
+        }
+        return;
+      }
+
       const { data } = await supabase
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
         .order('created_at', { ascending: true });
-
-      setMessages(data || []);
-      setIsLoading(false);
+      
+      if (data) setMessages(data as Message[]);
     };
 
     fetchMessages();
-
-    const channel = supabase
-      .channel(`chat:${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, 
-      (payload) => {
-        const newMsg = payload.new as Message;
-        if (newMsg.sender_id === chatId) setMessages((prev) => [...prev, newMsg]);
-      }).subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [authUser, chatId]);
+    
+    if (isValidUUID(chatId)) {
+      const channel = supabase
+        .channel(`chat_${chatId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const newMsg = payload.new as Message;
+          if ((newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId) ||
+              (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id)) {
+            setMessages(prev => [...prev, newMsg]);
+          }
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [authUser?.id, chatId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || !authUser || !chatId) return;
-
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const content = inputValue.trim();
-    const tempId = Math.random().toString();
-    const optimisticMsg: Message = {
-      id: tempId,
-      content: content,
-      sender_id: authUser.id,
-      created_at: new Date().toISOString(),
-    };
+    if (!content || !authUser || !chatId || isSending) return;
 
-    setMessages((prev) => [...prev, optimisticMsg]);
+    setIsSending(true);
     setInputValue('');
 
     if (isValidUUID(chatId)) {
-      const { error } = await supabase.from('messages').insert([{
-        sender_id: authUser.id,
-        receiver_id: chatId,
-        content: content,
-      }]);
-
-      if (error) {
+      try {
+        const { error } = await supabase.from('messages').insert([{
+          sender_id: authUser.id,
+          receiver_id: chatId,
+          content: content,
+          is_read: false
+        }]);
+        if (error) throw error;
+      } catch (err) {
         showError('메시지 전송에 실패했습니다.');
-        setMessages((prev) => prev.filter(m => m.id !== tempId));
+        setInputValue(content);
+      } finally {
+        setIsSending(false);
       }
     } else {
-      chatStore.getOrCreateRoom(chatId, otherUser?.nickname || `Explorer_${chatId}`, otherUser?.avatar_url || '');
       chatStore.addMessage(chatId, content, 'me');
+      setIsSending(false);
     }
   };
 
@@ -134,7 +137,6 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col bg-white overflow-hidden" style={{ height: '100dvh' }}>
-      {/* 헤더: flex-shrink-0으로 고정 */}
       <header className="flex-shrink-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center justify-between px-4 border-b border-gray-100 pt-safe">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-50 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
@@ -155,7 +157,6 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* 메시지 리스트: flex-1로 남은 공간 전부 차지 */}
       <div ref={scrollRef} className="flex-1 px-4 py-4 overflow-y-auto space-y-4 no-scrollbar">
         {messages.map((msg) => {
           const isMe = msg.sender_id === authUser?.id;
@@ -169,25 +170,24 @@ const Chat = () => {
         })}
       </div>
 
-      {/* 입력창: flex-shrink-0으로 고정 */}
       <div className="flex-shrink-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 pb-safe">
-        <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner mb-4">
+        <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-2 border border-gray-100 shadow-inner mb-4">
           <Input 
+            ref={inputRef}
             placeholder="메시지 보내기..." 
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-10 font-bold" 
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
           />
           <Button 
+            type="submit"
             size="icon" 
-            onClick={handleSend} 
-            disabled={!inputValue.trim()} 
-            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", inputValue.trim() ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
+            disabled={!inputValue.trim() || isSending} 
+            className={cn("w-10 h-10 rounded-full transition-all shadow-lg", (inputValue.trim() && !isSending) ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-200 text-gray-400")}
           >
-            <Send className="w-5 h-5" />
+            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );

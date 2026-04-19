@@ -107,7 +107,9 @@ export const chatStore = {
   
   subscribe: (listener: () => void) => {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   },
   
   notify: () => listeners.forEach(l => l())

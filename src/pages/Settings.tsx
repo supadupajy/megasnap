@@ -12,13 +12,17 @@ import {
   LogOut,
   ChevronRight,
   Moon,
-  Languages
+  Languages,
+  Database,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { seedGlobalPosts, randomizeExistingLikes } from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,8 +62,9 @@ const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -67,9 +72,44 @@ const Settings = () => {
     navigate('/login');
   };
 
+  const handleSeedData = async () => {
+    if (!user) return;
+    setIsProcessing(true);
+    const toastId = showLoading('대한민국 전역 데이터를 생성 중입니다...');
+    try {
+      const count = await seedGlobalPosts(
+        user.id, 
+        profile?.nickname || '탐험가', 
+        profile?.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`
+      );
+      dismissToast(toastId);
+      showSuccess(`${count}개의 포스팅이 전국에 생성되었습니다! ✨`);
+    } catch (err: any) {
+      dismissToast(toastId);
+      showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRandomizeLikes = async () => {
+    setIsProcessing(true);
+    const toastId = showLoading('전체 좋아요 수치를 랜덤하게 섞는 중...');
+    try {
+      const count = await randomizeExistingLikes();
+      dismissToast(toastId);
+      showSuccess(`${count}개 포스팅의 좋아요가 무작위로 변경되었습니다! 🎲`);
+    } catch (err: any) {
+      dismissToast(toastId);
+      showError(`수치 변경 실패: ${err.message || 'RPC 함수를 찾을 수 없거나 권한이 없습니다.'}`);
+      console.error("Randomize Error Details:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white pb-10">
-      {/* Header */}
+    <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white/90 backdrop-blur-md z-50 flex items-center px-4 border-b border-gray-100">
         <button 
           onClick={() => navigate(-1)} 
@@ -81,7 +121,6 @@ const Settings = () => {
       </header>
 
       <div className="pt-[88px]">
-        {/* Account Section */}
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -91,7 +130,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* App Settings Section */}
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">앱 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -101,16 +139,45 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Support Section */}
         <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">지원</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={HelpCircle} label="고객 센터" />
-            <SettingItem icon={Info} label="정보" />
+            <button 
+              onClick={handleSeedData}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-bold text-indigo-600">전체 지역 데이터 생성</span>
+                  <span className="text-[10px] text-gray-400 font-medium">대한민국 전역에 포스팅을 골고루 배치합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+
+            <button 
+              onClick={handleRandomizeLikes}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
+                  <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
+                  <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
         </div>
 
-        {/* Login Section */}
         <div className="px-4 py-8">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem 
@@ -126,7 +193,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">

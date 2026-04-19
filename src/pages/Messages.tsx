@@ -31,7 +31,6 @@ const Messages = () => {
     if (!authUser) return;
 
     const fetchConversations = async () => {
-      // 1. Supabase 메시지 가져오기
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -56,7 +55,6 @@ const Messages = () => {
         }
       }
 
-      // 2. 로컬 스토어(Mock) 메시지 가져오기
       const localRooms = chatStore.getRooms();
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
@@ -66,27 +64,20 @@ const Messages = () => {
             last_message: lastMsg.text,
             created_at: new Date().toISOString(),
             unread_count: room.unread ? 1 : 0,
-            profile: {
-              nickname: room.user.name,
-              avatar_url: room.user.avatar
-            }
+            profile: { nickname: room.user.name, avatar_url: room.user.avatar }
           });
         }
       }
 
       const convList = Array.from(convMap.values());
-
-      // 3. 프로필 정보 보완 (Supabase 데이터용)
       const results = await Promise.all(
         convList.map(async (conv) => {
           if (conv.profile) return conv;
-
           const { data: profile } = await supabase
             .from('profiles')
             .select('nickname, avatar_url')
             .eq('id', conv.other_id)
             .single();
-          
           return {
             ...conv,
             profile: profile || { nickname: '사용자', avatar_url: null }
@@ -101,11 +92,7 @@ const Messages = () => {
 
     fetchConversations();
     const unsubscribe = chatStore.subscribe(fetchConversations);
-    
-    // 클린업 함수가 boolean을 반환하지 않도록 중괄호로 감싸 void 처리
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, [authUser]);
 
   const filteredConversations = conversations.filter(conv => 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "573401371329",
+    "project_id": "gen-lang-client-0536770943",
+    "storage_bucket": "gen-lang-client-0536770943.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573401371329:android:6f5c2f556cd95f1820ba40",
+        "android_client_info": {
+          "package_name": "com.example.chorasnap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuGBcco58T_Yj0hRJkWao7dqwS_dRE6Jk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

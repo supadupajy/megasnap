@@ -20,21 +20,22 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
-import BottomNav from "./components/BottomNav";
-import WritePost from "./components/WritePost";
 import ExitDialog from "./components/ExitDialog";
+import KeyboardSimulator from "./components/KeyboardSimulator";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { usePushNotifications } from "./hooks/use-push-notifications";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
+  
+  usePushNotifications();
 
-  // 인증 로딩 중에는 최소한의 스피너만 표시
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
@@ -51,7 +52,6 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(path => location.pathname.startsWith(path));
@@ -69,20 +69,19 @@ const AnimatedRoutes = () => {
     return () => { backButtonListener.then(l => l.remove()); };
   }, [location.pathname, navigate]);
 
-  // 전역 로딩 상태 처리 (인증 확인 중일 때만)
   if (loading && location.pathname !== '/login') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-white">
+    <div className="relative h-full bg-white overflow-hidden">
       {!hideLayout && session && <Header />}
       
-      <main className="relative">
+      <main className="h-full relative">
         <AnimatePresence mode="wait">
           <motion.div 
             key={location.pathname}
@@ -90,7 +89,7 @@ const AnimatedRoutes = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="w-full"
+            className="h-full w-full"
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
@@ -109,13 +108,6 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
-
-      {!hideLayout && session && (
-        <>
-          <BottomNav onWriteClick={() => setIsWriteOpen(prev => !prev)} />
-          <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
-        </>
-      )}
 
       <ExitDialog 
         isOpen={showExitDialog} 
@@ -141,13 +133,16 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AnimatePresence mode="wait">
-              {showSplash ? (
-                <SplashScreen key="splash" />
-              ) : (
-                <AnimatedRoutes key="main-app" />
-              )}
-            </AnimatePresence>
+            <div className="h-full w-full overflow-hidden bg-white">
+              <AnimatePresence mode="wait">
+                {showSplash ? (
+                  <SplashScreen key="splash" />
+                ) : (
+                  <AnimatedRoutes key="main-app" />
+                )}
+              </AnimatePresence>
+              <KeyboardSimulator />
+            </div>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
