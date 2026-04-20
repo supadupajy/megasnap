@@ -249,7 +249,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
       <div className="absolute top-4 right-6 z-[1100]"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button></div>
-      <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 pt-4 pb-[30px]">
+      <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 pt-4 pb-[60px]">
         <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
           <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
 
