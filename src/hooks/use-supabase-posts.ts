@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 import { getYoutubeThumbnail } from "@/lib/utils";
 import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
+import { remapUnsplashDisplayUrl } from "@/lib/mock-data";
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -29,7 +30,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   // 유튜브 영상인 경우 썸네일을 우선 사용, 아니면 DB의 image_url 사용
   const finalImage = p.youtube_url 
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : p.image_url;
+    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
 
   return {
     id: p.id,

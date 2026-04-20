@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
+import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,10 +76,10 @@ const Popular = () => {
         
         let finalImage = p.youtube_url
           ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-          : p.image_url;
+          : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
 
         if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
-          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
+          finalImage = getDiverseUnsplashUrl(p.id, 'general');
         }
 
         return {

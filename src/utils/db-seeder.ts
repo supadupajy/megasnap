@@ -3,11 +3,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   createMockPosts,
-  FOOD_UNSPLASH_IDS,
-  getUnsplashUrl,
+  getDiverseUnsplashUrl,
   getVerifiedYoutubeUrlByIndex,
   initializeYoutubePool,
-  UNSPLASH_IDS,
 } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 import { sanitizeYoutubeMedia } from "./youtube-utils";
@@ -153,14 +151,14 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         let finalImage = "";
         
         if (isAd) {
-          finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
+          finalImage = getDiverseUnsplashUrl(`${city.name}:${randomUser.id}:${globalIndex}`, 'food', i);
         } else {
           if (globalIndex % 2 === 0) {
             const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
             finalYoutubeUrl = candidateUrl;
-            finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
+            finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.name}:${randomUser.id}:${globalIndex}`, 'general', i);
           } else {
-            finalImage = getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
+            finalImage = getDiverseUnsplashUrl(`${city.name}:${randomUser.id}:${globalIndex}`, 'general', i);
           }
         }
 

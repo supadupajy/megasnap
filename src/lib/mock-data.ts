@@ -1,15 +1,20 @@
 "use client";
 
-import { Post, User, Comment } from '@/types';
+import { Post, User } from '@/types';
 import { getYoutubeThumbnail } from './utils';
 
-// 시드 기반 랜덤 함수
-const seededRandom = (seed: string) => {
+const buildUniquePool = (items: string[]) => Array.from(new Set(items));
+
+const stableHash = (value: string) => {
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = Math.imul(31, hash) + value.charCodeAt(i) | 0;
   }
+  return Math.abs(hash);
+};
+
+const seededRandom = (seed: string) => {
+  let hash = stableHash(seed) || 1;
   return () => {
     hash = (hash * 16807) % 2147483647;
     return ((hash - 1) / 2147483646) * 0.999999999999999;
@@ -17,9 +22,7 @@ const seededRandom = (seed: string) => {
 };
 
 const getTierFromId = (id: string) => {
-  let h = 0;
-  for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-  const val = Math.abs(h % 1000) / 1000;
+  const val = (stableHash(id) % 1000) / 1000;
   if (val < 0.01) return 'diamond';
   if (val < 0.03) return 'gold';
   if (val < 0.07) return 'silver';
@@ -27,7 +30,6 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-// 유튜브 영상 유효성 검증 함수
 export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
   try {
     const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
@@ -37,7 +39,6 @@ export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
   }
 };
 
-// 50종 이상의 고유하고 검증된 유튜브 ID 리스트 (K-POP & Global Hits)
 export const YOUTUBE_IDS_50 = [
   "gdZLi9hhztQ", "js1CtxSY38I", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo",
   "WMweEpGlu_U", "kCELZbeS09o", "d9IxdwEFk1c", "9bZkp7q19f0", "hTermM40EDU",
@@ -48,24 +49,21 @@ export const YOUTUBE_IDS_50 = [
   "kJQP7kiw5Fk", "S-sJp1FfG7Q", "u0XmZp1S-t8", "F0B7HDiY-10", "XqgYj8atJpE",
   "fE2h3lGlOsk", "0A6E0M_Z8r4", "3YqXJ7Ssh_Q", "n9N0zS5XvXw", "m8MfJg68oCs",
   "kOCkne-B8Hk", "z9n8ZzP4P8I", "XsX3ATc3FbA", "Lp_r9fX5Sfs", "7-qGKqveAnM",
-  "XjJQBjWYDTs", "qV5lzRHrGeg", "2S24-y0Ij3Y", "SlPhMPnQ58k", "J6Z8WAt9v80"
-];
+  "XjJQBjWYDTs", "qV5lzRHrGeg", "2S24-y0Ij3Y", "SlPhMPnQ58k", "J6Z8WAt9v80",
+] as const;
 
-// 호환성을 위해 YOUTUBE_LINKS 내보내기 추가
-export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map(id => `https://www.youtube.com/shorts/${id}`);
+export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map((id) => `https://www.youtube.com/shorts/${id}`);
 
-// 검증된 ID들을 저장할 변수 (초기값은 전체 리스트로 설정)
 let validYoutubeIds: string[] = [...YOUTUBE_IDS_50];
 let youtubePoolPromise: Promise<void> | null = null;
 
-// 앱 시작 시 또는 필요 시 호출하여 유효한 영상만 필터링
 export const initializeYoutubePool = async () => {
   if (youtubePoolPromise) return youtubePoolPromise;
 
   youtubePoolPromise = (async () => {
     console.log("🚀 [YouTube] 영상 50종 정책 검증 시작...");
     const checkResults = await Promise.all(
-      YOUTUBE_IDS_50.map(async (id) => ({ id, ok: await validateYoutubeVideo(id) }))
+      YOUTUBE_IDS_50.map(async (id) => ({ id, ok: await validateYoutubeVideo(id) })),
     );
     const filtered = checkResults.filter((result) => result.ok).map((result) => result.id);
 
@@ -82,69 +80,118 @@ export const initializeYoutubePool = async () => {
 
 export const getVerifiedYoutubeUrlByIndex = (index: number) => {
   const pool = validYoutubeIds.length > 0 ? validYoutubeIds : YOUTUBE_IDS_50;
-  const safeIndex = Math.abs(index) % pool.length;
-  return `https://www.youtube.com/watch?v=${pool[safeIndex]}`;
+  return `https://www.youtube.com/watch?v=${pool[Math.abs(index) % pool.length]}`;
 };
 
-// 고유한 Unsplash 이미지 ID 200개 이상 확보 (중복 제거 및 다양화)
-export const UNSPLASH_IDS = [
-  "1501785888041", "1470071459604", "1441974231531", "1500673922987", "1464822759023", "1472214103451", "1516035069371", "1504674900247", "1517841905240", "1469474968028",
-  "1470770841072", "1501854140801", "1446776811953", "1506744038136", "1511884642898", "1532274402911", "1433086966358", "1505144248183", "1475924156736", "1518173946687",
-  "1493246507139", "1506901437675", "1472396961693", "1500382017468", "1490730141103", "1519681393784", "1486406146926", "1449034446853", "1470252649378", "1501183638710",
-  "1493552152660", "1511576661531", "1534067783941", "1502082553048", "1477959858617", "1444703686981", "1465146344425", "1473442242725", "1502672260266", "1501949997128",
-  "1496715976403", "1523712999610", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732", "1565299624946",
-  "1565958011703", "1467003909585", "1513104890138", "1503264116222", "1507525428034", "1519331378306", "1510312305626", "1506702315532", "1516738900263", "1521339225847",
-  "1523906834652", "1526333313022", "1528605248657", "1530482054422", "1532347921422", "1534158935073", "1536001622275", "1538003142205", "1540001234567", "1542009876543",
-  "1544001122334", "1546005566778", "1548009988776", "1550001112223", "1552003334445", "1554005556667", "1556007778889", "1558009990001", "1560001212121", "1562003434343",
-  "1564005656565", "1566007878787", "1568009090909", "1570001122334", "1572003344556", "1574005566778", "1576007788990", "1578009900112", "1580001223344", "1582003445566",
-  "1584005667788", "1586007889900", "1588009001122", "1590001223344", "1592003445566", "1594005667788", "1596007889900", "1598009001122", "1600001223344", "1602003445566",
-  "1604005667788", "1606007889900", "1608009001122", "1610001223344", "1612003445566", "1614005667788", "1616007889900", "1618009001122", "1620001223344", "1622003445566",
-  "1624005667788", "1626007889900", "1628009001122", "1630001223344", "1632003445566", "1634005667788", "1636007889900", "1638009001122", "1640001223344", "1642003445566",
-  "1644005667788", "1646007889900", "1648009001122", "1650001223344", "1652003445566", "1654005667788", "1656007889900", "1658009001122", "1660001223344", "1662003445566",
-  "1664005667788", "1666007889900", "1668009001122", "1670001223344", "1672003445566", "1674005667788", "1676007889900", "1678009001122", "1680001223344", "1682003445566",
-  "1684005667788", "1686007889900", "1688009001122", "1690001223344", "1692003445566", "1694005667788", "1696007889900", "1698009001122", "1700001223344", "1702003445566",
-  "1704005667788", "1706007889900", "1708009001122", "1710001223344", "1712003445566", "1714005667788", "1716007889900", "1718009001122", "1720001223344", "1722003445566",
-  "1724005667788", "1726007889900", "1728009001122", "1730001223344", "1732003445566", "1734005667788", "1736007889900", "1738009001122", "1740001223344", "1742003445566",
-  "1744005667788", "1746007889900", "1748009001122", "1750001223344", "1752003445566", "1754005667788", "1756007889900", "1758009001122", "1760001223344", "1762003445566",
-  "1764005667788", "1766007889900", "1768009001122", "1770001223344", "1772003445566", "1774005667788", "1776007889900", "1778009001122", "1780001223344", "1782003445566",
-  "1784005667788", "1786007889900", "1788009001122", "1790001223344", "1792003445566", "1794005667788", "1796007889900", "1798009001122", "1800001223344", "1802003445566"
+const GENERAL_UNSPLASH_IDS_RAW = [
+  "photo-1444723126603-3e059c60c01e", "photo-1477959858617-67f85cf4f1df", "photo-1464822759023-fed622ff2c3b",
+  "photo-1514924013411-cbf25faa35bb", "photo-1493246507139-91e8bef99c02", "photo-1469474968028-56623f02e42e",
+  "photo-1501785888041-af3ef285b470", "photo-1470071459604-3b5ec3a7fe05", "photo-1441974231531-c6227db76b6e",
+  "photo-1532274402911-5a369e4c4bb5", "photo-1506744038136-46273834b3fb", "photo-1465146344425-f00d5f5c8f07",
+  "photo-1472214103451-9374bd1c798e", "photo-1426604966848-d7adac402bff", "photo-1414235077428-338989a2e8c0",
+  "photo-1504674900247-0877df9cc836", "photo-1493770348161-369560ae357d", "photo-1476224203421-9ac3993c4c5a",
+  "photo-1504439468489-c8920d796a29", "photo-1482049016688-2d3e1b311543", "photo-1512621776951-a57141f2eefd",
+  "photo-1517248135467-4c7edcad34c4", "photo-1552566626-52f8b828add9", "photo-1555939594-58d7cb561ad1",
+  "photo-1551218808-94e220e084d2", "photo-1565299624946-b28f40a0ae38", "photo-1567620905732-2d1ec7bb7445",
+  "photo-1546069901-ba9599a7e63c", "photo-1565958011703-44f9829ba187", "photo-1484723091739-30a097e8f929",
+  "photo-1519708227418-c8fd9a32b7a2", "photo-1529042410759-bf9390279d2b", "photo-1473093226795-af9932fe5856",
+  "photo-1490645935967-10de6ba17051", "photo-1432139555190-58521daec20b", "photo-1540189549336-e6e99c3679fe",
+  "photo-1498837167922-ddd27525d352", "photo-1543353071-873f17a7a088", "photo-1506354666786-959d6d497f1a",
+  "photo-1511690656952-34342bb7c2f2", "photo-1495195129352-aec325b55b65", "photo-1481671703460-040cb8a2d909",
+  "photo-1470252649358-96753a782901", "photo-1447752875215-b2761acb3c5d", "photo-1465189684280-6a8fa9b19a7a",
+  "photo-1433832597046-4f10e10ac764", "photo-1439066615861-d1af74d74000", "photo-1476514525535-07fb3b4ae5f1",
+  "photo-1507525428034-b723cf961d3e", "photo-1519046904884-53103b34b206", "photo-1533105079780-92b9be482077",
+  "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
+  "photo-1467232004584-a241de8bcf5d", "photo-1513584684031-43d5ec36038f", "photo-1523217582562-09d0def993a6",
+  "photo-1502672260266-1c1ef2d93688", "photo-1522708323590-d24dbb6b0267", "photo-1502005229762-cf1b2da7c5d6",
+  "photo-1512917774080-9991f1c4c750", "photo-1480074568708-e7b720bb3f09", "photo-1449034446853-66c86144b0ad",
+  "photo-1475855581690-80accde3ae2b", "photo-1513502703549-1ad55c7d314c", "photo-1518780664697-55e3ad937233",
+  "photo-1505691722718-4684375a973d", "photo-1523755231516-f43fd99bbd5a", "photo-1516455590571-18256e5bb9ff",
+  "photo-1516421591134-668418183a50", "photo-1464366400600-7168b8af9bc3", "photo-1496417263034-38ec4f0b665a",
+  "photo-1506057585508-85603cee9e17", "photo-1498050108023-c5249f4df085", "photo-1493612276216-ee3925520721",
+  "photo-1515378791036-0648a3ef77b2", "photo-1485827404703-89b55fcc595e", "photo-1526374965328-7f61d4dc18c5",
+  "photo-1531297484001-80022131f5a1", "photo-1488590528505-98d2b5aba04b", "photo-1518770660439-4636190af475",
+  "photo-1550745165-9bc0b252726f", "photo-1525547719571-a2d4ac8945e2", "photo-1519389950473-47ba0277781c",
+  "photo-1581091226825-a6a2a5aee158", "photo-1510511459019-5dda7724fd87", "photo-1520333789090-1afc82db536a",
+  "photo-1551434678-e076c223a692", "photo-1460925895917-afdab827c52f", "photo-1497215728101-856f4ea42174",
+  "photo-1522202176988-66273c2fd55f", "photo-1519244703995-f4e0f30006d5", "photo-1491438590914-bc09fcaaf77a",
+  "photo-1517048676732-d65bc937f952", "photo-1556761175-b413da4baf72", "photo-1523240795612-9a054b0db644",
+  "photo-1515187029135-18ee286d815b", "photo-1521737711867-e3b97375f902", "photo-1507679799987-c73779587ccf",
+  "photo-1522071820081-009f0129c71c",
 ];
 
-export const FOOD_UNSPLASH_IDS = [
-  "1504674900247", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732", "1565299624946", "1565958011703",
-  "1467003909585", "1513104890138", "1504674900247", "1512621776951", "1476224489176", "1493770348161", "1482049016688", "1484723091739", "1540189549336", "1567620905732"
+const FOOD_UNSPLASH_IDS_RAW = [
+  "photo-1504674900247-0877df9cc836", "photo-1493770348161-369560ae357d", "photo-1476224203421-9ac3993c4c5a",
+  "photo-1504439468489-c8920d796a29", "photo-1482049016688-2d3e1b311543", "photo-1512621776951-a57141f2eefd",
+  "photo-1517248135467-4c7edcad34c4", "photo-1552566626-52f8b828add9", "photo-1555939594-58d7cb561ad1",
+  "photo-1551218808-94e220e084d2", "photo-1565299624946-b28f40a0ae38", "photo-1567620905732-2d1ec7bb7445",
+  "photo-1546069901-ba9599a7e63c", "photo-1565958011703-44f9829ba187", "photo-1484723091739-30a097e8f929",
+  "photo-1490645935967-10de6ba17051", "photo-1540189549336-e6e99c3679fe", "photo-1498837167922-ddd27525d352",
+  "photo-1511690656952-34342bb7c2f2", "photo-1495195129352-aec325b55b65", "photo-1481671703460-040cb8a2d909",
+  "photo-1470252649358-96753a782901", "photo-1465146344425-f00d5f5c8f07", "photo-1414235077428-338989a2e8c0",
 ];
 
-export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
+export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW);
+export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW);
+
+export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
+
+export const isUnsplashImageUrl = (url?: string | null) =>
+  typeof url === 'string' && url.includes('images.unsplash.com');
+
+const pickFromPool = (pool: string[], seed: string, salt = 0) => {
+  const baseHash = stableHash(`${seed}:${salt}`);
+  const stepOptions = [7, 11, 13, 17, 19, 23, 29];
+  const step = stepOptions[baseHash % stepOptions.length];
+  const index = (baseHash + salt * step) % pool.length;
+  return pool[index];
+};
+
+export const getDiverseUnsplashId = (
+  seed: string | number,
+  variant: 'general' | 'food' = 'general',
+  salt = 0,
+) => {
+  const pool = variant === 'food' ? FOOD_UNSPLASH_IDS : UNSPLASH_IDS;
+  return pickFromPool(pool, String(seed), salt);
+};
+
+export const getDiverseUnsplashUrl = (
+  seed: string | number,
+  variant: 'general' | 'food' = 'general',
+  salt = 0,
+) => getUnsplashUrl(getDiverseUnsplashId(seed, variant, salt));
+
+export const remapUnsplashDisplayUrl = (
+  url: string | null | undefined,
+  seed: string | number,
+  variant: 'general' | 'food' = 'general',
+  salt = 0,
+) => {
+  if (!url || !isUnsplashImageUrl(url)) return url;
+  return getDiverseUnsplashUrl(`${seed}:${url}`, variant, salt);
+};
 
 export const createMockPosts = (
-  centerLat: number, 
-  centerLng: number, 
-  count: number = 15, 
+  centerLat: number,
+  centerLng: number,
+  count: number = 15,
   specificUserId?: string,
-  bounds?: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }
+  bounds?: { sw: { lat: number; lng: number }, ne: { lat: number; lng: number } },
 ): Post[] => {
   const randomFn = specificUserId ? seededRandom(specificUserId) : Math.random;
 
   return Array.from({ length: count }).map((_, i) => {
-    const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).substr(2, 9);
-    
-    // 광고 비율 5%
+    const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).slice(2, 11);
     const isAd = i % 20 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
-    
-    // 좌표와 인덱스를 조합하여 고유한 이미지 인덱스 생성
-    const latSeed = Math.floor(centerLat * 1000);
-    const lngSeed = Math.floor(centerLng * 1000);
-    const uniqueIdx = (latSeed + lngSeed + i) % UNSPLASH_IDS.length;
-    
-    // 검증된 유튜브 ID 풀에서 순환 선택 (50% 확률로 영상 할당)
-    const hasYoutube = !isAd && (i % 2 === 0); 
-    const ytId = hasYoutube ? validYoutubeIds[(latSeed + lngSeed + i) % validYoutubeIds.length] : undefined;
+    const hasYoutube = !isAd && i % 2 === 0;
+    const ytId = hasYoutube ? validYoutubeIds[(stableHash(`${centerLat}:${centerLng}:${i}`)) % validYoutubeIds.length] : undefined;
     const youtubeUrl = ytId ? `https://www.youtube.com/shorts/${ytId}` : undefined;
 
-    let lat, lng;
+    let lat: number;
+    let lng: number;
     if (bounds) {
       lat = bounds.sw.lat + (randomFn() * (bounds.ne.lat - bounds.sw.lat));
       lng = bounds.sw.lng + (randomFn() * (bounds.ne.lng - bounds.sw.lng));
@@ -152,19 +199,14 @@ export const createMockPosts = (
       lat = centerLat + (randomFn() - 0.5) * 0.1;
       lng = centerLng + (randomFn() - 0.5) * 0.1;
     }
-    
-    const content = isAd 
-      ? "특별한 혜택을 만나보세요! ✨"
-      : "오늘의 멋진 순간을 기록합니다. 📍";
-    
-    let image = "";
-    if (isAd) {
-      image = getUnsplashUrl(FOOD_UNSPLASH_IDS[i % FOOD_UNSPLASH_IDS.length]);
-    } else if (youtubeUrl) {
-      image = getYoutubeThumbnail(youtubeUrl) || getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
-    } else {
-      image = getUnsplashUrl(UNSPLASH_IDS[uniqueIdx]);
-    }
+
+    const imageSeed = `${specificUserId || 'global'}:${centerLat}:${centerLng}:${lat.toFixed(4)}:${lng.toFixed(4)}:${i}`;
+
+    const image = isAd
+      ? getDiverseUnsplashUrl(imageSeed, 'food', i)
+      : youtubeUrl
+        ? (getYoutubeThumbnail(youtubeUrl) || getDiverseUnsplashUrl(imageSeed, 'general', i))
+        : getDiverseUnsplashUrl(imageSeed, 'general', i);
 
     return {
       id,
@@ -176,7 +218,7 @@ export const createMockPosts = (
         name: isAd ? 'Partner' : `Explorer_${id.substring(0, 4)}`,
         avatar: `https://i.pravatar.cc/150?u=${isAd ? 'ad' : id}`,
       },
-      content,
+      content: isAd ? '특별한 혜택을 만나보세요! ✨' : '오늘의 멋진 순간을 기록합니다. 📍',
       location: '대한민국 어딘가',
       lat,
       lng,
@@ -187,7 +229,7 @@ export const createMockPosts = (
       isLiked: false,
       createdAt: new Date(Date.now() - randomFn() * 48 * 3600000),
       borderType,
-      youtubeUrl
+      youtubeUrl,
     };
   });
 };
@@ -197,14 +239,14 @@ export const getUserById = (id: string): User => ({
   name: id,
   nickname: `Explorer_${id}`,
   avatar: `https://i.pravatar.cc/150?u=${id}`,
-  bio: "탐험가입니다. 📍"
+  bio: '탐험가입니다. 📍',
 });
 
 export const MOCK_STORIES = Array.from({ length: 10 }).map((_, i) => ({
   id: `user_${i}`,
   name: `User ${i}`,
   avatar: `https://i.pravatar.cc/150?u=user_${i}`,
-  hasUpdate: Math.random() > 0.5
+  hasUpdate: Math.random() > 0.5,
 }));
 
 export const MOCK_USERS = Array.from({ length: 10 }).map((_, i) => getUserById(`user_${i}`));
