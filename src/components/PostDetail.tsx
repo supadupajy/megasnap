@@ -159,13 +159,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return (<div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}><Icon className="w-3.5 h-3.5" /> <span className="text-[10px] font-black">{label}</span></div>);
   };
 
-  const getBorderClass = () => {
-    if (isMine) return 'my-post-border-container';
-    if (isAd) return 'ad-border-container';
-    if (post.borderType === 'popular') return 'popular-border-container';
-    if (post.borderType === 'diamond') return 'diamond-border-container';
-    if (post.borderType === 'gold') return 'gold-border-container';
-    if (post.borderType === 'silver') return 'silver-border-container';
+  const getStaticDetailFrameClass = () => {
+    if (isMine) return 'p-1 rounded-2xl border-4 border-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.18)]';
+    if (isAd) return 'p-1 rounded-2xl border-4 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.18)]';
+    if (post.borderType === 'popular') return 'p-1 rounded-2xl border-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.18)]';
+    if (post.borderType === 'diamond') return 'p-1 rounded-2xl border-4 border-cyan-400 shadow-[0_0_18px_rgba(34,211,238,0.2)]';
+    if (post.borderType === 'gold') return 'p-1 rounded-2xl border-4 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.2)]';
+    if (post.borderType === 'silver') return 'p-1 rounded-2xl border-4 border-slate-400 shadow-[0_0_12px_rgba(148,163,184,0.18)]';
     return '';
   };
 
@@ -192,7 +192,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="text-gray-400 p-1 outline-none"><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
                 </div>
                 <div className="px-4">
-                  <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl transition-all duration-500", getBorderClass())}>
+                  <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl", getStaticDetailFrameClass())}>
                     <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
                       {isPlayingVideo ? (
                         youtubeId ? (
