@@ -235,8 +235,7 @@ export const createMockPosts = (
   return Array.from({ length: count }).map((_, i) => {
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).slice(2, 11);
     const isAd = i % 20 === 0;
-    const borderType = isAd ? 'none' : getTierFromId(id);
-    const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
+    
     const hasYoutube = !isAd && i % 2 === 0;
     const ytId = hasYoutube ? validYoutubeIds[(stableHash(`${centerLat}:${centerLng}:${i}`)) % validYoutubeIds.length] : undefined;
     const youtubeUrl = ytId ? `https://www.youtube.com/shorts/${ytId}` : undefined;
@@ -248,7 +247,7 @@ export const createMockPosts = (
       lng = bounds.sw.lng + (randomFn() * (bounds.ne.lng - bounds.sw.lng));
     } else {
       lat = centerLat + (randomFn() - 0.5) * 0.1;
-      lng = lng + (randomFn() - 0.5) * 0.1;
+      lng = centerLng + (randomFn() - 0.5) * 0.1;
     }
 
     const imageSeed = `${specificUserId || 'global'}:${centerLat}:${centerLng}:${lat.toFixed(4)}:${lng.toFixed(4)}:${i}`;
@@ -264,7 +263,7 @@ export const createMockPosts = (
       id,
       isAd,
       isGif: false,
-      isInfluencer,
+      isInfluencer: false, // Default to false, let Index.tsx decide based on likes
       category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
@@ -275,15 +274,15 @@ export const createMockPosts = (
       location: resolveOfflineLocationName(lat, lng),
       lat,
       lng,
-      likes: Math.floor(randomFn() * 5000),
+      likes: Math.floor(randomFn() * 5000), // This will be overwritten by getRandomLikesFlat in db-seeder.ts
       commentsCount: 5,
       comments: [],
       image,
       isLiked: false,
       createdAt: new Date(Date.now() - randomFn() * 48 * 3600000),
-      borderType,
+      borderType: 'none', // Default to none, let Index.tsx decide based on likes
       youtubeUrl,
-    };
+    } as Post;
   });
 };
 
