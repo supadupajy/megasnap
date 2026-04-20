@@ -15,14 +15,15 @@ import {
   Languages,
   Database,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { seedGlobalPosts, randomizeExistingLikes, cleanupInvalidYoutubePosts } from '@/utils/db-seeder';
+import { seedGlobalPosts, randomizeExistingLikes, cleanupInvalidYoutubePosts, enrichExistingPostLocations } from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,6 +125,22 @@ const Settings = () => {
     }
   };
 
+  const handleEnrichLocations = async () => {
+    setIsProcessing(true);
+    const toastId = showLoading('기존 포스팅의 지역명을 상세하게 보정하는 중...');
+    try {
+      const count = await enrichExistingPostLocations();
+      dismissToast(toastId);
+      showSuccess(`${count}개 포스팅의 지역명이 상세 주소 형식으로 보정되었습니다! 🗺️`);
+    } catch (err: any) {
+      dismissToast(toastId);
+      showError(`지역명 보정 실패: ${err.message || '알 수 없는 오류'}`);
+      console.error("Enrich Location Error Details:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
@@ -187,6 +204,23 @@ const Settings = () => {
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
                   <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+
+            <button 
+              onClick={handleEnrichLocations}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-between p-4 hover:bg-emerald-50 active:bg-emerald-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-bold text-emerald-600">기존 지역명 상세 보정</span>
+                  <span className="text-[10px] text-gray-400 font-medium">서울/부산처럼 짧게 저장된 포스팅을 서울시 강동구 형식으로 보정합니다.</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />
