@@ -375,7 +375,21 @@ const MapContainer = ({
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
-  return <div className="w-full h-full relative bg-gray-100"><div ref={mapElement} className="w-full h-full" style={{ pointerEvents: 'auto' }} /></div>;
+  return (
+    <div 
+      ref={mapElement} 
+      className="w-full h-full relative touch-none select-none" 
+      style={{ 
+        backgroundColor: '#f8f9fa',
+        WebkitUserSelect: 'none',
+        userSelect: 'none'
+      }}
+    >
+      {isMapReady && (
+        <div className="w-full h-full" style={{ pointerEvents: 'auto' }} />
+      )}
+    </div>
+  );
 };
 
 export default MapContainer;
