@@ -80,11 +80,7 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
-<<<<<<< HEAD
-    .limit(1000); // 300에서 1000으로 상향 조정
-=======
-    .limit(1000); // 300에서 1000으로 상향
->>>>>>> 4276c7ce3d5860f851efd72cb8fcac5f0cee0d0a
+    .limit(1000);
 
   if (error) throw error;
   return (data || []).map(mapDbToPost);

@@ -92,16 +92,12 @@ const MapContainer = ({
     // [중요] 1. 광고를 가장 먼저 판별합니다.
     const isAd = checkIsAd(post);
     
-<<<<<<< HEAD
     // [중요] 2. 광고가 아닐 때만 내 포스팅(isMine)인지 확인합니다.
     // 이렇게 해야 '공식 파트너'의 글이 내 ID로 저장되어 있어도 AD로 표시됩니다.
     const isMine = !isAd && authUser && (post.user_id === authUser.id || post.user?.id === authUser.id);
     
     const borderType = post.borderType || 'none';
     const displayImage = post.image_url || post.image || FALLBACK_IMAGE;
-=======
-    const displayImage = post.image;
->>>>>>> 4276c7ce3d5860f851efd72cb8fcac5f0cee0d0a
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let borderClass = '';
     
@@ -145,12 +141,8 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-<<<<<<< HEAD
-    if (currentLevel >= 11) { overlaysRef.current.forEach(o => o.setMap(null)); overlaysRef.current.clear(); return; }
-=======
     // 줌 레벨 제한을 9에서 11로 상향
     if (currentLevel >= 11) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
->>>>>>> 4276c7ce3d5860f851efd72cb8fcac5f0cee0d0a
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((o, id) => { if (!currentPostIds.has(id)) { o.setMap(null); overlaysRef.current.delete(id); } });
