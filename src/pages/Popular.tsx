@@ -8,17 +8,19 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts, YOUTUBE_IDS_50, UNSPLASH_IDS_100, getUnsplashUrl } from '@/lib/mock-data';
+import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { getYoutubeThumbnail } from '@/lib/utils';
 
+// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
 const getTierFromId = (id: string) => {
   let h = 0;
   for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
   const val = Math.abs(h % 1000) / 1000;
+  
   if (val < 0.01) return 'diamond';
   if (val < 0.03) return 'gold';
   if (val < 0.07) return 'silver';
@@ -50,6 +52,7 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // Supabase DB 전체에서 좋아요 순으로 정렬하여 가져옴
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -66,9 +69,10 @@ const Popular = () => {
         const borderType = getTierFromId(p.id);
         const isAd = p.content?.trim().startsWith('[AD]');
         
+        // DB 데이터 매핑 시 유튜브 URL이 없는데 썸네일이 들어있는 경우를 대비해 보정
         let finalImage = p.image_url;
         if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
-          finalImage = getUnsplashUrl(UNSPLASH_IDS_100[Math.floor(Math.random() * UNSPLASH_IDS_100.length)]);
+          finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
         }
 
         return {
@@ -97,10 +101,10 @@ const Popular = () => {
         };
       }) as Post[];
 
+      // 50% 유튜브 영상 강제 할당 로직 (광고는 제외)
       const processedPosts = mappedPosts.map((p, idx) => {
         if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl && !p.isAd) {
-          const ytId = YOUTUBE_IDS_50[Math.floor(Math.random() * YOUTUBE_IDS_50.length)];
-          const ytUrl = `https://www.youtube.com/watch?v=${ytId}`;
+          const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
           return {
             ...p,
             youtubeUrl: ytUrl,

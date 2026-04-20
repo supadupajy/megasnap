@@ -90,7 +90,6 @@ const Index = () => {
       image: p.image_url,
       youtubeUrl: p.youtube_url,
       videoUrl: p.video_url,
-      category: p.category || 'none',
       isLiked: false,
       createdAt: new Date(p.created_at),
       borderType
@@ -158,19 +157,15 @@ const Index = () => {
     // 줌 레벨 제한을 11로 늘려 전국 단위에서도 마커가 보이도록 수정 (최대 레벨 10)
     if (currentZoom >= 11) { setDisplayedMarkers([]); return; }
     const { sw, ne } = mapData.bounds;
-
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 시간 슬라이더가 최대(48)일 때는 모든 시간대의 포스팅을 보여줌
-    const isTimeInfinite = timeValue === 48;
-
     const inBoundsCandidates = allPosts.filter(post => {
       if (blockedIds.has(post.user.id)) return false;
       if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
       
       if (post.isAd) return true;
-      if (!isTimeInfinite && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
       
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
