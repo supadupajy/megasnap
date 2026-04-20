@@ -160,12 +160,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   };
 
   const getStaticDetailCardClass = () => {
-    if (isMine) return 'p-1 rounded-[44px] border-4 border-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.18)]';
-    if (isAd) return 'p-1 rounded-[44px] border-4 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.18)]';
-    if (post.borderType === 'popular') return 'p-1 rounded-[44px] border-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.18)]';
-    if (post.borderType === 'diamond') return 'p-1 rounded-[44px] border-4 border-cyan-400 shadow-[0_0_18px_rgba(34,211,238,0.2)]';
-    if (post.borderType === 'gold') return 'p-1 rounded-[44px] border-4 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.2)]';
-    if (post.borderType === 'silver') return 'p-1 rounded-[44px] border-4 border-slate-400 shadow-[0_0_12px_rgba(148,163,184,0.18)]';
+    if (isMine) return 'absolute inset-0 rounded-[40px] border-4 border-indigo-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(79,70,229,0.18)] pointer-events-none';
+    if (isAd) return 'absolute inset-0 rounded-[40px] border-4 border-blue-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(59,130,246,0.18)] pointer-events-none';
+    if (post.borderType === 'popular') return 'absolute inset-0 rounded-[40px] border-4 border-red-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(239,68,68,0.18)] pointer-events-none';
+    if (post.borderType === 'diamond') return 'absolute inset-0 rounded-[40px] border-4 border-cyan-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_18px_rgba(34,211,238,0.2)] pointer-events-none';
+    if (post.borderType === 'gold') return 'absolute inset-0 rounded-[40px] border-4 border-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(251,191,36,0.2)] pointer-events-none';
+    if (post.borderType === 'silver') return 'absolute inset-0 rounded-[40px] border-4 border-slate-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_12px_rgba(148,163,184,0.18)] pointer-events-none';
     return '';
   };
 
@@ -176,7 +176,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
       <div className="absolute top-4 right-6 z-[1100]"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button></div>
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
-        <div className={cn("w-full max-w-[420px] h-[82vh] relative pointer-events-auto", getStaticDetailCardClass())}>
+        <div className="w-full max-w-[420px] h-[82vh] relative pointer-events-auto">
+          {getStaticDetailCardClass() && <div className={getStaticDetailCardClass()} />}
           <div className="w-full h-full flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
