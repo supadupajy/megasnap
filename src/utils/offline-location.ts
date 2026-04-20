@@ -35,7 +35,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '부산시',
     lat: 35.1796,
     lng: 129.0756,
-    density: DEFAULT_REGION_DENSITY,
+    density: 600,
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } },
     districts: [
       '중구', '서구', '동구', '영도구', '부산진구', '동래구', '남구', '북구',
