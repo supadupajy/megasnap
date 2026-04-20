@@ -289,7 +289,7 @@ const Index = () => {
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} />
       <PostListOverlay isOpen={isPostListOpen} onClose={() => setIsPostListOpen(false)} initialPosts={displayedMarkers} mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} />
-      {!isSelectingLocation && <BottomNav onWriteClick={() => setIsWriteOpen(true)} />}
+      {!isSelectingLocation && !isPostListOpen && <BottomNav onWriteClick={() => setIsWriteOpen(true)} />}
     </>
   );
 };
