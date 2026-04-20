@@ -14,7 +14,7 @@ const Header = () => {
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   const fetchCounts = useCallback(async () => {
-    if (!authUser) return;
+    if (!authUser?.id) return;
     try {
       // 1. 알림 개수 (읽지 않은 것)
       const { count: notifCount } = await supabase
@@ -36,17 +36,18 @@ const Header = () => {
     } catch (err) {
       console.error('[Header] Failed to fetch counts:', err);
     }
-  }, [authUser?.id]); // authUser 전체가 아닌 id만 의존성으로 설정
+  }, [authUser?.id]);
 
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser?.id) return;
 
     fetchCounts();
 
-    // 실시간 업데이트 구독
-    // .on() 메서드들을 모두 호출한 뒤 마지막에 .subscribe()를 호출해야 합니다.
-    const channel = supabase
-      .channel(`header_updates_${authUser.id}`)
+    // 채널 이름에 타임스탬프를 추가하여 React Strict Mode나 빠른 재렌더링 시의 충돌 방지
+    const channelName = `header_updates_${authUser.id}_${Date.now()}`;
+    const channel = supabase.channel(channelName);
+
+    channel
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
@@ -66,6 +67,8 @@ const Header = () => {
       .subscribe();
 
     return () => { 
+      // 구독 해제 및 채널 제거
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, [authUser?.id, fetchCounts]);
