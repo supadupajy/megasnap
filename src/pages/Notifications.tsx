@@ -10,6 +10,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { showError, showSuccess } from '@/utils/toast';
 
 interface Notification {
   id: string;
@@ -114,10 +115,20 @@ const Notifications = () => {
   }, [authUser]);
 
   const deleteNotification = async (id: string) => {
-    const { error } = await supabase.from('notifications').delete().eq('id', id);
-    if (!error) {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
       setNotifications(prev => prev.filter(n => n.id !== id));
       setSwipedId(null);
+      showSuccess('알림이 삭제되었습니다.');
+    } catch (error: any) {
+      console.error('[Notifications] Delete error:', error);
+      showError('알림 삭제에 실패했습니다.');
     }
   };
 
@@ -197,7 +208,6 @@ const Notifications = () => {
                         }}
                         className={cn(
                           "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
-                          // 투명도가 없는 불투명한 배경색으로 변경하여 하단 레이어 비침 방지
                           notif.is_read ? "bg-white" : "bg-[#f0f4ff]"
                         )} 
                         onClick={(e) => {
