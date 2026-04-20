@@ -11,7 +11,7 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
-  level?: number; // 줌 레벨 프롭 추가
+  level?: number; 
   selectionLocation?: { lat: number; lng: number } | null;
   searchResultLocation?: { lat: number; lng: number } | null;
 }
@@ -26,7 +26,7 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level: externalLevel, // 외부에서 주입되는 레벨
+  level: externalLevel, 
   selectionLocation,
   searchResultLocation
 }: MapContainerProps) => {
@@ -133,11 +133,13 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 외부에서 주입된 레벨 변경 감지
+  // 외부에서 주입된 레벨 변경 감지 및 애니메이션 적용
   useEffect(() => {
     if (isMapReady && mapInstance.current && externalLevel !== undefined) {
-      if (mapInstance.current.getLevel() !== externalLevel) {
-        mapInstance.current.setLevel(externalLevel);
+      const map = mapInstance.current;
+      if (map.getLevel() !== externalLevel) {
+        // 애니메이션과 함께 레벨 변경
+        map.setLevel(externalLevel, { animate: true });
       }
     }
   }, [externalLevel, isMapReady]);
