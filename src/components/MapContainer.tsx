@@ -397,10 +397,12 @@ const MapContainer = ({
     
     // ✅ 줌 레벨이 7 이상일 때는 모든 마커를 안전하게 비움
     if (currentLevel >= 7) {
-      overlaysRef.current.forEach((overlay, id) => {
-        overlay.setMap(null);
-      });
-      overlaysRef.current.clear();
+      if (overlaysRef.current.size > 0) {
+        overlaysRef.current.forEach((overlay) => {
+          overlay.setMap(null);
+        });
+        overlaysRef.current.clear();
+      }
       return;
     }
 
@@ -414,6 +416,10 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
+      
+      // ✅ 줌 레벨이 6단계인 경우에만 렌더링하도록 한 번 더 보장
+      if (currentLevel >= 7) return;
+
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = 1;
@@ -445,7 +451,9 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
-          // ✅ 맵 레벨이 바뀌어 돌아왔을 때 스케일이 0이거나 투명해진 경우를 대비해 스타일 강제 복구
+          // ✅ 마커가 다시 나타날 때 투명도와 스케일을 확실히 초기화
+          content.classList.remove('animate-marker-disappear');
+          content.classList.add('animate-marker-appear');
           content.style.setProperty('--marker-scale', scale.toString());
           content.style.opacity = "1";
           content.style.visibility = "visible";

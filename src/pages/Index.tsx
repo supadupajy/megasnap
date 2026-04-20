@@ -154,27 +154,32 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
-    // ✅ [FIX] 줌 레벨 변경 시에는 throttle을 무시하고 즉시 업데이트
-    // (줌 복귀 시 마커가 즉시 나타나도록 보장)
+    // [FIX] 줌 레벨 변경 시에는 throttle을 무시하고 즉시 업데이트
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
     
     if (zoomChanged) {
-      // 기존 throttle 타이머 취소
       if (throttleTimer.current) {
         clearTimeout(throttleTimer.current);
         throttleTimer.current = null;
       }
       
-      // 즉시 상태 업데이트 (좌표와 줌을 함께 갱신)
+      // 상태를 한꺼번에 업데이트하여 동기화 보장
       setMapData(data);
-      mapCache.lastCenter = data.center;
       setCurrentZoom(data.level);
+      
+      // 캐시 갱신
+      mapCache.lastCenter = data.center;
       mapCache.lastZoom = data.level;
+      
       if (isSelectingLocation) setTempSelectedLocation(data.center);
+      
+      // 줌 변경 후 데이터 동기화 강제 트리거 (100ms 지연으로 렌더링 안정화)
+      setTimeout(() => {
+        syncPostsWithSupabase(data.bounds);
+      }, 100);
       return;
     }
     
-    // 줌 변경이 아닌 일반 이동(팬)은 기존대로 throttle 적용
     if (throttleTimer.current) return;
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
@@ -190,7 +195,11 @@ const Index = () => {
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
     const targetBounds = forceBounds || mapData?.bounds;
-    if (!targetBounds || isSyncing.current) return;
+    // bounds가 없으면 중단
+    if (!targetBounds) return;
+    
+    // 이미 싱킹 중이면 중단 (forceBounds가 있는 경우 제외하고 싶을 수도 있지만 안전을 위해 유지)
+    if (isSyncing.current && !forceBounds) return;
     
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
@@ -235,10 +244,9 @@ const Index = () => {
       return;
     }
     
-    // ✅ [DEBUG] 지도를 축소(7단계 이상)하면 모든 마커를 숨김
-    // 우선 지도의 확대/축소 및 이동 인터랙션이 정상인지 확인하기 위함
+    // ✅ 줌 레벨이 7단계 이상일 때는 모든 마커를 숨김 (사용자 요청)
     if (currentZoom >= 7) { 
-      setDisplayedMarkers([]); 
+      if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
       return; 
     }
 
