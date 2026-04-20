@@ -37,8 +37,6 @@ const AD_COMMENTS = [
   '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
 ];
 
-const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
-
 const getRandomLikesFlat = () => {
   const r = Math.random();
   if (r < 0.5) return Math.floor(Math.random() * 1001);
@@ -73,7 +71,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const detailedLocation = resolveOfflineLocationName(p.lat, p.lng);
         const finalLikes = getRandomLikesFlat();
         const isAd = p.isAd;
-        const category = CATEGORIES[globalIndex % CATEGORIES.length]; // 카테고리 할당
 
         let finalYoutubeUrl = null;
         let finalImage = "";
@@ -83,9 +80,9 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         } else if (globalIndex % 2 === 0) {
           const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
           finalYoutubeUrl = candidateUrl;
-          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
         } else {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
         }
 
         const finalContent = isAd
@@ -103,7 +100,6 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: finalLikes,
-          category: category, // 카테고리 추가
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString(),
         });
 

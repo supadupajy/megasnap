@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Trash2, Loader2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,67 +32,58 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [swipedId, setSwipedId] = useState<string | null>(null);
-  const hasLoaded = useRef(false); // 데이터 초기 로딩 여부 플래그
 
-  const fetchNotifications = useCallback(async () => {
+  useEffect(() => {
     if (!authUser) return;
     
-    try {
-      const { data: notifs, error: notifError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false });
+    const fetchNotifications = async () => {
+      try {
+        const { data: notifs, error: notifError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false });
 
-      if (notifError) throw notifError;
+        if (notifError) throw notifError;
 
-      if (notifs && notifs.length > 0) {
-        const actorIds = Array.from(new Set(notifs.map(n => n.actor_id)));
-        const { data: profiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url')
-          .in('id', actorIds);
+        if (notifs && notifs.length > 0) {
+          const actorIds = Array.from(new Set(notifs.map(n => n.actor_id)));
+          const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, nickname, avatar_url')
+            .in('id', actorIds);
 
-        if (profileError) throw profileError;
+          if (profileError) throw profileError;
 
-        const profileMap = (profiles || []).reduce((acc, p) => {
-          acc[p.id] = p;
-          return acc;
-        }, {} as Record<string, any>);
+          const profileMap = (profiles || []).reduce((acc, p) => {
+            acc[p.id] = p;
+            return acc;
+          }, {} as Record<string, any>);
 
-        const combinedNotifs = notifs.map(n => ({
-          ...n,
-          actor: profileMap[n.actor_id] || { nickname: '알 수 없는 사용자', avatar_url: null }
-        }));
+          const combinedNotifs = notifs.map(n => ({
+            ...n,
+            actor: profileMap[n.actor_id] || { nickname: '알 수 없는 사용자', avatar_url: null }
+          }));
 
-        setNotifications(combinedNotifs);
+          setNotifications(combinedNotifs);
 
-        // 읽음 처리: 초기 로딩 시에만 실행하여 무한 루프 방지
-        if (!hasLoaded.current) {
           await supabase
             .from('notifications')
             .update({ is_read: true })
             .eq('user_id', authUser.id)
             .eq('is_read', false);
+        } else {
+          setNotifications([]);
         }
-      } else {
-        setNotifications([]);
+      } catch (error) {
+        console.error('[Notifications] Fetch error:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('[Notifications] Fetch error:', error);
-    } finally {
-      setIsLoading(false);
-      hasLoaded.current = true;
-    }
-  }, [authUser]);
+    };
 
-  useEffect(() => {
-    if (!authUser) return;
-
-    // 초기 데이터 로딩
     fetchNotifications();
 
-    // Realtime 구독 설정
     const channelName = `realtime_notifs_page_${authUser.id}_${Date.now()}`;
     const channel = supabase
       .channel(channelName)
@@ -102,7 +93,6 @@ const Notifications = () => {
         table: 'notifications', 
         filter: `user_id=eq.${authUser.id}` 
       }, async (payload) => {
-        // 새 알림이 들어오면 목록에 추가 (무한 루프 방지)
         const { data: actorProfile } = await supabase
           .from('profiles')
           .select('nickname, avatar_url')
@@ -116,24 +106,13 @@ const Notifications = () => {
         
         setNotifications(prev => [newNotif, ...prev]);
       })
-      .on('postgres_changes', { 
-        event: 'UPDATE', // 읽음 처리 시 뱃지 업데이트를 위해 Header.tsx에서 구독 중이므로, 여기서는 무시
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${authUser.id}` 
-      }, (payload) => {
-        // 읽음 상태가 변경되면 로컬 상태만 업데이트
-        setNotifications(prev => prev.map(notif => 
-          notif.id === payload.new.id ? { ...notif, is_read: payload.new.is_read } : notif
-        ));
-      })
       .subscribe();
 
     return () => { 
       channel.unsubscribe();
       supabase.removeChannel(channel); 
     };
-  }, [authUser, fetchNotifications]);
+  }, [authUser]);
 
   const deleteNotification = async (id: string) => {
     try {

@@ -61,8 +61,8 @@ const AnimatedRoutes = () => {
     path => location.pathname.startsWith(path)
   );
 
-  // isPostListOpen 상태는 이제 BottomNav 렌더링에 사용되지 않습니다.
-  // const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
+  // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
+  const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -118,8 +118,8 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {/* BottomNav가 항상 표시되도록 isPostListOpen 조건 제거 */}
-      {!hideLayout && session && <BottomNav />}
+      {/* BottomNav를 AnimatePresence 바깥으로 이동하여 항상 고정 */}
+      {!hideLayout && session && !isPostListOpen && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
