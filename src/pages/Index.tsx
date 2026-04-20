@@ -201,24 +201,27 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // ✅ 축소 시 훨씬 넉넉한 범위를 보장하기 위해 마진 계산 방식 고도화
-    const latSpan = Math.abs(ne.lat - sw.lat);
-    const lngSpan = Math.abs(ne.lng - sw.lng);
+    // 축소 시 영역 판정 안전장치 강화
+    const latMin = Math.min(sw.lat, ne.lat);
+    const latMax = Math.max(sw.lat, ne.lat);
+    const lngMin = Math.min(sw.lng, ne.lng);
+    const lngMax = Math.max(sw.lng, ne.lng);
+
+    const latSpan = latMax - latMin;
+    const lngSpan = lngMax - lngMin;
     
-    // 레벨 7 이상부터는 화면 밖 데이터를 더 많이 유지 (0.8배 마진)
-    const marginMultiplier = currentZoom >= 7 ? 0.8 : 0.3;
+    // 레벨 7 이상부터는 렌더링 버퍼를 넉넉하게 (0.5배)
+    const marginMultiplier = currentZoom >= 7 ? 0.5 : 0.2;
     const latMargin = latSpan * marginMultiplier;
     const lngMargin = lngSpan * marginMultiplier;
     
-    return allPosts.filter(post => {
-      if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
+    const filtered = allPosts.filter(post => {
+      if (post.lat === null || post.lng === null) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // 유연한 범위 체크
-      const isInLat = post.lat >= (Math.min(sw.lat, ne.lat) - latMargin) && post.lat <= (Math.max(sw.lat, ne.lat) + latMargin);
-      const isInLng = post.lng >= (Math.min(sw.lng, ne.lng) - lngMargin) && post.lng <= (Math.max(sw.lng, ne.lng) + lngMargin);
-      
-      if (!isInLat || !isInLng) return false;
+      // 좌표 범위 체크
+      if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
+          post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
       
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       
@@ -229,12 +232,15 @@ const Index = () => {
       
       return matchesCategory;
     });
+
+    // ✅ [IMPORTANT] 지도 엔진 보호를 위해 화면에 표시할 마커 개수를 최대 1000개로 제한
+    // 지도를 축소했을 때 너무 많은 마커가 한꺼번에 그려지면 엔진 오류로 마커가 사라질 수 있습니다.
+    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
   }, [allPosts, mapData, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
 
   useEffect(() => {
-    // ✅ 레벨 변경 시 새로운 배열 참조를 생성하여 MapContainer의 렌더링을 강제 유도
     setDisplayedMarkers([...inBoundsMarkers]);
-  }, [inBoundsMarkers, currentZoom]);
+  }, [inBoundsMarkers]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
