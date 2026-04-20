@@ -38,7 +38,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  const [currentZoom, setCurrentZoom] = useState(mapCache.lastZoom || 6);
+  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -285,18 +285,22 @@ const Index = () => {
     if (!routeState) return;
 
     // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
-if (routeState.filterUserId === 'me') {
-  setSelectedCategories(['mine']);
-  setCurrentZoom(9); // ← 숫자 타입으로 (문자열 X)
+    if (routeState.filterUserId === 'me') {
+      setSelectedCategories(['mine']);
 
-  if (routeState.post) {
-    focusPostOnMap(routeState.post, routeState.center);
-  } else if (routeState.center) {
-    setMapCenter(routeState.center);
-  } else {
-    handleCurrentLocation();
-  }
-}
+      // ✅ 딜레이 후 줌 변경 (지도 초기화 완료 보장)
+      setTimeout(() => {
+        setCurrentZoom(10);
+      }, 500);
+
+      if (routeState.post) {
+        focusPostOnMap(routeState.post, routeState.center);
+      } else if (routeState.center) {
+        setMapCenter(routeState.center);
+      } else {
+        handleCurrentLocation();
+      }
+    }
     // 2. 일반적인 특정 포스트 포커싱 처리
     else if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
@@ -343,7 +347,7 @@ if (routeState.filterUserId === 'me') {
             onMapChange={handleMapChange} 
             onMapClick={handleMapClick} 
             center={mapCenter} 
-            level={currentZoom} // 줌 레벨 전달
+            level={currentZoom}
             searchResultLocation={searchResultLocation} 
           />
           <AnimatePresence>
