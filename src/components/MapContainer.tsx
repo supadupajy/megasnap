@@ -407,6 +407,14 @@ const MapContainer = ({
     // React 상태 비동기 문제를 근본적으로 우회
     const actualLevel = mapInstance.current?.getLevel() ?? currentLevel;
 
+  // ✅ 임시 디버그 로그
+  console.log('🔍 [MarkerEffect] 실행됨', {
+    currentLevel,           // React state 값
+    actualLevel,            // 지도 실제 값
+    postsCount: posts.length,
+    overlayCount: overlaysRef.current.size,
+  });
+
     if (actualLevel >= 7) {
       if (overlaysRef.current.size > 0) {
         overlaysRef.current.forEach((overlay) => {
