@@ -22,7 +22,7 @@ const BottomNav = () => {
   if (isKeyboardOpen) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[100] pb-8">
+    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[1002] pb-8">
       {/* 첫 번째 메뉴: 지도 */}
       <button 
         onClick={() => navigate('/')}

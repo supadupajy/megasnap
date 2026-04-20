@@ -64,7 +64,8 @@ const Profile = () => {
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
       likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType
+      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType,
+      category: p.category || 'none', // category 필드 포함
     };
   };
 
@@ -103,16 +104,8 @@ const Profile = () => {
 
   const handleScrollToPosts = () => {
     if (scrollRef.current && postListStartRef.current) {
-      // 포스팅 리스트 시작점의 상단 위치를 계산
       const postListTop = postListStartRef.current.offsetTop;
-      
-      // 헤더 높이 (88px)를 고려하여 스크롤 위치 조정
       const headerHeight = 88; 
-      
-      // 스크롤 컨테이너의 현재 스크롤 위치
-      const currentScroll = scrollRef.current.scrollTop;
-      
-      // 목표 스크롤 위치: 포스팅 리스트 시작점 - 헤더 높이
       const targetScroll = postListTop - headerHeight;
 
       scrollRef.current.scrollTo({

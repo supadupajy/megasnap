@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, Image as ImageIcon } from 'lucide-react';
+import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -22,6 +22,13 @@ interface WritePostProps {
   initialLocation?: { lat: number; lng: number } | null;
 }
 
+const CATEGORIES = [
+  { key: 'food', label: '맛집', Icon: Utensils, color: 'bg-orange-500' },
+  { key: 'accident', label: '사고', Icon: Car, color: 'bg-red-600' },
+  { key: 'place', label: '명소', Icon: TreePine, color: 'bg-green-600' },
+  { key: 'animal', label: '동물', Icon: PawPrint, color: 'bg-purple-600' },
+] as const;
+
 const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
   const { user: authUser, profile } = useAuth();
   
@@ -31,6 +38,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // 카테고리 상태 추가
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
   
@@ -111,6 +119,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
+    if (!selectedCategory) {
+      showError('카테고리를 선택해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
@@ -146,6 +159,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         likes: 0,
+        category: selectedCategory, // 카테고리 추가
         created_at: new Date().toISOString()
       };
 
@@ -177,7 +191,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         videoUrl: finalVideoUrl,
         isLiked: false,
         createdAt: new Date(),
-        borderType: 'none'
+        borderType: 'none',
+        category: selectedCategory, // 카테고리 추가
       };
 
       if (onPostCreated) onPostCreated(newPost);
@@ -186,6 +201,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       postDraftStore.clear();
       setVideoUrl(null);
       setVideoFile(null);
+      setSelectedCategory(null); // 카테고리 초기화
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -196,12 +212,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={true}>
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
       <DrawerContent 
         className={cn(
           "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
-          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh]"
+          // 키보드가 열리면 전체 화면을 덮도록 설정
+          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh] rounded-t-[40px]"
         )}
+        style={{ 
+          // BottomNav가 z-[1002]로 최상단에 오도록 설정했으므로,
+          // DrawerContent는 bottom: 0으로 설정하여 화면 전체를 덮도록 복구합니다.
+          bottom: 0,
+          height: isKeyboardOpen ? '100%' : '92vh',
+          top: 'auto',
+        }}
       >
         {!isKeyboardOpen && (
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
@@ -265,7 +289,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
                   <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
                     <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                   </button>
@@ -279,6 +303,29 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                       {address || '위치를 선택해주세요'}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={cn(
+                        "flex flex-col items-center justify-center h-16 rounded-xl border-2 transition-all",
+                        selectedCategory === cat.key
+                          ? `border-indigo-600 ${cat.color}/20 bg-indigo-50`
+                          : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                      )}
+                    >
+                      <cat.Icon className={cn("w-5 h-5", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")} />
+                      <span className={cn("text-xs font-bold mt-1", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-600")}>
+                        {cat.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -298,7 +345,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
               onClick={handlePost}
-              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation}
+              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation || !selectedCategory}
             >
               {isSubmitting ? '저장 중...' : '지도에 등록하기'}
             </Button>

@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 import { getYoutubeThumbnail } from "@/lib/utils";
-import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
 import { remapUnsplashDisplayUrl } from "@/lib/mock-data";
+import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -23,11 +23,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   const likes = Number(p.likes || 0);
   const isAd = p.content?.trim().startsWith('[AD]');
   const borderType = isAd ? 'none' : getTierFromId(p.id);
-  const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
   
-  // 유튜브 영상인 경우 썸네일을 우선 사용, 아니면 DB의 image_url 사용
   const finalImage = p.youtube_url 
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
@@ -36,7 +34,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     id: p.id,
     isAd: isAd,
     isGif: false,
-    isInfluencer: isInfluencer, 
+    isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
     user: {
       id: p.user_id,
       name: p.user_name || '탐험가',
@@ -52,16 +50,16 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     image: finalImage,
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
-    category: 'none',
+    category: p.category || 'none', // category 필드 포함
     isLiked: false,
     createdAt: new Date(p.created_at),
     borderType: borderType,
   };
 };
 
-export const useSupabasePosts = (limit = 50) => {
+export const usePosts = (limit: number = 10) => {
   return useQuery({
-    queryKey: ["supabase-posts", limit],
+    queryKey: ['posts', limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
@@ -72,7 +70,6 @@ export const useSupabasePosts = (limit = 50) => {
       if (error) throw error;
       return Promise.all((data || []).map(mapDbToPost));
     },
-    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -84,7 +81,7 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
-    .limit(1000); // 300에서 1000으로 상향 조정
+    .limit(1000);
 
   if (error) throw error;
   return Promise.all((data || []).map(mapDbToPost));
