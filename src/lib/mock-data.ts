@@ -2,6 +2,7 @@
 
 import { Post, User } from '@/types';
 import { getYoutubeThumbnail } from './utils';
+import { resolveOfflineLocationName } from '@/utils/offline-location';
 
 const buildUniquePool = (items: string[]) => Array.from(new Set(items));
 
@@ -219,7 +220,7 @@ export const createMockPosts = (
         avatar: `https://i.pravatar.cc/150?u=${isAd ? 'ad' : id}`,
       },
       content: isAd ? '특별한 혜택을 만나보세요! ✨' : '오늘의 멋진 순간을 기록합니다. 📍',
-      location: '대한민국 어딘가',
+      location: resolveOfflineLocationName(lat, lng),
       lat,
       lng,
       likes: Math.floor(randomFn() * 5000),
