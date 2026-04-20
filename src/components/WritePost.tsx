@@ -148,13 +148,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         finalVideoUrl = publicUrl;
       }
 
-      const postData = {
+      const postData: any = {
         content: draft.content,
         location_name: address,
         latitude: initialLocation.lat,
         longitude: initialLocation.lng,
         image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
-        video_url: finalVideoUrl,
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -163,52 +162,75 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         created_at: new Date().toISOString()
       };
 
+      // Only add video_url if it's not null to avoid issues with potential schema cache desync
+      if (finalVideoUrl) {
+        postData.video_url = finalVideoUrl;
+      }
+
       const { data, error } = await supabase
         .from('posts')
         .insert([postData])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        // Fallback: If video_url column is missing/stale, try inserting without it
+        if (error.code === 'PGRST204' || error.message?.includes('video_url')) {
+          console.warn('Retrying insert without video_url due to schema cache issue');
+          delete postData.video_url;
+          const retry = await supabase.from('posts').insert([postData]).select();
+          if (retry.error) throw retry.error;
+          // Use retry data
+          const retryData = retry.data;
+          processNewPost(retryData[0], finalVideoUrl);
+          return;
+        }
+        throw error;
+      }
 
-      const newPost = {
-        id: data[0].id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: authUser.id,
-          name: displayName,
-          avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`
-        },
-        content: draft.content,
-        location: address,
-        lat: initialLocation.lat,
-        lng: initialLocation.lng,
-        likes: 0,
-        commentsCount: 0,
-        comments: [],
-        image: postData.image_url,
-        videoUrl: finalVideoUrl,
-        isLiked: false,
-        createdAt: new Date(),
-        borderType: 'none',
-        category: selectedCategory,
-      };
-
-      if (onPostCreated) onPostCreated(newPost);
-      showSuccess('새로운 추억이 등록되었습니다! ✨');
-      
-      postDraftStore.clear();
-      setVideoUrl(null);
-      setVideoFile(null);
-      setSelectedCategory(null);
-      onClose();
+      processNewPost(data[0], finalVideoUrl);
     } catch (err) {
       console.error('Error saving post:', err);
       showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
+    const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
+    const newPost = {
+      id: dbPost.id,
+      isAd: false,
+      isGif: false,
+      isInfluencer: false,
+      user: {
+        id: authUser!.id,
+        name: displayName,
+        avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser!.id}`
+      },
+      content: draft.content,
+      location: address,
+      lat: initialLocation!.lat,
+      lng: initialLocation!.lng,
+      likes: 0,
+      commentsCount: 0,
+      comments: [],
+      image: dbPost.image_url,
+      videoUrl: finalVideoUrl,
+      isLiked: false,
+      createdAt: new Date(),
+      borderType: 'none',
+      category: selectedCategory,
+    };
+
+    if (onPostCreated) onPostCreated(newPost);
+    showSuccess('새로운 추억이 등록되었습니다! ✨');
+    
+    postDraftStore.clear();
+    setVideoUrl(null);
+    setVideoFile(null);
+    setSelectedCategory(null);
+    onClose();
   };
 
   return (
