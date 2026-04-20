@@ -23,6 +23,7 @@ interface Message {
 interface OtherUser {
   nickname: string;
   avatar_url: string | null;
+  last_seen: string | null;
 }
 
 const isValidUUID = (uuid: string) => {
@@ -41,6 +42,7 @@ const Chat = () => {
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -131,11 +133,12 @@ const Chat = () => {
       if (!isValidUUID(chatId)) {
         const room = chatStore.getRoom(chatId);
         if (room) {
-          setOtherUser({ nickname: room.user.name, avatar_url: room.user.avatar });
+          setOtherUser({ nickname: room.user.name, avatar_url: room.user.avatar, last_seen: null });
         } else {
           setOtherUser({
             nickname: `Explorer_${chatId}`,
             avatar_url: `https://i.pravatar.cc/150?u=${chatId}`,
+            last_seen: null
           });
         }
         setIsLoading(false);
@@ -144,14 +147,50 @@ const Chat = () => {
 
       const { data } = await supabase
         .from('profiles')
-        .select('nickname, avatar_url')
+        .select('nickname, avatar_url, last_seen')
         .eq('id', chatId)
         .single();
-      setOtherUser(data || { nickname: '사용자', avatar_url: null });
+      setOtherUser(data || { nickname: '사용자', avatar_url: null, last_seen: null });
       setIsLoading(false);
     };
     fetchOtherUser();
+
+    // Subscribe to profile changes for real-time online status
+    if (chatId && isValidUUID(chatId)) {
+      const channel = supabase
+        .channel(`public:profiles:id=eq.${chatId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${chatId}` },
+          (payload) => {
+            setOtherUser(prev => prev ? ({ ...prev, last_seen: payload.new.last_seen }) : null);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [chatId]);
+
+  useEffect(() => {
+    if (!otherUser?.last_seen) {
+      setIsOnline(false);
+      return;
+    }
+
+    const checkOnline = () => {
+      const lastSeen = new Date(otherUser.last_seen!);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
+      setIsOnline(diffMinutes < 5);
+    };
+
+    checkOnline();
+    const interval = setInterval(checkOnline, 30000); // 30초마다 갱신
+    return () => clearInterval(interval);
+  }, [otherUser?.last_seen]);
 
   useEffect(() => {
     if (!authUser || !chatId) return;
@@ -325,7 +364,12 @@ const Chat = () => {
               <span className="text-sm font-black text-gray-900">
                 {otherUser?.nickname || '사용자'}
               </span>
-              <span className="text-[10px] text-indigo-600 font-bold">현재 활동 중</span>
+              <div className="flex items-center gap-1.5">
+                <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-400")} />
+                <span className={cn("text-[10px] font-bold uppercase tracking-tight", isOnline ? "text-green-500" : "text-gray-400")}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

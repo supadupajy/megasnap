@@ -53,6 +53,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    let lastSeenInterval: any;
+
+    const updateLastSeen = async (userId: string) => {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ last_seen: new Date().toISOString() })
+          .eq("id", userId);
+      } catch (err) {
+        console.error("[AuthProvider] Update last_seen error:", err);
+      }
+    };
+
     const initSession = async () => {
       try {
         // 1. 세션 정보를 먼저 가져옴
@@ -65,6 +78,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (initialSession?.user) {
           fetchProfile(initialSession.user.id, initialSession.user.email);
+          updateLastSeen(initialSession.user.id);
+          
+          // 2분마다 마지막 활동 시간 업데이트
+          lastSeenInterval = setInterval(() => {
+            updateLastSeen(initialSession.user.id);
+          }, 1000 * 60 * 2);
         }
       } catch (error) {
         console.error("Auth init error:", error);
@@ -81,8 +100,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (currentSession?.user) {
           fetchProfile(currentSession.user.id, currentSession.user.email);
+          updateLastSeen(currentSession.user.id);
+          
+          if (lastSeenInterval) clearInterval(lastSeenInterval);
+          lastSeenInterval = setInterval(() => {
+            updateLastSeen(currentSession.user.id);
+          }, 1000 * 60 * 2);
         } else {
           setProfile(null);
+          if (lastSeenInterval) clearInterval(lastSeenInterval);
         }
         setLoading(false);
       }
@@ -90,6 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       subscription.unsubscribe();
+      if (lastSeenInterval) clearInterval(lastSeenInterval);
     };
   }, []);
 
