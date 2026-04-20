@@ -119,12 +119,13 @@ const Messages = () => {
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <h1 className="font-black text-lg text-gray-900">Direct Message</h1>
-        <button 
-          onClick={() => navigate('/friends')} 
+        <button
+          onClick={() => navigate('/friends')}
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
         >
-          <Edit className="w-6 h-6 text-gray-800" />
+          <Edit className="w-6 h-6 text-indigo-600" />
         </button>
+
       </header>
 
       <div className="pt-[88px]">
