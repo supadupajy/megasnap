@@ -122,10 +122,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     setIsSubmitting(true);
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
-    // ✅ 위치 정보가 없는 경우 기본값(서울 시청 근처) 또는 이전 선택값 유지
-    const finalLat = initialLocation?.lat || 37.5665;
-    const finalLng = initialLocation?.lng || 126.9780;
-    const finalAddress = address || '대한민국';
+    // ✅ 위치 정보가 없는 경우 null로 설정하여 지도에 나타나지 않게 함
+    const finalLat = initialLocation?.lat || null;
+    const finalLng = initialLocation?.lng || null;
+    const finalAddress = address || '위치 미지정';
 
     try {
       let finalVideoUrl = null;
@@ -198,9 +198,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
     const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-    const finalLat = initialLocation?.lat || 37.5665;
-    const finalLng = initialLocation?.lng || 126.9780;
-    const finalAddress = address || '대한민국';
+    
+    // ✅ 위치가 없는 포스팅은 지도 객체에서 제외하기 위해 null 처리
+    const finalLat = initialLocation?.lat || null;
+    const finalLng = initialLocation?.lng || null;
+    const finalAddress = address || '위치 미지정';
 
     const newPost = {
       id: dbPost.id,
@@ -214,8 +216,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       },
       content: draft.content,
       location: finalAddress,
-      lat: finalLat,
-      lng: finalLng,
+      lat: finalLat as any, // allow null for non-map posts
+      lng: finalLng as any, // allow null for non-map posts
       likes: 0,
       commentsCount: 0,
       comments: [],

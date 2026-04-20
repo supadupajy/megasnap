@@ -188,6 +188,9 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
     const inBoundsCandidates = allPosts.filter(post => {
+      // ✅ 위치 정보가 없는 포스팅(null)은 지도 마커 대상에서 제외
+      if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
+      
       if (blockedIds.has(post.user.id)) return false;
       if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
       
@@ -253,6 +256,9 @@ const Index = () => {
   }, [fetchGlobalTrending, mapData]);
 
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
+    // ✅ 위치 정보가 없는 포스팅은 지도를 이동시키지 않음
+    if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return;
+
     setAllPosts((prev) => {
       if (prev.some((item) => item.id === post.id)) return prev;
       const combined = [post, ...prev];
@@ -344,9 +350,16 @@ const Index = () => {
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
-    setMapCenter({ lat: newPost.lat, lng: newPost.lng });
+    
+    // ✅ 위치 정보가 있을 때만 지도를 해당 위치로 이동
+    if (newPost.lat !== null && newPost.lng !== null) {
+      setMapCenter({ lat: newPost.lat, lng: newPost.lng });
+      setTimeout(() => { 
+        setHighlightedPostId(newPost.id); 
+        setTimeout(() => setHighlightedPostId(null), 3000); 
+      }, 1500);
+    }
     setFinalSelectedLocation(null); 
-    setTimeout(() => { setHighlightedPostId(newPost.id); setTimeout(() => setHighlightedPostId(null), 3000); }, 1500);
   };
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
