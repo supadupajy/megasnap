@@ -9,24 +9,15 @@ import {
   createMockPosts
 } from "@/lib/mock-data"; 
 
-async function checkYoutubePlayable(videoId: string): Promise<boolean> {
-  try {
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  const confirmClear = confirm("기존 데이터를 삭제하고 다양한 유저 비율로 새로 생성하시겠습니까?");
+  const confirmClear = confirm("기존 데이터를 삭제하고 '내 포스팅'을 100개 이하로 제한하여 새로 생성하시겠습니까?");
   if (!confirmClear) return;
 
   try {
     console.log("🧹 데이터 초기화 중...");
     await supabase.from('posts').delete().neq('id', '_root_');
 
-    // [개선] 더 많은 유저 프로필을 가져와 유저 풀을 만듭니다 (최대 100명)
+    // 다른 유저 풀 확보
     const { data: otherProfiles } = await supabase
       .from('profiles')
       .select('id, nickname, avatar_url')
@@ -35,9 +26,9 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
     const otherUsers = otherProfiles || [];
     
-    console.log(`👤 확보된 타인 프로필: ${otherUsers.length}개`);
-
     let globalCount = 0;
+    let myPostCounter = 0; // 내 포스팅 개수 추적
+    const MAX_MY_POSTS = 80; // 내 포스팅 최대 개수 제한 (100개 이하)
 
     for (const city of MAJOR_CITIES) {
       console.log(`📍 ${city.name} 생성 중...`);
@@ -48,15 +39,15 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const p = mockPoints[i];
         const uniqueSeed = Date.now() + globalCount;
         
-        // [핵심] 유저 배정 로직 (나의 포스팅 비율 조절)
+        // [수정된 핵심 로직] 
         let postUser = { id: "", name: "", avatar: "" };
-        const userRand = Math.random();
-
-        if (userRand < 0.05) { 
-          // 1. 본인 포스팅 (5% 확률)
+        
+        // 1. 내 포스팅은 지정된 한도(80개) 내에서만 매우 낮은 확률로 생성
+        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.03) {
           postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
+          myPostCounter++;
         } else if (otherUsers.length > 0) {
-          // 2. 다른 유저 배정 (95% 확률)
+          // 2. 나머지는 모두 다른 유저 배정
           const randomOther = otherUsers[Math.floor(Math.random() * otherUsers.length)];
           postUser = { 
             id: randomOther.id, 
@@ -64,8 +55,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
             avatar: randomOther.avatar_url || `https://i.pravatar.cc/150?u=${randomOther.id}` 
           };
         } else {
-          // 3. 만약 다른 유저가 없다면 가상 유저 생성
-          const virtualId = `virtual_${uniqueSeed % 100}`;
+          // 3. 다른 유저 정보가 부족할 경우 가상 유저 배정
+          const virtualId = `virtual_user_${uniqueSeed % 500}`;
           postUser = { 
             id: virtualId, 
             name: `Explorer_${uniqueSeed % 1000}`, 
@@ -87,7 +78,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
         batch.push({
           content: REALISTIC_COMMENTS[uniqueSeed % REALISTIC_COMMENTS.length],
-          location_name: `${city.name} 어딘가`,
+          location_name: `${city.name} 인근`,
           latitude: p.lat,
           longitude: p.lng,
           image_url: finalImage,
@@ -95,7 +86,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: postUser.id,
           user_name: postUser.name,
           user_avatar: postUser.avatar,
-          likes: Math.floor(Math.random() * 15000), // 인기 포스팅 연출을 위해 범위 확대
+          likes: Math.floor(Math.random() * 15000),
           created_at: new Date(Date.now() - Math.random() * 72 * 3600000).toISOString()
         });
 
@@ -108,7 +99,9 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
       if (batch.length > 0) await supabase.from('posts').insert(batch);
     }
-    alert("✨ 다양한 유저 비율로 데이터 생성이 완료되었습니다!");
+    
+    console.log(`✅ 생성 완료! 총 포스팅: ${globalCount}, 내 포스팅: ${myPostCounter}`);
+    alert(`성공! 내 포스팅은 딱 ${myPostCounter}개만 생성되었습니다.`);
   } catch (err) {
     console.error(err);
   }
