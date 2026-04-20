@@ -61,13 +61,25 @@ const Header = () => {
 
     channel
       .on('postgres_changes', { 
-        event: 'INSERT', // INSERT 이벤트에만 반응하도록 명확히 지정
+        event: 'INSERT', // 새 알림/활동 발생 시
         schema: 'public', 
         table: 'notifications',
         filter: `user_id=eq.${authUser.id}`
       }, handleRealtimeUpdate)
       .on('postgres_changes', { 
-        event: 'INSERT', // INSERT 이벤트에만 반응하도록 명확히 지정
+        event: 'UPDATE', // 알림 읽음 처리 시 (is_read 변경)
+        schema: 'public', 
+        table: 'notifications',
+        filter: `user_id=eq.${authUser.id}`
+      }, handleRealtimeUpdate)
+      .on('postgres_changes', { 
+        event: 'INSERT', // 새 메시지 수신 시
+        schema: 'public', 
+        table: 'messages',
+        filter: `receiver_id=eq.${authUser.id}`
+      }, handleRealtimeUpdate)
+      .on('postgres_changes', { 
+        event: 'UPDATE', // 메시지 읽음 처리 시 (is_read 변경)
         schema: 'public', 
         table: 'messages',
         filter: `receiver_id=eq.${authUser.id}`
