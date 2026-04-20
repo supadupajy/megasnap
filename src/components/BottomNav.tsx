@@ -14,7 +14,7 @@ const BottomNav = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleWriteClick = () => {
-    window.dispatchEvent(new CustomEvent('toggle-write-post'));
+    window.dispatchEvent(new CustomEvent('open-write-post'));
   };
 
   if (isKeyboardOpen) return null;
