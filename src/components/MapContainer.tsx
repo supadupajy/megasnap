@@ -407,30 +407,29 @@ const MapContainer = ({
     // React 상태 비동기 문제를 근본적으로 우회
     const actualLevel = mapInstance.current?.getLevel() ?? currentLevel;
 
-  // ✅ 임시 디버그 로그
-  console.log('🔍 [MarkerEffect] 실행됨', {
-    currentLevel,           // React state 값
-    actualLevel,            // 지도 실제 값
-    postsCount: posts.length,
-    overlayCount: overlaysRef.current.size,
-  });
-
     if (actualLevel >= 7) {
       if (overlaysRef.current.size > 0) {
-        overlaysRef.current.forEach((overlay) => {
-          overlay.setMap(null);
-        });
-        overlaysRef.current.clear();
-        // ✅ 제거 대기 중인 타임아웃도 함께 정리
+        // ✅ [FIX] 타임아웃을 반드시 먼저 취소한 뒤 overlay 제거
+        // 순서가 바뀌면 타임아웃이 260ms 뒤에 새로 생성된 마커를 죽임
         removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
         removalTimeoutsRef.current.clear();
+        overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+        overlaysRef.current.clear();
       }
       return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) removeOverlayWithAnimation(id, overlay);
+      if (!currentPostIds.has(id)) {
+        // ✅ [FIX] 애니메이션 타임아웃 없이 즉시 제거
+        // 줌 전환 직후 타임아웃이 남아있으면 새 마커를 죽일 수 있음
+        const timeoutId = removalTimeoutsRef.current.get(id);
+        if (timeoutId) window.clearTimeout(timeoutId);
+        removalTimeoutsRef.current.delete(id);
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
+      }
     });
 
     posts.forEach(post => {
@@ -513,7 +512,6 @@ const MapContainer = ({
         msUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',
-        // @ts-ignore - WebkitUserDrag is a non-standard property
         WebkitUserDrag: 'none'
       }}
       onContextMenu={(e) => e.preventDefault()}
