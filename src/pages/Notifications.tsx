@@ -196,8 +196,9 @@ const Notifications = () => {
                           }
                         }}
                         className={cn(
-                          "relative bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
-                          !notif.is_read && "bg-indigo-50/30"
+                          "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
+                          // 투명도가 없는 불투명한 배경색으로 변경하여 하단 레이어 비침 방지
+                          notif.is_read ? "bg-white" : "bg-[#f0f4ff]"
                         )} 
                         onClick={(e) => {
                           e.stopPropagation();
