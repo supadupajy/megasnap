@@ -32,33 +32,33 @@ const Follow = () => {
         .single();
       if (profile) setTargetNickname(profile.nickname || '사용자');
 
-let query;
-if (activeTab === 'followers') {
-  // 나를 팔로우하는 사람들
-  query = supabase
-    .from('follows')
-    .select(`
-      follower:profiles!follows_follower_id_fkey (id, nickname, avatar_url, bio)
-    `)
-    .eq('following_id', userId);
-} else {
-  // 내가 팔로우하는 사람들
-  query = supabase
-    .from('follows')
-    .select(`
-      following:profiles!follows_following_id_fkey (id, nickname, avatar_url, bio)
-    `)
-    .eq('follower_id', userId);
-}
+      let query;
+      if (activeTab === 'followers') {
+        query = supabase
+          .from('follows')
+          .select(`follower:profiles!follows_follower_id_fkey (id, nickname, avatar_url, bio)`)
+          .eq('following_id', userId);
+      } else {
+        query = supabase
+          .from('follows')
+          .select(`following:profiles!follows_following_id_fkey (id, nickname, avatar_url, bio)`)
+          .eq('follower_id', userId);
+      }
 
-const { data, error } = await query;
-if (error) throw error;
+      const { data, error } = await query;
+      if (error) throw error;
 
-const formattedUsers = (data || []).map((item: any) => {
-  return activeTab === 'followers' ? item.follower : item.following;
-}).filter(Boolean);
+      const formattedUsers = (data || []).map((item: any) => {
+        return activeTab === 'followers' ? item.follower : item.following;
+      }).filter(Boolean);
 
-setUsers(formattedUsers);
+      setUsers(formattedUsers);
+    } catch (err) {
+      console.error('Error fetching follow data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, activeTab]);
 
   useEffect(() => {
     fetchFollowData();
