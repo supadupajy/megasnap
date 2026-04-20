@@ -15,7 +15,7 @@ export type OfflineRegion = {
 };
 
 // [수정] 이 값을 변경하면 모든 지역의 밀도가 한꺼번에 바뀝니다.
-const DEFAULT_REGION_DENSITY = 500; 
+const DEFAULT_REGION_DENSITY = 700; 
 
 export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
   {
