@@ -505,6 +505,7 @@ const MapContainer = ({
         msUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',
+        // @ts-ignore - WebkitUserDrag is a non-standard property
         WebkitUserDrag: 'none'
       }}
       onContextMenu={(e) => e.preventDefault()}

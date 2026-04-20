@@ -269,8 +269,7 @@ const PostListOverlay = ({
   }, [navigate, visiblePosts, onClose]);
 
   const handleLocalDelete = (id: string) => {
-    setAllPosts(prev => prev.filter(p => p.id !== id));
-    setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
+    setPosts(prev => prev.filter(p => p.id !== id));
     if (onDeletePost) onDeletePost(id);
   };
 
