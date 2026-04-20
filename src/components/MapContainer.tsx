@@ -51,73 +51,52 @@ const MapContainer = ({
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return;
-
     const initMap = () => {
       try {
         const kakao = (window as any).kakao;
         if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
-
-        const options = {
-          center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: 6
-        };
-
+        const options = { center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780), level: 6 };
         const map = new kakao.maps.Map(mapElement.current!, options);
         map.setMaxLevel(10);
         mapInstance.current = map;
-
         const updateMapData = () => {
           if (isProgrammaticMove.current) return;
           try {
             const bounds = map.getBounds();
-            const currentCenter = map.getCenter();
-            setCurrentLevel(map.getLevel());
             onMapChangeRef.current({
-              bounds: { 
-                sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
-                ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
-              },
-              center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+              bounds: { sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } },
+              center: { lat: map.getCenter().getLat(), lng: map.getCenter().getLng() },
               level: map.getLevel()
             });
+            setCurrentLevel(map.getLevel());
           } catch (e) {}
         };
-
-        updateMapData();
         setIsMapReady(true);
         kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
         kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
         kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; lastDragEnd.current = Date.now(); });
-        kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-          if (Date.now() - lastDragEnd.current < 200) return;
-          if (onMapClickRef.current) {
-            const latLng = mouseEvent.latLng;
-            onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
-          }
-        });
         return true;
       } catch (e) { return false; }
     };
-
     const timer = setInterval(() => { if (initMap()) clearInterval(timer); }, 100);
     return () => clearInterval(timer);
   }, []);
 
-  // [수정] 광고 판별 로직을 더 명확하게 통합
-  const getIsAd = (post: any) => {
-    return post.is_ad === true || post.isAd === true || post.user_name === '공식 파트너' || (post.user && post.user.name === '공식 파트너');
+  // [수정] 광고 판별 로직: 데이터가 어디에 있든 '공식 파트너' 글자만 있으면 OK
+  const checkIsAd = (post: any) => {
+    const name = String(post.user_name || post.user?.name || post.user?.nickname || "");
+    return post.is_ad === true || post.isAd === true || name.includes("공식 파트너");
   };
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    const isAd = getIsAd(post);
-    const isMine = authUser && (post.user_id === authUser.id || (post.user && post.user.id === authUser.id));
+    const isAd = checkIsAd(post);
+    const isMine = authUser && (post.user_id === authUser.id || post.user?.id === authUser.id);
     const borderType = post.borderType || 'none';
-    const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     const displayImage = post.image_url || post.image || FALLBACK_IMAGE;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let borderClass = '';
     
-    // 테두리 및 라벨 설정
+    // 테두리 결정
     if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
     else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container'; }
     else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container'; }
@@ -125,11 +104,9 @@ const MapContainer = ({
     else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; borderClass = 'gold-border-container'; }
     else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container'; }
 
-    // [복구 핵심] 일반 포스팅(borderClass가 없을 때) 흰색 테두리 강제 부여
-    const whiteBorderStyle = !borderClass ? 'border: 2px solid #ffffff;' : '';
-    
+    // [복구 핵심] 클래스가 없을 때만 기본 흰색 테두리 적용
+    const innerBorderStyle = borderClass ? "" : "border: 2px solid white;";
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
-    const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: white; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
 
     return `
@@ -137,21 +114,20 @@ const MapContainer = ({
         <div class="marker-highlight-ping"></div>
         <div class="${animationClass}">
           ${labelHtml}
-          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white; ${whiteBorderStyle}">
+          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; background-color: white; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); ${innerBorderStyle}">
             <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;">
               <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes || 0}</div>
-              ${videoIconHtml}
+              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px;">${post.likes || 0}</div>
             </div>
           </div>
-          ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
+          ${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
         </div>
       </div>`;
   };
 
   useEffect(() => {
     const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
+    if (!isMapReady || !mapInstance.current) return;
     if (currentLevel >= 11) { overlaysRef.current.forEach(o => o.setMap(null)); overlaysRef.current.clear(); return; }
 
     const currentPostIds = new Set(posts.map(p => p.id));
@@ -160,24 +136,25 @@ const MapContainer = ({
     posts.forEach(post => {
       if (!post.id) return;
       const isViewed = viewedPostIds.has(post.id);
-      const isHighlighted = highlightedPostId === post.id;
-      const isAd = getIsAd(post);
+      const isAd = checkIsAd(post);
       
-      const baseZIndex = isHighlighted ? 10000 : (isAd ? 500 : 300);
+      // [디버깅 로그] 광고 데이터가 루프에 들어오는지 확인
+      if (isAd) console.log("📣 [DEBUG] 지도 루프에서 광고 발견:", post.user_name || post.user?.name);
+
+      const baseZIndex = isAd ? 500 : 300;
       let scale = 1;
       if (currentLevel === 7) scale = 0.7; else if (currentLevel >= 8) scale = 0.5;
 
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image_url || post.image}-${currentLevel}-${isAd}`;
+      const contentStateKey = `${post.likes}-${isViewed}-${currentLevel}-${isAd}`;
+      const existing = overlaysRef.current.get(post.id);
 
-      const existingOverlay = overlaysRef.current.get(post.id);
-      if (!existingOverlay) {
+      if (!existing) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay animate-marker-appear';
-        if (isHighlighted) content.classList.add('highlighted');
         content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        content.onclick = (e) => { e.stopPropagation(); onMarkerClickRef.current(post); };
+        content.onclick = () => onMarkerClickRef.current(post);
         
         const overlay = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(Number(post.latitude || post.lat), Number(post.longitude || post.lng)),
@@ -186,19 +163,14 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        const content = existingOverlay.getContent() as HTMLElement;
-        existingOverlay.setZIndex(baseZIndex);
-        if (content) {
-          content.style.setProperty('--marker-scale', scale.toString());
-          if (isHighlighted) content.classList.add('highlighted'); else content.classList.remove('highlighted');
-          if (content.getAttribute('data-content-state') !== contentStateKey) {
-            content.innerHTML = getMarkerInnerHtml(post, isViewed);
-            content.setAttribute('data-content-state', contentStateKey);
-          }
+        const div = existing.getContent() as HTMLElement;
+        if (div && div.getAttribute('data-content-state') !== contentStateKey) {
+          div.innerHTML = getMarkerInnerHtml(post, isViewed);
+          div.setAttribute('data-content-state', contentStateKey);
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, currentLevel]);
+  }, [posts, viewedPostIds, isMapReady, currentLevel]);
 
   return <div className="w-full h-full relative bg-gray-100"><div ref={mapElement} className="w-full h-full" /></div>;
 };
