@@ -4,7 +4,7 @@ import { Post, User } from '@/types';
 import { getYoutubeThumbnail } from './utils';
 
 /**
- * 1. 기초 유틸리티 및 티어 로직
+ * 1. 기초 유틸리티
  */
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -30,7 +30,30 @@ const getTierFromId = (id: string) => {
 };
 
 /**
- * 2. 유튜브 데이터 (50종) 및 검증 로직
+ * 2. 이미지 다양성 극대화 로직 (500개 이상의 체감 효과)
+ */
+const IMAGE_CATEGORIES = [
+  'seoul', 'korea', 'travel', 'nightview', 'street', 'cafe', 'mountain', 
+  'ocean', 'forest', 'architecture', 'fashion', 'interior', 'minimal', 
+  'lifestyle', 'people', 'landscape', 'sunset', 'art', 'urban', 'culture'
+];
+
+export const getUnsplashUrl = (sig: number) => {
+  // 카테고리를 sig에 따라 다양하게 배정 (20개 카테고리)
+  const category = IMAGE_CATEGORIES[sig % IMAGE_CATEGORIES.length];
+  
+  // 1/4 확률로 Picsum 사용 (완전 무작위성 확보)
+  if (sig % 4 === 0) {
+    return `https://picsum.photos/seed/${sig}/800/600`;
+  }
+  
+  // 3/4 확률로 Unsplash 키워드 + 고유 시드 조합 (실질적으로 무제한 풀)
+  // images.unsplash.com/featured 로 요청하면 키워드에 맞는 최신 이미지를 가져옵니다.
+  return `https://images.unsplash.com/featured/?${category}&sig=${sig}`;
+};
+
+/**
+ * 3. 유튜브 및 기타 리소스 (기존 유지)
  */
 export const YOUTUBE_IDS_50 = [
   "gdZLi9hhztQ", "js1CtxSY38I", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo",
@@ -47,6 +70,25 @@ export const YOUTUBE_IDS_50 = [
 
 export const YOUTUBE_IDS_POOL = YOUTUBE_IDS_50;
 export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map(id => `https://www.youtube.com/watch?v=${id}`);
+export const FOOD_UNSPLASH_IDS = ["photo-1504674900247-0877df9cc836", "photo-1512621776951-a57141f2eefd", "photo-1476224203421-9ac3993c4c5a", "photo-1493770348161-1482049016688"];
+export const UNSPLASH_IDS = ["photo-1501785888041-af3ef285b470", "photo-1470071459604-1441974231531"]; // 이제 getUnsplashUrl에서 키워드를 쓰므로 ID 풀은 상징적으로만 둡니다.
+
+export const MAJOR_CITIES = [
+  { name: "서울", lat: 37.5665, lng: 126.9780, density: 1500, bounds: { sw: { lat: 37.42, lng: 126.75 }, ne: { lat: 37.72, lng: 127.2 } } },
+  { name: "부산", lat: 35.1796, lng: 129.0756, density: 800, bounds: { sw: { lat: 35.04, lng: 128.89 }, ne: { lat: 35.31, lng: 129.23 } } },
+  { name: "제주", lat: 33.4996, lng: 126.5312, density: 600, bounds: { sw: { lat: 33.21, lng: 126.21 }, ne: { lat: 33.55, lng: 126.91 } } }
+];
+
+export const REALISTIC_COMMENTS = ["여기 정말 추천해요! 😍", "오늘 날씨 대박 ✨", "인생샷 건졌습니다 📸", "다음에 또 오고 싶네요 📍"];
+export const AD_COMMENTS = ["[AD] 지금 할인 중!", "[AD] 프리미엄 서비스를 만나보세요."];
+
+export const getUserById = (id: string): User => ({
+  id,
+  name: id.startsWith('Explorer') ? id : `Explorer_${id.substring(0, 4)}`,
+  nickname: id.startsWith('Explorer') ? id : `Explorer_${id.substring(0, 4)}`,
+  avatar: `https://i.pravatar.cc/150?u=${id}`,
+  bio: "탐험가입니다. 📍"
+});
 
 export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
   try {
@@ -57,65 +99,10 @@ export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
   }
 };
 
-export const initializeYoutubePool = async () => {
-  // 앱 시작 시에는 true만 반환 (실제 검증은 Seeder에서 수행)
-  return true;
-};
+export const initializeYoutubePool = async () => true;
 
 /**
- * 3. 이미지 데이터 및 중복 방지 로직
- */
-export const UNSPLASH_IDS = [
-  "photo-1501785888041-af3ef285b470", "photo-1470071459604-1441974231531", "photo-1441974231531-1500673922987", "photo-1464822759023-1472214103451", "photo-1516035069371-1504674900247",
-  "photo-1517841905240-1469474968028", "photo-1470770841072-1501854140801", "photo-1446776811953-1506744038136", "photo-1511884642898-1532274402911", "photo-1433086966358-1505144248183",
-  "photo-1475924156736-1518173946687", "photo-1493246507139-1506901437675", "photo-1472396961693-1500382017468", "photo-1490730141103-1519681393784", "photo-1486406146926-1449034446853",
-  "photo-1502672260266-1501949997128", "photo-1496715976403-1523712999610", "photo-1512621776951-1476224489176", "photo-1493770348161-1482049016688", "photo-1484723091739-1540189549336"
-];
-
-export const FOOD_UNSPLASH_IDS = ["photo-1504674900247-0877df9cc836", "photo-1512621776951-a57141f2eefd", "photo-1476224203421-1493770348161"];
-
-// [핵심] 중복 이미지 원천 차단을 위한 URL 생성기
-export const getUnsplashUrl = (id?: string, sig?: number) => {
-  const s = sig || Math.floor(Math.random() * 1000000);
-  
-  // 1. 30% 확률로 Picsum 사용 (가장 중복이 없음)
-  if (Math.random() < 0.3) {
-    return `https://picsum.photos/seed/${s}/800/600`;
-  }
-  
-  // 2. 70% 확률로 Unsplash 사용
-  if (id) {
-    return `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=800&sig=${s}`;
-  } else {
-    // 키워드 기반 무작위 이미지
-    const keywords = ['seoul', 'korea', 'travel', 'nightview', 'street', 'cafe', 'mountain'];
-    const kw = keywords[s % keywords.length];
-    return `https://images.unsplash.com/featured/?${kw}&sig=${s}`;
-  }
-};
-
-/**
- * 4. 지역 및 사용자 데이터
- */
-export const MAJOR_CITIES = [
-  { name: "서울", lat: 37.5665, lng: 126.9780, density: 1500, bounds: { sw: { lat: 37.42, lng: 126.75 }, ne: { lat: 37.72, lng: 127.2 } } },
-  { name: "부산", lat: 35.1796, lng: 129.0756, density: 800, bounds: { sw: { lat: 35.04, lng: 128.89 }, ne: { lat: 35.31, lng: 129.23 } } },
-  { name: "제주", lat: 33.4996, lng: 126.5312, density: 600, bounds: { sw: { lat: 33.21, lng: 126.21 }, ne: { lat: 33.55, lng: 126.91 } } }
-];
-
-export const REALISTIC_COMMENTS = ["분위기 정말 좋네요! 😍", "인생샷 건지고 갑니다 ✨", "추천받아 왔는데 만족스러워요 📍"];
-export const AD_COMMENTS = ["[AD] 특별 할인 혜택!", "[AD] 지금 예약하세요."];
-
-export const getUserById = (id: string): User => ({
-  id,
-  name: id.startsWith('Explorer') ? id : `Explorer_${id.substring(0, 4)}`,
-  nickname: id.startsWith('Explorer') ? id : `Explorer_${id.substring(0, 4)}`,
-  avatar: `https://i.pravatar.cc/150?u=${id}`,
-  bio: "탐험가입니다. 📍"
-});
-
-/**
- * 5. 메인 포스팅 모킹 함수 (createMockPosts)
+ * 4. 메인 포스팅 모킹 함수
  */
 export const createMockPosts = (
   centerLat: number, 
@@ -130,10 +117,11 @@ export const createMockPosts = (
     const id = Math.random().toString(36).substring(2, 11);
     const isAd = i % 25 === 0;
     const borderType = isAd ? 'none' : getTierFromId(id);
-    const randomSig = Math.floor(Math.random() * 999999);
+    // [중요] 생성 시점마다 고유한 시드를 만들어 이미지 중복 완전 차단
+    const randomSeed = Math.floor(Math.random() * 10000000);
     
     const hasYoutube = !isAd && (i % 2 === 0); 
-    const ytId = hasYoutube ? YOUTUBE_IDS_50[randomSig % YOUTUBE_IDS_50.length] : undefined;
+    const ytId = hasYoutube ? YOUTUBE_IDS_50[randomSeed % YOUTUBE_IDS_50.length] : undefined;
     const youtubeUrl = ytId ? `https://www.youtube.com/watch?v=${ytId}` : undefined;
 
     let lat, lng;
@@ -147,44 +135,27 @@ export const createMockPosts = (
     
     let image = "";
     if (isAd) {
-      image = getUnsplashUrl(FOOD_UNSPLASH_IDS[randomSig % FOOD_UNSPLASH_IDS.length], randomSig);
+      image = `https://images.unsplash.com/featured/?food,restaurant&sig=${randomSeed}`;
     } else if (youtubeUrl) {
       image = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
     } else {
-      // 70% 고정 ID, 30% 완전 랜덤
-      const unsplashId = Math.random() > 0.3 ? UNSPLASH_IDS[randomSig % UNSPLASH_IDS.length] : undefined;
-      image = getUnsplashUrl(unsplashId, randomSig);
+      image = getUnsplashUrl(randomSeed);
     }
 
     return {
-      id,
-      isAd,
-      isGif: false,
+      id, isAd, isGif: false,
       isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
       user: getUserById(isAd ? 'ad_partner' : (specificUserId || `user_${id.substring(0, 3)}`)),
-      content: isAd ? AD_COMMENTS[i % AD_COMMENTS.length] : REALISTIC_COMMENTS[i % REALISTIC_COMMENTS.length],
-      location: '대한민국',
-      lat,
-      lng,
+      content: isAd ? AD_COMMENTS[i % AD_COMMENTS.length] : REALISTIC_COMMENTS[randomSeed % REALISTIC_COMMENTS.length],
+      location: '대한민국', lat, lng,
       likes: Math.floor(randomFn() * 10000),
-      commentsCount: Math.floor(randomFn() * 20),
-      comments: [],
-      image,
-      isLiked: false,
+      commentsCount: Math.floor(randomFn() * 15),
+      comments: [], image, isLiked: false,
       createdAt: new Date(Date.now() - randomFn() * 48 * 3600000),
-      borderType,
-      youtubeUrl
+      borderType, youtubeUrl
     };
   });
 };
 
-/**
- * 6. 추가 데이터
- */
 export const MOCK_USERS = Array.from({ length: 10 }).map((_, i) => getUserById(`user_${i}`));
-export const MOCK_STORIES = MOCK_USERS.map(u => ({
-  id: u.id,
-  name: u.name,
-  avatar: u.avatar,
-  hasUpdate: Math.random() > 0.5
-}));
+export const MOCK_STORIES = MOCK_USERS.map(u => ({ id: u.id, name: u.name, avatar: u.avatar, hasUpdate: Math.random() > 0.5 }));
