@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
+import { isMobilePlatform } from '@/lib/utils';
 
 export const usePushNotifications = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
 
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !isMobilePlatform()) return; // 웹 환경에서는 실행하지 않음
 
     const register = async () => {
       try {
