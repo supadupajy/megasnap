@@ -10,14 +10,13 @@ import {
 } from "@/lib/mock-data"; 
 
 /**
- * 유튜브 유효성 정밀 체크 (2중 필터링)
+ * 유튜브 유효성 정밀 체크
  */
 async function validateYoutube(videoId: string): Promise<boolean> {
   try {
     const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
     if (res.status !== 200) return false;
     const data = await res.json();
-    // 제목이 없거나 특정 차단 키워드가 있으면 제외
     return !!data.title && !data.title.includes("Private video");
   } catch {
     return false;
@@ -25,22 +24,28 @@ async function validateYoutube(videoId: string): Promise<boolean> {
 }
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  const confirmClear = confirm("기존 중복 데이터와 재생 불가 영상을 삭제하고 전국구 데이터를 새로 생성할까요?");
+  const confirmClear = confirm("중복 제거 및 '내 포스팅 80개 제한' 생성을 시작할까요?");
   if (!confirmClear) return;
 
   try {
-    console.log("🧹 기존 데이터 완전 삭제 중...");
+    console.log("🧹 기존 데이터 삭제 중...");
     await supabase.from('posts').delete().neq('id', '_root_');
 
-    console.log("📺 고품질 유튜브 영상 필터링 중...");
+    console.log("📺 유튜브 재생 가능 영상 확인 중...");
     const playableIds = [];
     for (const id of YOUTUBE_IDS_50) {
       const ok = await validateYoutube(id);
       if (ok) playableIds.push(id);
     }
 
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').neq('id', currentUserId).limit(100);
-    const otherUsers = otherProfiles || [];
+    // [에러 해결] profiles로 받아서 정확히 참조합니다.
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, nickname, avatar_url')
+      .neq('id', currentUserId)
+      .limit(100);
+
+    const otherUsers = profiles || [];
     
     let globalCount = 0;
     let myPostCounter = 0; 
@@ -56,15 +61,15 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const uniqueSeed = Date.now() + globalCount;
         let postUser = { id: "", name: "", avatar: "" };
         
-        // 내 포스팅 생성 로직 (한도 80개)
-        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.02) {
+        // 내 포스팅 개수 조절
+        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.025) {
           postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
           myPostCounter++;
         } else if (otherUsers.length > 0) {
           const u = otherUsers[Math.floor(Math.random() * otherUsers.length)];
           postUser = { id: u.id, name: u.nickname || "탐험가", avatar: u.avatar_url || `https://i.pravatar.cc/150?u=${u.id}` };
         } else {
-          const vid = `v_${uniqueSeed % 500}`;
+          const vid = `user_${uniqueSeed % 1000}`;
           postUser = { id: vid, name: `User_${uniqueSeed % 1000}`, avatar: `https://i.pravatar.cc/150?u=${vid}` };
         }
 
@@ -101,16 +106,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
       }
       if (batch.length > 0) await supabase.from('posts').insert(batch);
     }
-    alert(`✨ 성공! 전국 분산 완료. 내 포스팅은 딱 ${myPostCounter}개입니다.`);
+    alert(`✨ 성공! 전국 분산 배치 및 유튜브 검증 완료. 내 포스팅: ${myPostCounter}개.`);
   } catch (err) {
     console.error(err);
   }
 };
 
 export const randomizeExistingLikes = async () => {
-  try {
-    await supabase.rpc('randomize_all_likes');
-  } catch (e) {
-    console.error(e);
-  }
+  await supabase.rpc('randomize_all_likes');
 };
