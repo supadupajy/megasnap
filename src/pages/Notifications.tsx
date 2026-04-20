@@ -34,6 +34,12 @@ const Notifications = () => {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const hasLoaded = useRef(false); // 데이터 초기 로딩 여부 플래그
 
+  useEffect(() => {
+    const handleOpenWrite = () => {}; // Notifications 페이지에서는 WritePost를 열지 않음
+    window.addEventListener('open-write-post', handleOpenWrite);
+    return () => window.removeEventListener('open-write-post', handleOpenWrite);
+  }, []);
+
   const fetchNotifications = useCallback(async () => {
     if (!authUser) return;
     

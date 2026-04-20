@@ -64,8 +64,7 @@ const Profile = () => {
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
       likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType,
-      category: p.category || 'none', // category 필드 포함
+      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType
     };
   };
 

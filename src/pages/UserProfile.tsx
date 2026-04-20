@@ -404,7 +404,7 @@ const UserProfile = () => {
                     <Bookmark className="w-4 h-4 fill-indigo-600" />
                     저장된 포스팅
                   </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{targetUser.nickname} 님의 저장된 기록</p>
                 </div>
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
