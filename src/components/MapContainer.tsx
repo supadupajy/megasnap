@@ -55,38 +55,45 @@ const MapContainer = ({
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // ✅ [FINAL FIX] IndexSizeError 근본적 차단을 위한 Selection API 몽키 패치
+  // ✅ [ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 캡처링 단계의 이벤트 제어
   useEffect(() => {
-    const originalGetRangeAt = Selection.prototype.getRangeAt;
-
-    // getRangeAt 메서드를 가로채서 에러가 발생하는 상황(rangeCount가 0일 때)을 방어
-    Selection.prototype.getRangeAt = function(index: number) {
-      if (index === 0 && this.rangeCount === 0) {
-        // 에러를 내지 않고 빈 범위를 반환하여 확장 프로그램을 속임
-        return document.createRange();
-      }
-      return originalGetRangeAt.apply(this, [index]);
-    };
-
-    const preventSelectionError = () => {
+    const preventSelectionError = (e: Event) => {
+      // 이벤트가 확장 프로그램으로 전달되어 getRangeAt(0)을 호출하기 전에 전파 차단
+      e.stopPropagation();
+      
       if (window.getSelection) {
         const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+        try {
+          if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+        } catch (err) {}
       }
     };
 
     const container = containerRef.current;
     if (container) {
-      const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
-      events.forEach(evt => container.addEventListener(evt, preventSelectionError, { passive: true }));
+      // 캡처링(capture: true) 단계에서 이벤트를 가로채어 하위 요소나 확장 프로그램이 감지하지 못하게 함
+      const criticalEvents = ['selectstart', 'dragstart'];
+      criticalEvents.forEach(evt => {
+        container.addEventListener(evt, preventSelectionError, { capture: true });
+      });
+      
+      const interactionEvents = ['mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
+      interactionEvents.forEach(evt => {
+        container.addEventListener(evt, () => {
+          if (window.getSelection) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+          }
+        }, { passive: true, capture: true });
+      });
     }
 
     return () => {
-      // 원래의 브라우저 함수로 복구
-      Selection.prototype.getRangeAt = originalGetRangeAt;
       if (container) {
-        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
-        events.forEach(evt => container.removeEventListener(evt, preventSelectionError));
+        const criticalEvents = ['selectstart', 'dragstart'];
+        criticalEvents.forEach(evt => {
+          container.removeEventListener(evt, preventSelectionError, { capture: true } as any);
+        });
       }
     };
   }, []);
@@ -408,7 +415,8 @@ const MapContainer = ({
         WebkitUserSelect: 'none',
         userSelect: 'none',
         msUserSelect: 'none',
-        WebkitTouchCallout: 'none'
+        WebkitTouchCallout: 'none',
+        WebkitUserDrag: 'none'
       }}
     >
       {isLoading && (
