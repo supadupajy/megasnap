@@ -8,9 +8,9 @@ import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
-import { getUserById, createMockPosts } from '@/lib/mock-data';
+import { getUserById } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
+import { supabase } from '@/integrations/supabase/client';
+import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
+import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -30,37 +33,88 @@ const UserProfile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const user = useMemo(() => {
     return getUserById(userId || 'traveler');
   }, [userId]);
 
-  useEffect(() => {
-    // GIF 제거 요청에 따라 모든 포스팅을 일반 포스팅으로 생성
-    const rawPosts = createMockPosts(37.5665, 126.9780, 30);
+  const getTierFromId = (id: string) => {
+    let h = 0;
+    for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+    const val = Math.abs(h % 1000) / 1000;
+    if (val < 0.01) return 'diamond';
+    if (val < 0.03) return 'gold';
+    if (val < 0.07) return 'silver';
+    if (val < 0.15) return 'popular';
+    return 'none';
+  };
+
+  const mapDbToPost = async (p: any): Promise<Post> => {
+    const sanitized = await sanitizeYoutubeMedia(p);
+    const isAd = sanitized.content?.trim().startsWith('[AD]');
+    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    const userPosts = rawPosts.map((p) => {
-      return {
-        ...p,
-        isGif: false,
-        user: {
-          id: user.id,
-          name: user.nickname || user.name,
-          avatar: user.avatar
-        }
-      };
-    }).sort(() => Math.random() - 0.5);
+    const finalImage = sanitized.youtube_url 
+      ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url)
+      : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
 
-    setPosts(userPosts);
+    return {
+      id: sanitized.id,
+      isAd,
+      isGif: false,
+      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      user: {
+        id: sanitized.user_id,
+        name: sanitized.user_name || '탐험가',
+        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
+      },
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: sanitized.location_name || '알 수 없는 장소',
+      lat: sanitized.latitude,
+      lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0),
+      commentsCount: 0,
+      comments: [],
+      image: finalImage,
+      youtubeUrl: sanitized.youtube_url,
+      videoUrl: sanitized.video_url,
+      isLiked: false,
+      createdAt: new Date(sanitized.created_at),
+      borderType
+    };
+  };
 
-    const saved = createMockPosts(37.5665, 126.9780, 12)
-      .filter(p => p.user.id !== user.id)
-      .map(p => ({ ...p, isLiked: true }));
-    setSavedPosts(saved);
-  }, [user]);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!userId) return;
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
 
-  const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
-    const setter = isSaved ? setSavedPosts : setPosts;
+        if (error) throw error;
+        const formatted = await Promise.all((data || []).map(mapDbToPost));
+        setPosts(formatted);
+        
+        // 타인의 프로필에서는 저장된 포스팅 탭을 비우거나 본인의 것만 보여주는 것이 일반적이나,
+        // 요청에 따라 샘플 데이터를 제거하고 빈 상태로 둡니다.
+        setSavedPosts([]);
+      } catch (err) {
+        console.error('Error fetching user posts:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [userId]);
+
+  const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
+    const setter = isFromSaved ? setSavedPosts : setPosts;
     setter(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
@@ -279,6 +333,9 @@ const UserProfile = () => {
                     />
                   </div>
                 ))}
+                {savedPosts.length === 0 && !isLoading && (
+                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
+                )}
               </>
             ) : (
               <>

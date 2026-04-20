@@ -65,7 +65,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setShowComments(false);
       setCurrentImageIndex(0);
       const post = posts[initialIndex];
-      if (post) { setLocalComments(post.comments || []); setIsSaved(post.isSaved || false); }
+      if (post) { 
+        setLocalComments(post.comments || []); 
+        setIsSaved(post.isSaved || false); 
+      }
     }
     if (!isOpen) { setHasInitialized(false); setIsPlayingVideo(false); }
   }, [isOpen, initialIndex, hasInitialized, posts]);
@@ -79,8 +82,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
+
+      // 저장 상태 확인
+      const checkSaveStatus = async () => {
+        if (!authUser || !isPersistedPostId(currentPost.id)) return;
+        const { data } = await supabase.from('saved_posts').select('id').eq('post_id', currentPost.id).eq('user_id', authUser.id).maybeSingle();
+        setIsSaved(!!data);
+      };
+      checkSaveStatus();
     }
-  }, [currentIndex, isOpen, onViewPost, posts]);
+  }, [currentIndex, isOpen, onViewPost, posts, authUser]);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +169,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   
   const displayImages = useMemo(() => {
     if (isAd) return [post.image];
-    if (youtubeId) return [post.image]; // 유튜브 영상인 경우 썸네일만 사용
+    if (youtubeId) return [post.image]; 
     
     const img1 = post.images?.length ? post.images[0] : post.image;
     const img3 = (post.images?.length > 1 && post.images[1] !== AD_IMAGE) ? post.images[1] : THIRD_PLACEHOLDER;
@@ -173,6 +184,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     onClose();
     if (isMine) navigate('/profile');
     else navigate(`/profile/${post.user.id}`);
+  };
+
+  const handleSaveToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!authUser) { showError('로그인이 필요합니다.'); return; }
+    if (!isPersistedPostId(post.id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
+
+    const prevSaved = isSaved;
+    setIsSaved(!prevSaved);
+
+    try {
+      if (prevSaved) {
+        await supabase.from('saved_posts').delete().eq('post_id', post.id).eq('user_id', authUser.id);
+        showSuccess('저장이 취소되었습니다.');
+      } else {
+        await supabase.from('saved_posts').insert({ post_id: post.id, user_id: authUser.id });
+        showSuccess('포스팅을 저장했습니다! ✨');
+      }
+    } catch (err) {
+      setIsSaved(prevSaved);
+      showError('저장 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const confirmDelete = async () => {
@@ -260,7 +293,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-3">
-                          <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved); }}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
+                          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
                           {renderCategoryBadge()}
                           {post.lat !== undefined && post.lng !== undefined && (
                             <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">

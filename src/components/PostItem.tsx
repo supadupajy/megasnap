@@ -112,7 +112,7 @@ const PostItem = ({
   
   const displayImages = useMemo(() => {
     if (isAd) return [image];
-    if (youtubeId) return [image]; // 유튜브 영상인 경우 썸네일만 사용
+    if (youtubeId) return [image]; 
     
     const img1 = images.length > 0 ? images[0] : image;
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
@@ -138,12 +138,18 @@ const PostItem = ({
   };
 
   useEffect(() => {
-    const checkLikeStatus = async () => {
-      if (!authUser || !id || id.length < 20) return;
-      const { data } = await supabase.from('likes').select('id').eq('post_id', id).eq('user_id', authUser.id).single();
-      if (data) setIsLiked(true);
+    const checkStatus = async () => {
+      if (!authUser || !id || !isPersistedPostId(id)) return;
+      
+      // 좋아요 상태 확인
+      const { data: likeData } = await supabase.from('likes').select('id').eq('post_id', id).eq('user_id', authUser.id).maybeSingle();
+      if (likeData) setIsLiked(true);
+
+      // 저장 상태 확인
+      const { data: saveData } = await supabase.from('saved_posts').select('id').eq('post_id', id).eq('user_id', authUser.id).maybeSingle();
+      if (saveData) setIsSaved(true);
     };
-    checkLikeStatus();
+    checkStatus();
   }, [authUser, id]);
 
   useEffect(() => {
@@ -234,10 +240,26 @@ const PostItem = ({
     if (lat !== undefined && lng !== undefined && onLocationClick) onLocationClick(e, lat, lng);
   };
 
-  const handleSaveToggle = (e: React.MouseEvent) => {
+  const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
-    showSuccess(isSaved ? '저장이 취소되었습니다.' : '포스팅을 저장했습니다.');
+    if (!authUser) { showError('로그인이 필요합니다.'); return; }
+    if (!isPersistedPostId(id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
+
+    const prevSaved = isSaved;
+    setIsSaved(!prevSaved);
+
+    try {
+      if (prevSaved) {
+        await supabase.from('saved_posts').delete().eq('post_id', id).eq('user_id', authUser.id);
+        showSuccess('저장이 취소되었습니다.');
+      } else {
+        await supabase.from('saved_posts').insert({ post_id: id, user_id: authUser.id });
+        showSuccess('포스팅을 저장했습니다! ✨');
+      }
+    } catch (err) {
+      setIsSaved(prevSaved);
+      showError('저장 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const confirmDelete = async () => {

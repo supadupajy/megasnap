@@ -9,11 +9,12 @@ import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
-import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
+import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -34,53 +35,93 @@ const Profile = () => {
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
+  const getTierFromId = (id: string) => {
+    let h = 0;
+    for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+    const val = Math.abs(h % 1000) / 1000;
+    if (val < 0.01) return 'diamond';
+    if (val < 0.03) return 'gold';
+    if (val < 0.07) return 'silver';
+    if (val < 0.15) return 'popular';
+    return 'none';
+  };
+
+  const mapDbToPost = async (p: any): Promise<Post> => {
+    const sanitized = await sanitizeYoutubeMedia(p);
+    const isAd = sanitized.content?.trim().startsWith('[AD]');
+    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
+    
+    const finalImage = sanitized.youtube_url 
+      ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url)
+      : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+
+    return {
+      id: sanitized.id,
+      isAd,
+      isGif: false,
+      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      user: {
+        id: sanitized.user_id,
+        name: sanitized.user_name || '탐험가',
+        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
+      },
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: sanitized.location_name || '알 수 없는 장소',
+      lat: sanitized.latitude,
+      lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0),
+      commentsCount: 0,
+      comments: [],
+      image: finalImage,
+      youtubeUrl: sanitized.youtube_url,
+      videoUrl: sanitized.video_url,
+      isLiked: false,
+      isSaved: true,
+      createdAt: new Date(sanitized.created_at),
+      borderType
+    };
+  };
+
   const loadProfileData = useCallback(async (uid: string) => {
     if (hasFetched.current) return;
     hasFetched.current = true;
     setIsDataLoading(true);
 
     try {
-      const { data: realData, error } = await supabase
+      // 내 포스팅 로드
+      const { data: myData, error: myError } = await supabase
         .from('posts')
         .select('*')
         .eq('user_id', uid)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (myError) throw myError;
+      const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
+      setMyPosts(formattedMyPosts);
 
-      const formattedPosts = (realData || []).map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: {
-          id: p.user_id,
-          name: p.user_name || displayName,
-          avatar: p.user_avatar || avatarUrl
-        },
-        content: p.content || '',
-        location: p.location_name || '알 수 없는 장소',
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: 'none'
-      })) as Post[];
+      // 저장된 포스팅 로드
+      const { data: savedData, error: savedError } = await supabase
+        .from('saved_posts')
+        .select('post_id, posts(*)')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (savedError) throw savedError;
       
-      setMyPosts(formattedPosts);
-      const saved = createMockPosts(37.5665, 126.9780, 8, `saved_${uid}`).map(p => ({ ...p, isLiked: true }));
-      setSavedPosts(saved);
+      const formattedSavedPosts = await Promise.all(
+        (savedData || [])
+          .filter(item => item.posts)
+          .map(item => mapDbToPost(item.posts))
+      );
+      setSavedPosts(formattedSavedPosts);
+
     } catch (err) {
       console.error('[Profile] Data load error:', err);
       hasFetched.current = false;
     } finally {
       setIsDataLoading(false);
     }
-  }, [displayName, avatarUrl]);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && authUser?.id) {
@@ -88,8 +129,8 @@ const Profile = () => {
     }
   }, [authLoading, authUser?.id, loadProfileData]);
 
-  const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
-    const setter = isSaved ? setSavedPosts : setMyPosts;
+  const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
+    const setter = isFromSaved ? setSavedPosts : setMyPosts;
     setter(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
@@ -114,9 +155,10 @@ const Profile = () => {
 
   const handlePostDelete = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
+    setSavedPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (authLoading || (authUser && isDataLoading && myPosts.length === 0)) {
+  if (authLoading || (authUser && isDataLoading && myPosts.length === 0 && savedPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -184,6 +226,7 @@ const Profile = () => {
               <>
                 <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Bookmark className="w-4 h-4 fill-indigo-600" />저장된 포스팅</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">다른 탐험가들의 멋진 기록들</p></div>
                 {savedPosts.map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={() => handleImageError(post.id)} /></div>))}
+                {savedPosts.length === 0 && !isDataLoading && (<div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>)}
               </>
             ) : (
               <>
