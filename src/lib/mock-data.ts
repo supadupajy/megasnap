@@ -173,6 +173,8 @@ export const remapUnsplashDisplayUrl = (
   return getDiverseUnsplashUrl(`${seed}:${url}`, variant, salt);
 };
 
+const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
+
 export const createMockPosts = (
   centerLat: number,
   centerLng: number,
@@ -202,6 +204,7 @@ export const createMockPosts = (
     }
 
     const imageSeed = `${specificUserId || 'global'}:${centerLat}:${centerLng}:${lat.toFixed(4)}:${lng.toFixed(4)}:${i}`;
+    const category = CATEGORIES[i % CATEGORIES.length]; // 카테고리 할당
 
     const image = isAd
       ? getDiverseUnsplashUrl(imageSeed, 'food', i)
@@ -214,6 +217,7 @@ export const createMockPosts = (
       isAd,
       isGif: false,
       isInfluencer,
+      category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
         name: isAd ? 'Partner' : `Explorer_${id.substring(0, 4)}`,
