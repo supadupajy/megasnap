@@ -27,7 +27,7 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level,
+  level = 6, // ✅ 기본값 명시
   searchResultLocation
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -132,7 +132,7 @@ const MapContainer = ({
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
 
       const initialCenter = center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = level || mapCache.lastZoom || 6;
+      const initialLevel = level || mapCache.lastZoom || 6; // ✅ 명시적으로 6단계 보장
 
       const options = {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
