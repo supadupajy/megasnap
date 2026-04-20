@@ -169,10 +169,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                       </span>
                       
                       <div className={cn(
-                        "w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 relative",
-                        isInfluencer ? "influencer-border-container p-[2px]" : (isPopular ? "popular-border-container p-[2px]" : "bg-gray-100")
+                        "w-11 h-11 rounded-xl flex-shrink-0 relative",
+                        isInfluencer ? "influencer-border-container p-[2px]" : (isPopular ? "popular-border-container p-[2px]" : "bg-gray-100 overflow-hidden")
                       )}>
-                        <div className="w-full h-full rounded-[9px] overflow-hidden relative bg-white">
+                        <div className={cn(
+                          "w-full h-full relative bg-white",
+                          (isInfluencer || isPopular) ? "rounded-[9px] overflow-hidden" : ""
+                        )}>
                           <img
                             src={post.image}
                             alt=""
