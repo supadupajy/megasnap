@@ -15,7 +15,6 @@ const Follow = () => {
   const location = useLocation();
   const { user: authUser } = useAuth();
   
-  // 초기 탭 설정 (네비게이션 state에서 전달받거나 기본값 followers)
   const initialTab = (location.state as any)?.tab || 'followers';
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>(initialTab);
   const [users, setUsers] = useState<any[]>([]);
@@ -26,7 +25,6 @@ const Follow = () => {
     if (!userId) return;
     setIsLoading(true);
     try {
-      // 대상 유저의 닉네임 가져오기
       const { data: profile } = await supabase
         .from('profiles')
         .select('nickname')
@@ -36,19 +34,19 @@ const Follow = () => {
 
       let query;
       if (activeTab === 'followers') {
-        // 나를 팔로우하는 사람들 찾기
+        // 나를 팔로우하는 사람들 (follower_id를 가진 프로필들)
         query = supabase
           .from('follows')
           .select(`
-            follower:profiles!follows_follower_id_fkey(id, nickname, avatar_url, bio)
+            profiles:follower_id (id, nickname, avatar_url, bio)
           `)
           .eq('following_id', userId);
       } else {
-        // 내가 팔로우하는 사람들 찾기
+        // 내가 팔로우하는 사람들 (following_id를 가진 프로필들)
         query = supabase
           .from('follows')
           .select(`
-            following:profiles!follows_following_id_fkey(id, nickname, avatar_url, bio)
+            profiles:following_id (id, nickname, avatar_url, bio)
           `)
           .eq('follower_id', userId);
       }
@@ -56,10 +54,7 @@ const Follow = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const formattedUsers = (data || []).map((item: any) => 
-        activeTab === 'followers' ? item.follower : item.following
-      ).filter(Boolean);
-
+      const formattedUsers = (data || []).map((item: any) => item.profiles).filter(Boolean);
       setUsers(formattedUsers);
     } catch (err) {
       console.error('Error fetching follow data:', err);
@@ -74,7 +69,6 @@ const Follow = () => {
 
   const toggleFollow = (e: React.MouseEvent, targetId: string) => {
     e.stopPropagation();
-    // UI 피드백만 우선 적용
     setUsers(prev => prev.map(u => 
       u.id === targetId ? { ...u, isFollowing: !u.isFollowing } : u
     ));
@@ -82,12 +76,8 @@ const Follow = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white no-scrollbar">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <div className="flex-1 text-center mr-10">
@@ -97,7 +87,6 @@ const Follow = () => {
       </header>
 
       <div className="pt-[88px]">
-        {/* Tabs */}
         <div className="flex border-b border-gray-100 sticky top-[88px] bg-white z-40">
           <button 
             onClick={() => setActiveTab('followers')}
@@ -107,9 +96,7 @@ const Follow = () => {
             )}
           >
             팔로워
-            {activeTab === 'followers' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-            )}
+            {activeTab === 'followers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
           </button>
           <button 
             onClick={() => setActiveTab('following')}
@@ -119,31 +106,20 @@ const Follow = () => {
             )}
           >
             팔로잉
-            {activeTab === 'following' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-            )}
+            {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
           </button>
         </div>
 
-        {/* List */}
         <div className="p-4 space-y-1">
           {isLoading ? (
-            <div className="py-20 flex justify-center">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-            </div>
+            <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>
           ) : users.length > 0 ? (
             users.map((user) => (
-              <div 
-                key={user.id} 
-                onClick={() => navigate(`/profile/${user.id}`)}
-                className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
-              >
+              <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
                 <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
                   <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                     <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
-                      {user.nickname?.[0] || '?'}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -155,12 +131,7 @@ const Follow = () => {
                     variant={user.isFollowing ? "secondary" : "default"} 
                     size="sm" 
                     onClick={(e) => toggleFollow(e, user.id)}
-                    className={cn(
-                      "rounded-xl h-8 px-3 font-bold",
-                      user.isFollowing 
-                        ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
-                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                    )}
+                    className={cn("rounded-xl h-8 px-3 font-bold", user.isFollowing ? "bg-gray-100 text-gray-900 hover:bg-gray-200" : "bg-indigo-600 hover:bg-indigo-700 text-white")}
                   >
                     {user.isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
                   </Button>
@@ -169,12 +140,8 @@ const Follow = () => {
             ))
           ) : (
             <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-gray-200" />
-              </div>
-              <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                {activeTab === 'followers' ? '아직 팔로워가 없습니다.' : '아직 팔로잉하는 사용자가 없습니다.'}
-              </p>
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Users className="w-8 h-8 text-gray-200" /></div>
+              <p className="text-sm text-gray-400 font-bold leading-relaxed">{activeTab === 'followers' ? '아직 팔로워가 없습니다.' : '아직 팔로잉하는 사용자가 없습니다.'}</p>
             </div>
           )}
         </div>
