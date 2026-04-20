@@ -380,7 +380,7 @@ const Index = () => {
                 </button>
                 <div className="relative">
                   {displayedMarkers.length > 0 && currentZoom < 11 && (
-                    <div className="absolute inset-0 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
+                    <div className="absolute inset-1 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
                   <button
                     onClick={handleViewAllClick}
