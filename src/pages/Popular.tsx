@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import WritePost from '@/components/WritePost';
-import StoryBar from '@/components/StoryBar';
 import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
@@ -136,7 +135,6 @@ const Popular = () => {
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[88px]">
-        <StoryBar />
         <div className="flex flex-col">
           {filteredPosts.map((post) => (
             <PostItem key={post.id} id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} lat={post.lat} lng={post.lng} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} youtubeUrl={post.youtubeUrl} videoUrl={post.videoUrl} category={post.category} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id)} onLocationClick={handleLocationClick} onDelete={handlePostDelete} />
