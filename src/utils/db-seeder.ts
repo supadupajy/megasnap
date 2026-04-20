@@ -9,54 +9,59 @@ import {
   createMockPosts
 } from "@/lib/mock-data"; 
 
-export const seedGlobalPosts = async (currentUserId: string) => {
-  // 1. 기존 데이터 삭제 (중복 데이터가 지도에 남아있지 않도록 확실히 처리)
-  const confirmClear = confirm("중복 제거를 위해 기존 데이터를 모두 지우고 새로 생성할까요?");
-  if (confirmClear) {
-    await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  }
-
+/**
+ * Settings.tsx 에서 3개의 인자를 보내므로 (currentUserId, currentNickname, currentAvatar) 
+ * 이에 맞춰 인자를 정의합니다.
+ */
+export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
+  const confirmClear = confirm("중복 데이터 방지를 위해 기존 포스팅을 모두 삭제하고 새로 생성하시겠습니까?");
+  
   try {
-    const { data: profiles } = await supabase.from('profiles').select('id').limit(20);
-    const userPool = profiles || [{ id: currentUserId }];
+    if (confirmClear) {
+      // 기존 데이터 삭제
+      await supabase.from('posts').delete().neq('id', '_root_');
+    }
 
-    // [개선] 모든 도시가 이 인덱스를 공유하여 절대 겹치지 않게 함
-    let globalImageIndex = 0; 
+    let globalCount = 0;
 
     for (const city of MAJOR_CITIES) {
-      console.log(`${city.name} 데이터 생성 중...`);
+      console.log(`📍 ${city.name} 생성 중...`);
+      // createMockPosts 호출
       const mockPoints = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       let batch: any[] = [];
 
       for (let i = 0; i < mockPoints.length; i++) {
-        const isYoutube = i % 2 === 0;
         const p = mockPoints[i];
+        const uniqueSeed = Date.now() + globalCount;
         
-        let imageUrl = "";
-        let youtubeUrl = null;
+        const isYoutube = i % 2 === 0;
+        let finalImage = "";
+        let finalYoutubeUrl = null;
 
         if (isYoutube) {
-          const ytId = YOUTUBE_IDS_50[globalImageIndex % YOUTUBE_IDS_50.length];
-          youtubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
-          imageUrl = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          const ytId = YOUTUBE_IDS_50[uniqueSeed % YOUTUBE_IDS_50.length];
+          finalYoutubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
+          finalImage = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
         } else {
-          // getUnsplashUrl에서 순차적으로 이미지를 배정 (Picsum 200종 + Unsplash 100종 순환)
-          imageUrl = getUnsplashUrl(globalImageIndex);
+          // 중복 방지를 위해 Picsum ID 기반 고유 이미지 배정
+          finalImage = getUnsplashUrl(uniqueSeed); 
         }
 
         batch.push({
-          content: REALISTIC_COMMENTS[globalImageIndex % REALISTIC_COMMENTS.length],
+          content: REALISTIC_COMMENTS[uniqueSeed % REALISTIC_COMMENTS.length],
           location_name: `${city.name} 인근`,
           latitude: p.lat,
           longitude: p.lng,
-          image_url: imageUrl,
-          youtube_url: youtubeUrl,
-          user_id: userPool[globalImageIndex % userPool.length].id,
+          image_url: finalImage,
+          youtube_url: finalYoutubeUrl,
+          user_id: currentUserId, // 인자로 받은 ID 사용
+          user_name: currentNickname,
+          user_avatar: currentAvatar,
           likes: Math.floor(Math.random() * 5000),
           created_at: new Date().toISOString()
         });
 
-        globalImageIndex++; // 인덱스를 1씩 증가시켜 다음 포스팅은 무조건 다음 이미지를 쓰게 함
+        globalCount++;
 
         if (batch.length >= 100) {
           await supabase.from('posts').insert(batch);
@@ -65,13 +70,13 @@ export const seedGlobalPosts = async (currentUserId: string) => {
       }
       if (batch.length > 0) await supabase.from('posts').insert(batch);
     }
-    alert("완료되었습니다. 이제 지도를 확인해보세요!");
-  } catch (e) {
-    console.error(e);
+    alert("✨ 모든 에러가 해결되었고 데이터 생성이 완료되었습니다!");
+    return globalCount;
+  } catch (err) {
+    console.error(err);
   }
 };
 
-// 필수 Export 누락 방지
 export const randomizeExistingLikes = async () => {
   await supabase.rpc('randomize_all_likes');
 };
