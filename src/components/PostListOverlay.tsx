@@ -293,7 +293,7 @@ const PostListOverlay = ({
             </button>
           </div>
 
-          <div className="flex flex-col pt-4 pb-32">
+          <div className="flex flex-col pt-4 pb-4">
             {filteredPosts.length > 0 ? (
               <>
                 {filteredPosts.map((post) => (
