@@ -87,7 +87,6 @@ const Index = () => {
   };
 
   const mapDbToPost = async (rawPost: any): Promise<Post> => {
-    // rawPost가 유효한지 확인
     if (!rawPost || !rawPost.id) {
       console.warn('⚠️ [mapDbToPost] Invalid raw post data:', rawPost);
       return null as any;
@@ -96,9 +95,6 @@ const Index = () => {
     try {
       const p = await sanitizeYoutubeMedia(rawPost);
       const isAd = p.content?.trim().startsWith('[AD]');
-      
-      // ✅ 이제 테두리(티어)는 좋아요 숫자가 아니라, 포스팅 고유의 ID를 기반으로 결정됩니다.
-      // 좋아요가 적은 다이아몬드 포스팅이나, 좋아요가 많은 일반 포스팅이 가능해집니다.
       const borderType = isAd ? 'none' : getTierFromId(p.id);
 
       return {
@@ -154,7 +150,6 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
-    // [FIX] 줌 레벨 변경 시에는 throttle을 무시하고 즉시 업데이트
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
     
     if (zoomChanged) {
@@ -163,19 +158,18 @@ const Index = () => {
         throttleTimer.current = null;
       }
       
-      // 상태를 한꺼번에 업데이트하여 동기화 보장
       setMapData(data);
       setCurrentZoom(data.level);
       
-      // 캐시 갱신
       mapCache.lastCenter = data.center;
       mapCache.lastZoom = data.level;
       
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       
-      // 줌 변경 후 데이터 동기화 강제 트리거 (100ms 지연으로 렌더링 안정화)
+      // ✅ [FIX] 줌 복귀 시 displayedMarkers 재계산을 강제로 트리거하기 위해
+      // syncPostsWithSupabase를 호출하고 mapData도 함께 업데이트
       setTimeout(() => {
-        syncPostsWithSupabase(data.bounds);
+        syncPostsWithSupabase(data.bounds, data.level);
       }, 100);
       return;
     }
@@ -193,31 +187,29 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
+  // ✅ [FIX] forceZoom 파라미터 추가 — currentZoom 상태가 아직 반영 안됐을 때 사용
+  const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
-    // bounds가 없으면 중단
     if (!targetBounds) return;
     
-    // 이미 싱킹 중이면 중단 (forceBounds가 있는 경우 제외하고 싶을 수도 있지만 안전을 위해 유지)
     if (isSyncing.current && !forceBounds) return;
     
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
     const center = mapData?.center;
+    // ✅ forceZoom이 있으면 그것을 우선 사용 (상태 비동기 문제 우회)
+    const zoomToUse = forceZoom ?? currentZoom;
 
     try {
-      const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom, center);
+      const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       
       const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
       const validMappedPosts = mappedPosts.filter(p => p !== null);
 
       setAllPosts(prev => {
-        // ✅ [FIX] 단순히 ID 중복만 체크하는 게 아니라, 
-        // 현재 화면 중앙에서 가까운 데이터가 배열의 앞쪽(렌더링 우선순위)에 오도록 정렬
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
         
-        // 현재 중앙 좌표가 있다면 거리순으로 정렬하여 머지
         if (center) {
           newUnique.sort((a, b) => {
             const distA = Math.hypot(a.lat - center.lat, a.lng - center.lng);
@@ -226,7 +218,7 @@ const Index = () => {
           });
         }
 
-        const combined = [...newUnique, ...prev].slice(0, 15000); // 더 많은 데이터 유지
+        const combined = [...newUnique, ...prev].slice(0, 15000);
         mapCache.posts = combined;
         return combined;
       });
@@ -235,7 +227,7 @@ const Index = () => {
     } finally { 
       isSyncing.current = false; 
     }
-  }, [mapData, currentZoom, mapDbToPost]); // mapDbToPost 의존성 추가
+  }, [mapData, currentZoom, mapDbToPost]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
@@ -244,7 +236,6 @@ const Index = () => {
       return;
     }
     
-    // ✅ 줌 레벨이 7단계 이상일 때는 모든 마커를 숨김 (사용자 요청)
     if (currentZoom >= 7) { 
       if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
       return; 
@@ -254,19 +245,11 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // ✅ [CRITICAL FIX] 영역 판정을 더 엄격하게 수정 (마진 제거)
-    // 화면 밖의 포스팅이 포함되지 않도록 실제 지도 경계값만 사용합니다.
     const inBoundsCandidates = allPosts.filter(post => {
       if (!post) return false;
-      
-      // 위치 정보 필수
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
-      
-      // 차단된 유저 제외
       if (blockedIds.has(post.user.id)) return false;
 
-      // ✅ [STRICT BOUNDS] 실제 지도 화면 내에 있는지 정확하게 판정
-      // 위도(lat)는 sw.lat ~ ne.lat, 경도(lng)는 sw.lng ~ ne.lng 사이여야 함
       const isInStrictBounds = 
         post.lat >= Math.min(sw.lat, ne.lat) && 
         post.lat <= Math.max(sw.lat, ne.lat) && 
@@ -274,16 +257,12 @@ const Index = () => {
         post.lng <= Math.max(sw.lng, ne.lng);
 
       if (!isInStrictBounds) return false;
-      
-      // 광고는 항상 표시
       if (post.isAd) return true;
       
-      // 시간 필터
       if (timeValue < 100) {
         if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
       }
       
-      // 카테고리 필터
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matchesCategory = true;
@@ -292,20 +271,17 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // ✅ 중복 제거 및 최종 후보군 추출
     const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());
     
-    // ✅ [FIX] 무한 루프 방지: 현재 표시된 마커와 새로 계산된 마커의 ID 리스트를 비교
-    // 내용이 같으면 setDisplayedMarkers를 호출하지 않아 렌더링 루프를 끊습니다.
     setDisplayedMarkers(prev => {
       const prevIds = prev.map(p => p.id).sort().join(',');
       const nextIds = uniquePosts.map(p => p.id).sort().join(',');
       
       if (prevIds === nextIds) {
-        return prev; // 변경 없으면 기존 상태 유지 (루프 차단)
+        return prev;
       }
       
-      console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts (Strict Bounds)`);
+      console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts`);
       return uniquePosts;
     });
   }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
@@ -359,7 +335,6 @@ const Index = () => {
   }, [fetchGlobalTrending, mapData]);
 
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-    // ✅ 위치 정보가 없는 포스팅은 지도를 이동시키지 않음
     if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return;
 
     setAllPosts((prev) => {
@@ -454,7 +429,6 @@ const Index = () => {
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
     
-    // ✅ 위치 정보가 있을 때만 지도를 해당 위치로 이동
     if (newPost.lat !== null && newPost.lng !== null) {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setTimeout(() => { 
