@@ -3,7 +3,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { 
   MAJOR_CITIES, 
-  UNSPLASH_IDS, 
   YOUTUBE_IDS_POOL, 
   FOOD_UNSPLASH_IDS, 
   getUnsplashUrl,
@@ -12,72 +11,57 @@ import {
   createMockPosts
 } from "@/lib/mock-data"; 
 
-/**
- * 1. 유튜브 재생 가능 여부 체크 (oEmbed)
- */
-async function checkYoutubePlayable(videoId: string): Promise<boolean> {
-  try {
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data.title;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 2. 메인 포스팅 생성 함수 (seedGlobalPosts)
- */
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  console.log("🚀 [Seeder] 프로세스 시작...");
-
+  // 1. 사용자에게 확인 (실수로 데이터 날리는 것 방지)
+  const confirmClear = confirm("기존의 모든 포스팅을 삭제하고 새로 생성하시겠습니까? (중복 해결을 위해 권장)");
+  
   try {
-    // 유튜브 클린 리스트 확보
-    const validYoutubeIds: string[] = [];
-    for (const id of YOUTUBE_IDS_POOL) {
-      const ok = await checkYoutubePlayable(id);
-      if (ok) validYoutubeIds.push(id);
-      await new Promise(r => setTimeout(r, 30)); 
+    if (confirmClear) {
+      console.log("🧹 기존 데이터 삭제 중...");
+      const { error: deleteError } = await supabase.from('posts').delete().neq('id', '_root_'); // 전체 삭제
+      if (deleteError) throw deleteError;
     }
+
+    console.log("🚀 [Seeder] 새로운 데이터 생성 시작...");
 
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
 
-    let globalIndex = 0;
-    let totalInserted = 0;
+    let globalCount = 0;
 
     for (const city of MAJOR_CITIES) {
-      console.log(`📍 ${city.name} 생성 중 (${city.density}개)...`);
+      console.log(`📍 ${city.name} 생성 중...`);
       
       const mockPoints = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
-      const cityBatch: any[] = [];
+      let cityBatch: any[] = [];
 
       for (let i = 0; i < mockPoints.length; i++) {
         const p = mockPoints[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
         
-        const isAd = i % 30 === 0;
+        // [중요] 절대 중복될 수 없는 고유 번호 생성
+        const uniqueSeed = Date.now() + globalCount; 
+        
+        const isAd = i % 35 === 0;
         const isYoutube = !isAd && i % 2 === 0;
 
         let finalImage = "";
         let finalYoutubeUrl = null;
 
         if (isAd) {
-          const foodId = FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length];
-          finalImage = getUnsplashUrl(foodId, globalIndex);
-        } else if (isYoutube && validYoutubeIds.length > 0) {
-          const ytId = validYoutubeIds[globalIndex % validYoutubeIds.length];
+          finalImage = `https://images.unsplash.com/featured/?food,restaurant&sig=${uniqueSeed}`;
+        } else if (isYoutube) {
+          const ytId = YOUTUBE_IDS_POOL[uniqueSeed % YOUTUBE_IDS_POOL.length];
           finalYoutubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
           finalImage = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
         } else {
-          const unsplashId = UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length];
-          finalImage = getUnsplashUrl(unsplashId, globalIndex);
+          // 일반 이미지는 getUnsplashUrl에서 picsum과unsplash를 섞어 반환
+          finalImage = getUnsplashUrl(uniqueSeed);
         }
 
         cityBatch.push({
-          content: isAd ? AD_COMMENTS[globalIndex % AD_COMMENTS.length] : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length],
-          location_name: `${city.name} 인근`,
+          content: isAd ? AD_COMMENTS[i % AD_COMMENTS.length] : REALISTIC_COMMENTS[uniqueSeed % REALISTIC_COMMENTS.length],
+          location_name: `${city.name} 어딘가`,
           latitude: p.lat,
           longitude: p.lng,
           image_url: finalImage,
@@ -85,44 +69,24 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: Math.floor(Math.random() * 5000),
-          created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
+          likes: Math.floor(Math.random() * 8000),
+          created_at: new Date(Date.now() - Math.random() * 72 * 3600000).toISOString()
         });
 
-        globalIndex++;
+        globalCount++;
 
         if (cityBatch.length >= 100) {
-          const { error } = await supabase.from('posts').insert([...cityBatch]);
-          if (error) throw error;
-          totalInserted += cityBatch.length;
-          cityBatch.length = 0;
+          await supabase.from('posts').insert([...cityBatch]);
+          cityBatch = [];
         }
       }
-
-      if (cityBatch.length > 0) {
-        await supabase.from('posts').insert(cityBatch);
-        totalInserted += cityBatch.length;
-      }
+      if (cityBatch.length > 0) await supabase.from('posts').insert(cityBatch);
     }
 
-    return totalInserted;
+    alert(`✨ 생성 완료! 총 ${globalCount}개의 데이터가 새로 등록되었습니다.`);
+    return globalCount;
   } catch (err) {
-    console.error("❌ 시딩 오류:", err);
-    throw err;
-  }
-};
-
-/**
- * 3. [에러 해결 포인트] 기존 좋아요 랜덤화 함수 (randomizeExistingLikes)
- */
-export const randomizeExistingLikes = async () => {
-  try {
-    // Supabase의 RPC 기능을 호출하여 DB 상의 모든 좋아요를 랜덤화합니다.
-    const { data, error } = await supabase.rpc('randomize_all_likes');
-    if (error) throw error;
-    return data || 0;
-  } catch (err) {
-    console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
-    throw err;
+    console.error(err);
+    alert("시딩 중 오류가 발생했습니다.");
   }
 };
