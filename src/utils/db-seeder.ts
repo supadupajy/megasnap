@@ -1,8 +1,14 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, FOOD_UNSPLASH_IDS, getUnsplashUrl } from "@/lib/mock-data";
-import { verifyYoutubeUrl } from "./youtube-utils";
+import {
+  createMockPosts,
+  FOOD_UNSPLASH_IDS,
+  getUnsplashUrl,
+  getVerifiedYoutubeUrlByIndex,
+  initializeYoutubePool,
+  UNSPLASH_IDS,
+} from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
 
 const MAJOR_CITIES = [
@@ -115,6 +121,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   console.log("🚀 [Seeder] 전역 데이터 생성 프로세스를 시작합니다...");
   
   try {
+    await initializeYoutubePool();
+
     console.log("👥 [Seeder] 사용자 프로필 목록을 가져오는 중...");
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
@@ -147,7 +155,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           finalImage = getUnsplashUrl(FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length]);
         } else {
           if (globalIndex % 2 === 0) {
-            const candidateUrl = YOUTUBE_LINKS[globalIndex % YOUTUBE_LINKS.length];
+            const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
             finalYoutubeUrl = candidateUrl;
             finalImage = getYoutubeThumbnail(candidateUrl) || getUnsplashUrl(UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length]);
           } else {

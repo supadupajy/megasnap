@@ -8,12 +8,13 @@ import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
-import { createMockPosts, YOUTUBE_LINKS, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
+import { createMockPosts, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, UNSPLASH_IDS, getUnsplashUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { getYoutubeThumbnail } from '@/lib/utils';
+import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 
 // 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
 const getTierFromId = (id: string) => {
@@ -52,6 +53,8 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      await initializeYoutubePool();
+
       // Supabase DB 전체에서 좋아요 순으로 정렬하여 가져옴
       const { data, error } = await supabase
         .from('posts')
@@ -65,7 +68,9 @@ const Popular = () => {
         setHasMore(false);
       }
 
-      const mappedPosts = (data || []).map(p => {
+      const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));
+
+      const mappedPosts = sanitizedData.map(p => {
         const borderType = getTierFromId(p.id);
         const isAd = p.content?.trim().startsWith('[AD]');
         
@@ -101,10 +106,9 @@ const Popular = () => {
         };
       }) as Post[];
 
-      // 50% 유튜브 영상 강제 할당 로직 (광고는 제외)
       const processedPosts = mappedPosts.map((p, idx) => {
         if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl && !p.isAd) {
-          const ytUrl = YOUTUBE_LINKS[Math.floor(Math.random() * YOUTUBE_LINKS.length)];
+          const ytUrl = getVerifiedYoutubeUrlByIndex(from + idx);
           return {
             ...p,
             youtubeUrl: ytUrl,

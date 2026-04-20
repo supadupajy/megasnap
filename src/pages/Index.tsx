@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 
 const Index = () => {
   const location = useLocation();
@@ -71,7 +72,8 @@ const Index = () => {
     return 'none';
   };
 
-  const mapDbToPost = (p: any): Post => {
+  const mapDbToPost = async (rawPost: any): Promise<Post> => {
+    const p = await sanitizeYoutubeMedia(rawPost);
     const isAd = p.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(p.id);
     return {
@@ -105,7 +107,7 @@ const Index = () => {
         .limit(20);
       
       if (!error && data) {
-        const mapped = data.map(mapDbToPost).map((p, idx) => ({ ...p, rank: idx + 1 }));
+        const mapped = (await Promise.all(data.map(mapDbToPost))).map((p, idx) => ({ ...p, rank: idx + 1 }));
         setGlobalTrendingPosts(mapped);
       }
     } catch (err) {
@@ -215,12 +217,12 @@ const Index = () => {
     } else {
       const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
       if (data) {
-        const mapped = data.map(mapDbToPost);
+        const mapped = await Promise.all(data.map(mapDbToPost));
         setAllPosts(mapped);
         mapCache.posts = mapped;
       }
     }
-    
+
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
   }, [fetchGlobalTrending, mapData]);

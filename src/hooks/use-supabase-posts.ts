@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 import { getYoutubeThumbnail } from "@/lib/utils";
+import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -16,7 +17,8 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-const mapDbToPost = (p: any): Post => {
+const mapDbToPost = async (rawPost: any): Promise<Post> => {
+  const p = await sanitizeYoutubeMedia(rawPost);
   const likes = Number(p.likes || 0);
   const isAd = p.content?.trim().startsWith('[AD]');
   const borderType = isAd ? 'none' : getTierFromId(p.id);
@@ -67,7 +69,7 @@ export const useSupabasePosts = (limit = 50) => {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []).map(mapDbToPost);
+      return Promise.all((data || []).map(mapDbToPost));
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -84,5 +86,5 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .limit(1000); // 300에서 1000으로 상향 조정
 
   if (error) throw error;
-  return (data || []).map(mapDbToPost);
+  return Promise.all((data || []).map(mapDbToPost));
 };

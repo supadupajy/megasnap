@@ -56,20 +56,34 @@ export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map(id => `https://www.youtube.com/s
 
 // 검증된 ID들을 저장할 변수 (초기값은 전체 리스트로 설정)
 let validYoutubeIds: string[] = [...YOUTUBE_IDS_50];
+let youtubePoolPromise: Promise<void> | null = null;
 
 // 앱 시작 시 또는 필요 시 호출하여 유효한 영상만 필터링
 export const initializeYoutubePool = async () => {
-  console.log("🚀 [YouTube] 영상 50종 정책 검증 시작...");
-  const checkResults = await Promise.all(
-    YOUTUBE_IDS_50.map(async (id) => ({ id, ok: await validateYoutubeVideo(id) }))
-  );
-  const filtered = checkResults.filter(r => r.ok).map(r => r.id);
-  if (filtered.length > 0) {
-    validYoutubeIds = filtered;
-    console.log(`✅ [YouTube] ${validYoutubeIds.length}개의 클린 영상 확보 완료!`);
-  } else {
-    console.warn("⚠️ [YouTube] 검증된 영상이 없습니다. 기본 리스트를 유지합니다.");
-  }
+  if (youtubePoolPromise) return youtubePoolPromise;
+
+  youtubePoolPromise = (async () => {
+    console.log("🚀 [YouTube] 영상 50종 정책 검증 시작...");
+    const checkResults = await Promise.all(
+      YOUTUBE_IDS_50.map(async (id) => ({ id, ok: await validateYoutubeVideo(id) }))
+    );
+    const filtered = checkResults.filter((result) => result.ok).map((result) => result.id);
+
+    if (filtered.length > 0) {
+      validYoutubeIds = filtered;
+      console.log(`✅ [YouTube] ${validYoutubeIds.length}개의 클린 영상 확보 완료!`);
+    } else {
+      console.warn("⚠️ [YouTube] 검증된 영상이 없습니다. 기본 리스트를 유지합니다.");
+    }
+  })();
+
+  return youtubePoolPromise;
+};
+
+export const getVerifiedYoutubeUrlByIndex = (index: number) => {
+  const pool = validYoutubeIds.length > 0 ? validYoutubeIds : YOUTUBE_IDS_50;
+  const safeIndex = Math.abs(index) % pool.length;
+  return `https://www.youtube.com/watch?v=${pool[safeIndex]}`;
 };
 
 // 고유한 Unsplash 이미지 ID 200개 이상 확보 (중복 제거 및 다양화)
