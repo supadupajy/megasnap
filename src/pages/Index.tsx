@@ -193,24 +193,28 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // ✅ 축소 레벨(7 이상)에서 영역 판정 로직 강화
+    // 지도를 축소하면 좌표 범위가 급격히 넓어지는데, 이때 부동소수점 오차나 
+    // 계산 방식 차이로 중심부 데이터가 누락되는 것을 방지하기 위해 버퍼를 더 넉넉히 잡음
+    const latSpan = ne.lat - sw.lat;
+    const lngSpan = ne.lng - sw.lng;
+    const bufferMultiplier = currentZoom >= 7 ? 0.2 : 0.1; // 축소 시 더 넓게 판정
+    
+    const latMargin = latSpan * bufferMultiplier;
+    const lngMargin = lngSpan * bufferMultiplier;
+    
     return allPosts.filter(post => {
-      // 위치 정보 필수
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
-      
-      // 차단 유저 제외
       if (blockedIds.has(post.user.id)) return false;
       
-      // 현재 지도 영역(Bounds) 내에 있는지 확인 (여유 범위 10% 추가하여 깜빡임 방지)
-      const latMargin = (ne.lat - sw.lat) * 0.1;
-      const lngMargin = (ne.lng - sw.lng) * 0.1;
+      // ✅ 명시적인 범위 판정
+      const isInLat = post.lat >= (sw.lat - latMargin) && post.lat <= (ne.lat + latMargin);
+      const isInLng = post.lng >= (sw.lng - lngMargin) && post.lng <= (ne.lng + lngMargin);
       
-      if (!(post.lat >= sw.lat - latMargin && post.lat <= ne.lat + latMargin && 
-            post.lng >= sw.lng - lngMargin && post.lng <= ne.lng + lngMargin)) return false;
+      if (!isInLat || !isInLng) return false;
       
-      // 시간 필터
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       
-      // 카테고리 필터
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matchesCategory = true;
