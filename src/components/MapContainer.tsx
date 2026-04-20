@@ -133,13 +133,16 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 외부에서 주입된 레벨 변경 감지 및 애니메이션 적용
+  // 외부에서 주입된 레벨 변경 감지
   useEffect(() => {
     if (isMapReady && mapInstance.current && externalLevel !== undefined) {
       const map = mapInstance.current;
+      // 현재 지도 레벨과 다를 때만 실행
       if (map.getLevel() !== externalLevel) {
-        // 애니메이션과 함께 레벨 변경
-        map.setLevel(externalLevel, { animate: true });
+        // 애니메이션 없이 즉시 변경하여 더 확실하게 적용되도록 함
+        map.setLevel(externalLevel);
+        // 로컬 상태도 즉시 업데이트하여 마커 크기 동기화
+        setCurrentLevel(externalLevel);
       }
     }
   }, [externalLevel, isMapReady]);

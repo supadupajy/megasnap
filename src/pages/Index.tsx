@@ -287,7 +287,9 @@ const Index = () => {
     // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
-      setCurrentZoom(10); // 지도를 10단계로 변경
+      
+      // 줌 레벨을 10으로 설정 (축소 뷰)
+      setCurrentZoom(10);
       
       // 가장 최근 포스팅이 있다면 해당 위치로 강조 이동
       if (routeState.post) {
