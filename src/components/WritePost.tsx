@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -241,12 +242,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   return (
     <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-[1px]"
-          onClick={onClose}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-[1px]"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent 
           className={cn(
