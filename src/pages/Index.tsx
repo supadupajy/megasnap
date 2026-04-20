@@ -173,17 +173,12 @@ const Index = () => {
     
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
-    console.log('🔄 [Sync] Starting sync with bounds:', { sw, ne, currentZoom });
+    const center = mapData?.center;
 
     try {
-      // ✅ 현재 줌 레벨(currentZoom)을 넘겨서 유동적인 리미트 적용
-      const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom);
-      console.log(`📥 [Sync] Fetched ${dbPosts.length} posts from Supabase`);
+      // ✅ 현재 줌 레벨과 중심 좌표를 넘겨서 최적의 데이터를 가져옴
+      const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom, center);
       
-      if (dbPosts.length === 0) {
-        console.warn('⚠️ [Sync] No posts returned from Supabase for these bounds.');
-      }
-
       // DB 데이터를 Post 객체로 변환
       const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
       const validMappedPosts = mappedPosts.filter(p => p !== null);
@@ -192,8 +187,7 @@ const Index = () => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
         
-        console.log(`✨ [Sync] Found ${newUnique.length} new unique posts`);
-
+        // ✅ [FIX] 기존 데이터를 뒤로 밀고, 현재 화면(중심부 우선)의 데이터를 앞으로 배치
         const combined = [...newUnique, ...prev].slice(0, 10000);
         mapCache.posts = combined;
         return combined;

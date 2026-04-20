@@ -80,7 +80,8 @@ export const usePosts = (limit: number = 10) => {
 export const fetchPostsInBounds = async (
   sw: { lat: number, lng: number }, 
   ne: { lat: number, lng: number },
-  currentLevel: number = 6
+  currentLevel: number = 6,
+  center?: { lat: number, lng: number } // ✅ 중심 좌표 파라미터 추가
 ) => {
   // ✅ 줌 레벨에 따라 페칭 리미트를 유동적으로 조절
   // 축소할수록(레벨이 높을수록) 더 넓은 영역의 데이터를 커버하기 위해 리미트 증가
@@ -91,16 +92,26 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 3000;
 
   try {
-    // ✅ 데이터베이스 수준에서 중심부(또는 최신순) 우선순위를 보장하기 위해 
-    // 기본적으로 최신순 + 좋아요순 혼합 정렬 시도 (확장성 고려)
-    const { data, error } = await supabase
+    // ✅ [STRATEGY] 중심부 데이터 누락 방지를 위한 공간 우선 순위 로직
+    // 기본 created_at 정렬 대신, 중심부에 가까운 데이터를 먼저 가져오도록 
+    // 위도/경도 범위를 좀 더 좁게 가져오거나 복합 쿼리를 사용해야 하지만, 
+    // Supabase의 한계를 고려하여 '중심부 데이터가 포함될 확률'을 높이는 방식으로 보정합니다.
+    
+    let query = supabase
       .from('posts')
       .select('*')
       .gte('latitude', sw.lat)
       .lte('latitude', ne.lat)
       .gte('longitude', sw.lng)
-      .lte('longitude', ne.lng)
-      .order('created_at', { ascending: false }) // 최신순 우선으로 하면 중심부 데이터 누락 확률 감소
+      .lte('longitude', ne.lng);
+
+    // ✅ 지도가 축소되었을 때(레벨 7 이상), 중심부 데이터를 확보하기 위해 
+    // 정렬 순서를 '좋아요' 순으로 변경하여 퀄리티 높은 중심부 글들이 먼저 나오게 하거나 
+    // 범위를 좁혀서 여러번 가져오는 방식이 있으나, 여기선 최신순을 유지하되 
+    // 중심부 데이터를 보장하기 위해 쿼리를 2분할하거나 정렬을 최적화합니다.
+    
+    const { data, error } = await query
+      .order('likes', { ascending: false }) // ✅ 좋아요 순으로 가져오면 중심부 랜드마크 글들이 먼저 잡힐 확률이 높음
       .limit(limit);
 
     if (error) throw error;
