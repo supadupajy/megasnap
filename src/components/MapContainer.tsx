@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { Loader2 } from 'lucide-react';
+import { mapCache } from '@/utils/map-cache';
 
 interface MapContainerProps {
   posts: any[];
@@ -12,7 +14,6 @@ interface MapContainerProps {
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
   level?: number; 
-  selectionLocation?: { lat: number; lng: number } | null;
   searchResultLocation?: { lat: number; lng: number } | null;
 }
 
@@ -31,13 +32,32 @@ const MapContainer = ({
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLevel, setCurrentLevel] = useState<number>(level || mapCache.lastZoom || 6);
+  
+  const overlaysRef = useRef<Map<string, any>>(new Map());
+  const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
+  const searchOverlayRef = useRef<any>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const isDragging = useRef(false);
+  const isProgrammaticMove = useRef(false);
+  const lastDragEnd = useRef(0);
+
+  const { user: authUser } = useAuth();
+
+  // 리스너가 최신 props를 참조할 수 있도록 함
+  const onMapChangeRef = useRef(onMapChange);
+  const onMarkerClickRef = useRef(onMarkerClick);
+  const onMapClickRef = useRef(onMapClick);
+
+  useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
+  useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
   // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 강력한 차단
   useEffect(() => {
     const preventSelectionError = (e: Event) => {
-      // 지도 영역 내에서의 모든 드래그/선택 시도 시 기존 선택 범위를 초기화
       if (window.getSelection) {
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -50,7 +70,6 @@ const MapContainer = ({
     if (container) {
       container.addEventListener('selectstart', preventSelectionError);
       container.addEventListener('dragstart', preventSelectionError);
-      // 일부 확장 프로그램이 참조하는 selectionchange 이벤트에 대응
       document.addEventListener('selectionchange', preventSelectionError);
     }
 
@@ -68,13 +87,15 @@ const MapContainer = ({
       const kakao = (window as any).kakao;
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
 
+      const initialCenter = center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
+      const initialLevel = level || mapCache.lastZoom || 6;
+
       const options = {
-        center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-        level: level || 6
+        center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
+        level: initialLevel
       };
 
       const map = new kakao.maps.Map(containerRef.current!, options);
-      // ✅ setMaxLevel을 14로 올려서 10단계 축소가 가능하도록 수정
       map.setMaxLevel(14);
       mapInstance.current = map;
 
@@ -85,16 +106,16 @@ const MapContainer = ({
           const currentCenter = map.getCenter();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
-          const level = map.getLevel();
+          const currentLevel = map.getLevel();
           
-          setCurrentLevel(level);
+          setCurrentLevel(currentLevel);
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
               ne: { lat: ne.getLat(), lng: ne.getLng() } 
             },
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: level
+            level: currentLevel
           });
         } catch (e) {
           console.error('Map update error:', e);
@@ -103,6 +124,7 @@ const MapContainer = ({
 
       updateMapData();
       setIsMapReady(true);
+      setIsLoading(false);
 
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
       kakao.maps.event.addListener(map, 'dragstart', () => { 
@@ -130,29 +152,27 @@ const MapContainer = ({
       console.error('Kakao Map Init Error:', e);
       return false;
     }
-  }, []);
+  }, [center, level]);
 
-  const timer = setInterval(() => { 
-    try {
-      if (initMap()) clearInterval(timer); 
-    } catch (e) {
-      console.error('Map init interval error:', e);
-    }
-  }, 100);
-  return () => clearInterval(timer);
-  }, []);
+  useEffect(() => {
+    const timer = setInterval(() => { 
+      try {
+        if (initMap()) clearInterval(timer); 
+      } catch (e) {
+        console.error('Map init interval error:', e);
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [initMap]);
 
-  // ✅ 외부 레벨 변경 감지 - 딜레이로 지도 초기화 완료 보장
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
-
     const timer = setTimeout(() => {
       const map = mapInstance.current;
       if (!map) return;
       map.setLevel(level, { animate: false });
       setCurrentLevel(level);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [level, isMapReady]);
 
@@ -176,7 +196,6 @@ const MapContainer = ({
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
       const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
       const currentLat = startLat + (targetLat - startLat) * ease;
@@ -258,7 +277,6 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    
     const displayImage = post.image;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
@@ -289,34 +307,21 @@ const MapContainer = ({
 
   const removeOverlayWithAnimation = (id: string, overlay: any) => {
     if (removalTimeoutsRef.current.has(id)) return;
-
     const content = overlay.getContent();
     if (!(content instanceof HTMLElement)) {
       overlay.setMap(null);
       overlaysRef.current.delete(id);
       return;
     }
-
     content.classList.remove('animate-marker-appear');
     content.classList.add('animate-marker-disappear');
-
     const timeoutId = window.setTimeout(() => {
       overlay.setMap(null);
-      if (overlaysRef.current.get(id) === overlay) {
-        overlaysRef.current.delete(id);
-      }
+      if (overlaysRef.current.get(id) === overlay) overlaysRef.current.delete(id);
       removalTimeoutsRef.current.delete(id);
     }, 260);
-
     removalTimeoutsRef.current.set(id, timeoutId);
   };
-
-  useEffect(() => {
-    return () => {
-      removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-      removalTimeoutsRef.current.clear();
-    };
-  }, []);
 
   useEffect(() => {
     const kakao = (window as any).kakao;
@@ -329,9 +334,7 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) {
-        removeOverlayWithAnimation(id, overlay);
-      }
+      if (!currentPostIds.has(id)) removeOverlayWithAnimation(id, overlay);
     });
 
     posts.forEach(post => {
@@ -339,7 +342,6 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-      
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = 1;
@@ -383,17 +385,6 @@ const MapContainer = ({
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
-  // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 핸들러
-  const preventSelection = (e: React.UIEvent) => {
-    // 입력 요소가 아닐 경우에만 기본 동작(선택) 방지
-    if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
-      // 이벤트 전파는 허용하되 브라우저의 기본 선택 동작만 막음
-      if (e.cancelable) {
-        // e.preventDefault(); // 지도 자체의 드래그를 막을 수 있으므로 주의 필요
-      }
-    }
-  };
-
   return (
     <div 
       ref={containerRef} 
@@ -407,8 +398,11 @@ const MapContainer = ({
       }}
     >
       {isLoading && (
-        <div className="w-full h-full" style={{ pointerEvents: 'auto' }} />
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        </div>
       )}
+      <div id="kakao-map" className="w-full h-full select-none" />
     </div>
   );
 };
