@@ -377,18 +377,6 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
-    const actualLevel = mapInstance.current?.getLevel() ?? currentLevel;
-
-    if (actualLevel >= 7) {
-      if (overlaysRef.current.size > 0) {
-        removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-        removalTimeoutsRef.current.clear();
-        overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-        overlaysRef.current.clear();
-      }
-      return;
-    }
-
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
@@ -402,22 +390,26 @@ const MapContainer = ({
 
     posts.forEach(post => {
       if (!post) return;
-      if (actualLevel >= 7) return;
-
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-
+      
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      let scale = 1;
-      if (actualLevel === 7) scale = 0.6;
-      else if (actualLevel === 8) scale = 0.4;
-      else if (actualLevel === 9) scale = 0.25;
-      else if (actualLevel === 10) scale = 0.18;
-      else if (actualLevel === 11) scale = 0.12;
+      // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
+      // 6단계 이하: 1.0 (100%)
+      // 7단계: 0.8 (6단계의 80%)
+      // 8단계: 0.64 (7단계의 80%)
+      // 9단계 이후: 단계별 0.8배씩 축소
+      let scale = 1.0;
+      if (currentLevel > 6) {
+        scale = Math.pow(0.8, currentLevel - 6);
+      }
+      
+      // 최소 스케일 제한 (너무 작아지지 않게)
+      scale = Math.max(scale, 0.15);
 
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${actualLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');

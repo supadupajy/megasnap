@@ -235,11 +235,6 @@ const Index = () => {
     if (!mapData?.bounds) {
       return;
     }
-    
-    if (currentZoom >= 7) { 
-      if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
-      return; 
-    }
 
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
@@ -284,7 +279,7 @@ const Index = () => {
       console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts`);
       return uniquePosts;
     });
-  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
