@@ -398,16 +398,16 @@ const MapContainer = ({
       
       // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
       // 6단계 이하: 1.0 (100%)
-      // 7단계: 0.8 (6단계의 80%)
-      // 8단계: 0.64 (7단계의 80%)
-      // 9단계 이후: 단계별 0.8배씩 축소
+      // 7단계: 0.5 (6단계의 50%)
+      // 8단계: 0.25 (7단계의 50%)
+      // 9단계: 0.125 (8단계의 50%)
       let scale = 1.0;
       if (currentLevel > 6) {
-        scale = Math.pow(0.8, currentLevel - 6);
+        scale = Math.pow(0.5, currentLevel - 6);
       }
       
       // 최소 스케일 제한 (너무 작아지지 않게)
-      scale = Math.max(scale, 0.15);
+      scale = Math.max(scale, 0.05);
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
