@@ -481,8 +481,9 @@ const MapContainer = ({
         msUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',
-        WebkitUserDrag: 'none'
+        ...({ WebkitUserDrag: 'none' } as any)
       }}
+
       onContextMenu={(e) => e.preventDefault()}
     >
       {isLoading && (
