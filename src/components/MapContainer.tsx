@@ -387,9 +387,9 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 지도 이동 중(줌/드래그)일 때는 렌더링 업데이트를 건너뛰어 깜빡임 방지
-    if (isMapMoving) return;
-
+    // ✅ 지도 이동 중에도 렌더링을 완전히 막지 않고, 
+    // 이동이 멈췄을 때 즉시 갱신되도록 로직 수정 (isMapMoving 조건 제거 또는 완화)
+    
     if (currentLevel >= 7) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
@@ -436,7 +436,11 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
+          // ✅ 맵 레벨이 바뀌어 돌아왔을 때 스케일이 0이거나 투명해진 경우를 대비해 스타일 강제 복구
           content.style.setProperty('--marker-scale', scale.toString());
+          content.style.opacity = "1";
+          content.style.visibility = "visible";
+          
           if (isHighlighted) content.classList.add('highlighted'); else content.classList.remove('highlighted');
           if (content.getAttribute('data-content-state') !== contentStateKey) {
             requestAnimationFrame(() => { 
