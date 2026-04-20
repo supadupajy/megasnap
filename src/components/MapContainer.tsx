@@ -141,6 +141,7 @@ const MapContainer = ({
       };
 
       const map = new kakao.maps.Map(containerRef.current!, options);
+      console.log('🗺️ [initMap] target:', containerRef.current?.id, containerRef.current?.className);
       map.setMaxLevel(14);
       mapInstance.current = map;
 
