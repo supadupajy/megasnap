@@ -182,7 +182,14 @@ const Index = () => {
 
   useEffect(() => {
     if (!mapData?.bounds) return;
-    if (currentZoom >= 11) { setDisplayedMarkers([]); return; }
+    
+    // ✅ 축소 단계 제한을 12단계로 더 완화 (이전 11단계)
+    // 12단계 이상(매우 넓은 영역)일 때만 마커를 숨깁니다.
+    if (currentZoom >= 12) { 
+      setDisplayedMarkers([]); 
+      return; 
+    }
+
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
@@ -192,10 +199,25 @@ const Index = () => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       
       if (blockedIds.has(post.user.id)) return false;
-      if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
+
+      // ✅ 영역 판정 시 마커가 잘리지 않도록 마진(padding)을 추가 (약 10% 정도 더 넓게)
+      const latMargin = (ne.lat - sw.lat) * 0.1;
+      const lngMargin = (ne.lng - sw.lng) * 0.1;
+      
+      const isInExtendedBounds = 
+        post.lat >= sw.lat - latMargin && 
+        post.lat <= ne.lat + latMargin && 
+        post.lng >= sw.lng - lngMargin && 
+        post.lng <= ne.lng + lngMargin;
+
+      if (!isInExtendedBounds) return false;
       
       if (post.isAd) return true;
-      if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
+      
+      // ✅ 시간 필터: 100시간(Max)일 때는 모든 포스팅 표시
+      if (timeValue < 100) {
+        if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
+      }
       
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
@@ -346,7 +368,7 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 11) setIsPostListOpen(true); };
+  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 12) setIsPostListOpen(true); };
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
@@ -407,21 +429,21 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 11 && (
+                  {displayedMarkers.length > 0 && currentZoom < 12 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
                   <button
                     onClick={handleViewAllClick}
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 11}
+                    disabled={displayedMarkers.length === 0 || currentZoom >= 12}
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 11 && "opacity-50 grayscale cursor-not-allowed"
+                      currentZoom >= 12 && "opacity-50 grayscale cursor-not-allowed"
                     )}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {displayedMarkers.length > 0 && currentZoom < 11 && (
+                  {displayedMarkers.length > 0 && currentZoom < 12 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>

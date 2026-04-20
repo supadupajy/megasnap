@@ -149,16 +149,16 @@ const MapContainer = ({
           const currentCenter = map.getCenter();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
-          const currentLevel = map.getLevel();
+          const mapLevel = map.getLevel();
           
-          setCurrentLevel(currentLevel);
+          setCurrentLevel(mapLevel);
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
               ne: { lat: ne.getLat(), lng: ne.getLng() } 
             },
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: currentLevel
+            level: mapLevel
           });
         } catch (e) {
           console.error('Map update error:', e);
@@ -170,6 +170,7 @@ const MapContainer = ({
       setIsLoading(false);
 
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
+      kakao.maps.event.addListener(map, 'zoom_changed', updateMapData); // ✅ 추가: 줌 변경 시에도 데이터 업데이트 강제
       kakao.maps.event.addListener(map, 'dragstart', () => { 
         isDragging.current = true; 
         if (animationFrameRef.current) {
@@ -262,13 +263,14 @@ const MapContainer = ({
         animationFrameRef.current = null;
         try {
           const bounds = map.getBounds();
+          const currentLevel = map.getLevel(); // ✅ currentLevel 변수 충돌 방지 위해 mapLevel 대신 명시적으로 가져옴
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
               ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
             },
             center: { lat: targetLat, lng: targetLng },
-            level: map.getLevel()
+            level: currentLevel
           });
         } catch (e) {}
       }
@@ -375,7 +377,8 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    if (currentLevel >= 11) {
+    // ✅ 축소 제한 단계를 12단계로 완화 (Index.tsx와 일치)
+    if (currentLevel >= 12) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
     }
@@ -396,7 +399,8 @@ const MapContainer = ({
       if (currentLevel === 7) scale = 0.6;
       else if (currentLevel === 8) scale = 0.4;
       else if (currentLevel === 9) scale = 0.25;
-      else if (currentLevel === 10) scale = 0.15;
+      else if (currentLevel === 10) scale = 0.18; // ✅ 약간 더 크게 조정
+      else if (currentLevel === 11) scale = 0.12; // ✅ 11단계 스케일 추가
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
