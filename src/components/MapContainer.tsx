@@ -532,8 +532,7 @@ const MapContainer = ({
       )}
       
       <div
-            ref={containerRef} 
-
+      ref={containerRef} 
       id="kakao-map" className="w-full h-full select-none" />
     </div>
   );
