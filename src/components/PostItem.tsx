@@ -269,17 +269,19 @@ const PostItem = ({
     );
   };
 
-  const getStaticCardBorderClass = () => {
-    if (isMine) return 'absolute inset-0 rounded-[28px] border-4 border-indigo-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(79,70,229,0.16)] pointer-events-none z-20';
-    if (isAd) return 'absolute inset-0 rounded-[28px] border-4 border-blue-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(59,130,246,0.16)] pointer-events-none z-20';
-    if (borderType === 'popular') return 'absolute inset-0 rounded-[28px] border-4 border-red-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(239,68,68,0.16)] pointer-events-none z-20';
-    if (borderType === 'diamond') return 'absolute inset-0 rounded-[28px] border-4 border-cyan-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_18px_rgba(34,211,238,0.18)] pointer-events-none z-20';
-    if (borderType === 'gold') return 'absolute inset-0 rounded-[28px] border-4 border-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(251,191,36,0.18)] pointer-events-none z-20';
-    if (borderType === 'silver') return 'absolute inset-0 rounded-[28px] border-4 border-slate-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_12px_rgba(148,163,184,0.16)] pointer-events-none z-20';
+  const getMediaBorderContainerClass = () => {
+    if (isMine) return 'my-post-border-container';
+    if (isAd) return 'ad-border-container';
+    if (borderType === 'popular') return 'popular-border-container';
+    if (borderType === 'diamond') return 'diamond-border-container';
+    if (borderType === 'gold') return 'gold-border-container';
+    if (borderType === 'silver') return 'silver-border-container';
     return '';
   };
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+  const mediaBorderContainerClass = getMediaBorderContainerClass();
+  const hasMediaBorder = mediaBorderContainerClass !== '';
 
   return (
     <div
@@ -290,8 +292,6 @@ const PostItem = ({
         (borderType !== 'none' && !disablePulse) && "animate-influencer-float"
       )}
     >
-      {getStaticCardBorderClass() && <div className={getStaticCardBorderClass()} />}
-
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} /></div>
@@ -304,8 +304,8 @@ const PostItem = ({
       </div>
 
       <div className="px-4">
-        <div className="relative aspect-square w-full rounded-2xl">
-          <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
+        <div className={cn("relative aspect-square w-full rounded-2xl", mediaBorderContainerClass)}>
+          <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
             {isPlayingVideo ? (
               youtubeId ? (
                 <div className="relative w-full h-full">

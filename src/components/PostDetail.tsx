@@ -198,17 +198,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return (<div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}><Icon className="w-3.5 h-3.5" /> <span className="text-[10px] font-black">{label}</span></div>);
   };
 
-  const getStaticDetailCardClass = () => {
-    if (isMine) return 'absolute inset-0 rounded-[40px] border-4 border-indigo-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(79,70,229,0.18)] pointer-events-none';
-    if (isAd) return 'absolute inset-0 rounded-[40px] border-4 border-blue-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(59,130,246,0.18)] pointer-events-none';
-    if (post.borderType === 'popular') return 'absolute inset-0 rounded-[40px] border-4 border-red-500 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(239,68,68,0.18)] pointer-events-none';
-    if (post.borderType === 'diamond') return 'absolute inset-0 rounded-[40px] border-4 border-cyan-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_18px_rgba(34,211,238,0.2)] pointer-events-none';
-    if (post.borderType === 'gold') return 'absolute inset-0 rounded-[40px] border-4 border-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_15px_rgba(251,191,36,0.2)] pointer-events-none';
-    if (post.borderType === 'silver') return 'absolute inset-0 rounded-[40px] border-4 border-slate-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35),0_0_12px_rgba(148,163,184,0.18)] pointer-events-none';
+  const getMediaBorderContainerClass = () => {
+    if (isMine) return 'my-post-border-container';
+    if (isAd) return 'ad-border-container';
+    if (post.borderType === 'popular') return 'popular-border-container';
+    if (post.borderType === 'diamond') return 'diamond-border-container';
+    if (post.borderType === 'gold') return 'gold-border-container';
+    if (post.borderType === 'silver') return 'silver-border-container';
     return '';
   };
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+  const mediaBorderContainerClass = getMediaBorderContainerClass();
+  const hasMediaBorder = mediaBorderContainerClass !== '';
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
@@ -217,8 +219,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
         <div className="w-full max-w-[420px] h-[82vh] relative pointer-events-auto">
           <div className="w-full h-full flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-            {getStaticDetailCardClass() && <div className={cn(getStaticDetailCardClass(), "z-20")} />}
-
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
@@ -234,8 +234,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     <DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="text-gray-400 p-1 outline-none"><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
                   </div>
                   <div className="px-4">
-                    <div ref={videoContainerRef} className="relative aspect-square w-full rounded-2xl">
-                      <div className="w-full h-full rounded-[14px] overflow-hidden bg-white relative z-10">
+                    <div ref={videoContainerRef} className={cn("relative aspect-square w-full rounded-2xl", mediaBorderContainerClass)}>
+                      <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
                         {isPlayingVideo ? (
                           youtubeId ? (
                             <div className="relative w-full h-full">
