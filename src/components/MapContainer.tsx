@@ -380,9 +380,10 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 레벨이 변경될 때만 Hard Reset을 수행하되, 
-    // currentLevel 상태 업데이트와 마커 삭제를 분리하여 엔진 안정성 확보
+    // ✅ 레벨 변경 시 마커 증발을 막기 위해 Hard Reset을 수행하되, 
+    // 즉시 정리를 마친 후 다음 틱에서 바로 그릴 수 있도록 보장
     if (level !== undefined && currentLevel !== level) {
+      console.log(`[MapContainer] Zoom Level Changed: ${currentLevel} -> ${level}. Resetting markers...`);
       overlaysRef.current.forEach((overlay) => {
         if (overlay) overlay.setMap(null);
       });
@@ -391,7 +392,17 @@ const MapContainer = ({
       removalTimeoutsRef.current.clear();
       
       setCurrentLevel(level);
+      // 레벨이 바뀌는 틱에서는 삭제만 하고 다음 틱에서 그리도록 종료
       return; 
+    }
+
+    // 마커 데이터가 아예 없으면 정리만 수행
+    if (posts.length === 0) {
+      overlaysRef.current.forEach((overlay, id) => {
+        overlay.setMap(null);
+      });
+      overlaysRef.current.clear();
+      return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));

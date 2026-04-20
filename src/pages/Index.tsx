@@ -195,15 +195,15 @@ const Index = () => {
   }, [mapData, syncPostsWithSupabase]);
 
   const inBoundsMarkers = useMemo(() => {
+    // mapData가 없으면 빈 배열 반환
     if (!mapData?.bounds) return [];
     
-    // ✅ 축소 레벨 제한을 아예 제거하여 모든 레벨에서 마커 렌더링 시도
-    // currentZoom >= 13 체크를 제거
-
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // ✅ 모든 레벨에서 필터링을 최소화하여 "증발" 현상 방지
+    // 위경도 값이 뒤집혀서 들어올 수 있으므로 정규화
     const latMin = Math.min(sw.lat, ne.lat);
     const latMax = Math.max(sw.lat, ne.lat);
     const lngMin = Math.min(sw.lng, ne.lng);
@@ -212,35 +212,49 @@ const Index = () => {
     const latSpan = latMax - latMin;
     const lngSpan = lngMax - lngMin;
     
-    // ✅ 마진을 200%로 늘려서 화면 밖에서도 미리 렌더링되게 함
-    const latMargin = latSpan * 2.0;
-    const lngMargin = lngSpan * 2.0;
+    // ✅ 극단적으로 넓은 마진(300%)을 적용하여 화면상의 모든 데이터 유실 방지
+    const latMargin = latSpan * 3.0;
+    const lngMargin = lngSpan * 3.0;
     
     const filtered = allPosts.filter(post => {
+      // 1. 유효 좌표 확인
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
+      
+      // 2. 차단 유저 제외
       if (blockedIds.has(post.user.id)) return false;
       
-      // ✅ 필터링 조건을 극도로 완화
+      // 3. 시간 필터 (광고 제외)
+      if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) {
+        // 시간 설정이 '전체'일 경우(예: 8760시간 이상) 예외 처리
+        if (timeValue < 8000) return false;
+      }
+      
+      // 4. 영역 체크 (극도로 넉넉한 범위)
       if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
           post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
       
-      if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
-      
+      // 5. 카테고리 필터
       let matchesCategory = false;
-      if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
-      else if (selectedCategories.includes('all')) matchesCategory = true;
-      else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      if (selectedCategories.includes('mine')) {
+        matchesCategory = authUser && post.user.id === authUser.id;
+      } else if (selectedCategories.includes('all')) {
+        matchesCategory = true;
+      } else {
+        matchesCategory = selectedCategories.includes(post.category || 'none') || 
+                          (selectedCategories.includes('hot') && post.borderType === 'popular') || 
+                          (selectedCategories.includes('influencer') && post.isInfluencer);
+      }
       
       return matchesCategory;
     });
 
-    // 정렬 후 상위 1000개 반환
+    // 최신순 정렬 후 상위 1000개만 마커로 표시
     return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
   }, [allPosts, mapData?.bounds, timeValue, selectedCategories, blockedIds, authUser]);
 
-  // ✅ 마커 업데이트를 위한 별도 Effect 분리
   useEffect(() => {
-    // 줌 레벨이나 데이터가 바뀌면 즉시 마커 상태 업데이트
+    // displayedMarkers 상태가 바뀔 때마다 로그를 찍어 실제 데이터 확인
+    console.log(`[Markers] Count: ${inBoundsMarkers.length}, Zoom: ${currentZoom}`);
     setDisplayedMarkers([...inBoundsMarkers]);
   }, [inBoundsMarkers, currentZoom]);
 
