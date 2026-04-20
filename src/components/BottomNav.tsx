@@ -6,22 +6,23 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useKeyboard } from '@/hooks/use-keyboard';
 
-interface BottomNavProps {
-  onWriteClick: () => void;
-}
-
-const BottomNav = ({ onWriteClick }: BottomNavProps) => {
+const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isKeyboardOpen } = useKeyboard();
 
   const isActive = (path: string) => location.pathname === path;
 
-  // 키보드가 올라왔을 때는 하단 메뉴를 숨겨서 화면을 가리지 않게 함
+  const handleWriteClick = () => {
+    // 전역 이벤트를 발생시켜 현재 활성화된 페이지의 WritePost를 엽니다.
+    window.dispatchEvent(new CustomEvent('open-write-post'));
+  };
+
+  // 키보드가 올라왔을 때는 하단 메뉴를 숨김
   if (isKeyboardOpen) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[100] pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[100] pb-8">
       {/* 첫 번째 메뉴: 지도 */}
       <button 
         onClick={() => navigate('/')}
@@ -50,7 +51,7 @@ const BottomNav = ({ onWriteClick }: BottomNavProps) => {
       <div className="relative flex flex-col items-center w-full">
         <div className="absolute -top-12">
           <button 
-            onClick={onWriteClick}
+            onClick={handleWriteClick}
             className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[0_10px_20px_rgba(79,70,229,0.25)] active:scale-90 active:rotate-90 transition-all duration-300"
           >
             <Plus className="w-7 h-7 stroke-[3px]" />

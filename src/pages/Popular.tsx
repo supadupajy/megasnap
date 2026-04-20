@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import PostItem from '@/components/PostItem';
 import WritePost from '@/components/WritePost';
 import StoryBar from '@/components/StoryBar';
@@ -16,12 +15,10 @@ import { useAuth } from '@/components/AuthProvider';
 import { getYoutubeThumbnail } from '@/lib/utils';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 
-// 포스팅 ID를 기반으로 고유한 확률적 등급을 반환하는 헬퍼
 const getTierFromId = (id: string) => {
   let h = 0;
   for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
   const val = Math.abs(h % 1000) / 1000;
-  
   if (val < 0.01) return 'diamond';
   if (val < 0.03) return 'gold';
   if (val < 0.07) return 'silver';
@@ -44,6 +41,12 @@ const Popular = () => {
   
   const hasLoaded = useRef(false);
 
+  useEffect(() => {
+    const handleOpenWrite = () => setIsWriteOpen(true);
+    window.addEventListener('open-write-post', handleOpenWrite);
+    return () => window.removeEventListener('open-write-post', handleOpenWrite);
+  }, []);
+
   const filteredPosts = useMemo(() => {
     return posts.filter(p => !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
@@ -52,129 +55,57 @@ const Popular = () => {
     try {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-
       await initializeYoutubePool();
-
-      // Supabase DB 전체에서 좋아요 순으로 정렬하여 가져옴
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('likes', { ascending: false })
-        .range(from, to);
-
+      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).range(from, to);
       if (error) throw error;
-
-      if (!data || data.length < PAGE_SIZE) {
-        setHasMore(false);
-      }
-
+      if (!data || data.length < PAGE_SIZE) setHasMore(false);
       const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));
-
       const mappedPosts = sanitizedData.map(p => {
         const borderType = getTierFromId(p.id);
         const isAd = p.content?.trim().startsWith('[AD]');
-        
-        let finalImage = p.youtube_url
-          ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-          : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
-
-        if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
-          finalImage = getDiverseUnsplashUrl(p.id, 'general');
-        }
-
+        let finalImage = p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+        if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) finalImage = getDiverseUnsplashUrl(p.id, 'general');
         return {
-          id: p.id,
-          isAd: isAd,
-          isGif: false,
-          isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-          user: {
-            id: p.user_id,
-            name: p.user_name,
-            avatar: p.user_avatar
-          },
-          content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-          location: p.location_name,
-          lat: p.latitude,
-          lng: p.longitude,
-          likes: Number(p.likes || 0),
-          commentsCount: 0,
-          comments: [],
-          image: finalImage,
-          youtubeUrl: p.youtube_url,
-          videoUrl: p.video_url,
-          isLiked: false,
-          createdAt: new Date(p.created_at),
-          borderType: borderType
+          id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+          content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
+          likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+          isLiked: false, createdAt: new Date(p.created_at), borderType
         };
       }) as Post[];
-
-      const processedPosts = mappedPosts.map((p, idx) => {
-        if (idx % 2 === 0 && !p.youtubeUrl && !p.videoUrl && !p.isAd) {
-          const ytUrl = getVerifiedYoutubeUrlByIndex(from + idx);
-          return {
-            ...p,
-            youtubeUrl: ytUrl,
-            image: getYoutubeThumbnail(ytUrl) || p.image
-          };
-        }
-        return p;
-      });
-
-      return processedPosts;
-    } catch (err) {
-      console.error('[Popular] Fetch Error:', err);
-      return [];
-    }
+      return mappedPosts;
+    } catch (err) { return []; }
   }, []);
 
   const loadInitialData = useCallback(async () => {
     if (hasLoaded.current) return;
     setIsInitialLoading(true);
-    
     const initialPosts = await fetchPopularPosts(0);
     setPosts(initialPosts);
-    
     hasLoaded.current = true;
     setIsInitialLoading(false);
   }, [fetchPopularPosts]);
 
   useEffect(() => {
     if (!authLoading) {
-      if (authUser) {
-        loadInitialData();
-      } else {
-        navigate('/login', { replace: true });
-      }
+      if (authUser) loadInitialData();
+      else navigate('/login', { replace: true });
     }
   }, [authLoading, authUser, loadInitialData, navigate]);
 
   const loadMorePosts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
-
     const nextPage = page + 1;
     const newPosts = await fetchPopularPosts(nextPage);
-    
-    if (newPosts.length > 0) {
-      setPosts(prev => [...prev, ...newPosts]);
-      setPage(nextPage);
-    } else {
-      setHasMore(false);
-    }
-    
+    if (newPosts.length > 0) { setPosts(prev => [...prev, ...newPosts]); setPage(nextPage); }
+    else setHasMore(false);
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMore, page, fetchPopularPosts]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && posts.length > 0 && hasMore) {
-          loadMorePosts();
-        }
-      },
-      { threshold: 0.1 }
-    );
+    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting && posts.length > 0 && hasMore) loadMorePosts(); }, { threshold: 0.1 });
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [loadMorePosts, posts.length, hasMore]);
@@ -192,77 +123,30 @@ const Popular = () => {
     navigate('/', { state: { center: { lat, lng }, post } });
   }, [navigate, posts]);
 
-  const handlePostDelete = useCallback((postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
-  }, []);
+  const handlePostDelete = useCallback((postId: string) => { setPosts(prev => prev.filter(p => p.id !== postId)); }, []);
 
   if (authLoading || (isInitialLoading && posts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-          <p className="text-xs font-bold text-gray-400">인기 포스팅을 불러오는 중...</p>
-        </div>
+        <div className="flex flex-col items-center gap-4"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /><p className="text-xs font-bold text-gray-400">인기 포스팅을 불러오는 중...</p></div>
       </div>
     );
   }
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <Header />
       <div className="pt-[88px]">
         <StoryBar />
         <div className="flex flex-col">
           {filteredPosts.map((post) => (
-            <PostItem
-              key={post.id}
-              id={post.id}
-              user={post.user}
-              content={post.content}
-              location={post.location}
-              likes={post.likes}
-              commentsCount={post.commentsCount}
-              comments={post.comments}
-              image={post.image}
-              images={post.images}
-              adImageIndex={post.adImageIndex}
-              lat={post.lat}
-              lng={post.lng}
-              isLiked={post.isLiked}
-              isAd={post.isAd}
-              isGif={post.isGif}
-              isInfluencer={post.isInfluencer}
-              category={post.category}
-              borderType={post.borderType}
-              youtubeUrl={post.youtubeUrl}
-              videoUrl={post.videoUrl}
-              disablePulse={true}
-              onLikeToggle={() => handleLikeToggle(post.id)}
-              onLocationClick={handleLocationClick}
-              onDelete={handlePostDelete}
-            />
+            <PostItem key={post.id} id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} lat={post.lat} lng={post.lng} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} youtubeUrl={post.youtubeUrl} videoUrl={post.videoUrl} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id)} onLocationClick={handleLocationClick} onDelete={handlePostDelete} />
           ))}
         </div>
         <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-          {isLoadingMore ? (
-            <>
-              <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p>
-            </>
-          ) : (
-            hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>
-          )}
+          {isLoadingMore ? (<><Loader2 className="w-6 h-6 text-indigo-600 animate-spin" /><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p></>) : (hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>)}
         </div>
       </div>
-      <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
-      <WritePost 
-        isOpen={isWriteOpen} 
-        onClose={() => setIsWriteOpen(false)} 
-        onStartLocationSelection={() => {
-          setIsWriteOpen(false);
-          navigate('/', { state: { startSelection: true } });
-        }}
-      />
+      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} onStartLocationSelection={() => { setIsWriteOpen(false); navigate('/', { state: { startSelection: true } }); }} />
     </div>
   );
 };

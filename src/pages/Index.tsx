@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
@@ -61,6 +59,21 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
+
+  // 전역 글쓰기 이벤트 리스너
+  useEffect(() => {
+    const handleOpenWrite = () => setIsWriteOpen(true);
+    window.addEventListener('open-write-post', handleOpenWrite);
+    return () => window.removeEventListener('open-write-post', handleOpenWrite);
+  }, []);
+
+  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
+  useEffect(() => {
+    navigate(location.pathname, { 
+      replace: true, 
+      state: { ...location.state, isPostListOpen } 
+    });
+  }, [isPostListOpen]);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -284,11 +297,8 @@ const Index = () => {
     
     if (!routeState) return;
 
-    // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
-
-      // ✅ 딜레이 후 줌 변경 (지도 초기화 완료 보장)
       setTimeout(() => {
         setCurrentZoom(10);
       }, 500);
@@ -301,11 +311,9 @@ const Index = () => {
         handleCurrentLocation();
       }
     }
-    // 2. 일반적인 특정 포스트 포커싱 처리
     else if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
     } 
-    // 3. 단순 좌표 이동 처리
     else if (routeState.center) {
       setSelectedPostId(null);
       setSearchResultLocation(null);
@@ -383,7 +391,6 @@ const Index = () => {
         timeValueHours={timeValue}
         authUserId={authUser?.id}
       />
-      {!isSelectingLocation && !isPostListOpen && <BottomNav onWriteClick={() => setIsWriteOpen(true)} />}
     </>
   );
 };

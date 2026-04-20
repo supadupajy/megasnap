@@ -5,7 +5,6 @@ import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertic
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import { getUserById } from '@/lib/mock-data';
@@ -38,6 +37,13 @@ const UserProfile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 전역 글쓰기 이벤트 리스너
+  useEffect(() => {
+    const handleOpenWrite = () => setIsWriteOpen(true);
+    window.addEventListener('open-write-post', handleOpenWrite);
+    return () => window.removeEventListener('open-write-post', handleOpenWrite);
+  }, []);
 
   const user = useMemo(() => {
     return getUserById(userId || 'traveler');
@@ -93,7 +99,6 @@ const UserProfile = () => {
     if (!userId) return;
     setIsLoading(true);
     try {
-      // 1. 유저 게시물 가져오기
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -104,7 +109,6 @@ const UserProfile = () => {
       const formatted = await Promise.all((data || []).map(mapDbToPost));
       setPosts(formatted);
 
-      // 2. 팔로워/팔로잉 카운트 가져오기
       const [followersRes, followingRes] = await Promise.all([
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
@@ -113,7 +117,6 @@ const UserProfile = () => {
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
 
-      // 3. 팔로우 상태 확인
       if (authUser) {
         const { data: followData } = await supabase
           .from('follows')
@@ -225,8 +228,6 @@ const UserProfile = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <Header />
-
       <div className="pt-[88px]">
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
@@ -459,7 +460,6 @@ const UserProfile = () => {
         </div>
       </div>
 
-      <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );

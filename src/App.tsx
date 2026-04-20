@@ -9,7 +9,7 @@ import { App as CapApp } from '@capacitor/app';
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
-import Follow from "./pages/Follow"; // 추가
+import Follow from "./pages/Follow";
 import Popular from "./pages/Popular";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
@@ -21,6 +21,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
+import BottomNav from "./components/BottomNav";
 import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
@@ -59,6 +60,9 @@ const AnimatedRoutes = () => {
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
     path => location.pathname.startsWith(path)
   );
+
+  // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
+  const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -113,6 +117,9 @@ const AnimatedRoutes = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* BottomNav를 AnimatePresence 바깥으로 이동하여 항상 고정 */}
+      {!hideLayout && session && !isPostListOpen && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
