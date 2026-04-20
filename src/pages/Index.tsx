@@ -231,8 +231,8 @@ const Index = () => {
     });
   }, [allPosts, mapData, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
 
-  // ✅ 레벨 변경 시 마커 강제 재렌더링 유도를 위한 종속성 추가
   useEffect(() => {
+    // ✅ 레벨 변경 시 새로운 배열 참조를 생성하여 MapContainer의 렌더링을 강제 유도
     setDisplayedMarkers([...inBoundsMarkers]);
   }, [inBoundsMarkers, currentZoom]);
 

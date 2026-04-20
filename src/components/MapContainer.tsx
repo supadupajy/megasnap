@@ -380,8 +380,15 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
-    // 전국 단위로 지도를 축소했을 때도 마커가 유지되도록 변경
+    // ✅ [CRITICAL FIX] 레벨이 변경되면 엔진의 오버레이 상태와 리액트 상태를 일치시키기 위해 
+    // 기존에 있던 모든 마커를 지우고 새로 그리는 'Hard Reset' 과정을 거칩니다.
+    if (level !== undefined && currentLevel !== level) {
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      overlaysRef.current.clear();
+      removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      removalTimeoutsRef.current.clear();
+    }
+
     if (currentLevel >= 13) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
