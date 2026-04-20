@@ -1,7 +1,6 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-// 경로를 "@/lib/mock-data"로 정확히 지정했습니다.
 import { 
   MAJOR_CITIES, 
   UNSPLASH_IDS, 
@@ -14,7 +13,7 @@ import {
 } from "@/lib/mock-data"; 
 
 /**
- * 유튜브 재생 가능 여부 체크 (oEmbed)
+ * 1. 유튜브 재생 가능 여부 체크 (oEmbed)
  */
 async function checkYoutubePlayable(videoId: string): Promise<boolean> {
   try {
@@ -27,11 +26,14 @@ async function checkYoutubePlayable(videoId: string): Promise<boolean> {
   }
 }
 
+/**
+ * 2. 메인 포스팅 생성 함수 (seedGlobalPosts)
+ */
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   console.log("🚀 [Seeder] 프로세스 시작...");
 
   try {
-    // 1. 유튜브 클린 리스트 확보
+    // 유튜브 클린 리스트 확보
     const validYoutubeIds: string[] = [];
     for (const id of YOUTUBE_IDS_POOL) {
       const ok = await checkYoutubePlayable(id);
@@ -48,8 +50,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     for (const city of MAJOR_CITIES) {
       console.log(`📍 ${city.name} 생성 중 (${city.density}개)...`);
       
-      // mock-data에서 가져온 함수 사용
-      const mockPoints = createMockPosts(city.lat, city.lng, city.density, 0.1, undefined, city.bounds);
+      const mockPoints = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
       const cityBatch: any[] = [];
 
       for (let i = 0; i < mockPoints.length; i++) {
@@ -84,7 +85,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: Math.floor(Math.random() * 3000),
+          likes: Math.floor(Math.random() * 5000),
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
 
@@ -107,6 +108,21 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     return totalInserted;
   } catch (err) {
     console.error("❌ 시딩 오류:", err);
+    throw err;
+  }
+};
+
+/**
+ * 3. [에러 해결 포인트] 기존 좋아요 랜덤화 함수 (randomizeExistingLikes)
+ */
+export const randomizeExistingLikes = async () => {
+  try {
+    // Supabase의 RPC 기능을 호출하여 DB 상의 모든 좋아요를 랜덤화합니다.
+    const { data, error } = await supabase.rpc('randomize_all_likes');
+    if (error) throw error;
+    return data || 0;
+  } catch (err) {
+    console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
     throw err;
   }
 };
