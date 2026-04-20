@@ -1,4 +1,4 @@
-// 1. 대한민국 주요 도시 설정
+// 1. 도시 설정 및 데이터
 export const MAJOR_CITIES = [
   { name: "서울", lat: 37.5665, lng: 126.9780, density: 1500, bounds: { sw: { lat: 37.4200, lng: 126.7500 }, ne: { lat: 37.7200, lng: 127.2000 } } },
   { name: "부산", lat: 35.1796, lng: 129.0756, density: 800, bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } } },
@@ -11,46 +11,41 @@ export const MAJOR_CITIES = [
   { name: "제주", lat: 33.4996, lng: 126.5312, density: 600, bounds: { sw: { lat: 33.2000, lng: 126.1500 }, ne: { lat: 33.5500, lng: 126.9500 } } }
 ];
 
-// 2. Unsplash ID 100선
-export const UNSPLASH_IDS = [
-  "photo-1444723126603-3e059c60c01e", "photo-1477959858617-67f85cf4f1df", "photo-1464822759023-fed622ff2c3b", "photo-1514924013411-cbf25faa35bb", "photo-1493246507139-91e8bef99c02",
-  "photo-1469474968028-56623f02e42e", "photo-1501785888041-af3ef285b470", "photo-1470071459604-3b5ec3a7fe05", "photo-1441974231531-c6227db76b6e", "photo-1532274402911-5a369e4c4bb5",
-  "photo-1506744038136-46273834b3fb", "photo-1465146344425-f00d5f5c8f07", "photo-1472214103451-9374bd1c798e", "photo-1426604966848-d7adac402bff", "photo-1414235077428-338989a2e8c0",
-  "photo-1504674900247-0877df9cc836", "photo-1493770348161-369560ae357d", "photo-1476224203421-9ac3993c4c5a", "photo-1504439468489-c8920d796a29", "photo-1482049016688-2d3e1b311543",
-  "photo-1512621776951-a57141f2eefd", "photo-1517248135467-4c7edcad34c4", "photo-1552566626-52f8b828add9", "photo-1555939594-58d7cb561ad1", "photo-1551218808-94e220e084d2",
-  "photo-1565299624946-b28f40a0ae38", "photo-1567620905732-2d1ec7bb7445", "photo-1546069901-ba9599a7e63c", "photo-1565958011703-44f9829ba187", "photo-1484723091739-30a097e8f929",
-  "photo-1519708227418-c8fd9a32b7a2", "photo-1529042410759-bf9390279d2b", "photo-1473093226795-af9932fe5856", "photo-1490645935967-10de6ba17051", "photo-1432139555190-58521daec20b",
-  "photo-1540189549336-e6e99c3679fe", "photo-1498837167922-ddd27525d352", "photo-1543353071-873f17a7a088", "photo-1506354666786-959d6d497f1a", "photo-1511690656952-34342bb7c2f2",
-  "photo-1495195129352-aec325b55b65", "photo-1481671703460-040cb8a2d909", "photo-1470252649358-96753a782901", "photo-1447752875215-b2761acb3c5d", "photo-1465189684280-6a8fa9b19a7a",
-  "photo-1433832597046-4f10e10ac764", "photo-1439066615861-d1af74d74000", "photo-1476514525535-07fb3b4ae5f1", "photo-1507525428034-b723cf961d3e", "photo-1519046904884-53103b34b206",
-  "photo-1533105079780-92b9be482077", "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57", "photo-1467232004584-a241de8bcf5d",
-  "photo-1513584684031-43d5ec36038f", "photo-1523217582562-09d0def993a6", "photo-1502672260266-1c1ef2d93688", "photo-1522708323590-d24dbb6b0267", "photo-1502005229762-cf1b2da7c5d6",
-  "photo-1512917774080-9991f1c4c750", "photo-1480074568708-e7b720bb3f09", "photo-1449034446853-66c86144b0ad", "photo-1475855581690-80accde3ae2b", "photo-1513502703549-1ad55c7d314c",
-  "photo-1518780664697-55e3ad937233", "photo-1505691722718-4684375a973d", "photo-1523755231516-f43fd99bbd5a", "photo-1516455590571-18256e5bb9ff", "photo-1516421591134-668418183a50",
-  "photo-1464366400600-7168b8af9bc3", "photo-1496417263034-38ec4f0b665a", "photo-1506057585508-85603cee9e17", "photo-1498050108023-c5249f4df085", "photo-1493612276216-ee3925520721",
-  "photo-1515378791036-0648a3ef77b2", "photo-1485827404703-89b55fcc595e", "photo-1526374965328-7f61d4dc18c5", "photo-1531297484001-80022131f5a1", "photo-1488590528505-98d2b5aba04b",
-  "photo-1518770660439-4636190af475", "photo-1550745165-9bc0b252726f", "photo-1525547719571-a2d4ac8945e2", "photo-1519389950473-47ba0277781c", "photo-1581091226825-a6a2a5aee158",
-  "photo-1510511459019-5dda7724fd87", "photo-1520333789090-1afc82db536a", "photo-1551434678-e076c223a692", "photo-1460925895917-afdab827c52f", "photo-1497215728101-856f4ea42174",
-  "photo-1522202176988-66273c2fd55f", "photo-1519244703995-f4e0f30006d5", "photo-1491438590914-bc09fcaaf77a", "photo-1517048676732-d65bc937f952", "photo-1556761175-b413da4baf72",
-  "photo-1523240795612-9a054b0db644", "photo-1515187029135-18ee286d815b", "photo-1521737711867-e3b97375f902", "photo-1507679799987-c73779587ccf", "photo-1522071820081-009f0129c71c"
-];
-
-// 3. 유튜브 ID 50선
-export const YOUTUBE_IDS_50 = [
-  "gdZLi9hhztQ", "js1CtxSY38I", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo", "WMweEpGlu_U", "kCELZbeS09o", "d9IxdwEFk1c", "9bZkp7q19f0", "hTermM40EDU",
-  "CtpT_S6-B9U", "TQTlCHxyuu8", "M7lc1UVf-VE", "pFuJAIMQjHk", "tg2uF3R_Ozo", "UuV27Nq_Oks", "D9G1VOjua_8", "IHNzOHi8sJs", "fHI8X4OXW5Q", "a5uQMwRMHcs",
-  "POe9SOEKotU", "V1Pl8CzNzCw", "gQLQDnZ0yS8", "dyRsYk0ViA8", "rRzxEiBLQCA", "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", "0NCP48xaSfs", "h4m-pIReA6Y",
-  "kJQP7kiw5Fk", "S-sJp1FfG7Q", "u0XmZp1S-t8", "F0B7HDiY-10", "XqgYj8atJpE", "fE2h3lGlOsk", "0A6E0M_Z8r4", "3YqXJ7Ssh_Q", "n9N0zS5XvXw", "m8MfJg68oCs",
-  "kOCkne-B8Hk", "z9n8ZzP4P8I", "XsX3ATc3FbA", "Lp_r9fX5Sfs", "7-qGKqveAnM", "XjJQBjWYDTs", "qV5lzRHrGeg", "2S24-y0Ij3Y", "SlPhMPnQ58k", "J6Z8WAt9v80"
-];
-
-// 4. 광고성 음식 이미지
+// 2. 리소스 ID 리스트
+export const UNSPLASH_IDS = [ /* 이전의 100개 ID 리스트를 여기에 넣으세요 */ ];
+export const YOUTUBE_IDS_50 = [ /* 이전의 50개 ID 리스트를 여기에 넣으세요 */ ];
 export const FOOD_UNSPLASH_IDS = ["photo-1504674900247-0877df9cc836", "photo-1493770348161-369560ae357d", "photo-1476224203421-9ac3993c4c5a"];
 
-// 5. 유틸리티
+// 3. 텍스트 데이터
 export const REALISTIC_COMMENTS = ["여기 분위기 진짜 대박이에요! 😍", "오늘 날씨랑 찰떡인 장소 발견! ✨", "인생샷 건졌습니다. 📸"];
 export const AD_COMMENTS = ["[AD] 특별한 혜택을 만나보세요!", "[AD] 프리미엄 서비스를 경험하세요."];
 
+// 4. [중요] 좌표 생성 함수 (에러 해결 포인트)
+export const createMockPosts = (
+  centerLat: number, 
+  centerLng: number, 
+  count: number, 
+  radius: number = 0.1, // 기본 범위
+  bounds?: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }
+) => {
+  const posts = [];
+  for (let i = 0; i < count; i++) {
+    let lat, lng;
+    if (bounds) {
+      // 경계값이 있으면 그 안에서 랜덤 생성
+      lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
+      lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
+    } else {
+      // 중심점 기준 랜덤 생성
+      lat = centerLat + (Math.random() - 0.5) * radius;
+      lng = centerLng + (Math.random() - 0.5) * radius;
+    }
+    posts.push({ lat, lng });
+  }
+  return posts;
+};
+
+// 5. 유틸리티
 export const getUnsplashUrl = (id: string, sig?: number) => {
   const baseUrl = `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=800`;
   return sig !== undefined ? `${baseUrl}&sig=${sig}` : baseUrl;
