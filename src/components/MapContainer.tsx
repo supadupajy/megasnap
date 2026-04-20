@@ -512,7 +512,6 @@ const MapContainer = ({
 
   return (
     <div 
-      ref={containerRef} 
       className="w-full h-full relative select-none touch-none" 
       style={{ 
         backgroundColor: '#f8f9fa',
