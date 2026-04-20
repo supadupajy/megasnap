@@ -90,27 +90,11 @@ const Index = () => {
     const p = await sanitizeYoutubeMedia(rawPost);
     const isAd = p.content?.trim().startsWith('[AD]');
     
-    // Determine tier/borderType based on LIKES only
-    let borderType: 'none' | 'popular' | 'silver' | 'gold' | 'diamond' = 'none';
-    
-    // Check if likes is a number, otherwise default to 0
-    const likesCount = Number(p.likes || 0);
+    // ✅ 이제 테두리(티어)는 좋아요 숫자가 아니라, 포스팅 고유의 ID를 기반으로 결정됩니다.
+    // 좋아요가 적은 다이아몬드 포스팅이나, 좋아요가 많은 일반 포스팅이 가능해집니다.
+    const borderType = isAd ? 'none' : getTierFromId(p.id);
 
-    if (isAd) {
-      borderType = 'none';
-    } else if (likesCount >= 1000) {
-      borderType = 'diamond';
-    } else if (likesCount >= 500) {
-      borderType = 'gold';
-    } else if (likesCount >= 200) {
-      borderType = 'silver';
-    } else if (likesCount >= 50) {
-      borderType = 'popular';
-    } else {
-      borderType = 'none';
-    }
-
-    const mappedPost: Post = {
+    return {
       id: p.id,
       isAd,
       isGif: false,
@@ -120,7 +104,7 @@ const Index = () => {
       location: p.location_name,
       lat: p.latitude,
       lng: p.longitude,
-      likes: likesCount,
+      likes: Number(p.likes || 0),
       commentsCount: 0,
       comments: [],
       image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
@@ -131,8 +115,6 @@ const Index = () => {
       createdAt: new Date(p.created_at),
       borderType
     };
-
-    return mappedPost;
   };
 
   const fetchGlobalTrending = useCallback(async () => {

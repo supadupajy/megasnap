@@ -236,6 +236,11 @@ export const createMockPosts = (
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).slice(2, 11);
     const isAd = i % 20 === 0;
     
+    // ✅ 포스팅 종류(티어)를 다시 ID 기반의 고유한 속성으로 복구합니다.
+    // 이는 좋아요 개수와는 별개인 "포스팅의 신분"입니다.
+    const borderType = isAd ? 'none' : getTierFromId(id);
+    const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
+    
     const hasYoutube = !isAd && i % 2 === 0;
     const ytId = hasYoutube ? validYoutubeIds[(stableHash(`${centerLat}:${centerLng}:${i}`)) % validYoutubeIds.length] : undefined;
     const youtubeUrl = ytId ? `https://www.youtube.com/shorts/${ytId}` : undefined;
@@ -263,7 +268,7 @@ export const createMockPosts = (
       id,
       isAd,
       isGif: false,
-      isInfluencer: false, // Default to false, let Index.tsx decide based on likes
+      isInfluencer,
       category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
@@ -274,13 +279,13 @@ export const createMockPosts = (
       location: resolveOfflineLocationName(lat, lng),
       lat,
       lng,
-      likes: Math.floor(randomFn() * 5000), // This will be overwritten by getRandomLikesFlat in db-seeder.ts
+      likes: Math.floor(randomFn() * 10001), 
       commentsCount: 5,
       comments: [],
       image,
       isLiked: false,
       createdAt: new Date(Date.now() - randomFn() * 48 * 3600000),
-      borderType: 'none', // Default to none, let Index.tsx decide based on likes
+      borderType,
       youtubeUrl,
     } as Post;
   });
