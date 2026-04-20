@@ -278,7 +278,7 @@ const PostListOverlay = ({
             ease: [0.22, 1, 0.36, 1]
           }}
           // ✅ 위치 및 높이 조정: top-[88px] (헤더 아래) bottom-[106px] (BottomNav 위)
-          className="fixed top-[88px] bottom-[120px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar"
+          className="fixed top-[88px] bottom-[60px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
           <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
             <div>
