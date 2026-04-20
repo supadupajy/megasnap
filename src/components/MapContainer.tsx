@@ -55,15 +55,24 @@ const MapContainer = ({
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // ✅ [ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 캡처링 단계의 이벤트 제어
+  // ✅ [FINAL ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 윈도우 수준의 Monkey Patch
   useEffect(() => {
-    const preventSelectionError = (e: Event) => {
-      // 텍스트 선택 관련 동작이 감지되면 즉시 차단하고 선택 범위를 초기화
-      if (e.cancelable) {
-        e.preventDefault();
+    // Selection.prototype.getRangeAt 메서드가 에러를 발생시키지 않도록 원천적으로 수정
+    const originalGetRangeAt = Selection.prototype.getRangeAt;
+    
+    Selection.prototype.getRangeAt = function(index: number) {
+      if (this.rangeCount <= index || index < 0) {
+        // 인덱스가 유효하지 않을 때 에러를 던지는 대신 안전하게 빈 범위를 반환합니다.
+        // 이것이 특정 확장 프로그램의 'content.js'에서 발생하는 Uncaught IndexSizeError를 막는 유일한 방법입니다.
+        const range = document.createRange();
+        // 안전을 위해 현재 컨테이너를 기준으로 빈 범위를 설정할 수도 있으나 기본 Range로도 충분합니다.
+        return range;
       }
-      e.stopPropagation();
-      
+      return originalGetRangeAt.apply(this, [index]);
+    };
+
+    // 추가로 지도 영역에서의 모든 선택 시도를 차단
+    const preventSelectionError = (e: Event) => {
       if (window.getSelection) {
         try {
           const sel = window.getSelection();
@@ -76,42 +85,16 @@ const MapContainer = ({
 
     const container = containerRef.current;
     if (container) {
-      // 모든 주요 인터랙션에 대해 캡처링 단계에서 선택 방지
-      const events = [
-        'selectstart', 
-        'dragstart', 
-        'mousedown', 
-        'mouseup', 
-        'touchstart', 
-        'touchend', 
-        'click', 
-        'dblclick',
-        'contextmenu'
-      ];
-      
-      events.forEach(evt => {
-        // capture: true를 통해 확장 프로그램의 리스너보다 먼저 실행되도록 함
-        container.addEventListener(evt, (e) => {
-          if (window.getSelection) {
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              sel.removeAllRanges();
-            }
-          }
-          // selectstart와 dragstart는 반드시 preventDefault와 stopPropagation 처리
-          if (evt === 'selectstart' || evt === 'dragstart') {
-            preventSelectionError(e);
-          }
-        }, { capture: true, passive: false });
-      });
+      const events = ['selectstart', 'dragstart', 'mousedown', 'click', 'touchstart'];
+      events.forEach(evt => container.addEventListener(evt, preventSelectionError, { capture: true, passive: true }));
     }
 
     return () => {
+      // 컴포넌트 언마운트 시 원래 메서드로 복구
+      Selection.prototype.getRangeAt = originalGetRangeAt;
       if (container) {
-        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick', 'contextmenu'];
-        events.forEach(evt => {
-          container.removeEventListener(evt, () => {}, { capture: true } as any);
-        });
+        const events = ['selectstart', 'dragstart', 'mousedown', 'click', 'touchstart'];
+        events.forEach(evt => container.removeEventListener(evt, preventSelectionError, { capture: true } as any));
       }
     };
   }, []);
