@@ -93,22 +93,25 @@ const Index = () => {
     // Determine tier/borderType based on logic or data
     let borderType: 'none' | 'popular' | 'silver' | 'gold' | 'diamond' = 'none';
     
+    // Check if likes is a number, otherwise default to 0
+    const likesCount = Number(p.likes || 0);
+
     if (isAd) {
       borderType = 'none';
-    } else if (p.likes >= 1000) { // Example logic for tiering
+    } else if (likesCount >= 1000) {
       borderType = 'diamond';
-    } else if (p.likes >= 500) {
+    } else if (likesCount >= 500) {
       borderType = 'gold';
-    } else if (p.likes >= 200) {
+    } else if (likesCount >= 200) {
       borderType = 'silver';
-    } else if (p.likes >= 50) {
+    } else if (likesCount >= 50) {
       borderType = 'popular';
     } else {
       // Fallback to deterministic ID hashing for variety if likes are low
       borderType = getTierFromId(p.id);
     }
 
-    return {
+    const mappedPost: Post = {
       id: p.id,
       isAd,
       isGif: false,
@@ -118,7 +121,7 @@ const Index = () => {
       location: p.location_name,
       lat: p.latitude,
       lng: p.longitude,
-      likes: Number(p.likes || 0),
+      likes: likesCount,
       commentsCount: 0,
       comments: [],
       image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
@@ -129,6 +132,8 @@ const Index = () => {
       createdAt: new Date(p.created_at),
       borderType
     };
+
+    return mappedPost;
   };
 
   const fetchGlobalTrending = useCallback(async () => {
@@ -140,18 +145,26 @@ const Index = () => {
         .limit(20);
       
       if (!error && data) {
-        const mapped = (await Promise.all(data.map(mapDbToPost))).map((p, idx) => ({ 
-          ...p, 
-          rank: idx + 1,
-          // Force high rank posts to have at least 'popular' border if they don't already
-          borderType: (idx < 3 && p.borderType === 'none') ? 'popular' : p.borderType
-        }));
-        setGlobalTrendingPosts(mapped);
+        const mapped = await Promise.all(data.map(mapDbToPost));
+        const ranked = mapped.map((p, idx) => {
+          let finalBorder = p.borderType;
+          // Force high rank posts to have at least 'popular' border
+          if (idx < 3 && finalBorder === 'none') {
+            finalBorder = 'popular';
+          }
+          return { 
+            ...p, 
+            rank: idx + 1,
+            borderType: finalBorder,
+            isInfluencer: ['silver', 'gold', 'diamond'].includes(finalBorder)
+          };
+        });
+        setGlobalTrendingPosts(ranked);
       }
     } catch (err) {
       console.error('[Trending] Fetch Error:', err);
     }
-  }, []);
+  }, [mapDbToPost]);
 
   useEffect(() => {
     fetchGlobalTrending();
