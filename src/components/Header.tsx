@@ -43,7 +43,7 @@ const Header = () => {
 
     fetchCounts();
 
-    // 채널 이름에 타임스탬프를 추가하여 React Strict Mode나 빠른 재렌더링 시의 충돌 방지
+    // 실시간 업데이트 구독
     const channelName = `header_updates_${authUser.id}_${Date.now()}`;
     const channel = supabase.channel(channelName);
 
@@ -52,7 +52,7 @@ const Header = () => {
         event: '*', 
         schema: 'public', 
         table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
+        filter: `user_id=eq.${authUser.id}` // 내가 수신자인 알림만 필터링
       }, () => {
         fetchCounts();
       })
@@ -60,14 +60,13 @@ const Header = () => {
         event: '*', 
         schema: 'public', 
         table: 'messages',
-        filter: `receiver_id=eq.${authUser.id}`
+        filter: `receiver_id=eq.${authUser.id}` // 내가 수신자인 메시지만 필터링
       }, () => {
         fetchCounts();
       })
       .subscribe();
 
     return () => { 
-      // 구독 해제 및 채널 제거
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
