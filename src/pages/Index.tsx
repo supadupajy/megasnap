@@ -154,6 +154,27 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
+    // ✅ [FIX] 줌 레벨 변경 시에는 throttle을 무시하고 즉시 업데이트
+    // (줌 복귀 시 마커가 즉시 나타나도록 보장)
+    const zoomChanged = data.level !== undefined && data.level !== currentZoom;
+    
+    if (zoomChanged) {
+      // 기존 throttle 타이머 취소
+      if (throttleTimer.current) {
+        clearTimeout(throttleTimer.current);
+        throttleTimer.current = null;
+      }
+      
+      // 즉시 상태 업데이트 (좌표와 줌을 함께 갱신)
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+      setCurrentZoom(data.level);
+      mapCache.lastZoom = data.level;
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      return;
+    }
+    
+    // 줌 변경이 아닌 일반 이동(팬)은 기존대로 throttle 적용
     if (throttleTimer.current) return;
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
@@ -165,7 +186,7 @@ const Index = () => {
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
     }, 100);
-  }, [isSelectingLocation]);
+  }, [isSelectingLocation, currentZoom]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
     const targetBounds = forceBounds || mapData?.bounds;
