@@ -287,7 +287,7 @@ const Index = () => {
     // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
 if (routeState.filterUserId === 'me') {
   setSelectedCategories(['mine']);
-  setCurrentZoom(10); // ← 숫자 타입으로 (문자열 X)
+  setCurrentZoom(9); // ← 숫자 타입으로 (문자열 X)
 
   if (routeState.post) {
     focusPostOnMap(routeState.post, routeState.center);
