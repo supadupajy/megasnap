@@ -228,8 +228,9 @@ const MapContainer = ({
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    const isAd = post.isAd;
-    const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+    // [수정 핵심] DB에 컬럼이 없어도 user_name으로 광고 여부를 판단합니다.
+    const isAd = post.isAd || post.user_name === '공식 파트너' || post.user?.name === '공식 파트너';
+    const isMine = authUser && (post.user?.id === authUser.id || post.user_id === authUser.id || post.user?.id === 'me');
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
@@ -253,7 +254,6 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    // 줌 레벨 제한을 11로 늘려 전국 단위에서도 마커가 보이도록 수정
     if (currentLevel >= 11) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
 
     const currentPostIds = new Set(posts.map(p => p.id));
@@ -265,9 +265,9 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+      const isAd = post.isAd || post.user_name === '공식 파트너' || post.user?.name === '공식 파트너';
+      const baseZIndex = isHighlighted ? 10000 : (isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // 줌 레벨에 따른 마커 크기 조정 (멀어질수록 작게)
       let scale = 1;
       if (currentLevel === 7) scale = 0.6;
       else if (currentLevel === 8) scale = 0.4;
