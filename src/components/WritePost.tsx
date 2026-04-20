@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
+import { resolveOfflineLocationName } from '@/utils/offline-location';
 
 interface WritePostProps {
   isOpen: boolean;
@@ -45,31 +46,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   }, []);
 
   useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (isOpen) {
-      if (initialLocation && kakao && kakao.maps.services) {
-        setIsLoadingAddress(true);
-        const geocoder = new kakao.maps.services.Geocoder();
-        
-        geocoder.coord2Address(initialLocation.lng, initialLocation.lat, (result: any, status: any) => {
-          if (status === kakao.maps.services.Status.OK && result[0]) {
-            const addr = result[0].address;
-            const city = addr.region_1depth_name || '';
-            const district = addr.region_2depth_name || '';
-            const neighborhood = addr.region_3depth_name || '';
-            
-            const cleanAddress = `${city} ${district} ${neighborhood}`.trim();
-            setAddress(cleanAddress || '알 수 없는 장소');
-          } else {
-            setAddress(`좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-          }
-          setIsLoadingAddress(false);
-        });
-      } else if (!initialLocation) {
-        setAddress('위치를 선택해주세요');
-        setIsLoadingAddress(false);
-      }
+    if (!isOpen) return;
+
+    if (initialLocation) {
+      setIsLoadingAddress(true);
+      const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
+      setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
+      setIsLoadingAddress(false);
+      return;
     }
+
+    setAddress('위치를 선택해주세요');
+    setIsLoadingAddress(false);
   }, [isOpen, initialLocation]);
 
   const takePhoto = async () => {
