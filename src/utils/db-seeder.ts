@@ -10,6 +10,7 @@ import {
   UNSPLASH_IDS,
 } from "@/lib/mock-data";
 import { getYoutubeThumbnail } from "@/lib/utils";
+import { sanitizeYoutubeMedia } from "./youtube-utils";
 
 const MAJOR_CITIES = [
   { 
@@ -224,6 +225,54 @@ export const randomizeExistingLikes = async () => {
     return data || 0;
   } catch (err) {
     console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
+    throw err;
+  }
+};
+
+export const cleanupInvalidYoutubePosts = async () => {
+  console.log("🧹 [Seeder] 재생 불가 유튜브 포스팅 정리를 시작합니다...");
+
+  try {
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select('id, youtube_url, image_url')
+      .not('youtube_url', 'is', null);
+
+    if (error) throw error;
+    if (!posts || posts.length === 0) {
+      console.log("ℹ️ [Seeder] 정리할 유튜브 포스팅이 없습니다.");
+      return 0;
+    }
+
+    let cleanedCount = 0;
+    const chunkSize = 20;
+
+    for (let i = 0; i < posts.length; i += chunkSize) {
+      const chunk = posts.slice(i, i + chunkSize);
+      const sanitizedChunk = await Promise.all(chunk.map((post) => sanitizeYoutubeMedia(post)));
+
+      const updateTargets = sanitizedChunk.filter((post, index) => post.youtube_url !== chunk[index].youtube_url);
+
+      for (const post of updateTargets) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({
+            youtube_url: post.youtube_url,
+            image_url: post.image_url,
+          })
+          .eq('id', post.id);
+
+        if (updateError) throw updateError;
+        cleanedCount += 1;
+      }
+
+      console.log(`🧹 [Seeder] 유튜브 검수 진행: ${Math.min(i + chunk.length, posts.length)}/${posts.length}`);
+    }
+
+    console.log(`✅ [Seeder] 재생 불가 유튜브 포스팅 ${cleanedCount}개를 정리했습니다.`);
+    return cleanedCount;
+  } catch (err) {
+    console.error("❌ [Seeder] 유튜브 포스팅 정리 실패:", err);
     throw err;
   }
 };
