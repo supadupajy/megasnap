@@ -207,9 +207,8 @@ const Index = () => {
       return;
     }
     
-    // ✅ 축소 단계 제한을 12단계로 더 완화 (이전 11단계)
+    // ✅ 축소 단계 제한을 12단계로 유지
     if (currentZoom >= 12) { 
-      console.log('ℹ️ [Markers] Zoom too high, clearing markers');
       setDisplayedMarkers([]); 
       return; 
     }
@@ -218,41 +217,49 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
+    // ✅ [CRITICAL FIX] 영역 판정을 더 엄격하게 수정 (마진 제거)
+    // 화면 밖의 포스팅이 포함되지 않도록 실제 지도 경계값만 사용합니다.
     const inBoundsCandidates = allPosts.filter(post => {
       if (!post) return false;
-      // ✅ 위치 정보가 없는 포스팅(null)은 지도 마커 대상에서 제외
+      
+      // 위치 정보 필수
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       
+      // 차단된 유저 제외
       if (blockedIds.has(post.user.id)) return false;
 
-      // ✅ 영역 판정 시 마커가 잘리지 않도록 마진(padding)을 추가 (약 10% 정도 더 넓게)
-      const latMargin = Math.abs(ne.lat - sw.lat) * 0.1;
-      const lngMargin = Math.abs(ne.lng - sw.lng) * 0.1;
-      
-      const isInExtendedBounds = 
-        post.lat >= sw.lat - latMargin && 
-        post.lat <= ne.lat + latMargin && 
-        post.lng >= sw.lng - lngMargin && 
-        post.lng <= ne.lng + lngMargin;
+      // ✅ [STRICT BOUNDS] 실제 지도 화면 내에 있는지 정확하게 판정
+      // 위도(lat)는 sw.lat ~ ne.lat, 경도(lng)는 sw.lng ~ ne.lng 사이여야 함
+      const isInStrictBounds = 
+        post.lat >= Math.min(sw.lat, ne.lat) && 
+        post.lat <= Math.max(sw.lat, ne.lat) && 
+        post.lng >= Math.min(sw.lng, ne.lng) && 
+        post.lng <= Math.max(sw.lng, ne.lng);
 
-      if (!isInExtendedBounds) return false;
+      if (!isInStrictBounds) return false;
       
+      // 광고는 항상 표시
       if (post.isAd) return true;
       
-      // ✅ 시간 필터: 100시간(Max)일 때는 모든 포스팅 표시
+      // 시간 필터
       if (timeValue < 100) {
         if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
       }
       
+      // 카테고리 필터
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      
       return matchesCategory;
     });
     
-    console.log(`📍 [Markers] Updating displayed markers: ${inBoundsCandidates.length} posts`);
-    setDisplayedMarkers(inBoundsCandidates);
+    // ✅ 중복 제거 (만약 ID가 중복된 포스팅이 있다면 제거)
+    const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());
+    
+    console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts (Strict Bounds)`);
+    setDisplayedMarkers(uniquePosts);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
