@@ -35,6 +35,7 @@ const MapContainer = ({
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState<number>(level || mapCache.lastZoom || 6);
+  const [isMapMoving, setIsMapMoving] = useState(false); // ✅ 지도 이동 상태 추가
   
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -173,6 +174,7 @@ const MapContainer = ({
       kakao.maps.event.addListener(map, 'zoom_changed', updateMapData); // ✅ 추가: 줌 변경 시에도 데이터 업데이트 강제
       kakao.maps.event.addListener(map, 'dragstart', () => { 
         isDragging.current = true; 
+        setIsMapMoving(true); // ✅ 이동 시작
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
           isProgrammaticMove.current = false;
@@ -180,7 +182,15 @@ const MapContainer = ({
       });
       kakao.maps.event.addListener(map, 'dragend', () => { 
         isDragging.current = false; 
+        setIsMapMoving(false); // ✅ 이동 종료
         lastDragEnd.current = Date.now(); 
+      });
+
+      // ✅ 줌 애니메이션 시작/종료 감지
+      kakao.maps.event.addListener(map, 'zoom_start', () => setIsMapMoving(true));
+      kakao.maps.event.addListener(map, 'zoom_changed', () => {
+        updateMapData();
+        setIsMapMoving(false);
       });
 
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -377,7 +387,9 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ [DEBUG] 7단계 이상일 때 오버레이를 모두 제거 (Index.tsx와 동기화)
+    // ✅ 지도 이동 중(줌/드래그)일 때는 렌더링 업데이트를 건너뛰어 깜빡임 방지
+    if (isMapMoving) return;
+
     if (currentLevel >= 7) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
