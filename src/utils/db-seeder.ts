@@ -210,7 +210,7 @@ export const randomizeExistingLikes = async () => {
         }
       }
       
-      if (i % 500 === 0) console.log(`   - 진행 상황: ${i}/${allPosts.length} 완료...`);
+      if (i % 100 === 0) console.log(`   - 진행 상황: ${i}/${allPosts.length} 완료...`);
     }
 
     return allPosts.length;
