@@ -60,6 +60,7 @@ const Index = () => {
 
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -227,12 +228,56 @@ const Index = () => {
     showSuccess('데이터를 새로고침했습니다.');
   }, [fetchGlobalTrending, mapData]);
 
-  const handleTrendingPostClick = useCallback((post: Post) => {
-    setMapCenter({ lat: post.lat, lng: post.lng });
-    setIsTrendingExpanded(false);
+  const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
+    setAllPosts((prev) => {
+      if (prev.some((item) => item.id === post.id)) return prev;
+      const combined = [post, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
+
+    setSelectedPostId(null);
+    setSearchResultLocation(null);
+    setMapCenter(center || { lat: post.lat, lng: post.lng });
+
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+
     setHighlightedPostId(post.id);
-    setTimeout(() => setHighlightedPostId(null), 4000);
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedPostId(null);
+      highlightTimeoutRef.current = null;
+    }, 4000);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const routeState = location.state as { center?: { lat: number; lng: number }; post?: Post } | null;
+    if (!routeState?.center && !routeState?.post) return;
+
+    if (routeState.post) {
+      focusPostOnMap(routeState.post, routeState.center);
+    } else if (routeState.center) {
+      setSelectedPostId(null);
+      setSearchResultLocation(null);
+      setMapCenter(routeState.center);
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [focusPostOnMap, location.pathname, location.state, navigate]);
+
+  const handleTrendingPostClick = useCallback((post: Post) => {
+    setIsTrendingExpanded(false);
+    focusPostOnMap(post);
+  }, [focusPostOnMap]);
 
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 찾는 중...');
