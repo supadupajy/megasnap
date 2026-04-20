@@ -285,21 +285,25 @@ const Index = () => {
     if (!routeState) return;
 
     // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
-    if (routeState.filterUserId === 'me') {
-      setSelectedCategories(['mine']);
-      
-      // 줌 레벨을 10으로 설정 (축소 뷰)
-      setCurrentZoom('9');
-      
-      // 가장 최근 포스팅이 있다면 해당 위치로 강조 이동
-      if (routeState.post) {
-        focusPostOnMap(routeState.post, routeState.center);
-      } else if (routeState.center) {
-        setMapCenter(routeState.center);
-      } else {
-        handleCurrentLocation();
-      }
-    }
+if (routeState.filterUserId === 'me') {
+  setSelectedCategories(['mine']);
+
+  // ✅ state 업데이트
+  setCurrentZoom('10');
+
+  // ✅ 카카오 지도 인스턴스에 직접 줌 레벨 적용
+  if (mapRef.current) {
+    mapRef.current.setLevel(10);
+  }
+
+  if (routeState.post) {
+    focusPostOnMap(routeState.post, routeState.center);
+  } else if (routeState.center) {
+    setMapCenter(routeState.center);
+  } else {
+    handleCurrentLocation();
+  }
+}
     // 2. 일반적인 특정 포스트 포커싱 처리
     else if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
