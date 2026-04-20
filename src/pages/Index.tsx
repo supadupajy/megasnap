@@ -87,34 +87,45 @@ const Index = () => {
   };
 
   const mapDbToPost = async (rawPost: any): Promise<Post> => {
-    const p = await sanitizeYoutubeMedia(rawPost);
-    const isAd = p.content?.trim().startsWith('[AD]');
-    
-    // ✅ 이제 테두리(티어)는 좋아요 숫자가 아니라, 포스팅 고유의 ID를 기반으로 결정됩니다.
-    // 좋아요가 적은 다이아몬드 포스팅이나, 좋아요가 많은 일반 포스팅이 가능해집니다.
-    const borderType = isAd ? 'none' : getTierFromId(p.id);
+    // rawPost가 유효한지 확인
+    if (!rawPost || !rawPost.id) {
+      console.warn('⚠️ [mapDbToPost] Invalid raw post data:', rawPost);
+      return null as any;
+    }
 
-    return {
-      id: p.id,
-      isAd,
-      isGif: false,
-      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-      user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-      content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: p.location_name,
-      lat: p.latitude,
-      lng: p.longitude,
-      likes: Number(p.likes || 0),
-      commentsCount: 0,
-      comments: [],
-      image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
-      youtubeUrl: p.youtube_url,
-      videoUrl: p.video_url,
-      category: p.category || 'none',
-      isLiked: false,
-      createdAt: new Date(p.created_at),
-      borderType
-    };
+    try {
+      const p = await sanitizeYoutubeMedia(rawPost);
+      const isAd = p.content?.trim().startsWith('[AD]');
+      
+      // ✅ 이제 테두리(티어)는 좋아요 숫자가 아니라, 포스팅 고유의 ID를 기반으로 결정됩니다.
+      // 좋아요가 적은 다이아몬드 포스팅이나, 좋아요가 많은 일반 포스팅이 가능해집니다.
+      const borderType = isAd ? 'none' : getTierFromId(p.id);
+
+      return {
+        id: p.id,
+        isAd,
+        isGif: false,
+        isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+        user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+        content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+        location: p.location_name,
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes || 0),
+        commentsCount: 0,
+        comments: [],
+        image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
+        youtubeUrl: p.youtube_url,
+        videoUrl: p.video_url,
+        category: p.category || 'none',
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType
+      };
+    } catch (err) {
+      console.error('❌ [mapDbToPost] Error processing post:', err);
+      return null as any;
+    }
   };
 
   const fetchGlobalTrending = useCallback(async () => {
@@ -162,35 +173,49 @@ const Index = () => {
     
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
+    console.log('🔄 [Sync] Starting sync with bounds:', { sw, ne, currentZoom });
+
     try {
       // ✅ 현재 줌 레벨(currentZoom)을 넘겨서 유동적인 리미트 적용
       const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom);
+      console.log(`📥 [Sync] Fetched ${dbPosts.length} posts from Supabase`);
       
+      if (dbPosts.length === 0) {
+        console.warn('⚠️ [Sync] No posts returned from Supabase for these bounds.');
+      }
+
+      // DB 데이터를 Post 객체로 변환
+      const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
+      const validMappedPosts = mappedPosts.filter(p => p !== null);
+
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
-        const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
+        const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
         
-        // ✅ 단순히 뒤에 붙이는 게 아니라, 현재 보이는 영역의 데이터가 우선순위를 갖도록 병합
-        // (필요시 mapCache와 동기화)
-        const combined = [...newUnique, ...prev].slice(0, 10000); // 메모리 보호를 위한 최대 캡
+        console.log(`✨ [Sync] Found ${newUnique.length} new unique posts`);
+
+        const combined = [...newUnique, ...prev].slice(0, 10000);
         mapCache.posts = combined;
         return combined;
       });
     } catch (err) { 
-      console.error('[Sync] Error:', err); 
+      console.error('❌ [Sync] Critical Error during sync:', err); 
     } finally { 
       isSyncing.current = false; 
     }
-  }, [mapData, currentZoom]); // currentZoom 의존성 추가
+  }, [mapData, currentZoom, mapDbToPost]); // mapDbToPost 의존성 추가
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
   useEffect(() => {
-    if (!mapData?.bounds) return;
+    if (!mapData?.bounds) {
+      console.log('ℹ️ [Markers] Map bounds not ready yet');
+      return;
+    }
     
     // ✅ 축소 단계 제한을 12단계로 더 완화 (이전 11단계)
-    // 12단계 이상(매우 넓은 영역)일 때만 마커를 숨깁니다.
     if (currentZoom >= 12) { 
+      console.log('ℹ️ [Markers] Zoom too high, clearing markers');
       setDisplayedMarkers([]); 
       return; 
     }
@@ -200,14 +225,15 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
     const inBoundsCandidates = allPosts.filter(post => {
+      if (!post) return false;
       // ✅ 위치 정보가 없는 포스팅(null)은 지도 마커 대상에서 제외
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       
       if (blockedIds.has(post.user.id)) return false;
 
       // ✅ 영역 판정 시 마커가 잘리지 않도록 마진(padding)을 추가 (약 10% 정도 더 넓게)
-      const latMargin = (ne.lat - sw.lat) * 0.1;
-      const lngMargin = (ne.lng - sw.lng) * 0.1;
+      const latMargin = Math.abs(ne.lat - sw.lat) * 0.1;
+      const lngMargin = Math.abs(ne.lng - sw.lng) * 0.1;
       
       const isInExtendedBounds = 
         post.lat >= sw.lat - latMargin && 
@@ -231,6 +257,7 @@ const Index = () => {
       return matchesCategory;
     });
     
+    console.log(`📍 [Markers] Updating displayed markers: ${inBoundsCandidates.length} posts`);
     setDisplayedMarkers(inBoundsCandidates);
   }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
