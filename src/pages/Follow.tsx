@@ -32,24 +32,24 @@ const Follow = () => {
         .single();
       if (profile) setTargetNickname(profile.nickname || '사용자');
 
-      let query;
-      if (activeTab === 'followers') {
-        // 나를 팔로우하는 사람들 (follower_id를 가진 프로필들)
-        query = supabase
-          .from('follows')
-          .select(`
-            profiles:follower_id (id, nickname, avatar_url, bio)
-          `)
-          .eq('following_id', userId);
-      } else {
-        // 내가 팔로우하는 사람들 (following_id를 가진 프로필들)
-        query = supabase
-          .from('follows')
-          .select(`
-            profiles:following_id (id, nickname, avatar_url, bio)
-          `)
-          .eq('follower_id', userId);
-      }
+let query;
+if (activeTab === 'followers') {
+  // 나를 팔로우하는 사람들
+  query = supabase
+    .from('follows')
+    .select(`
+      follower:profiles!follows_follower_id_fkey (id, nickname, avatar_url, bio)
+    `)
+    .eq('following_id', userId);
+} else {
+  // 내가 팔로우하는 사람들
+  query = supabase
+    .from('follows')
+    .select(`
+      following:profiles!follows_following_id_fkey (id, nickname, avatar_url, bio)
+    `)
+    .eq('follower_id', userId);
+}
 
       const { data, error } = await query;
       if (error) throw error;
