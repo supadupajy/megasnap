@@ -11,7 +11,6 @@ import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- ObservedPostItem 컴포넌트 ---
 const ObservedPostItem = ({ 
   post, 
   onVisible, 
@@ -63,7 +62,6 @@ const ObservedPostItem = ({
   );
 };
 
-// --- 메인 PostListOverlay 컴포넌트 ---
 interface PostListOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -86,6 +84,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
       setPosts(initialPosts);
       return;
     }
+
     setPosts([]);
     setIsLoadingMore(false);
   }, [isOpen, initialPosts]);
@@ -155,78 +154,62 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-end">
-          {/* 1. 뒷 배경 (Backdrop): 리스트 뒤에 깔리는 불투명 레이어 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[1]"
-          />
-
-          {/* 2. 콘텐츠 컨테이너 (List Container): 실제 포스팅 리스트 */}
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{
-              duration: 0.3,
-              ease: [0.22, 1, 0.36, 1]
-            }}
-            className="relative w-full h-full bg-white shadow-2xl overflow-hidden flex flex-col z-[2]"
-          >
-            {/* 상단 헤더 섹션 (Sticky) */}
-            <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between border-b border-gray-100 bg-white z-30">
-              <div>
-                <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                  Total {filteredPosts.length} Posts
-                </p>
-              </div>
-              <button 
-                onClick={onClose}
-                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
-              </button>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={{
+            duration: 0.22,
+            ease: [0.22, 1, 0.36, 1]
+          }}
+          className="fixed inset-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
+        >
+          <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
             </div>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
+            </button>
+          </div>
 
-            {/* 스크롤 가능한 리스트 섹션 */}
-            <div className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-32">
-              {filteredPosts.length > 0 ? (
-                <>
-                  {filteredPosts.map((post) => (
-                    <ObservedPostItem
-                      key={post.id}
-                      post={post}
-                      onVisible={markAsViewed}
-                      isViewed={viewedIds.has(post.id)}
-                      onLikeToggle={handleLikeToggle}
-                      onLocationClick={handleLocationClick}
-                      onDelete={handleLocalDelete}
-                    />
-                  ))}
-                  
-                  <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
-                      </>
-                    ) : (
-                      <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="py-20 text-center text-gray-400 font-medium">
-                  표시할 포스트가 없습니다.
+          <div className="flex flex-col pt-4 pb-32">
+            {filteredPosts.length > 0 ? (
+              <>
+                {filteredPosts.map((post) => (
+                  <ObservedPostItem
+                    key={post.id}
+                    post={post}
+                    onVisible={markAsViewed}
+                    isViewed={viewedIds.has(post.id)}
+                    onLikeToggle={handleLikeToggle}
+                    onLocationClick={handleLocationClick}
+                    onDelete={handleLocalDelete}
+                  />
+                ))}
+                
+                <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
+                    </>
+                  ) : (
+                    <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  )}
                 </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
+              </>
+            ) : (
+              <div className="py-20 text-center text-gray-400 font-medium">
+                표시할 포스트가 없습니다.
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
