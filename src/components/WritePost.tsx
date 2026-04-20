@@ -114,11 +114,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    if (!initialLocation) {
-      showError('장소를 선택해주세요.');
-      return;
-    }
-
     if (!selectedCategory) {
       showError('카테고리를 선택해주세요.');
       return;
@@ -126,6 +121,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
     setIsSubmitting(true);
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+
+    // ✅ 위치 정보가 없는 경우 기본값(서울 시청 근처) 또는 이전 선택값 유지
+    const finalLat = initialLocation?.lat || 37.5665;
+    const finalLng = initialLocation?.lng || 126.9780;
+    const finalAddress = address || '대한민국';
 
     try {
       let finalVideoUrl = null;
@@ -150,9 +150,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
       const postData: any = {
         content: draft.content,
-        location_name: address,
-        latitude: initialLocation.lat,
-        longitude: initialLocation.lng,
+        location_name: finalAddress,
+        latitude: finalLat,
+        longitude: finalLng,
         image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
         user_id: authUser.id,
         user_name: displayName,
@@ -198,6 +198,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
     const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
+    const finalLat = initialLocation?.lat || 37.5665;
+    const finalLng = initialLocation?.lng || 126.9780;
+    const finalAddress = address || '대한민국';
+
     const newPost = {
       id: dbPost.id,
       isAd: false,
@@ -209,9 +213,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser!.id}`
       },
       content: draft.content,
-      location: address,
-      lat: initialLocation!.lat,
-      lng: initialLocation!.lng,
+      location: finalAddress,
+      lat: finalLat,
+      lng: finalLng,
       likes: 0,
       commentsCount: 0,
       comments: [],
@@ -377,7 +381,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <Button 
                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
                 onClick={handlePost}
-                disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation || !selectedCategory}
+                disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !selectedCategory}
               >
                 {isSubmitting ? '저장 중...' : '지도에 등록하기'}
               </Button>
