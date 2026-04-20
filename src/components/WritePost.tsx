@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Sparkles, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint } from 'lucide-react';
+import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -38,7 +38,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // 카테고리 상태 추가
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
   
@@ -159,7 +159,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         likes: 0,
-        category: selectedCategory, // 카테고리 추가
+        category: selectedCategory,
         created_at: new Date().toISOString()
       };
 
@@ -192,7 +192,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         isLiked: false,
         createdAt: new Date(),
         borderType: 'none',
-        category: selectedCategory, // 카테고리 추가
+        category: selectedCategory,
       };
 
       if (onPostCreated) onPostCreated(newPost);
@@ -201,7 +201,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       postDraftStore.clear();
       setVideoUrl(null);
       setVideoFile(null);
-      setSelectedCategory(null); // 카테고리 초기화
+      setSelectedCategory(null);
       onClose();
     } catch (err) {
       console.error('Error saving post:', err);
@@ -212,147 +212,152 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
-      <DrawerContent 
-        className={cn(
-          "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
-          // 키보드가 열리면 전체 화면을 덮도록 설정
-          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh] rounded-t-[40px]"
-        )}
-        style={{ 
-          // BottomNav가 z-[1002]로 최상단에 오도록 설정했으므로,
-          // DrawerContent는 bottom: 0으로 설정하여 화면 전체를 덮도록 복구합니다.
-          bottom: 0,
-          height: isKeyboardOpen ? '100%' : '92vh',
-          top: 'auto',
-        }}
-      >
-        {!isKeyboardOpen && (
-          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
-        )}
-        
-        <div className={cn("px-10 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="text-indigo-600">✨</span>
-              새 게시물 작성
-            </h2>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-              <X className="w-5 h-5 text-gray-400" />
-            </Button>
-          </div>
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-[1px]"
+          onClick={onClose}
+        />
+      )}
+      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
+        <DrawerContent 
+          className={cn(
+            "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
+            isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh] rounded-t-[40px]"
+          )}
+          style={{ 
+            bottom: 0,
+            height: isKeyboardOpen ? '100%' : '92vh',
+            top: 'auto',
+          }}
+        >
+          {!isKeyboardOpen && (
+            <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+          )}
+          
+          <div className={cn("px-10 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-indigo-600">✨</span>
+                새 게시물 작성
+              </h2>
+              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+                <X className="w-5 h-5 text-gray-400" />
+              </Button>
+            </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
-            <div className="space-y-6 px-1">
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={takePhoto}
-                    className={cn(
-                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                      draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                    )}
-                  >
-                    <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
-                    <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
-                  </button>
-                  <button 
-                    onClick={() => videoInputRef.current?.click()}
-                    className={cn(
-                      "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                      videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                    )}
-                  >
-                    <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
-                    <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
-                  </button>
-                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
-                </div>
-              </div>
-
-              {(draft.image || videoUrl) && (
-                <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
-                  {draft.image ? (
-                    <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <video src={videoUrl!} className="w-full h-full object-contain" controls />
-                  )}
-                  <button 
-                    onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); }}
-                    className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
-                  <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
-                    <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
-                  </button>
-                </div>
-                <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                    <MapPin className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
-                      {address || '위치를 선택해주세요'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.key}
-                      onClick={() => setSelectedCategory(cat.key)}
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+              <div className="space-y-6 px-1">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={takePhoto}
                       className={cn(
-                        "flex flex-col items-center justify-center h-16 rounded-xl border-2 transition-all",
-                        selectedCategory === cat.key
-                          ? `border-indigo-600 ${cat.color}/20 bg-indigo-50`
-                          : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                        "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                        draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                       )}
                     >
-                      <cat.Icon className={cn("w-5 h-5", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")} />
-                      <span className={cn("text-xs font-bold mt-1", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-600")}>
-                        {cat.label}
-                      </span>
+                      <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
+                      <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
                     </button>
-                  ))}
+                    <button 
+                      onClick={() => videoInputRef.current?.click()}
+                      className={cn(
+                        "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                        videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                      )}
+                    >
+                      <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
+                      <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                    </button>
+                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
+                  </div>
+                </div>
+
+                {(draft.image || videoUrl) && (
+                  <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+                    {draft.image ? (
+                      <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                    )}
+                    <button 
+                      onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); }}
+                      className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
+                    <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                      <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
+                    </button>
+                  </div>
+                  <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                      <MapPin className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
+                        {address || '위치를 선택해주세요'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.key}
+                        onClick={() => setSelectedCategory(cat.key)}
+                        className={cn(
+                          "flex flex-col items-center justify-center h-16 rounded-xl border-2 transition-all",
+                          selectedCategory === cat.key
+                            ? `border-indigo-600 ${cat.color}/20 bg-indigo-50`
+                            : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                        )}
+                      >
+                        <cat.Icon className={cn("w-5 h-5", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")} />
+                        <span className={cn("text-xs font-bold mt-1", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-600")}>
+                          {cat.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                  <Textarea 
+                    placeholder="이 장소에서의 추억을 기록해보세요..."
+                    className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                    value={draft.content}
+                    onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-                <Textarea 
-                  placeholder="이 장소에서의 추억을 기록해보세요..."
-                  className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
-                  value={draft.content}
-                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
-                />
-              </div>
+            <div className={cn("py-4 bg-white shrink-0 transition-all duration-300", isKeyboardOpen ? "pb-2" : "pb-[120px]")}>
+              <Button 
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
+                onClick={handlePost}
+                disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation || !selectedCategory}
+              >
+                {isSubmitting ? '저장 중...' : '지도에 등록하기'}
+              </Button>
             </div>
           </div>
-
-          <div className={cn("py-4 bg-white shrink-0 transition-all duration-300", isKeyboardOpen ? "pb-2" : "pb-[120px]")}>
-            <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
-              onClick={handlePost}
-              disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !initialLocation || !selectedCategory}
-            >
-              {isSubmitting ? '저장 중...' : '지도에 등록하기'}
-            </Button>
-          </div>
-        </div>
-      </DrawerContent>
-    </Drawer>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 };
 

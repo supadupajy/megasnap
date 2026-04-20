@@ -14,16 +14,13 @@ const BottomNav = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleWriteClick = () => {
-    // 전역 이벤트를 발생시켜 현재 활성화된 페이지의 WritePost를 엽니다.
-    window.dispatchEvent(new CustomEvent('open-write-post'));
+    window.dispatchEvent(new CustomEvent('toggle-write-post'));
   };
 
-  // 키보드가 올라왔을 때는 하단 메뉴를 숨김
   if (isKeyboardOpen) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[1002] pb-8">
-      {/* 첫 번째 메뉴: 지도 */}
       <button 
         onClick={() => navigate('/')}
         className={cn(
@@ -35,7 +32,6 @@ const BottomNav = () => {
         <span className="text-[10px] font-bold tracking-tight">지도</span>
       </button>
 
-      {/* 두 번째 메뉴: 인기 */}
       <button 
         onClick={() => navigate('/popular')}
         className={cn(
@@ -47,7 +43,6 @@ const BottomNav = () => {
         <span className="text-[10px] font-bold tracking-tight">인기</span>
       </button>
       
-      {/* 세 번째 메뉴: 글쓰기 (중앙) */}
       <div className="relative flex flex-col items-center w-full">
         <div className="absolute -top-12">
           <button 
@@ -60,7 +55,6 @@ const BottomNav = () => {
         </div>
       </div>
 
-      {/* 네 번째 메뉴: 친구검색 */}
       <button 
         onClick={() => navigate('/search')}
         className={cn(
@@ -72,7 +66,6 @@ const BottomNav = () => {
         <span className="text-[10px] font-bold tracking-tight">친구검색</span>
       </button>
 
-      {/* 다섯 번째 메뉴: 내정보 */}
       <button 
         onClick={() => navigate('/profile')}
         className={cn(
