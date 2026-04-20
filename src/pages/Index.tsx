@@ -143,40 +143,33 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
-    // 줌 레벨이나 중심점이 바뀌면 즉시 상태 업데이트 (throttle 제거 시도)
-    setMapData(data);
-    mapCache.lastCenter = data.center;
-    if (data.level !== undefined) {
-      setCurrentZoom(data.level);
-      mapCache.lastZoom = data.level;
-    }
-    if (isSelectingLocation) setTempSelectedLocation(data.center);
+    if (throttleTimer.current) return;
+    throttleTimer.current = setTimeout(() => {
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+      if (data.level !== undefined) {
+        setCurrentZoom(data.level);
+        mapCache.lastZoom = data.level;
+      }
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      throttleTimer.current = null;
+    }, 100); // 100ms는 너무 빠를 수 있어 syncPostsWithSupabase와 조율 필요
   }, [isSelectingLocation]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds || isSyncing.current) return;
     
-    // 축소 레벨이 너무 낮으면(넓은 지역) 데이터 Fetch 중단 (성능 보호)
+    // ✅ 축소 레벨이 너무 낮으면(넓은 지역) 데이터 Fetch 중단 (성능 보호)
     if (currentZoom >= 13) return;
 
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
-    
-    // ✅ 검색 영역을 지도 화면보다 1.5배 넓게 설정하여 데이터 미리 확보
-    const latDiff = ne.lat - sw.lat;
-    const lngDiff = ne.lng - sw.lng;
-    const wideSw = { lat: sw.lat - latDiff * 0.25, lng: sw.lng - lngDiff * 0.25 };
-    const wideNe = { lat: ne.lat + latDiff * 0.25, lng: ne.lng + lngDiff * 0.25 };
-
     try {
-      console.log(`[Sync] Fetching wide area for level ${currentZoom}`);
-      const dbPosts = await fetchPostsInBounds(wideSw, wideNe);
+      const dbPosts = await fetchPostsInBounds(sw, ne);
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-        if (newUnique.length === 0) return prev;
-        
         const combined = [...prev, ...newUnique];
         mapCache.posts = combined;
         return combined;
@@ -188,61 +181,41 @@ const Index = () => {
     }
   }, [mapData, currentZoom]);
 
-  useEffect(() => { 
-    if (mapData) {
-      syncPostsWithSupabase(); 
-    }
-  }, [mapData, syncPostsWithSupabase]);
+  useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
-  const inBoundsMarkers = useMemo(() => {
-    if (!mapData?.bounds) return [];
+  useEffect(() => {
+    if (!mapData?.bounds) return;
     
-    // ✅ 축소 레벨 제한을 아예 제거하여 모든 레벨에서 마커 렌더링 시도
-    // currentZoom >= 13 체크를 제거
+    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
+    // 지도를 아주 많이 축소했을 때만 마커를 숨기도록 변경하여 전국 단위 가시성 확보
+    if (currentZoom >= 13) { 
+      setDisplayedMarkers([]); 
+      return; 
+    }
 
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    const latMin = Math.min(sw.lat, ne.lat);
-    const latMax = Math.max(sw.lat, ne.lat);
-    const lngMin = Math.min(sw.lng, ne.lng);
-    const lngMax = Math.max(sw.lng, ne.lng);
-
-    const latSpan = latMax - latMin;
-    const lngSpan = lngMax - lngMin;
-    
-    // ✅ 마진을 200%로 늘려서 화면 밖에서도 미리 렌더링되게 함
-    const latMargin = latSpan * 2.0;
-    const lngMargin = lngSpan * 2.0;
-    
-    const filtered = allPosts.filter(post => {
+    const inBoundsCandidates = allPosts.filter(post => {
+      // ✅ 위치 정보가 없는 포스팅(null)은 지도 마커 대상에서 제외
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
+      
       if (blockedIds.has(post.user.id)) return false;
+      if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
       
-      // ✅ 필터링 조건을 극도로 완화
-      if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
-          post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
-      
-      if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      if (post.isAd) return true;
+      if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
       
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
-      
       return matchesCategory;
     });
-
-    // 정렬 후 상위 1000개 반환
-    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
-  }, [allPosts, mapData?.bounds, timeValue, selectedCategories, blockedIds, authUser]);
-
-  // ✅ 마커 업데이트를 위한 별도 Effect 분리
-  useEffect(() => {
-    // 줌 레벨이나 데이터가 바뀌면 즉시 마커 상태 업데이트
-    setDisplayedMarkers([...inBoundsMarkers]);
-  }, [inBoundsMarkers, currentZoom]);
+    
+    setDisplayedMarkers(inBoundsCandidates);
+  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {

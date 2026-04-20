@@ -152,10 +152,6 @@ const MapContainer = ({
           const currentLevel = map.getLevel();
           
           setCurrentLevel(currentLevel);
-          
-          // ✅ 디버깅을 위해 현재 좌표 범위와 레벨을 로그로 남김
-          console.log(`[MapUpdate] Level: ${currentLevel}, SW: ${sw.getLat()}, ${sw.getLng()}, NE: ${ne.getLat()}, ${ne.getLng()}`);
-
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
@@ -173,8 +169,6 @@ const MapContainer = ({
       setIsMapReady(true);
       setIsLoading(false);
 
-      // 'zoom_changed' 이벤트를 명시적으로 추가하여 확대/축소 시 데이터 업데이트 보장
-      kakao.maps.event.addListener(map, 'zoom_changed', updateMapData);
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
       kakao.maps.event.addListener(map, 'dragstart', () => { 
         isDragging.current = true; 
@@ -216,12 +210,13 @@ const MapContainer = ({
 
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
-    
-    const map = mapInstance.current;
-    if (map.getLevel() !== level) {
+    const timer = setTimeout(() => {
+      const map = mapInstance.current;
+      if (!map) return;
       map.setLevel(level, { animate: false });
       setCurrentLevel(level);
-    }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [level, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
@@ -380,18 +375,11 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 레벨이 변경될 때만 Hard Reset을 수행하되, 
-    // currentLevel 상태 업데이트와 마커 삭제를 분리하여 엔진 안정성 확보
-    if (level !== undefined && currentLevel !== level) {
-      overlaysRef.current.forEach((overlay) => {
-        if (overlay) overlay.setMap(null);
-      });
-      overlaysRef.current.clear();
-      removalTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
-      removalTimeoutsRef.current.clear();
-      
-      setCurrentLevel(level);
-      return; 
+    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
+    // 전국 단위로 지도를 축소했을 때도 마커가 유지되도록 변경
+    if (currentLevel >= 13) {
+      overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
+      return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
@@ -404,23 +392,23 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
+      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ 줌 레벨별 마커 스케일 정밀 보정 (가시성 확보)
       let scale = 1;
-      if (currentLevel === 7) scale = 0.75;
-      else if (currentLevel === 8) scale = 0.55;
-      else if (currentLevel === 9) scale = 0.4;
-      else if (currentLevel === 10) scale = 0.3;
-      else if (currentLevel === 11) scale = 0.22;
-      else if (currentLevel >= 12) scale = 0.15;
+      if (currentLevel === 7) scale = 0.6;
+      else if (currentLevel === 8) scale = 0.4;
+      else if (currentLevel === 9) scale = 0.3; // 살짝 키움
+      else if (currentLevel === 10) scale = 0.2; // 살짝 키움
+      else if (currentLevel === 11) scale = 0.15; // 추가
+      else if (currentLevel === 12) scale = 0.1; // 추가
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // ✅ 줌 레벨 정보를 data 속성에 저장하여 렌더링 일관성 보장
         content.className = 'marker-container kakao-overlay animate-marker-appear';
-        content.setAttribute('data-zoom-level', currentLevel.toString());
+        if (isHighlighted) content.classList.add('highlighted');
+        content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         content.onclick = (e) => { 
@@ -428,20 +416,13 @@ const MapContainer = ({
           if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
           if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
         };
-        const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1, zIndex: (isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))) });
+        const overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(post.lat, post.lng), content: content, yAnchor: 1, zIndex: baseZIndex });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
         const content = existingOverlay.getContent();
+        existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
-          // ✅ 줌 레벨이 다르면 기존 오버레이 강제 갱신
-          if (content.getAttribute('data-zoom-level') !== currentLevel.toString()) {
-            existingOverlay.setMap(null);
-            overlaysRef.current.delete(post.id);
-            // 다음 렌더링에서 신규 생성됨
-            return;
-          }
-          existingOverlay.setZIndex((isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))));
           cancelPendingRemoval(post.id, content);
           content.style.setProperty('--marker-scale', scale.toString());
           if (isHighlighted) content.classList.add('highlighted'); else content.classList.remove('highlighted');

@@ -74,7 +74,6 @@ export const usePosts = (limit: number = 10) => {
 };
 
 export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {lat: number, lng: number}) => {
-  // ✅ 지도를 축소했을 때 더 많은 데이터를 가져오기 위해 리밋을 3000으로 상향
   const { data, error } = await supabase
     .from("posts")
     .select("*")
@@ -82,7 +81,7 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
-    .limit(3000);
+    .limit(1000);
 
   if (error) throw error;
   return Promise.all((data || []).map(mapDbToPost));
