@@ -90,7 +90,7 @@ const Index = () => {
     const p = await sanitizeYoutubeMedia(rawPost);
     const isAd = p.content?.trim().startsWith('[AD]');
     
-    // Determine tier/borderType based on logic or data
+    // Determine tier/borderType based on LIKES only
     let borderType: 'none' | 'popular' | 'silver' | 'gold' | 'diamond' = 'none';
     
     // Check if likes is a number, otherwise default to 0
@@ -107,8 +107,7 @@ const Index = () => {
     } else if (likesCount >= 50) {
       borderType = 'popular';
     } else {
-      // Fallback to deterministic ID hashing for variety if likes are low
-      borderType = getTierFromId(p.id);
+      borderType = 'none';
     }
 
     const mappedPost: Post = {
@@ -146,25 +145,16 @@ const Index = () => {
       
       if (!error && data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
-        const ranked = mapped.map((p, idx) => {
-          let finalBorder = p.borderType;
-          // Force high rank posts to have at least 'popular' border
-          if (idx < 3 && finalBorder === 'none') {
-            finalBorder = 'popular';
-          }
-          return { 
-            ...p, 
-            rank: idx + 1,
-            borderType: finalBorder,
-            isInfluencer: ['silver', 'gold', 'diamond'].includes(finalBorder)
-          };
-        });
+        const ranked = mapped.map((p, idx) => ({ 
+          ...p, 
+          rank: idx + 1
+        }));
         setGlobalTrendingPosts(ranked);
       }
     } catch (err) {
       console.error('[Trending] Fetch Error:', err);
     }
-  }, [mapDbToPost]);
+  }, []);
 
   useEffect(() => {
     fetchGlobalTrending();
