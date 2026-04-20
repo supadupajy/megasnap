@@ -47,7 +47,8 @@ const Search = () => {
           </div>
         </div>
 
-        {!searchQuery && <SearchAdBanner />}
+        {/* 광고 배너를 항상 표시하도록 수정 */}
+        <SearchAdBanner />
 
         <div className="space-y-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
