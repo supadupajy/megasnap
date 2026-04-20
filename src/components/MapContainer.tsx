@@ -153,6 +153,9 @@ const MapContainer = ({
           
           setCurrentLevel(currentLevel);
           
+          // ✅ 디버깅을 위해 현재 좌표 범위와 레벨을 로그로 남김
+          console.log(`[MapUpdate] Level: ${currentLevel}, SW: ${sw.getLat()}, ${sw.getLng()}, NE: ${ne.getLat()}, ${ne.getLng()}`);
+
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 

@@ -162,12 +162,20 @@ const Index = () => {
 
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
+    
+    // ✅ 검색 영역을 지도 화면보다 1.5배 넓게 설정하여 데이터 미리 확보
+    const latDiff = ne.lat - sw.lat;
+    const lngDiff = ne.lng - sw.lng;
+    const wideSw = { lat: sw.lat - latDiff * 0.25, lng: sw.lng - lngDiff * 0.25 };
+    const wideNe = { lat: ne.lat + latDiff * 0.25, lng: ne.lng + lngDiff * 0.25 };
+
     try {
-      const dbPosts = await fetchPostsInBounds(sw, ne);
+      console.log(`[Sync] Fetching wide area for level ${currentZoom}`);
+      const dbPosts = await fetchPostsInBounds(wideSw, wideNe);
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-        if (newUnique.length === 0) return prev; // 변경사항 없으면 참조 유지
+        if (newUnique.length === 0) return prev;
         
         const combined = [...prev, ...newUnique];
         mapCache.posts = combined;
@@ -189,29 +197,26 @@ const Index = () => {
   const inBoundsMarkers = useMemo(() => {
     if (!mapData?.bounds || currentZoom >= 13) return [];
     
+    // ✅ 마커 렌더링 시 필터링을 최소화하거나 제거하여 "사라짐" 현상 방지
+    // 이미 syncPostsWithSupabase에서 영역 데이터를 가져왔으므로, 
+    // 여기서는 화면 내외를 너무 엄격하게 따지지 않고 데이터를 보여줍니다.
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // ✅ 축소 레벨(7 이상)에서 영역 판정 로직 강화
-    // 지도를 축소하면 좌표 범위가 급격히 넓어지는데, 이때 부동소수점 오차나 
-    // 계산 방식 차이로 중심부 데이터가 누락되는 것을 방지하기 위해 버퍼를 더 넉넉히 잡음
+    // 화면 영역보다 훨씬 넉넉한 범위를 마커 렌더링 대상으로 잡음
     const latSpan = ne.lat - sw.lat;
     const lngSpan = ne.lng - sw.lng;
-    const bufferMultiplier = currentZoom >= 7 ? 0.2 : 0.1; // 축소 시 더 넓게 판정
-    
-    const latMargin = latSpan * bufferMultiplier;
-    const lngMargin = lngSpan * bufferMultiplier;
+    const latMargin = latSpan * 0.5; // 50% 여유
+    const lngMargin = lngSpan * 0.5; // 50% 여유
     
     return allPosts.filter(post => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // ✅ 명시적인 범위 판정
-      const isInLat = post.lat >= (sw.lat - latMargin) && post.lat <= (ne.lat + latMargin);
-      const isInLng = post.lng >= (sw.lng - lngMargin) && post.lng <= (ne.lng + lngMargin);
-      
-      if (!isInLat || !isInLng) return false;
+      // ✅ 매우 넉넉한 범위 판정 (거의 화면에 조금이라도 걸치면 다 보여줌)
+      if (post.lat < (sw.lat - latMargin) || post.lat > (ne.lat + latMargin) || 
+          post.lng < (sw.lng - lngMargin) || post.lng > (ne.lng + lngMargin)) return false;
       
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       
