@@ -11,7 +11,64 @@ import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ... ObservedPostItem 컴포넌트는 동일하므로 생략 ...
+const ObservedPostItem = ({ 
+  post, 
+  onVisible, 
+  isViewed, 
+  onLikeToggle, 
+  onLocationClick,
+  onDelete 
+}: { 
+  post: Post, 
+  onVisible: (id: string) => void, 
+  isViewed: boolean, 
+  onLikeToggle: (id: string) => void, 
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
+  onDelete: (id: string) => void
+}) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          onVisible(post.id);
+          observer.unobserve(entry.target);
+        }
+      },
+      { 
+        threshold: [0, 0.6, 1.0],
+        rootMargin: '-10% 0px -10% 0px'
+      }
+    );
+
+    if (itemRef.current) {
+      observer.observe(itemRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [post.id, onVisible]);
+
+  return (
+    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
+      <PostItem 
+        {...post}
+        isViewed={isViewed} 
+        onLikeToggle={() => onLikeToggle(post.id)}
+        onLocationClick={onLocationClick}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+};
+
+interface PostListOverlayProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialPosts: Post[];
+  mapCenter: { lat: number; lng: number };
+  onDeletePost?: (id: string) => void;
+}
 
 const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePost }: PostListOverlayProps) => {
   const navigate = useNavigate();
@@ -22,12 +79,12 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // [기존 로직 유지]
   useLayoutEffect(() => {
     if (isOpen) {
       setPosts(initialPosts);
       return;
     }
+
     setPosts([]);
     setIsLoadingMore(false);
   }, [isOpen, initialPosts]);
@@ -58,6 +115,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
 
   useEffect(() => {
     if (!isOpen) return;
+    
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visiblePosts.length > 0) {
@@ -96,77 +154,62 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          {/* 1. 불투명 레이어 (Backdrop) - 리스트 뒤에 위치하도록 z-index 조정 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose} // 레이어 클릭 시 닫힘
-            className="fixed inset-0 z-[1190] bg-black/40 backdrop-blur-sm"
-          />
-
-          {/* 2. 실시간 포스팅 리스트 (Content Container) */}
-          <motion.div
-            initial={{ opacity: 0, y: "100%" }} // 밑에서 위로 올라오는 애니메이션 추천
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "100%" }}
-            transition={{
-              duration: 0.3,
-              ease: [0.22, 1, 0.36, 1]
-            }}
-            // z-index를 레이어보다 높게 설정하여 절대 겹치지 않게 함
-            className="fixed inset-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar flex flex-col"
-          >
-            {/* 헤더 섹션 */}
-            <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
-              <div>
-                <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
-              </div>
-              <button 
-                onClick={onClose}
-                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
-              </button>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={{
+            duration: 0.22,
+            ease: [0.22, 1, 0.36, 1]
+          }}
+          className="fixed inset-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
+        >
+          <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
             </div>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
+            </button>
+          </div>
 
-            {/* 리스트 섹션 */}
-            <div className="flex flex-col pt-4 pb-32">
-              {filteredPosts.length > 0 ? (
-                <>
-                  {filteredPosts.map((post) => (
-                    <ObservedPostItem
-                      key={post.id}
-                      post={post}
-                      onVisible={markAsViewed}
-                      isViewed={viewedIds.has(post.id)}
-                      onLikeToggle={handleLikeToggle}
-                      onLocationClick={handleLocationClick}
-                      onDelete={handleLocalDelete}
-                    />
-                  ))}
-                  
-                  <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
-                      </>
-                    ) : (
-                      <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="py-20 text-center text-gray-400 font-medium">
-                  표시할 포스트가 없습니다.
+          <div className="flex flex-col pt-4 pb-32">
+            {filteredPosts.length > 0 ? (
+              <>
+                {filteredPosts.map((post) => (
+                  <ObservedPostItem
+                    key={post.id}
+                    post={post}
+                    onVisible={markAsViewed}
+                    isViewed={viewedIds.has(post.id)}
+                    onLikeToggle={handleLikeToggle}
+                    onLocationClick={handleLocationClick}
+                    onDelete={handleLocalDelete}
+                  />
+                ))}
+                
+                <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
+                    </>
+                  ) : (
+                    <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  )}
                 </div>
-              )}
-            </div>
-          </motion.div>
-        </>
+              </>
+            ) : (
+              <div className="py-20 text-center text-gray-400 font-medium">
+                표시할 포스트가 없습니다.
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
