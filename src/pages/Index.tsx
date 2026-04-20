@@ -492,7 +492,7 @@ const Index = () => {
                     disabled={displayedMarkers.length === 0 || currentZoom >= 9}
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 9 && "opacity-30 grayscale-0 cursor-not-allowed bg-indigo-600/30 border-white/10 shadow-none"
+                      currentZoom >= 9 && "opacity-50 grayscale-0 cursor-not-allowed bg-indigo-600/30 border-white/10 shadow-none"
                     )}
                   >
                     <LayoutGrid className={cn("w-7 h-7 stroke-[3px] relative z-10", currentZoom >= 9 && "text-white/50")} />
