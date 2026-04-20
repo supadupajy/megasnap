@@ -55,29 +55,44 @@ const MapContainer = ({
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // ✅ [FINAL ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 윈도우 수준의 Monkey Patch
+  // ✅ [ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 윈도우 수준의 Monkey Patch
   useEffect(() => {
-    // Selection.prototype.getRangeAt 메서드가 에러를 발생시키지 않도록 원천적으로 수정
+    // 1. Selection.prototype.getRangeAt 메서드가 에러를 발생시키지 않도록 원천적으로 수정
     const originalGetRangeAt = Selection.prototype.getRangeAt;
     
     Selection.prototype.getRangeAt = function(index: number) {
       if (this.rangeCount <= index || index < 0) {
-        // 인덱스가 유효하지 않을 때 에러를 던지는 대신 안전하게 빈 범위를 반환합니다.
-        // 이것이 특정 확장 프로그램의 'content.js'에서 발생하는 Uncaught IndexSizeError를 막는 유일한 방법입니다.
-        const range = document.createRange();
-        // 안전을 위해 현재 컨테이너를 기준으로 빈 범위를 설정할 수도 있으나 기본 Range로도 충분합니다.
-        return range;
+        return document.createRange();
       }
-      return originalGetRangeAt.apply(this, [index]);
+      try {
+        return originalGetRangeAt.apply(this, [index]);
+      } catch (e) {
+        return document.createRange();
+      }
     };
 
-    // 추가로 지도 영역에서의 모든 선택 시도를 차단
+    // 2. Selection.prototype.addRange 방어 (일부 확장 프로그램 대응)
+    const originalAddRange = Selection.prototype.addRange;
+    Selection.prototype.addRange = function(range: Range) {
+      try {
+        return originalAddRange.apply(this, [range]);
+      } catch (e) {
+        // 에러 무시
+      }
+    };
+
+    // 3. 지도 영역에서의 모든 선택 시도를 차단 (캡처링 단계)
     const preventSelectionError = (e: Event) => {
       if (window.getSelection) {
         try {
           const sel = window.getSelection();
-          if (sel && sel.rangeCount > 0) {
-            sel.removeAllRanges();
+          if (sel) {
+            if (sel.rangeCount > 0) sel.removeAllRanges();
+            // 강제로 포커스 해제 (확장 프로그램의 트리거 방지)
+            if (document.activeElement instanceof HTMLElement && 
+                containerRef.current?.contains(document.activeElement)) {
+              document.activeElement.blur();
+            }
           }
         } catch (err) {}
       }
@@ -85,15 +100,26 @@ const MapContainer = ({
 
     const container = containerRef.current;
     if (container) {
-      const events = ['selectstart', 'dragstart', 'mousedown', 'click', 'touchstart'];
+      // 모든 인터랙션 이벤트에서 선택 영역을 청소
+      const events = ['mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend', 'contextmenu', 'selectstart', 'dragstart'];
       events.forEach(evt => container.addEventListener(evt, preventSelectionError, { capture: true, passive: true }));
     }
 
+    // 4. 전역 에러 핸들러 추가 (마지막 보루)
+    const handleError = (e: ErrorEvent) => {
+      if (e.message?.includes('getRangeAt') || e.message?.includes('IndexSizeError')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener('error', handleError, true);
+
     return () => {
-      // 컴포넌트 언마운트 시 원래 메서드로 복구
       Selection.prototype.getRangeAt = originalGetRangeAt;
+      Selection.prototype.addRange = originalAddRange;
+      window.removeEventListener('error', handleError, true);
       if (container) {
-        const events = ['selectstart', 'dragstart', 'mousedown', 'click', 'touchstart'];
+        const events = ['mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend', 'contextmenu', 'selectstart', 'dragstart'];
         events.forEach(evt => container.removeEventListener(evt, preventSelectionError, { capture: true } as any));
       }
     };
