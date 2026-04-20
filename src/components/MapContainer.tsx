@@ -58,41 +58,59 @@ const MapContainer = ({
   // ✅ [ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 캡처링 단계의 이벤트 제어
   useEffect(() => {
     const preventSelectionError = (e: Event) => {
-      // 이벤트가 확장 프로그램으로 전달되어 getRangeAt(0)을 호출하기 전에 전파 차단
+      // 텍스트 선택 관련 동작이 감지되면 즉시 차단하고 선택 범위를 초기화
+      if (e.cancelable) {
+        e.preventDefault();
+      }
       e.stopPropagation();
       
       if (window.getSelection) {
-        const sel = window.getSelection();
         try {
-          if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            sel.removeAllRanges();
+          }
         } catch (err) {}
       }
     };
 
     const container = containerRef.current;
     if (container) {
-      // 캡처링(capture: true) 단계에서 이벤트를 가로채어 하위 요소나 확장 프로그램이 감지하지 못하게 함
-      const criticalEvents = ['selectstart', 'dragstart'];
-      criticalEvents.forEach(evt => {
-        container.addEventListener(evt, preventSelectionError, { capture: true });
-      });
+      // 모든 주요 인터랙션에 대해 캡처링 단계에서 선택 방지
+      const events = [
+        'selectstart', 
+        'dragstart', 
+        'mousedown', 
+        'mouseup', 
+        'touchstart', 
+        'touchend', 
+        'click', 
+        'dblclick',
+        'contextmenu'
+      ];
       
-      const interactionEvents = ['mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
-      interactionEvents.forEach(evt => {
-        container.addEventListener(evt, () => {
+      events.forEach(evt => {
+        // capture: true를 통해 확장 프로그램의 리스너보다 먼저 실행되도록 함
+        container.addEventListener(evt, (e) => {
           if (window.getSelection) {
             const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+            if (sel && sel.rangeCount > 0) {
+              sel.removeAllRanges();
+            }
           }
-        }, { passive: true, capture: true });
+          // selectstart와 dragstart는 반드시 preventDefault와 stopPropagation 처리
+          if (evt === 'selectstart' || evt === 'dragstart') {
+            preventSelectionError(e);
+          }
+        }, { capture: true, passive: false });
       });
     }
 
     return () => {
       if (container) {
-        const criticalEvents = ['selectstart', 'dragstart'];
-        criticalEvents.forEach(evt => {
-          container.removeEventListener(evt, preventSelectionError, { capture: true } as any);
+        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick', 'contextmenu'];
+        events.forEach(evt => {
+          container.removeEventListener(evt, () => {}, { capture: true } as any);
         });
       }
     };
@@ -413,11 +431,14 @@ const MapContainer = ({
       style={{ 
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
-        userSelect: 'none',
+        KhtmlUserSelect: 'none',
+        MozUserSelect: 'none',
         msUserSelect: 'none',
+        userSelect: 'none',
         WebkitTouchCallout: 'none',
         WebkitUserDrag: 'none'
       }}
+      onContextMenu={(e) => e.preventDefault()}
     >
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
