@@ -216,8 +216,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       <DrawerContent 
         className={cn(
           "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
-          isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh]"
+          isKeyboardOpen ? "h-full rounded-t-none" : "h-[calc(100vh-106px)] rounded-t-[40px] bottom-[106px]"
         )}
+        style={{ 
+          // DrawerContent가 bottom: 0으로 고정되는 것을 방지하고, BottomNav 위에서 시작하도록 조정
+          bottom: isKeyboardOpen ? 0 : '106px',
+          height: isKeyboardOpen ? '100%' : 'calc(100vh - 106px)',
+          top: 'auto', // 상단 고정 해제
+        }}
       >
         {!isKeyboardOpen && (
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
@@ -247,7 +253,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                     )}
                   >
                     <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
-                    <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
+                    <span className="text-xs font-bold">사진 촬영</span>
                   </button>
                   <button 
                     onClick={() => videoInputRef.current?.click()}
@@ -257,7 +263,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                     )}
                   >
                     <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
-                    <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                    <span className="text-xs font-bold">동영상 선택</span>
                   </button>
                   <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
                 </div>
