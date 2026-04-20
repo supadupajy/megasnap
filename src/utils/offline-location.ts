@@ -14,9 +14,6 @@ export type OfflineRegion = {
   districts: string[];
 };
 
-// [수정] 이 값을 변경하면 모든 지역의 밀도가 한꺼번에 바뀝니다.
-const DEFAULT_REGION_DENSITY = 700; 
-
 export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
   {
     key: 'seoul',
@@ -24,7 +21,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '서울시',
     lat: 37.5665,
     lng: 126.978,
-    density: DEFAULT_REGION_DENSITY,
+    density: 700,
     bounds: { sw: { lat: 37.42, lng: 126.75 }, ne: { lat: 37.72, lng: 127.2 } },
     districts: [
       '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구', '강북구', '도봉구',
