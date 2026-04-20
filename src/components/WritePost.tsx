@@ -123,13 +123,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     setIsSubmitting(true);
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
 
-    try {
-      console.log('🚀 [WritePost] Starting post save...', { 
-        content: draft.content, 
-        initialLocation, 
-        address 
-      });
+    // ✅ 위치 정보가 없는 경우 null로 설정하여 지도에 나타나지 않게 함
+    const finalLat = initialLocation?.lat || null;
+    const finalLng = initialLocation?.lng || null;
+    const finalAddress = address || '위치 미지정';
 
+    try {
       let finalVideoUrl = null;
 
       if (videoFile) {
@@ -149,11 +148,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         
         finalVideoUrl = publicUrl;
       }
-
-      // ✅ 위치 정보가 없는 경우 null로 설정하여 지도에 나타나지 않게 함
-      const finalLat = initialLocation?.lat || null;
-      const finalLng = initialLocation?.lng || null;
-      const finalAddress = address || '위치 미지정';
 
       const postData: any = {
         content: draft.content,
@@ -180,25 +174,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         .select();
 
       if (error) {
-        console.error('❌ [WritePost] Supabase Insert Error:', error);
         // Fallback: If video_url column is missing/stale, try inserting without it
         if (error.code === 'PGRST204' || error.message?.includes('video_url')) {
           console.warn('Retrying insert without video_url due to schema cache issue');
-          const fallbackData = { ...postData };
-          delete fallbackData.video_url;
-          const retry = await supabase.from('posts').insert([fallbackData]).select();
-          if (retry.error) {
-            console.error('❌ [WritePost] Retry Insert Error:', retry.error);
-            throw retry.error;
-          }
-          console.log('✅ [WritePost] Post saved successfully (Fallback):', retry.data[0]);
-          processNewPost(retry.data[0], finalVideoUrl);
+          delete postData.video_url;
+          const retry = await supabase.from('posts').insert([postData]).select();
+          if (retry.error) throw retry.error;
+          // Use retry data
+          const retryData = retry.data;
+          processNewPost(retryData[0], finalVideoUrl);
           return;
         }
         throw error;
       }
 
-      console.log('✅ [WritePost] Post saved successfully:', data[0]);
       processNewPost(data[0], finalVideoUrl);
     } catch (err) {
       console.error('Error saving post:', err);
