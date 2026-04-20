@@ -23,12 +23,16 @@ async function validateYoutube(videoId: string): Promise<boolean> {
   } catch { return false; }
 }
 
+/**
+ * 전역 포스팅 생성 메인 함수
+ */
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  const confirmClear = confirm("광고를 포함한 전국구 데이터를 생성할까요? (is_ad 컬럼 우회 로직 적용)");
+  const confirmClear = confirm("광고 포함 전국구 데이터를 생성할까요? (모든 에러 해결 버전)");
   if (!confirmClear) return 0;
 
   try {
     console.log("🧹 기존 데이터 삭제 중...");
+    // 모든 데이터를 확실히 지우는 필터 적용
     await supabase.from('posts').delete().not('id', 'is', null);
 
     console.log("📺 유튜브 영상 검증 중...");
@@ -42,7 +46,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     
     let globalCount = 0;
     let myPostCounter = 0; 
-    const MAX_MY_POSTS = 80;
+    const MAX_MY_POSTS = 80; // 내 포스팅 제한
 
     for (const city of MAJOR_CITIES) {
       console.log(`📍 ${city.name} 지역 생성 중...`);
@@ -53,12 +57,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const p = mockPoints[i];
         const uniqueSeed = Date.now() + globalCount;
         
-        // 30개마다 광고 생성
+        // 30개마다 광고 생성 로직
         const isAd = i % 30 === 0;
         let postUser = { id: "", name: "", avatar: "" };
         
         if (isAd) {
-          // [핵심] 광고는 '공식 파트너'라는 이름을 식별자로 사용합니다.
+          // 식별자: '공식 파트너'
           postUser = { id: currentUserId, name: "공식 파트너", avatar: "https://i.pravatar.cc/150?u=ad" };
         } else if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.015) {
           postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
@@ -94,7 +98,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           user_avatar: postUser.avatar,
           likes: Math.floor(Math.random() * 20000),
           created_at: new Date(Date.now() - Math.random() * 120 * 3600000).toISOString()
-          // is_ad 필드는 DB에 없으므로 제외함
+          // is_ad 컬럼은 DB에 없으므로 제외
         });
 
         globalCount++;
@@ -109,5 +113,19 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   } catch (err) { 
     console.error("❌ 시딩 실패:", err); 
     return 0; 
+  }
+};
+
+/**
+ * [에러 해결 포인트] 기존 좋아요 무작위화 함수 export
+ */
+export const randomizeExistingLikes = async () => {
+  try {
+    const { data, error } = await supabase.rpc('randomize_all_likes');
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("❌ 좋아요 무작위화 실패:", err);
+    return false;
   }
 };
