@@ -57,7 +57,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow", "/messages", "/notifications"].some(
+  const isFullPage = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow", "/messages", "/notifications"].some(
     path => location.pathname.startsWith(path)
   );
 
@@ -87,7 +87,19 @@ const AnimatedRoutes = () => {
 
   return (
     <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
-      {!hideLayout && session && <Header />}
+      <AnimatePresence>
+        {!isFullPage && session && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="fixed top-0 left-0 right-0 z-50"
+          >
+            <Header />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
         <AnimatePresence mode="popLayout" initial={false}>
@@ -122,7 +134,7 @@ const AnimatedRoutes = () => {
       </main>
 
       {/* BottomNav를 AnimatePresence 바깥으로 이동하여 항상 고정 */}
-      {!hideLayout && session && !isPostListOpen && <BottomNav />}
+      {!isFullPage && session && !isPostListOpen && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
