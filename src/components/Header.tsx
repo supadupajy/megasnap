@@ -26,17 +26,14 @@ const Header = () => {
       
       setUnreadNotifCount(notifCount || 0);
 
-      // 2. Supabase 메시지 개수 (내가 수신자이고 읽지 않은 것)
+      // 2. 메시지 개수 (내가 수신자이고 읽지 않은 것)
       const { count: dbMsgCount } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', authUser.id)
         .eq('is_read', false);
       
-      // 3. 로컬 chatStore 메시지 개수 합산
-      const localUnreadCount = chatStore.getRooms().filter(r => r.unread).length;
-      
-      setUnreadMsgCount((dbMsgCount || 0) + localUnreadCount);
+      setUnreadMsgCount(dbMsgCount || 0);
     } catch (err) {
       console.error('[Header] Failed to fetch counts:', err);
     }
@@ -47,40 +44,30 @@ const Header = () => {
 
     fetchCounts();
 
-    // 실시간 업데이트 구독 (필터를 제거하여 UPDATE 이벤트를 확실히 수신)
-    const uniqueId = Math.random().toString(36).substring(2, 9);
-    const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
+    // 실시간 업데이트 구독
+    const channel = supabase.channel(`header_updates_${authUser.id}`);
 
     channel
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'notifications'
-      }, (payload: any) => {
-        // 내 알림인 경우에만 갱신
-        if (payload.new?.user_id === authUser.id || payload.old?.user_id === authUser.id) {
-          fetchCounts();
-        }
+        table: 'notifications',
+        filter: `user_id=eq.${authUser.id}`
+      }, () => {
+        fetchCounts();
       })
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'messages'
-      }, (payload: any) => {
-        // 내가 수신자이거나 발신자인 메시지의 변화(읽음 처리 포함)가 생기면 갱신
-        const msg = payload.new || payload.old;
-        if (msg?.receiver_id === authUser.id || msg?.sender_id === authUser.id) {
-          fetchCounts();
-        }
+        table: 'messages',
+        filter: `receiver_id=eq.${authUser.id}`
+      }, () => {
+        fetchCounts();
       })
       .subscribe();
 
-    // 로컬 스토어 구독
-    const unsubscribeChatStore = chatStore.subscribe(fetchCounts);
-
     return () => { 
       supabase.removeChannel(channel);
-      unsubscribeChatStore();
     };
   }, [authUser, fetchCounts]);
 

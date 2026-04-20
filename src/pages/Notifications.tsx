@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Trash2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Trash2, Loader2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +47,7 @@ const Notifications = () => {
 
       if (!error && data) {
         setNotifications(data as any);
+        // 페이지 진입 시 모두 읽음 처리
         await supabase
           .from('notifications')
           .update({ is_read: true })
@@ -60,7 +60,7 @@ const Notifications = () => {
     fetchNotifications();
 
     const channel = supabase
-      .channel('realtime_notifications')
+      .channel('realtime_notifications_page')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${authUser.id}` },
@@ -93,8 +93,19 @@ const Notifications = () => {
     switch (notif.type) {
       case 'follow': return '님이 회원님을 팔로우하기 시작했습니다.';
       case 'like_post': return '님이 회원님의 포스팅을 좋아합니다.';
-      case 'comment': return `님이 댓글을 남겼습니다: ${notif.content}`;
+      case 'comment': return `님이 댓글을 남겼습니다: "${notif.content}"`;
+      case 'message': return `님이 메시지를 보냈습니다: "${notif.content}"`;
       default: return '님이 활동을 남겼습니다.';
+    }
+  };
+
+  const handleNotifClick = (notif: Notification) => {
+    if (notif.type === 'message') {
+      navigate(`/chat/${notif.actor_id}`);
+    } else if (notif.post_id) {
+      navigate('/', { state: { postId: notif.post_id } });
+    } else {
+      navigate(`/profile/${notif.actor_id}`);
     }
   };
 
@@ -114,7 +125,6 @@ const Notifications = () => {
           </div>
         ) : (
           <div className="py-4">
-            <h2 className="text-sm font-bold text-gray-900 mb-4 px-4">최근 알림</h2>
             <div className="flex flex-col">
               <AnimatePresence initial={false}>
                 {notifications.map((notif) => (
@@ -134,10 +144,10 @@ const Notifications = () => {
                       dragConstraints={{ left: -80, right: 0 }}
                       dragElastic={0.1}
                       className={cn(
-                        "relative bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer",
+                        "relative bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors",
                         !notif.is_read && "bg-indigo-50/30"
                       )}
-                      onClick={() => notif.post_id && navigate('/', { state: { postId: notif.post_id } })}
+                      onClick={() => handleNotifClick(notif)}
                     >
                       <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
                         <AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} />
@@ -155,8 +165,13 @@ const Notifications = () => {
                 ))}
               </AnimatePresence>
               {notifications.length === 0 && (
-                <div className="py-20 text-center text-gray-400 font-medium">
-                  새로운 알림이 없습니다.
+                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Bell className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                    새로운 알림이 없습니다.
+                  </p>
                 </div>
               )}
             </div>
