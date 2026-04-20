@@ -44,9 +44,14 @@ const MapContainer = ({
   const isDragging = useRef(false);
   const isProgrammaticMove = useRef(false);
   const lastDragEnd = useRef(0);
-
-  // ✅ [FIX] currentLevel을 ref로도 관리하여 useEffect 클로저 문제 방지
   const currentLevelRef = useRef<number>(level || mapCache.lastZoom || 6);
+
+  // ✅ [핵심 FIX] center/level을 ref로 관리
+  // initMap의 deps를 비워서 "props 변경 → initMap 재생성 → setInterval 재실행 → 지도 재초기화" 루프를 차단
+  const centerRef = useRef(center);
+  const levelRef = useRef(level);
+  useEffect(() => { centerRef.current = center; }, [center]);
+  useEffect(() => { levelRef.current = level; }, [level]);
 
   const { user: authUser } = useAuth();
 
@@ -58,36 +63,25 @@ const MapContainer = ({
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // ✅ currentLevel state와 ref를 항상 동기화
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // ✅ [ULTIMATE FIX] IndexSizeError 근본적 차단을 위한 윈도우 수준의 Monkey Patch
+  // IndexSizeError 차단 (브라우저 확장 프로그램 대응)
   useEffect(() => {
     const originalGetRangeAt = Selection.prototype.getRangeAt;
-    
     Selection.prototype.getRangeAt = function(index: number) {
-      if (this.rangeCount <= index || index < 0) {
-        return document.createRange();
-      }
-      try {
-        return originalGetRangeAt.apply(this, [index]);
-      } catch (e) {
-        return document.createRange();
-      }
+      if (this.rangeCount <= index || index < 0) return document.createRange();
+      try { return originalGetRangeAt.apply(this, [index]); }
+      catch (e) { return document.createRange(); }
     };
 
     const originalAddRange = Selection.prototype.addRange;
     Selection.prototype.addRange = function(range: Range) {
-      try {
-        return originalAddRange.apply(this, [range]);
-      } catch (e) {
-        // 에러 무시
-      }
+      try { return originalAddRange.apply(this, [range]); } catch (e) {}
     };
 
-    const preventSelectionError = (e: Event) => {
+    const preventSelectionError = () => {
       if (window.getSelection) {
         try {
           const sel = window.getSelection();
@@ -127,13 +121,17 @@ const MapContainer = ({
     };
   }, []);
 
+  // ✅ [핵심 FIX] deps 배열 완전 제거 → 이 함수는 컴포넌트 생애주기 동안 절대 재생성되지 않음
   const initMap = useCallback(() => {
     try {
       const kakao = (window as any).kakao;
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
 
-      const initialCenter = center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = level || mapCache.lastZoom || 6;
+      // ✅ [핵심 FIX] 이미 초기화된 경우 즉시 true 반환 — 재초기화 완전 방지
+      if (mapInstance.current) return true;
+
+      const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
+      const initialLevel = levelRef.current || mapCache.lastZoom || 6;
 
       const options = {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
@@ -141,7 +139,6 @@ const MapContainer = ({
       };
 
       const map = new kakao.maps.Map(containerRef.current!, options);
-      console.log('🗺️ [initMap] target:', containerRef.current?.id, containerRef.current?.className);
       map.setMaxLevel(14);
       mapInstance.current = map;
 
@@ -154,7 +151,6 @@ const MapContainer = ({
           const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
           
-          // ✅ [FIX] state와 ref를 동시에 업데이트
           setCurrentLevel(mapLevel);
           currentLevelRef.current = mapLevel;
 
@@ -193,16 +189,11 @@ const MapContainer = ({
 
       kakao.maps.event.addListener(map, 'zoom_start', () => setIsMapMoving(true));
 
-      // ✅ [FIX] zoom_changed에서 ref를 직접 업데이트하고 updateMapData 호출
       kakao.maps.event.addListener(map, 'zoom_changed', () => {
         const newLevel = map.getLevel();
         setIsMapMoving(false);
-
-        // ref를 즉시 업데이트 (클로저 문제 없이 최신값 보장)
         currentLevelRef.current = newLevel;
         setCurrentLevel(newLevel);
-
-        // 한 번은 즉시, 한 번은 렌더링 안정화 후
         updateMapData();
         setTimeout(() => {
           if (mapInstance.current) updateMapData();
@@ -222,7 +213,7 @@ const MapContainer = ({
       console.error('Kakao Map Init Error:', e);
       return false;
     }
-  }, [center, level]);
+  }, []); // ✅ 의존성 없음 — 생애 동안 1회만 생성
 
   useEffect(() => {
     const timer = setInterval(() => { 
@@ -382,36 +373,14 @@ const MapContainer = ({
     }
   };
 
-  const removeOverlayWithAnimation = (id: string, overlay: any) => {
-    if (removalTimeoutsRef.current.has(id)) return;
-    const content = overlay.getContent();
-    if (!(content instanceof HTMLElement)) {
-      overlay.setMap(null);
-      overlaysRef.current.delete(id);
-      return;
-    }
-    content.classList.remove('animate-marker-appear');
-    content.classList.add('animate-marker-disappear');
-    const timeoutId = window.setTimeout(() => {
-      overlay.setMap(null);
-      if (overlaysRef.current.get(id) === overlay) overlaysRef.current.delete(id);
-      removalTimeoutsRef.current.delete(id);
-    }, 260);
-    removalTimeoutsRef.current.set(id, timeoutId);
-  };
-
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
-    // ✅ [FIX] state(currentLevel) 대신 실제 지도 레벨을 직접 읽어서
-    // React 상태 비동기 문제를 근본적으로 우회
     const actualLevel = mapInstance.current?.getLevel() ?? currentLevel;
 
     if (actualLevel >= 7) {
       if (overlaysRef.current.size > 0) {
-        // ✅ [FIX] 타임아웃을 반드시 먼저 취소한 뒤 overlay 제거
-        // 순서가 바뀌면 타임아웃이 260ms 뒤에 새로 생성된 마커를 죽임
         removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
         removalTimeoutsRef.current.clear();
         overlaysRef.current.forEach((overlay) => overlay.setMap(null));
@@ -423,8 +392,6 @@ const MapContainer = ({
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
-        // ✅ [FIX] 애니메이션 타임아웃 없이 즉시 제거
-        // 줌 전환 직후 타임아웃이 남아있으면 새 마커를 죽일 수 있음
         const timeoutId = removalTimeoutsRef.current.get(id);
         if (timeoutId) window.clearTimeout(timeoutId);
         removalTimeoutsRef.current.delete(id);
@@ -435,22 +402,11 @@ const MapContainer = ({
 
     posts.forEach(post => {
       if (!post) return;
-
-      // ✅ [FIX] 이중 체크: actualLevel로 한 번 더 가드
       if (actualLevel >= 7) return;
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-
-  // ✅ 임시 로그 추가
-  console.log('🔨 [CreateMarker]', {
-    postId: post.id,
-    hasExisting: !!existingOverlay,
-    lat: post.lat,
-    lng: post.lng,
-    actualLevel,
-  });
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
@@ -507,8 +463,6 @@ const MapContainer = ({
       }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
-  //            ↑ currentLevel이 바뀔 때 이 Effect가 재실행되면서
-  //              내부에서 actualLevel = mapInstance.current.getLevel()로 실제값을 읽음
 
   return (
     <div 
@@ -530,10 +484,12 @@ const MapContainer = ({
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </div>
       )}
-      
-      <div
-      ref={containerRef} 
-      id="kakao-map" className="w-full h-full select-none" />
+      {/* ✅ [FIX] ref를 카카오맵이 실제 마운트되는 div에 직접 부착 */}
+      <div 
+        ref={containerRef}
+        id="kakao-map" 
+        className="w-full h-full select-none" 
+      />
     </div>
   );
 };
