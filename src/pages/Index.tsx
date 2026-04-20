@@ -289,7 +289,7 @@ const Index = () => {
       setSelectedCategories(['mine']);
       
       // 줌 레벨을 10으로 설정 (축소 뷰)
-      setCurrentZoom(9);
+      setCurrentZoom('9');
       
       // 가장 최근 포스팅이 있다면 해당 위치로 강조 이동
       if (routeState.post) {
