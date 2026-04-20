@@ -399,7 +399,7 @@ const Index = () => {
                     )}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-                    <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
+                    <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
                   {displayedMarkers.length > 0 && currentZoom < 11 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
