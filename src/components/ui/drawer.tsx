@@ -1,8 +1,6 @@
 "use client";
-
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
-
 import { cn } from "@/lib/utils";
 
 const Drawer = ({
@@ -17,27 +15,23 @@ const Drawer = ({
 Drawer.displayName = "Drawer";
 
 const DrawerTrigger = DrawerPrimitive.Trigger;
-
 const DrawerPortal = DrawerPrimitive.Portal;
-
 const DrawerClose = DrawerPrimitive.Close;
 
-const DrawerOverlay = React.forwardRef<
+const DrawerOverlay = React.forwardRef
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    // z-index를 1000으로 설정하여 BottomNav (z-1002) 아래에 위치하도록 함
-    // BottomNav의 높이(106px)만큼 위에서 끝나도록 bottom: 106px 추가
     className={cn("fixed inset-0 z-[1000] bg-black/80", className)}
-    style={{ bottom: '106px' }} // BottomNav 영역을 제외
+    style={{ bottom: '106px' }}
     {...props}
   />
 ));
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
-const DrawerContent = React.forwardRef<
+const DrawerContent = React.forwardRef
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
@@ -46,9 +40,13 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[1001] mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "fixed inset-x-0 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className,
       )}
+      style={{ 
+        bottom: '106px',
+        zIndex: 1001 
+      }}
       {...props}
     >
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
@@ -80,7 +78,7 @@ const DrawerFooter = ({
 );
 DrawerFooter.displayName = "DrawerFooter";
 
-const DrawerTitle = React.forwardRef<
+const DrawerTitle = React.forwardRef
   React.ElementRef<typeof DrawerPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
 >(({ className, ...props }, ref) => (
@@ -95,7 +93,7 @@ const DrawerTitle = React.forwardRef<
 ));
 DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
 
-const DrawerDescription = React.forwardRef<
+const DrawerDescription = React.forwardRef
   React.ElementRef<typeof DrawerPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
 >(({ className, ...props }, ref) => (
