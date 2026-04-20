@@ -301,8 +301,9 @@ const Index = () => {
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
       
-      // 줌 레벨을 10으로 설정
-      setCurrentZoom(10);
+      setTimeout(() => {
+        setCurrentZoom(10);
+      }, 500);
 
       if (routeState.post) {
         focusPostOnMap(routeState.post, routeState.center);
