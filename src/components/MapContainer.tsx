@@ -66,7 +66,8 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        map.setMaxLevel(11);
+        // ✅ setMaxLevel을 14로 올려서 10단계 축소가 가능하도록 수정
+        map.setMaxLevel(14);
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -133,18 +134,18 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, []);
 
-  // 외부에서 주입된 레벨 변경 감지
+  // ✅ 외부 레벨 변경 감지 - 딜레이로 지도 초기화 완료 보장
   useEffect(() => {
-    if (isMapReady && mapInstance.current && externalLevel !== undefined) {
+    if (!isMapReady || !mapInstance.current || externalLevel === undefined) return;
+
+    const timer = setTimeout(() => {
       const map = mapInstance.current;
-      // 현재 지도 레벨과 다를 때만 실행
-      if (map.getLevel() !== externalLevel) {
-        // 애니메이션 없이 즉시 변경하여 더 확실하게 적용되도록 함
-        map.setLevel(externalLevel);
-        // 로컬 상태도 즉시 업데이트하여 마커 크기 동기화
-        setCurrentLevel(externalLevel);
-      }
-    }
+      if (!map) return;
+      map.setLevel(externalLevel, { animate: false });
+      setCurrentLevel(externalLevel);
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, [externalLevel, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
