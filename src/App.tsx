@@ -57,14 +57,9 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  
-  // BottomNav를 숨기는 경로 (채팅, 로그인, 설정 등)
   const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
     path => location.pathname.startsWith(path)
   );
-
-  // Header를 숨기는 경로 (Messages 페이지 포함)
-  const hideHeader = hideLayout || location.pathname.startsWith("/messages");
 
   // isPostListOpen 상태는 이제 BottomNav 렌더링에 사용되지 않습니다.
   // const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
@@ -92,7 +87,7 @@ const AnimatedRoutes = () => {
 
   return (
     <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
-      {!hideHeader && session && <Header />}
+      {!hideLayout && session && <Header />}
 
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
         <AnimatePresence mode="wait">
