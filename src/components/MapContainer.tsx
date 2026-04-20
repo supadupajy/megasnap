@@ -382,7 +382,8 @@ const MapContainer = ({
       style={{ 
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
-        userSelect: 'none'
+        userSelect: 'none',
+        msUserSelect: 'none'
       }}
     >
       {isMapReady && (
