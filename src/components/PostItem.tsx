@@ -74,7 +74,7 @@ const PostItem = ({
   lng,
   isLiked: initialIsLiked, 
   isSaved: initialIsSaved,
-  isAd, 
+  isAd: initialIsAd, // [수정] prop 이름을 잠시 변경
   isGif: initialIsGif, 
   isInfluencer,
   isViewed,
@@ -89,6 +89,9 @@ const PostItem = ({
   onImageError,
   onClick
 }: PostItemProps) => {
+  // [수정] DB에 is_ad 컬럼이 없어도 '공식 파트너' 이름으로 광고 여부를 판단합니다.
+  const isAd = initialIsAd || user.name === '공식 파트너';
+
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
   const { blockUser } = useBlockedUsers();
@@ -111,18 +114,12 @@ const PostItem = ({
   
   const displayImages = useMemo(() => {
     if (isAd) return [image];
-    if (youtubeId) return [image]; // 유튜브 영상인 경우 썸네일만 사용
+    if (youtubeId) return [image]; 
     
     const img1 = images.length > 0 ? images[0] : image;
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
   }, [isAd, images, image, youtubeId]);
-
-// 기존 로직 아래에 추가
-// isAd 속성이 true거나, 작성자 이름이 '공식 파트너'면 광고로 간주합니다.
-const effectiveIsAd = isAd || user.name === '공식 파트너';
-
-// 그 후 아래에 있는 모든 'isAd' 변수를 'effectiveIsAd'로 교체하면 됩니다.
 
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
