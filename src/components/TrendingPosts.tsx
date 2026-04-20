@@ -152,10 +152,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </div>
 
                 {displayPosts.map((post) => {
-                  // ✅ Use the post's actual borderType from data, 
-                  // but also allow top ranks to visually appear as "popular" if they are "none"
                   const isInfluencer = ['silver', 'gold', 'diamond'].includes(post.borderType);
-                  const isPopular = post.borderType === 'popular' || (post.rank && post.rank <= 3);
+                  // ✅ 인기 포스팅 판정 시 순위(rank) 강제 부여 로직을 제거하고 실제 데이터(borderType)만 따릅니다.
+                  const isPopular = post.borderType === 'popular' || isInfluencer;
                   
                   return (
                     <div
@@ -178,12 +177,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         post.borderType === 'gold' ? "gold-border-container p-[2px]" :
                         post.borderType === 'silver' ? "silver-border-container p-[2px]" :
                         post.borderType === 'popular' ? "popular-border-container p-[2px]" : 
-                        (post.rank && post.rank <= 3 && post.borderType === 'none') ? "popular-border-container p-[2px]" :
                         "bg-gray-100 overflow-hidden"
                       )}>
                         <div className={cn(
                           "w-full h-full relative bg-white",
-                          (post.borderType !== 'none' || (post.rank && post.rank <= 3)) ? "rounded-[9px] overflow-hidden" : ""
+                          post.borderType !== 'none' ? "rounded-[9px] overflow-hidden" : ""
                         )}>
                           <img
                             src={post.image}
