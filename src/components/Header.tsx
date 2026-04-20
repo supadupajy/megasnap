@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
@@ -12,6 +12,7 @@ const Header = () => {
   const { user: authUser } = useAuth();
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+  const timeoutRef = useRef<number | null>(null);
 
   const fetchCounts = useCallback(async () => {
     if (!authUser?.id) return;
@@ -38,6 +39,16 @@ const Header = () => {
     }
   }, [authUser?.id]);
 
+  const handleRealtimeUpdate = useCallback(() => {
+    // Realtime 이벤트 발생 시 100ms 지연 후 카운트 업데이트
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = window.setTimeout(() => {
+      fetchCounts();
+    }, 100);
+  }, [fetchCounts]);
+
   useEffect(() => {
     if (!authUser?.id) return;
 
@@ -49,30 +60,27 @@ const Header = () => {
 
     channel
       .on('postgres_changes', { 
-        event: '*', 
+        event: 'INSERT', // INSERT 이벤트에만 반응하도록 명확히 지정
         schema: 'public', 
         table: 'notifications',
-        filter: `user_id=eq.${authUser.id}` // 내가 수신자인 알림만 필터링
-      }, () => {
-        // 알림이 들어오면 카운트 새로고침
-        fetchCounts();
-      })
+        filter: `user_id=eq.${authUser.id}`
+      }, handleRealtimeUpdate)
       .on('postgres_changes', { 
-        event: '*', 
+        event: 'INSERT', // INSERT 이벤트에만 반응하도록 명확히 지정
         schema: 'public', 
         table: 'messages',
-        filter: `receiver_id=eq.${authUser.id}` // 내가 수신자인 메시지만 필터링
-      }, () => {
-        // 메시지가 들어오면 카운트 새로고침
-        fetchCounts();
-      })
+        filter: `receiver_id=eq.${authUser.id}`
+      }, handleRealtimeUpdate)
       .subscribe();
 
     return () => { 
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [authUser?.id, fetchCounts]);
+  }, [authUser?.id, handleRealtimeUpdate]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
