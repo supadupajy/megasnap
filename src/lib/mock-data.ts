@@ -4,7 +4,7 @@ import { Post, User } from '@/types';
 import { getYoutubeThumbnail } from './utils';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 
-const buildUniquePool = (items: readonly string[]) => Array.from(new Set(items));
+const buildUniquePool = (items: string[]) => Array.from(new Set(items));
 
 const stableHash = (value: string) => {
   let hash = 0;
@@ -46,10 +46,10 @@ export const YOUTUBE_IDS_50 = [
   "CtpT_S6-B9U", "TQTlCHxyuu8", "M7lc1UVf-VE", "pFuJAIMQjHk", "tg2uF3R_Ozo",
   "UuV27Nq_Oks", "D9G1VOjua_8", "IHNzOHi8sJs", "fHI8X4OXW5Q", "a5uQMwRMHcs",
   "POe9SOEKotU", "V1Pl8CzNzCw", "gQLQDnZ0yS8", "dyRsYk0ViA8", "rRzxEiBLQCA",
-  "f6YDF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", "0NCP48xaSfs", "h4m-pIReA6Y",
+  "f6YDKF0LVWw", "b_An4U8J1V4", "CuklIb9d3fI", "0NCP48xaSfs", "h4m-pIReA6Y",
   "kJQP7kiw5Fk", "S-sJp1FfG7Q", "u0XmZp1S-t8", "F0B7HDiY-10", "XqgYj8atJpE",
   "fE2h3lGlOsk", "0A6E0M_Z8r4", "3YqXJ7Ssh_Q", "n9N0zS5XvXw", "m8MfJg68oCs",
-  "kOCkne-B8k", "z9n8ZzP4P8I", "XsX3ATc3FbA", "Lp_r9fX5Sfs", "7-qGKqveAnM",
+  "kOCkne-B8Hk", "z9n8ZzP4P8I", "XsX3ATc3FbA", "Lp_r9fX5Sfs", "7-qGKqveAnM",
   "XjJQBjWYDTs", "qV5lzRHrGeg", "2S24-y0Ij3Y", "SlPhMPnQ58k", "J6Z8WAt9v80",
 ] as const;
 
@@ -119,7 +119,7 @@ const GENERAL_UNSPLASH_IDS_RAW = [
   "photo-1517048676732-d65bc937f952", "photo-1556761175-b413da4baf72", "photo-1523240795612-9a054b0db644",
   "photo-1515187029135-18ee286d815b", "photo-1521737711867-e3b97375f902", "photo-1507679799987-c73779587ccf",
   "photo-1522071820081-009f0129c71c",
-] as const;
+];
 
 const FOOD_UNSPLASH_IDS_RAW = [
   "photo-1504674900247-0877df9cc836", "photo-1493770348161-369560ae357d", "photo-1476224203421-9ac3993c4c5a",
@@ -132,45 +132,15 @@ const FOOD_UNSPLASH_IDS_RAW = [
   "photo-1470252649358-96753a782901", "photo-1465146344425-f00d5f5c8f07", "photo-1414235077428-338989a2e8c0",
 ];
 
-const ACCIDENT_UNSPLASH_IDS_RAW = [
-  "photo-1544620347-c4fd4a3d5957", "photo-1517048676732-d65bc937f952", "photo-1519244703995-f4e0f30006d5",
-  "photo-1517248135467-4c7edcad34c4", "photo-1504674900247-0877df9cc836", "photo-1504439468489-c8920d796a29",
-  "photo-1512917774080-9991f1c4c750", "photo-1480074568708-e7b720bb3f09", "photo-1449034446853-66c86144b0ad",
-  "photo-1475855581690-80accde3ae2b", "photo-1513502703549-1ad55c7d314c", "photo-1518780664697-55e3ad937233",
-  "photo-1505691722718-4684375a973d", "photo-1523755231516-f43fd99bbd5a", "photo-1516455590571-18256e5bb9ff",
-  "photo-1516421591134-668418183a50", "photo-1464366400600-7168b8af9bc3", "photo-1496417263034-38ec4f0b665a",
-  "photo-1506057585508-85603cee9e17", "photo-1498050108023-c5249f4df085", "photo-1493612276216-ee3925520721",
-];
-
-const PLACE_UNSPLASH_IDS_RAW = [
-  "photo-1470071459604-3b5ec3a7fe05", "photo-1441974231531-c6227db76b6e", "photo-1532274402911-5a369e4c4bb5",
-  "photo-1506744038136-46273834b3fb", "photo-1465146344425-f00d5f5c8f07", "photo-1472214103451-9374bd1c798e",
-  "photo-1426604966848-d7adac402bff", "photo-1414235077428-338989a2e8c0", "photo-1504674900247-0877df9cc836",
-  "photo-1507525428034-b723cf961d3e", "photo-1519046904884-53103b34b206", "photo-1533105079780-92b9be482077",
-  "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
-  "photo-1467232004584-a241de8bcf5d", "photo-1513584684031-43d5ec36038f", "photo-1523217582562-09d0def993a6",
-  "photo-1502672260266-1c1ef2d93688", "photo-1522708323590-d24dbb6b0267", "photo-1502005229762-cf1b2da7c5d6",
-];
-
-const ANIMAL_UNSPLASH_IDS_RAW = [
-  "photo-1548199973-03cbf5292374", "photo-1518717758241-b8497f81b10c", "photo-1517849845537-4d257902454a",
-  "photo-1516979187457-637abb4f9356", "photo-1514888673529-525381262790", "photo-1517331156700-3c241d2b4d80",
-  "photo-1510414842594-a61c69b5ae57", "photo-1519046904884-53103b34b206", "photo-1533105079780-92b9be482077",
-  "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
-];
-
 export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW);
 export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW);
-export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW);
-export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW);
-export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW);
 
 export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
 
 export const isUnsplashImageUrl = (url?: string | null) =>
   typeof url === 'string' && url.includes('images.unsplash.com');
 
-const pickFromPool = (pool: readonly string[], seed: string, salt = 0) => {
+const pickFromPool = (pool: string[], seed: string, salt = 0) => {
   const baseHash = stableHash(`${seed}:${salt}`);
   const stepOptions = [7, 11, 13, 17, 19, 23, 29];
   const step = stepOptions[baseHash % stepOptions.length];
@@ -180,48 +150,28 @@ const pickFromPool = (pool: readonly string[], seed: string, salt = 0) => {
 
 export const getDiverseUnsplashId = (
   seed: string | number,
-  variant: 'general' | 'food' | 'accident' | 'place' | 'animal' = 'general',
+  variant: 'general' | 'food' = 'general',
   salt = 0,
 ) => {
-  let pool: readonly string[];
-  switch (variant) {
-    case 'food':
-      pool = FOOD_UNSPLASH_IDS;
-      break;
-    case 'accident':
-      pool = ACCIDENT_UNSPLASH_IDS;
-      break;
-    case 'place':
-      pool = PLACE_UNSPLASH_IDS;
-      break;
-    case 'animal':
-      pool = ANIMAL_UNSPLASH_IDS;
-      break;
-    case 'general':
-    default:
-      pool = UNSPLASH_IDS;
-      break;
-  }
+  const pool = variant === 'food' ? FOOD_UNSPLASH_IDS : UNSPLASH_IDS;
   return pickFromPool(pool, String(seed), salt);
 };
 
 export const getDiverseUnsplashUrl = (
   seed: string | number,
-  variant: 'general' | 'food' | 'accident' | 'place' | 'animal' = 'general',
+  variant: 'general' | 'food' = 'general',
   salt = 0,
 ) => getUnsplashUrl(getDiverseUnsplashId(seed, variant, salt));
 
 export const remapUnsplashDisplayUrl = (
   url: string | null | undefined,
   seed: string | number,
-  variant: 'general' | 'food' | 'accident' | 'place' | 'animal' = 'general',
+  variant: 'general' | 'food' = 'general',
   salt = 0,
 ) => {
   if (!url || !isUnsplashImageUrl(url)) return url;
   return getDiverseUnsplashUrl(`${seed}:${url}`, variant, salt);
 };
-
-const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
 
 export const createMockPosts = (
   centerLat: number,
@@ -248,24 +198,22 @@ export const createMockPosts = (
       lng = bounds.sw.lng + (randomFn() * (bounds.ne.lng - bounds.sw.lng));
     } else {
       lat = centerLat + (randomFn() - 0.5) * 0.1;
-      lng = lng + (randomFn() - 0.5) * 0.1;
+      lng = centerLng + (randomFn() - 0.5) * 0.1;
     }
 
     const imageSeed = `${specificUserId || 'global'}:${centerLat}:${centerLng}:${lat.toFixed(4)}:${lng.toFixed(4)}:${i}`;
-    const category = CATEGORIES[i % CATEGORIES.length]; // 카테고리 할당
 
     const image = isAd
       ? getDiverseUnsplashUrl(imageSeed, 'food', i)
       : youtubeUrl
-        ? (getYoutubeThumbnail(youtubeUrl) || getDiverseUnsplashUrl(imageSeed, category, i)) // 카테고리 적용
-        : getDiverseUnsplashUrl(imageSeed, category, i); // 카테고리 적용
+        ? (getYoutubeThumbnail(youtubeUrl) || getDiverseUnsplashUrl(imageSeed, 'general', i))
+        : getDiverseUnsplashUrl(imageSeed, 'general', i);
 
     return {
       id,
       isAd,
       isGif: false,
       isInfluencer,
-      category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
         name: isAd ? 'Partner' : `Explorer_${id.substring(0, 4)}`,

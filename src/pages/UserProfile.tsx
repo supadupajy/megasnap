@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map, Loader2 } from 'lucide-react';
+import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
+import Header from '@/components/Header';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
+import { getUserById } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import {
@@ -35,7 +37,6 @@ const UserProfile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [targetUser, setTargetUser] = useState<any>(null); // 실제 DB에서 가져온 유저 정보
 
   // 전역 글쓰기 이벤트 리스너
   useEffect(() => {
@@ -43,6 +44,10 @@ const UserProfile = () => {
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
+
+  const user = useMemo(() => {
+    return getUserById(userId || 'traveler');
+  }, [userId]);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -94,17 +99,6 @@ const UserProfile = () => {
     if (!userId) return;
     setIsLoading(true);
     try {
-      // 1. 타겟 유저 프로필 정보 가져오기
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nickname, avatar_url, bio')
-        .eq('id', userId)
-        .single();
-
-      if (profileError || !profileData) throw new Error('User not found');
-      setTargetUser(profileData);
-
-      // 2. 유저 게시물 가져오기
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -115,7 +109,6 @@ const UserProfile = () => {
       const formatted = await Promise.all((data || []).map(mapDbToPost));
       setPosts(formatted);
 
-      // 3. 팔로워/팔로잉 카운트 가져오기
       const [followersRes, followingRes] = await Promise.all([
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
@@ -124,7 +117,6 @@ const UserProfile = () => {
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
 
-      // 4. 팔로우 상태 확인
       if (authUser) {
         const { data: followData } = await supabase
           .from('follows')
@@ -138,7 +130,6 @@ const UserProfile = () => {
 
     } catch (err) {
       console.error('Error fetching user data:', err);
-      setTargetUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -219,9 +210,8 @@ const UserProfile = () => {
   };
 
   const handleMessageClick = () => {
-    if (!targetUser) return;
-    chatStore.getOrCreateRoom(targetUser.id, targetUser.nickname || targetUser.name, targetUser.avatar_url);
-    navigate(`/chat/${targetUser.id}`);
+    chatStore.getOrCreateRoom(user.id, user.nickname || user.name, user.avatar);
+    navigate(`/chat/${user.id}`);
   };
 
   const handleReport = () => {
@@ -229,32 +219,12 @@ const UserProfile = () => {
   };
 
   const handleBlock = () => {
-    if (!targetUser) return;
-    showError(`${targetUser.nickname} 님을 차단했습니다.`);
+    showError(`${user.nickname} 님을 차단했습니다.`);
   };
 
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!targetUser) {
-    return (
-      <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-        <div className="pt-[88px] p-6 text-center">
-          <h2 className="text-xl font-black text-gray-900 mb-4">사용자를 찾을 수 없습니다.</h2>
-          <Button onClick={() => navigate(-1)}>뒤로가기</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
@@ -270,7 +240,7 @@ const UserProfile = () => {
               </button>
               <div>
                 <h2 className="text-xl font-black text-gray-900">유저 프로필</h2>
-                <p className="text-xs text-gray-400 font-medium">@{targetUser.nickname} 님의 활동</p>
+                <p className="text-xs text-gray-400 font-medium">@{userId?.substring(0, 8)} 님의 활동</p>
               </div>
             </div>
             
@@ -305,7 +275,7 @@ const UserProfile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-indigo-600">
                 <img 
-                  src={targetUser.avatar_url || `https://i.pravatar.cc/150?u=${targetUser.id}`} 
+                  src={user.avatar} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                   onError={handleImageError}
@@ -313,8 +283,8 @@ const UserProfile = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{targetUser.nickname}</h2>
-              <p className="text-sm text-gray-500 mb-4">{targetUser.bio || 'Chora 탐험가'}</p>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{user.nickname}</h2>
+              <p className="text-sm text-gray-500 mb-4">{user.bio}</p>
               <div className="flex gap-4">
                 <div className="text-center">
                   <p className="font-bold text-gray-900">{posts.length}</p>
@@ -442,7 +412,7 @@ const UserProfile = () => {
                     <Map className="w-4 h-4 fill-indigo-600" />
                     지도에서 보기
                   </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{targetUser.nickname} 님의 추억들을 지도에서 확인하세요</p>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{user.nickname} 님의 추억들을 지도에서 확인하세요</p>
                 </div>
 
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
