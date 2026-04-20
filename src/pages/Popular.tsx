@@ -56,7 +56,7 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       await initializeYoutubePool();
-      const { data, error } = await supabase.from('posts').select('*, category').order('likes', { ascending: false }).range(from, to);
+      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).range(from, to);
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
       const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));
@@ -70,8 +70,7 @@ const Popular = () => {
           user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
           content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
           likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-          isLiked: false, createdAt: new Date(p.created_at), borderType,
-          category: p.category || 'none',
+          isLiked: false, createdAt: new Date(p.created_at), borderType
         };
       }) as Post[];
       return mappedPosts;
