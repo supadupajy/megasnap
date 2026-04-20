@@ -2,119 +2,148 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  MAJOR_CITIES, 
+  createMockPosts, 
+  YOUTUBE_IDS_POOL, 
   UNSPLASH_IDS, 
-  YOUTUBE_IDS_50, 
   FOOD_UNSPLASH_IDS, 
   getUnsplashUrl,
+  MAJOR_CITIES,
   REALISTIC_COMMENTS,
   AD_COMMENTS
-} from "./mock-data";
+} from "@/lib/mock-data";
+import { getYoutubeThumbnail } from "@/lib/utils";
 
-/**
- * 1단계: 유튜브 정책 검증 함수 (oEmbed 활용)
- * 브라우저 콘솔 에러를 최소화하기 위해 404를 조용히 처리합니다.
- */
-async function checkYoutubePlayable(videoId: string): Promise<boolean> {
-  try {
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data.title;
-  } catch {
-    return false;
+// 배열을 무작위로 섞는 헬퍼 함수
+const shuffleArray = <T>(array: T[]): T[] => {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
   }
-}
+  return newArr;
+};
 
-/**
- * 2단계: 메인 시딩 함수
- */
+const getAddressFromCoords = (lat: number, lng: number): Promise<string> => {
+  return new Promise((resolve) => {
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps?.services) { resolve("대한민국"); return; }
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        const addr = result[0].address;
+        const region = `${addr.region_1depth_name} ${addr.region_2depth_name} ${addr.region_3depth_name}`.trim();
+        resolve(region || "대한민국");
+      } else { resolve("대한민국"); }
+    });
+  });
+};
+
+const getRandomLikesFlat = () => {
+  const r = Math.random();
+  if (r < 0.5) return Math.floor(Math.random() * 1001);
+  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000);
+  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000);
+  return Math.floor(Math.random() * 10001 + 10000);
+};
+
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  console.log("🚀 [Seeder] 데이터 생성을 시작합니다...");
-
+  console.log("🚀 [Seeder] 전역 데이터 생성 프로세스를 시작합니다...");
+  
   try {
-    // [중요] 유튜브 클린 리스트 확보 (병렬 대신 순차적 체크로 차단 방지)
-    console.log("🔍 영상 정책 검토 중 (잠시만 기다려주세요)...");
-    const validYoutubeIds: string[] = [];
-    for (const id of YOUTUBE_IDS_50) {
-      const ok = await checkYoutubePlayable(id);
-      if (ok) validYoutubeIds.push(id);
-      // 유튜브 서버 부하 방지를 위해 아주 짧은 대기 (선택 사항)
-      await new Promise(r => setTimeout(r, 50)); 
-    }
-    console.log(`✅ 검증 완료: ${validYoutubeIds.length}개의 영상 확보`);
-
-    // 유저 풀 확보
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
-
+    
+    // 리소스 풀 셔플 및 카운터 초기화 (Round-robin 보장)
+    const shuffledUnsplash = shuffleArray(UNSPLASH_IDS);
+    const shuffledFood = shuffleArray(FOOD_UNSPLASH_IDS);
+    const shuffledYoutube = shuffleArray(YOUTUBE_IDS_POOL);
+    
+    let unsplashCounter = 0;
+    let foodCounter = 0;
+    let youtubeCounter = 0;
     let globalIndex = 0;
-    let totalInserted = 0;
+
+    const allInsertData: any[] = [];
 
     for (const city of MAJOR_CITIES) {
-      console.log(`📍 ${city.name} 생성 중...`);
-      const cityBatch: any[] = [];
-
-      for (let i = 0; i < city.density; i++) {
+      console.log(`📍 [Seeder] ${city.name} 지역 데이터 생성 중...`);
+      const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
+      
+      for (let i = 0; i < mockPosts.length; i++) {
+        const p = mockPosts[i];
         const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
-        const lat = city.bounds.sw.lat + Math.random() * (city.bounds.ne.lat - city.bounds.sw.lat);
-        const lng = city.bounds.sw.lng + Math.random() * (city.bounds.ne.lng - city.bounds.sw.lng);
-
-        const isAd = i % 30 === 0;
-        const isYoutube = !isAd && i % 2 === 0;
-
-        let finalImage = "";
+        
+        let realAddress = city.name;
+        if (i % 50 === 0) realAddress = await getAddressFromCoords(p.lat, p.lng);
+        
+        const isAd = i % 20 === 0;
+        const isYoutube = !isAd && (i % 2 === 0);
+        
         let finalYoutubeUrl = null;
+        let finalImage = "";
+        
+        const sig = globalIndex; // 캐시 방지용 시그니처
 
         if (isAd) {
-          const foodId = FOOD_UNSPLASH_IDS[globalIndex % FOOD_UNSPLASH_IDS.length];
-          finalImage = getUnsplashUrl(foodId, globalIndex);
-        } else if (isYoutube && validYoutubeIds.length > 0) {
-          const ytId = validYoutubeIds[globalIndex % validYoutubeIds.length];
-          finalYoutubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
-          finalImage = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+          const foodId = shuffledFood[foodCounter % shuffledFood.length];
+          finalImage = getUnsplashUrl(foodId, sig);
+          foodCounter++;
+        } else if (isYoutube) {
+          const ytId = shuffledYoutube[youtubeCounter % shuffledYoutube.length];
+          finalYoutubeUrl = `https://www.youtube.com/shorts/${ytId}`;
+          finalImage = getYoutubeThumbnail(finalYoutubeUrl) || "";
+          youtubeCounter++;
         } else {
-          const unsplashId = UNSPLASH_IDS[globalIndex % UNSPLASH_IDS.length];
-          // sig를 붙여 100장의 이미지를 1500개에 뿌려도 다 다르게 인식되게 함
-          finalImage = getUnsplashUrl(unsplashId, globalIndex);
+          const unsplashId = shuffledUnsplash[unsplashCounter % shuffledUnsplash.length];
+          finalImage = getUnsplashUrl(unsplashId, sig);
+          unsplashCounter++;
         }
 
-        cityBatch.push({
-          content: isAd ? AD_COMMENTS[globalIndex % AD_COMMENTS.length] : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length],
-          location_name: `${city.name} 인근`,
-          latitude: lat,
-          longitude: lng,
+        const finalContent = isAd 
+          ? AD_COMMENTS[globalIndex % AD_COMMENTS.length]
+          : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length];
+
+        allInsertData.push({
+          content: finalContent,
+          location_name: realAddress,
+          latitude: p.lat,
+          longitude: p.lng,
           image_url: finalImage,
           youtube_url: finalYoutubeUrl,
           user_id: randomUser.id,
           user_name: randomUser.nickname || "탐험가",
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: Math.floor(Math.random() * 3000),
+          likes: getRandomLikesFlat(),
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
         });
 
         globalIndex++;
-
-        // 100개마다 DB에 쏟아부음
-        if (cityBatch.length >= 100) {
-          const { error } = await supabase.from('posts').insert([...cityBatch]);
-          if (error) throw error;
-          totalInserted += cityBatch.length;
-          cityBatch.length = 0;
-        }
-      }
-
-      // 남은 잔여 데이터 삽입
-      if (cityBatch.length > 0) {
-        await supabase.from('posts').insert(cityBatch);
-        totalInserted += cityBatch.length;
       }
     }
 
-    console.log(`✨ 총 ${totalInserted}개 성공적으로 생성!`);
-    return totalInserted;
+    console.log(`📤 [Seeder] 총 ${allInsertData.length}개 데이터를 DB에 저장합니다...`);
+    const chunkSize = 50;
+    for (let i = 0; i < allInsertData.length; i += chunkSize) {
+      const chunk = allInsertData.slice(i, i + chunkSize);
+      const { error } = await supabase.from('posts').insert(chunk);
+      if (error) throw error;
+    }
+
+    console.log("✨ [Seeder] 모든 데이터가 성공적으로 저장되었습니다!");
+    return allInsertData.length;
+  } catch (err: any) { 
+    console.error("❌ [Seeder] 오류 발생:", err); 
+    throw err; 
+  }
+};
+
+export const randomizeExistingLikes = async () => {
+  try {
+    const { data, error } = await supabase.rpc('randomize_all_likes');
+    if (error) throw error;
+    return data || 0;
   } catch (err) {
-    console.error("❌ 시딩 실패:", err);
+    console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
     throw err;
   }
 };
