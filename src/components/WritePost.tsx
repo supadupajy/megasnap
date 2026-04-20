@@ -281,7 +281,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                       )}
                     >
                       <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 촬영</span>
+                      <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 선택</span>
                     </button>
                     <button 
                       onClick={() => videoInputRef.current?.click()}
