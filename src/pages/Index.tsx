@@ -89,7 +89,25 @@ const Index = () => {
   const mapDbToPost = async (rawPost: any): Promise<Post> => {
     const p = await sanitizeYoutubeMedia(rawPost);
     const isAd = p.content?.trim().startsWith('[AD]');
-    const borderType = isAd ? 'none' : getTierFromId(p.id);
+    
+    // Determine tier/borderType based on logic or data
+    let borderType: 'none' | 'popular' | 'silver' | 'gold' | 'diamond' = 'none';
+    
+    if (isAd) {
+      borderType = 'none';
+    } else if (p.likes >= 1000) { // Example logic for tiering
+      borderType = 'diamond';
+    } else if (p.likes >= 500) {
+      borderType = 'gold';
+    } else if (p.likes >= 200) {
+      borderType = 'silver';
+    } else if (p.likes >= 50) {
+      borderType = 'popular';
+    } else {
+      // Fallback to deterministic ID hashing for variety if likes are low
+      borderType = getTierFromId(p.id);
+    }
+
     return {
       id: p.id,
       isAd,
@@ -106,7 +124,7 @@ const Index = () => {
       image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
       youtubeUrl: p.youtube_url,
       videoUrl: p.video_url,
-      category: p.category || 'none', // category 필드 포함
+      category: p.category || 'none',
       isLiked: false,
       createdAt: new Date(p.created_at),
       borderType
@@ -122,7 +140,12 @@ const Index = () => {
         .limit(20);
       
       if (!error && data) {
-        const mapped = (await Promise.all(data.map(mapDbToPost))).map((p, idx) => ({ ...p, rank: idx + 1 }));
+        const mapped = (await Promise.all(data.map(mapDbToPost))).map((p, idx) => ({ 
+          ...p, 
+          rank: idx + 1,
+          // Force high rank posts to have at least 'popular' border if they don't already
+          borderType: (idx < 3 && p.borderType === 'none') ? 'popular' : p.borderType
+        }));
         setGlobalTrendingPosts(mapped);
       }
     } catch (err) {
