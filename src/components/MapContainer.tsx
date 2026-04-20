@@ -11,6 +11,7 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
+  level?: number; // 줌 레벨 프롭 추가
   selectionLocation?: { lat: number; lng: number } | null;
   searchResultLocation?: { lat: number; lng: number } | null;
 }
@@ -25,6 +26,7 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
+  level: externalLevel, // 외부에서 주입되는 레벨
   selectionLocation,
   searchResultLocation
 }: MapContainerProps) => {
@@ -60,7 +62,7 @@ const MapContainer = ({
 
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: 6
+          level: externalLevel || 6
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
@@ -130,6 +132,15 @@ const MapContainer = ({
     }, 100);
     return () => clearInterval(timer);
   }, []);
+
+  // 외부에서 주입된 레벨 변경 감지
+  useEffect(() => {
+    if (isMapReady && mapInstance.current && externalLevel !== undefined) {
+      if (mapInstance.current.getLevel() !== externalLevel) {
+        mapInstance.current.setLevel(externalLevel);
+      }
+    }
+  }, [externalLevel, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
@@ -296,7 +307,7 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    // 줌 레벨 제한을 11로 늘려 전국 단위에서도 마커가 보이도록 수정
+    
     if (currentLevel >= 11) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
@@ -317,7 +328,6 @@ const MapContainer = ({
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // 줌 레벨에 따른 마커 크기 조정 (멀어질수록 작게)
       let scale = 1;
       if (currentLevel === 7) scale = 0.6;
       else if (currentLevel === 8) scale = 0.4;

@@ -38,7 +38,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  const [currentZoom, setCurrentZoom] = useState(6);
+  const [currentZoom, setCurrentZoom] = useState(mapCache.lastZoom || 6);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -125,7 +125,10 @@ const Index = () => {
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      if (data.level !== undefined) setCurrentZoom(data.level);
+      if (data.level !== undefined) {
+        setCurrentZoom(data.level);
+        mapCache.lastZoom = data.level;
+      }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
     }, 100);
@@ -157,7 +160,6 @@ const Index = () => {
 
   useEffect(() => {
     if (!mapData?.bounds) return;
-    // 줌 레벨 제한을 11로 늘려 전국 단위에서도 마커가 보이도록 수정 (최대 레벨 10)
     if (currentZoom >= 11) { setDisplayedMarkers([]); return; }
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
@@ -251,6 +253,20 @@ const Index = () => {
     }, 4000);
   }, []);
 
+  const handleCurrentLocation = async () => {
+    const toastId = showLoading('현재 위치를 찾는 중...');
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+      const { latitude, longitude } = position.coords;
+      setMapCenter({ lat: latitude, lng: longitude });
+      dismissToast(toastId);
+      showSuccess('현재 위치로 이동했습니다.');
+    } catch (err: any) { 
+      dismissToast(toastId); 
+      showError('위치 정보를 가져올 수 없습니다.'); 
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (highlightTimeoutRef.current) {
@@ -260,15 +276,30 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const routeState = location.state as { center?: { lat: number; lng: number }; post?: Post } | null;
-    if (!routeState?.center && !routeState?.post) return;
+    const routeState = location.state as { 
+      center?: { lat: number; lng: number }; 
+      post?: Post;
+      filterUserId?: string;
+    } | null;
+    
+    if (!routeState) return;
 
+    // 1. 특정 포스트 포커싱 처리
     if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
-    } else if (routeState.center) {
+    } 
+    // 2. 단순 좌표 이동 처리
+    else if (routeState.center) {
       setSelectedPostId(null);
       setSearchResultLocation(null);
       setMapCenter(routeState.center);
+    }
+
+    // 3. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
+    if (routeState.filterUserId === 'me') {
+      setSelectedCategories(['mine']);
+      setCurrentZoom(8); // 지도를 8단계로 변경
+      handleCurrentLocation(); // 현재 위치로 이동
     }
 
     navigate(location.pathname, { replace: true, state: null });
@@ -278,17 +309,6 @@ const Index = () => {
     setIsTrendingExpanded(false);
     focusPostOnMap(post);
   }, [focusPostOnMap]);
-
-  const handleCurrentLocation = async () => {
-    const toastId = showLoading('현재 위치를 찾는 중...');
-    try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
-      const { latitude, longitude } = position.coords;
-      setMapCenter({ lat: latitude, lng: longitude });
-      dismissToast(toastId);
-      showSuccess('현재 위치로 이동했습니다.');
-    } catch (err: any) { dismissToast(toastId); showError('위치 정보를 가져올 수 없습니다.'); }
-  };
 
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
@@ -309,7 +329,17 @@ const Index = () => {
     <>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer posts={displayedMarkers} viewedPostIds={viewedIds} highlightedPostId={highlightedPostId} onMarkerClick={(p) => setSelectedPostId(p.id)} onMapChange={handleMapChange} onMapClick={handleMapClick} center={mapCenter} searchResultLocation={searchResultLocation} />
+          <MapContainer 
+            posts={displayedMarkers} 
+            viewedPostIds={viewedIds} 
+            highlightedPostId={highlightedPostId} 
+            onMarkerClick={(p) => setSelectedPostId(p.id)} 
+            onMapChange={handleMapChange} 
+            onMapClick={handleMapClick} 
+            center={mapCenter} 
+            level={currentZoom} // 줌 레벨 전달
+            searchResultLocation={searchResultLocation} 
+          />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
