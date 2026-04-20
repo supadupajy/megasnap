@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -253,6 +253,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             top: 'auto',
           }}
         >
+          {/* Accessibility requirements for Radix Dialog/Drawer */}
+          <div className="sr-only">
+            <DrawerTitle>새 게시물 작성</DrawerTitle>
+            <DrawerDescription>장소를 선택하고 사진이나 동영상을 업로드하여 추억을 기록하세요.</DrawerDescription>
+          </div>
+
           {!isKeyboardOpen && (
             <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
           )}
