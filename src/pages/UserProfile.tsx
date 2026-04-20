@@ -33,6 +33,8 @@ const UserProfile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const user = useMemo(() => {
@@ -90,6 +92,7 @@ const UserProfile = () => {
       if (!userId) return;
       setIsLoading(true);
       try {
+        // 1. 유저 게시물 가져오기
         const { data, error } = await supabase
           .from('posts')
           .select('*')
@@ -99,9 +102,18 @@ const UserProfile = () => {
         if (error) throw error;
         const formatted = await Promise.all((data || []).map(mapDbToPost));
         setPosts(formatted);
-        setSavedPosts([]);
+
+        // 2. 팔로워/팔로잉 카운트 가져오기
+        const [followersRes, followingRes] = await Promise.all([
+          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
+        ]);
+
+        setFollowerCount(followersRes.count || 0);
+        setFollowingCount(followingRes.count || 0);
+
       } catch (err) {
-        console.error('Error fetching user posts:', err);
+        console.error('Error fetching user data:', err);
       } finally {
         setIsLoading(false);
       }
@@ -228,20 +240,18 @@ const UserProfile = () => {
                   <p className="font-bold text-gray-900">{posts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                {/* 팔로워 클릭 시 이동 */}
                 <div 
                   className="text-center cursor-pointer active:scale-95 transition-transform"
                   onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
                 >
-                  <p className="font-bold text-gray-900">{user.followers?.toLocaleString() || '856'}</p>
+                  <p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                {/* 팔로잉 클릭 시 이동 */}
                 <div 
                   className="text-center cursor-pointer active:scale-95 transition-transform"
                   onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
                 >
-                  <p className="font-bold text-gray-900">{user.following?.toLocaleString() || '320'}</p>
+                  <p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
               </div>

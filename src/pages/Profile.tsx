@@ -24,6 +24,8 @@ const Profile = () => {
   
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -88,6 +90,7 @@ const Profile = () => {
     setIsDataLoading(true);
 
     try {
+      // 1. 내 게시물 가져오기
       const { data: myData, error: myError } = await supabase
         .from('posts')
         .select('*')
@@ -98,6 +101,7 @@ const Profile = () => {
       const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
       setMyPosts(formattedMyPosts);
 
+      // 2. 저장된 게시물 가져오기
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select('post_id, posts(*)')
@@ -112,6 +116,15 @@ const Profile = () => {
           .map(item => mapDbToPost(item.posts))
       );
       setSavedPosts(formattedSavedPosts);
+
+      // 3. 팔로워/팔로잉 카운트 가져오기
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)
+      ]);
+
+      setFollowerCount(followersRes.count || 0);
+      setFollowingCount(followingRes.count || 0);
 
     } catch (err) {
       console.error('[Profile] Data load error:', err);
@@ -219,20 +232,18 @@ const Profile = () => {
                   <p className="font-bold text-gray-900">{myPosts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                {/* 팔로워 클릭 시 이동 */}
                 <div 
                   className="text-center cursor-pointer active:scale-95 transition-transform"
                   onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
                 >
-                  <p className="font-bold text-gray-900">1.2k</p>
+                  <p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                {/* 팔로잉 클릭 시 이동 */}
                 <div 
                   className="text-center cursor-pointer active:scale-95 transition-transform"
                   onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
                 >
-                  <p className="font-bold text-gray-900">850</p>
+                  <p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
               </div>
