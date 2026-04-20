@@ -158,6 +158,16 @@ const Profile = () => {
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  const handleViewOnMap = () => {
+    const latestPost = myPosts[0];
+    navigate('/', { 
+      state: { 
+        filterUserId: 'me',
+        center: latestPost ? { lat: latestPost.lat, lng: latestPost.lng } : undefined
+      } 
+    });
+  };
+
   if (authLoading || (authUser && isDataLoading && myPosts.length === 0 && savedPosts.length === 0)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -230,7 +240,7 @@ const Profile = () => {
               </>
             ) : (
               <>
-                <div onClick={() => navigate('/', { state: { filterUserId: 'me' } })} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>
+                <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
                   <div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>
                 ) : (

@@ -299,7 +299,13 @@ const Index = () => {
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
       setCurrentZoom(8); // 지도를 8단계로 변경
-      handleCurrentLocation(); // 현재 위치로 이동
+      
+      // 좌표가 전달되었다면 해당 좌표로, 없다면 현재 위치로
+      if (routeState.center) {
+        setMapCenter(routeState.center);
+      } else {
+        handleCurrentLocation();
+      }
     }
 
     navigate(location.pathname, { replace: true, state: null });
