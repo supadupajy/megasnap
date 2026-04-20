@@ -195,15 +195,13 @@ const Index = () => {
   }, [mapData, syncPostsWithSupabase]);
 
   const inBoundsMarkers = useMemo(() => {
-    // mapData가 없으면 빈 배열 반환
     if (!mapData?.bounds) return [];
     
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // ✅ 모든 레벨에서 필터링을 최소화하여 "증발" 현상 방지
-    // 위경도 값이 뒤집혀서 들어올 수 있으므로 정규화
+    // 좌표 범위 안정화 (정규화)
     const latMin = Math.min(sw.lat, ne.lat);
     const latMax = Math.max(sw.lat, ne.lat);
     const lngMin = Math.min(sw.lng, ne.lng);
@@ -212,49 +210,47 @@ const Index = () => {
     const latSpan = latMax - latMin;
     const lngSpan = lngMax - lngMin;
     
-    // ✅ 극단적으로 넓은 마진(300%)을 적용하여 화면상의 모든 데이터 유실 방지
-    const latMargin = latSpan * 3.0;
-    const lngMargin = lngSpan * 3.0;
-    
-    const filtered = allPosts.filter(post => {
-      // 1. 유효 좌표 확인
+    // ✅ 지도 렌더링용 마커는 넉넉하게 유지 (깜빡임 방지)
+    const renderMargin = 0.5; // 50% 여유
+    const renderLatMin = latMin - latSpan * renderMargin;
+    const renderLatMax = latMax + latSpan * renderMargin;
+    const renderLngMin = lngMin - lngSpan * renderMargin;
+    const renderLngMax = lngMax + lngSpan * renderMargin;
+
+    return allPosts.filter(post => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
-      
-      // 2. 차단 유저 제외
       if (blockedIds.has(post.user.id)) return false;
       
-      // 3. 시간 필터 (광고 제외)
+      // ✅ 실제 화면 범위(Bounds) 내에 있는지 엄격하게 판정하여 '여기 보기' 카운트에 반영
+      // 단, 렌더링은 부드러움을 위해 약간 넉넉한 범위까지 허용
+      const isActuallyVisible = post.lat >= latMin && post.lat <= latMax && 
+                                post.lng >= lngMin && post.lng <= lngMax;
+      
+      const isWithinRenderRange = post.lat >= renderLatMin && post.lat <= renderLatMax && 
+                                  post.lng >= renderLngMin && post.lng <= renderLngMax;
+
+      if (!isWithinRenderRange) return false;
+      
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) {
-        // 시간 설정이 '전체'일 경우(예: 8760시간 이상) 예외 처리
         if (timeValue < 8000) return false;
       }
       
-      // 4. 영역 체크 (극도로 넉넉한 범위)
-      if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
-          post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
-      
-      // 5. 카테고리 필터
       let matchesCategory = false;
-      if (selectedCategories.includes('mine')) {
-        matchesCategory = authUser && post.user.id === authUser.id;
-      } else if (selectedCategories.includes('all')) {
-        matchesCategory = true;
-      } else {
-        matchesCategory = selectedCategories.includes(post.category || 'none') || 
-                          (selectedCategories.includes('hot') && post.borderType === 'popular') || 
-                          (selectedCategories.includes('influencer') && post.isInfluencer);
-      }
+      if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
+      else if (selectedCategories.includes('all')) matchesCategory = true;
+      else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
       
-      return matchesCategory;
-    });
-
-    // 최신순 정렬 후 상위 1000개만 마커로 표시
-    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
+      // ✅ 필터 통과한 마커에 실제 가시성 속성 부여
+      return { ...post, isActuallyVisible };
+    }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000) as any[];
   }, [allPosts, mapData?.bounds, timeValue, selectedCategories, blockedIds, authUser]);
 
+  // ✅ '여기 보기' 버튼에는 실제 화면 범위(isActuallyVisible) 내의 마커 개수만 표시
+  const visibleMarkerCount = useMemo(() => {
+    return inBoundsMarkers.filter((p: any) => p.isActuallyVisible).length;
+  }, [inBoundsMarkers]);
+
   useEffect(() => {
-    // displayedMarkers 상태가 바뀔 때마다 로그를 찍어 실제 데이터 확인
-    console.log(`[Markers] Count: ${inBoundsMarkers.length}, Zoom: ${currentZoom}`);
     setDisplayedMarkers([...inBoundsMarkers]);
   }, [inBoundsMarkers, currentZoom]);
 
@@ -461,12 +457,12 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 13 && (
+                  {visibleMarkerCount > 0 && currentZoom < 13 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
                   <button
                     onClick={handleViewAllClick}
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 13}
+                    disabled={visibleMarkerCount === 0 || currentZoom >= 13}
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
                       currentZoom >= 13 && "opacity-50 grayscale cursor-not-allowed"
@@ -475,9 +471,9 @@ const Index = () => {
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {displayedMarkers.length > 0 && currentZoom < 13 && (
+                  {visibleMarkerCount > 0 && currentZoom < 13 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                      {displayedMarkers.length}
+                      {visibleMarkerCount}
                     </div>
                   )}
                 </div>
