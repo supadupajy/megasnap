@@ -189,8 +189,16 @@ const MapContainer = ({
       // ✅ 줌 애니메이션 시작/종료 감지
       kakao.maps.event.addListener(map, 'zoom_start', () => setIsMapMoving(true));
       kakao.maps.event.addListener(map, 'zoom_changed', () => {
-        updateMapData();
         setIsMapMoving(false);
+        // ✅ 줌이 완료된 즉시 수동으로 데이터 업데이트 트리거
+        updateMapData();
+        
+        // 브라우저 렌더링 타이밍 이슈 방지를 위해 짧은 지연 후 한 번 더 갱신
+        setTimeout(() => {
+          if (mapInstance.current) {
+            updateMapData();
+          }
+        }, 100);
       });
 
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -387,11 +395,12 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 지도 이동 중에도 렌더링을 완전히 막지 않고, 
-    // 이동이 멈췄을 때 즉시 갱신되도록 로직 수정 (isMapMoving 조건 제거 또는 완화)
-    
+    // ✅ 줌 레벨이 7 이상일 때는 모든 마커를 안전하게 비움
     if (currentLevel >= 7) {
-      overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
+      overlaysRef.current.forEach((overlay, id) => {
+        overlay.setMap(null);
+      });
+      overlaysRef.current.clear();
       return;
     }
 
