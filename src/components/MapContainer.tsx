@@ -442,6 +442,15 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
 
+  // ✅ 임시 로그 추가
+  console.log('🔨 [CreateMarker]', {
+    postId: post.id,
+    hasExisting: !!existingOverlay,
+    lat: post.lat,
+    lng: post.lng,
+    actualLevel,
+  });
+
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = 1;
