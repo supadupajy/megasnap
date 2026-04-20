@@ -66,7 +66,7 @@ const MapContainer = ({
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        map.setMaxLevel(10);
+        map.setMaxLevel(11);
         mapInstance.current = map;
 
         const updateMapData = () => {
