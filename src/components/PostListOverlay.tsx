@@ -7,9 +7,9 @@ import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { createMockPosts } from '@/lib/mock-data';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
 
 const ObservedPostItem = ({ 
   post, 
@@ -67,27 +67,76 @@ interface PostListOverlayProps {
   onClose: () => void;
   initialPosts: Post[];
   mapCenter: { lat: number; lng: number };
+  currentBounds?: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
+  selectedCategories: string[];
+  timeValueHours: number;
+  authUserId?: string | null;
   onDeletePost?: (id: string) => void;
 }
 
-const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePost }: PostListOverlayProps) => {
+const PostListOverlay = ({
+  isOpen,
+  onClose,
+  initialPosts,
+  mapCenter,
+  currentBounds,
+  selectedCategories,
+  timeValueHours,
+  authUserId,
+  onDeletePost,
+}: PostListOverlayProps) => {
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [expansionStep, setExpansionStep] = useState(0);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const now = Date.now();
+  const timeLimitMs = timeValueHours * 60 * 60 * 1000;
+  const baseLatSpan = useMemo(() => {
+    if (!currentBounds) return 0.08;
+    return Math.max(currentBounds.ne.lat - currentBounds.sw.lat, 0.08);
+  }, [currentBounds]);
+  const baseLngSpan = useMemo(() => {
+    if (!currentBounds) return 0.08;
+    return Math.max(currentBounds.ne.lng - currentBounds.sw.lng, 0.08);
+  }, [currentBounds]);
 
   useLayoutEffect(() => {
     if (isOpen) {
       setPosts(initialPosts);
+      setHasMore(true);
+      setExpansionStep(0);
       return;
     }
 
     setPosts([]);
     setIsLoadingMore(false);
+    setHasMore(true);
+    setExpansionStep(0);
   }, [isOpen, initialPosts]);
+
+  const matchesOverlayFilters = useCallback((post: Post) => {
+    if (blockedIds.has(post.user.id)) return false;
+    if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+
+    let matchesCategory = false;
+    if (selectedCategories.includes('mine')) {
+      matchesCategory = !!authUserId && post.user.id === authUserId;
+    } else if (selectedCategories.includes('all')) {
+      matchesCategory = true;
+    } else {
+      matchesCategory = selectedCategories.includes(post.category || 'none')
+        || (selectedCategories.includes('hot') && post.borderType === 'popular')
+        || (selectedCategories.includes('influencer') && post.isInfluencer);
+    }
+
+    return matchesCategory;
+  }, [authUserId, blockedIds, now, selectedCategories, timeLimitMs]);
 
   const visiblePosts = useMemo(() => {
     if (!isOpen) return posts;
@@ -96,25 +145,91 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   }, [isOpen, posts, initialPosts]);
 
   const filteredPosts = useMemo(() => {
-    return visiblePosts.filter(p => !blockedIds.has(p.user.id));
-  }, [visiblePosts, blockedIds]);
+    return visiblePosts.filter(matchesOverlayFilters);
+  }, [visiblePosts, matchesOverlayFilters]);
 
-  const loadMorePosts = useCallback(() => {
-    if (isLoadingMore || !isOpen) return;
+  const getExpandedBounds = useCallback((step: number) => {
+    const multiplier = 1 + (step * 0.75);
+    const latHalf = (baseLatSpan * multiplier) / 2;
+    const lngHalf = (baseLngSpan * multiplier) / 2;
+
+    return {
+      sw: { lat: mapCenter.lat - latHalf, lng: mapCenter.lng - lngHalf },
+      ne: { lat: mapCenter.lat + latHalf, lng: mapCenter.lng + lngHalf },
+    };
+  }, [baseLatSpan, baseLngSpan, mapCenter.lat, mapCenter.lng]);
+
+  const isWithinBounds = useCallback((post: Post, bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } }) => {
+    return post.lat >= bounds.sw.lat
+      && post.lat <= bounds.ne.lat
+      && post.lng >= bounds.sw.lng
+      && post.lng <= bounds.ne.lng;
+  }, []);
+
+  const getDistanceFromCenter = useCallback((post: Post) => {
+    return Math.hypot(post.lat - mapCenter.lat, post.lng - mapCenter.lng);
+  }, [mapCenter.lat, mapCenter.lng]);
+
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !isOpen || !hasMore) return;
+
     setIsLoadingMore(true);
-    setTimeout(() => {
-      const newPosts = createMockPosts(mapCenter.lat, mapCenter.lng, 10);
-      setPosts(prev => {
-        const combined = [...prev, ...newPosts];
-        mapCache.posts = [...mapCache.posts, ...newPosts];
+
+    try {
+      const loadedIds = new Set(posts.map((post) => post.id));
+      let nextStep = expansionStep + 1;
+      let foundPosts: Post[] = [];
+
+      while (nextStep <= 8 && foundPosts.length === 0) {
+        const previousBounds = getExpandedBounds(nextStep - 1);
+        const nextBounds = getExpandedBounds(nextStep);
+        const ringPosts = await fetchPostsInBounds(nextBounds.sw, nextBounds.ne);
+
+        foundPosts = ringPosts
+          .filter((post) => !loadedIds.has(post.id))
+          .filter((post) => !isWithinBounds(post, previousBounds))
+          .filter(matchesOverlayFilters)
+          .sort((a, b) => getDistanceFromCenter(a) - getDistanceFromCenter(b));
+
+        if (foundPosts.length > 0) {
+          break;
+        }
+
+        nextStep += 1;
+      }
+
+      if (foundPosts.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const batch = foundPosts.slice(0, 12);
+      setPosts((prev) => {
+        const combined = [...prev, ...batch];
+        const existingCacheIds = new Set(mapCache.posts.map((post) => post.id));
+        const newCachePosts = batch.filter((post) => !existingCacheIds.has(post.id));
+        if (newCachePosts.length > 0) {
+          mapCache.posts = [...mapCache.posts, ...newCachePosts];
+        }
         return combined;
       });
+
+      if (foundPosts.length <= 12) {
+        setExpansionStep(nextStep);
+        if (nextStep >= 8) {
+          setHasMore(false);
+        }
+      }
+    } catch (error) {
+      console.error('[PostListOverlay] Failed to load more real posts:', error);
+      setHasMore(false);
+    } finally {
       setIsLoadingMore(false);
-    }, 800);
-  }, [isLoadingMore, mapCenter, isOpen]);
+    }
+  }, [expansionStep, getDistanceFromCenter, getExpandedBounds, hasMore, isLoadingMore, isOpen, isWithinBounds, matchesOverlayFilters, posts]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !hasMore) return;
     
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -128,7 +243,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
       observer.observe(loadMoreRef.current);
     }
     return () => observer.disconnect();
-  }, [loadMorePosts, visiblePosts.length, isOpen]);
+  }, [hasMore, loadMorePosts, visiblePosts.length, isOpen]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
@@ -192,16 +307,24 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
                   />
                 ))}
                 
-                <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-                  {isLoadingMore ? (
-                    <>
-                      <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">새로운 추억을 불러오는 중...</p>
-                    </>
-                  ) : (
-                    <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                  )}
-                </div>
+                {(isLoadingMore || hasMore) && (
+                  <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">주변 실제 포스트를 불러오는 중...</p>
+                      </>
+                    ) : (
+                      <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                    )}
+                  </div>
+                )}
+
+                {!hasMore && (
+                  <div className="py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    더 이상 주변 실제 포스트가 없습니다.
+                  </div>
+                )}
               </>
             ) : (
               <div className="py-20 text-center text-gray-400 font-medium">
