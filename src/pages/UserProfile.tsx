@@ -86,7 +86,8 @@ const UserProfile = () => {
       videoUrl: sanitized.video_url,
       isLiked: false,
       createdAt: new Date(sanitized.created_at),
-      borderType
+      borderType,
+      category: sanitized.category || 'none',
     };
   };
 
@@ -107,7 +108,7 @@ const UserProfile = () => {
       // 2. 유저 게시물 가져오기
       const { data, error } = await supabase
         .from('posts')
-        .select('*')
+        .select('*, category')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 

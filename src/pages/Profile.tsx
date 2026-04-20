@@ -60,11 +60,26 @@ const Profile = () => {
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     const finalImage = sanitized.youtube_url ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url) : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
     return {
-      id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      id: sanitized.id,
+      isAd,
+      isGif: false,
+      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: sanitized.location_name || '알 수 없는 장소',
+      lat: sanitized.latitude,
+      lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0),
+      commentsCount: 0,
+      comments: [],
+      image: finalImage,
+      youtubeUrl: sanitized.youtube_url,
+      videoUrl: sanitized.video_url,
+      isLiked: false,
+      isSaved: true,
+      createdAt: new Date(sanitized.created_at),
+      borderType,
+      category: sanitized.category || 'none',
     };
   };
 
@@ -73,12 +88,30 @@ const Profile = () => {
     hasFetched.current = true;
     setIsDataLoading(true);
     try {
-      const { data: myData } = await supabase.from('posts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      // 내 포스팅 로드
+      const { data: myData, error: myError } = await supabase
+        .from('posts')
+        .select('*, category')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (myError) throw myError;
+
       const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
       setMyPosts(formattedMyPosts);
-      const { data: savedData } = await supabase.from('saved_posts').select('post_id, posts(*)').eq('user_id', uid).order('created_at', { ascending: false });
+
+      // 저장된 포스팅 로드
+      const { data: savedData, error: savedError } = await supabase
+        .from('saved_posts')
+        .select('post_id, posts(*, category)')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (savedError) throw savedError;
+
       const formattedSavedPosts = await Promise.all((savedData || []).filter(item => item.posts).map(item => mapDbToPost(item.posts)));
       setSavedPosts(formattedSavedPosts);
+
       const [followersRes, followingRes] = await Promise.all([supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid), supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)]);
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);

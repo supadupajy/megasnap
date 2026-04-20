@@ -108,7 +108,8 @@ const Index = () => {
       videoUrl: p.video_url,
       isLiked: false,
       createdAt: new Date(p.created_at),
-      borderType
+      borderType,
+      category: p.category || 'none',
     };
   };
 
@@ -116,7 +117,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*')
+        .select('*, category')
         .order('likes', { ascending: false })
         .limit(20);
       
@@ -231,7 +232,7 @@ const Index = () => {
         console.error('[Refresh] Sync Error:', err);
       }
     } else {
-      const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
+      const { data } = await supabase.from('posts').select('*, category').order('created_at', { ascending: false }).limit(1000);
       if (data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
         setAllPosts(mapped);

@@ -52,7 +52,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     image: finalImage,
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
-    category: 'none',
+    category: p.category || 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),
     borderType: borderType,
@@ -79,7 +79,7 @@ export const useSupabasePosts = (limit = 50) => {
 export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {lat: number, lng: number}) => {
   const { data, error } = await supabase
     .from("posts")
-    .select("*")
+    .select('*, category')
     .gte("latitude", sw.lat)
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
