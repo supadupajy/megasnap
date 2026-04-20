@@ -57,34 +57,46 @@ const MapContainer = ({
 
   // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 강력한 차단
   useEffect(() => {
-    const preventSelectionError = (e: Event) => {
-      if (window.getSelection) {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          selection.removeAllRanges();
+    const preventSelectionError = (e?: Event) => {
+      try {
+        if (window.getSelection) {
+          const selection = window.getSelection();
+          if (selection) {
+            // 모든 선택 범위를 제거하여 확장 프로그램이 참조할 범위를 없앰
+            if (selection.rangeCount > 0) {
+              selection.removeAllRanges();
+            }
+            // 강제로 포커스를 해제하여 브라우저의 선택 상태를 초기화
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+          }
         }
+      } catch (err) {
+        // 에러 발생 시 무시
       }
     };
 
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('selectstart', preventSelectionError);
-      container.addEventListener('dragstart', preventSelectionError);
-      // ✅ 마우스 업/다운 시에도 선택 영역을 초기화하여 드래그 후 발생하는 에러 차단
-      container.addEventListener('mousedown', preventSelectionError);
-      container.addEventListener('mouseup', preventSelectionError);
-      // 일부 확장 프로그램이 참조하는 selectionchange 이벤트에 대응
-      document.addEventListener('selectionchange', preventSelectionError);
+      const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick'];
+      events.forEach(evt => container.addEventListener(evt, preventSelectionError, { passive: true }));
+      
+      // 전역 이벤트에 대해서도 더 빈번하게 체크 (지도 자동 이동 시 대응)
+      document.addEventListener('selectionchange', preventSelectionError, { passive: true });
+      window.addEventListener('scroll', preventSelectionError, { passive: true });
     }
+
+    // 초기 실행으로 현재 있는 선택 영역 제거
+    preventSelectionError();
 
     return () => {
       if (container) {
-        container.removeEventListener('selectstart', preventSelectionError);
-        container.removeEventListener('dragstart', preventSelectionError);
-        container.removeEventListener('mousedown', preventSelectionError);
-        container.removeEventListener('mouseup', preventSelectionError);
+        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick'];
+        events.forEach(evt => container.removeEventListener(evt, preventSelectionError));
       }
       document.removeEventListener('selectionchange', preventSelectionError);
+      window.removeEventListener('scroll', preventSelectionError);
     };
   }, []);
 
@@ -186,6 +198,11 @@ const MapContainer = ({
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
     if (!map || !kakao || !kakao.maps?.LatLng) return;
+
+    // 이동 시작 시점에 모든 선택 영역을 강제로 제거
+    if (window.getSelection) {
+      window.getSelection()?.removeAllRanges();
+    }
 
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
