@@ -197,26 +197,28 @@ const Index = () => {
   const inBoundsMarkers = useMemo(() => {
     if (!mapData?.bounds || currentZoom >= 13) return [];
     
-    // ✅ 마커 렌더링 시 필터링을 최소화하거나 제거하여 "사라짐" 현상 방지
-    // 이미 syncPostsWithSupabase에서 영역 데이터를 가져왔으므로, 
-    // 여기서는 화면 내외를 너무 엄격하게 따지지 않고 데이터를 보여줍니다.
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 화면 영역보다 훨씬 넉넉한 범위를 마커 렌더링 대상으로 잡음
-    const latSpan = ne.lat - sw.lat;
-    const lngSpan = ne.lng - sw.lng;
-    const latMargin = latSpan * 0.5; // 50% 여유
-    const lngMargin = lngSpan * 0.5; // 50% 여유
+    // ✅ 축소 시 훨씬 넉넉한 범위를 보장하기 위해 마진 계산 방식 고도화
+    const latSpan = Math.abs(ne.lat - sw.lat);
+    const lngSpan = Math.abs(ne.lng - sw.lng);
+    
+    // 레벨 7 이상부터는 화면 밖 데이터를 더 많이 유지 (0.8배 마진)
+    const marginMultiplier = currentZoom >= 7 ? 0.8 : 0.3;
+    const latMargin = latSpan * marginMultiplier;
+    const lngMargin = lngSpan * marginMultiplier;
     
     return allPosts.filter(post => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // ✅ 매우 넉넉한 범위 판정 (거의 화면에 조금이라도 걸치면 다 보여줌)
-      if (post.lat < (sw.lat - latMargin) || post.lat > (ne.lat + latMargin) || 
-          post.lng < (sw.lng - lngMargin) || post.lng > (ne.lng + lngMargin)) return false;
+      // 유연한 범위 체크
+      const isInLat = post.lat >= (Math.min(sw.lat, ne.lat) - latMargin) && post.lat <= (Math.max(sw.lat, ne.lat) + latMargin);
+      const isInLng = post.lng >= (Math.min(sw.lng, ne.lng) - lngMargin) && post.lng <= (Math.max(sw.lng, ne.lng) + lngMargin);
+      
+      if (!isInLat || !isInLng) return false;
       
       if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       
@@ -229,10 +231,10 @@ const Index = () => {
     });
   }, [allPosts, mapData, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
 
-  // displayedMarkers 업데이트 로직을 useMemo 기반으로 교체
+  // ✅ 레벨 변경 시 마커 강제 재렌더링 유도를 위한 종속성 추가
   useEffect(() => {
-    setDisplayedMarkers(inBoundsMarkers);
-  }, [inBoundsMarkers]);
+    setDisplayedMarkers([...inBoundsMarkers]);
+  }, [inBoundsMarkers, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
