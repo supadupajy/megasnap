@@ -51,14 +51,17 @@ if (activeTab === 'followers') {
     .eq('follower_id', userId);
 }
 
-const { data, error } = await query;
-if (error) throw error;
+      const { data, error } = await query;
+      if (error) throw error;
 
-const formattedUsers = (data || []).map((item: any) => {
-  return activeTab === 'followers' ? item.follower : item.following;
-}).filter(Boolean);
-
-setUsers(formattedUsers);
+      const formattedUsers = (data || []).map((item: any) => item.profiles).filter(Boolean);
+      setUsers(formattedUsers);
+    } catch (err) {
+      console.error('Error fetching follow data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, activeTab]);
 
   useEffect(() => {
     fetchFollowData();
