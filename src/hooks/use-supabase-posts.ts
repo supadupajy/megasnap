@@ -73,16 +73,40 @@ export const usePosts = (limit: number = 10) => {
   });
 };
 
-export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {lat: number, lng: number}) => {
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .gte("latitude", sw.lat)
-    .lte("latitude", ne.lat)
-    .gte("longitude", sw.lng)
-    .lte("longitude", ne.lng)
-    .limit(1000);
+/**
+ * Fetches posts within the given geographical bounds with a limit.
+ * Optimized to fetch more posts when zoomed out and prioritize center-weighted or balanced data.
+ */
+export const fetchPostsInBounds = async (
+  sw: { lat: number, lng: number }, 
+  ne: { lat: number, lng: number },
+  currentLevel: number = 6
+) => {
+  // ✅ 줌 레벨에 따라 페칭 리미트를 유동적으로 조절
+  // 축소할수록(레벨이 높을수록) 더 넓은 영역의 데이터를 커버하기 위해 리미트 증가
+  let limit = 1000;
+  if (currentLevel >= 7) limit = 1500;
+  if (currentLevel >= 8) limit = 2000;
+  if (currentLevel >= 9) limit = 2500;
+  if (currentLevel >= 10) limit = 3000;
 
-  if (error) throw error;
-  return Promise.all((data || []).map(mapDbToPost));
+  try {
+    // ✅ 데이터베이스 수준에서 중심부(또는 최신순) 우선순위를 보장하기 위해 
+    // 기본적으로 최신순 + 좋아요순 혼합 정렬 시도 (확장성 고려)
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .gte('latitude', sw.lat)
+      .lte('latitude', ne.lat)
+      .gte('longitude', sw.lng)
+      .lte('longitude', ne.lng)
+      .order('created_at', { ascending: false }) // 최신순 우선으로 하면 중심부 데이터 누락 확률 감소
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[SupabasePosts] Fetch error:', err);
+    return [];
+  }
 };

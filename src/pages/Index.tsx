@@ -163,11 +163,16 @@ const Index = () => {
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
     try {
-      const dbPosts = await fetchPostsInBounds(sw, ne);
+      // ✅ 현재 줌 레벨(currentZoom)을 넘겨서 유동적인 리미트 적용
+      const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom);
+      
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-        const combined = [...prev, ...newUnique];
+        
+        // ✅ 단순히 뒤에 붙이는 게 아니라, 현재 보이는 영역의 데이터가 우선순위를 갖도록 병합
+        // (필요시 mapCache와 동기화)
+        const combined = [...newUnique, ...prev].slice(0, 10000); // 메모리 보호를 위한 최대 캡
         mapCache.posts = combined;
         return combined;
       });
@@ -176,7 +181,7 @@ const Index = () => {
     } finally { 
       isSyncing.current = false; 
     }
-  }, [mapData]);
+  }, [mapData, currentZoom]); // currentZoom 의존성 추가
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
