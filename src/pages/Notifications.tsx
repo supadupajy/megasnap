@@ -33,21 +33,54 @@ const Notifications = () => {
 
   useEffect(() => {
     if (!authUser) return;
+    
     const fetchNotifications = async () => {
-      const { data } = await supabase.from('notifications').select('*, actor:profiles!notifications_actor_id_fkey(nickname, avatar_url)').eq('user_id', authUser.id).order('created_at', { ascending: false });
-      if (data) {
+      // 제약 조건 이름 대신 actor_id 컬럼을 명시하여 조인합니다.
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*, actor:profiles!actor_id(nickname, avatar_url)')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[Notifications] Fetch error:', error);
+      } else if (data) {
         setNotifications(data as any);
-        await supabase.from('notifications').update({ is_read: true }).eq('user_id', authUser.id).eq('is_read', false);
+        // 페이지 진입 시 읽지 않은 알림을 모두 읽음 처리
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', authUser.id)
+          .eq('is_read', false);
       }
       setIsLoading(false);
     };
+
     fetchNotifications();
-    const channel = supabase.channel('realtime_notifications_page').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${authUser.id}` }, async (payload) => {
-      const { data: actorProfile } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', payload.new.actor_id).single();
-      const newNotif = { ...payload.new, actor: actorProfile } as Notification;
-      setNotifications(prev => [newNotif, ...prev]);
-    }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const channel = supabase
+      .channel(`realtime_notifications_${authUser.id}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications', 
+        filter: `user_id=eq.${authUser.id}` 
+      }, async (payload) => {
+        // 실시간으로 추가된 알림의 발신자 프로필 정보를 별도로 가져옵니다.
+        const { data: actorProfile } = await supabase
+          .from('profiles')
+          .select('nickname, avatar_url')
+          .eq('id', payload.new.actor_id)
+          .single();
+        
+        const newNotif = { ...payload.new, actor: actorProfile } as Notification;
+        setNotifications(prev => [newNotif, ...prev]);
+      })
+      .subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
   }, [authUser]);
 
   const deleteNotification = async (id: string) => {
@@ -73,22 +106,69 @@ const Notifications = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-800" />
+        </button>
+        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
+      </header>
+
       <div className="pt-[88px] flex flex-col">
-        {isLoading ? (<div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>) : (
+        {isLoading ? (
+          <div className="py-20 flex justify-center">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          </div>
+        ) : (
           <div className="py-4">
             <div className="flex flex-col">
               <AnimatePresence initial={false}>
                 {notifications.map((notif) => (
                   <div key={notif.id} className="relative group overflow-hidden">
-                    <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={() => deleteNotification(notif.id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
-                    <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} className={cn("relative bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", !notif.is_read && "bg-indigo-50/30")} onClick={() => handleNotifClick(notif)}>
-                      <Avatar className="w-11 h-11 shrink-0 border border-gray-100"><AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} /><AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback></Avatar>
-                      <div className="flex-1 text-sm leading-tight"><span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span><span className="text-gray-700"> {getNotificationText(notif)}</span><span className="text-[10px] text-gray-400 ml-2 block mt-1">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}</span></div>
+                    <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
+                      <button 
+                        onClick={() => deleteNotification(notif.id)} 
+                        className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+                      >
+                        <Trash2 className="w-6 h-6" />
+                        <span className="text-[10px] font-bold">삭제</span>
+                      </button>
+                    </div>
+                    <motion.div 
+                      drag="x" 
+                      dragConstraints={{ left: -80, right: 0 }} 
+                      dragElastic={0.1} 
+                      className={cn(
+                        "relative bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
+                        !notif.is_read && "bg-indigo-50/30"
+                      )} 
+                      onClick={() => handleNotifClick(notif)}
+                    >
+                      <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
+                        <AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} />
+                        <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 text-sm leading-tight">
+                        <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
+                        <span className="text-gray-700"> {getNotificationText(notif)}</span>
+                        <span className="text-[10px] text-gray-400 ml-2 block mt-1">
+                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
+                        </span>
+                      </div>
                     </motion.div>
                   </div>
                 ))}
               </AnimatePresence>
-              {notifications.length === 0 && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Bell className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">새로운 알림이 없습니다.</p></div>)}
+              {notifications.length === 0 && (
+                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Bell className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-sm text-gray-400 font-bold leading-relaxed">새로운 알림이 없습니다.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
