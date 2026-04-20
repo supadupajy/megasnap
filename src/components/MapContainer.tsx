@@ -153,16 +153,13 @@ const MapContainer = ({
           
           setCurrentLevel(currentLevel);
           
-          // RequestAnimationFrame을 사용하여 브라우저 렌더링 주기에 맞춰 업데이트
-          requestAnimationFrame(() => {
-            onMapChangeRef.current({
-              bounds: { 
-                sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-                ne: { lat: ne.getLat(), lng: ne.getLng() } 
-              },
-              center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-              level: currentLevel
-            });
+          onMapChangeRef.current({
+            bounds: { 
+              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+              ne: { lat: ne.getLat(), lng: ne.getLng() } 
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            level: currentLevel
           });
         } catch (e) {
           console.error('Map update error:', e);
@@ -173,6 +170,8 @@ const MapContainer = ({
       setIsMapReady(true);
       setIsLoading(false);
 
+      // 'zoom_changed' 이벤트를 명시적으로 추가하여 확대/축소 시 데이터 업데이트 보장
+      kakao.maps.event.addListener(map, 'zoom_changed', updateMapData);
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
       kakao.maps.event.addListener(map, 'dragstart', () => { 
         isDragging.current = true; 
@@ -214,13 +213,12 @@ const MapContainer = ({
 
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
-    const timer = setTimeout(() => {
-      const map = mapInstance.current;
-      if (!map) return;
+    
+    const map = mapInstance.current;
+    if (map.getLevel() !== level) {
       map.setLevel(level, { animate: false });
       setCurrentLevel(level);
-    }, 300);
-    return () => clearTimeout(timer);
+    }
   }, [level, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
