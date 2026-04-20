@@ -144,15 +144,15 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
+        <motion.div
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ 
+          transition={{
             duration: 0.4,
             ease: [0.4, 0, 0.2, 1]
           }}
-          className="fixed top-[88px] bottom-0 left-0 right-0 z-40 bg-white overflow-y-auto shadow-2xl no-scrollbar"
+          className="fixed top-[88px] bottom-0 left-0 right-0 z-[200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
           <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-30">
             <div>
