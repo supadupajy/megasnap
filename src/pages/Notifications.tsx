@@ -19,7 +19,7 @@ interface Notification {
   content?: string;
   created_at: string;
   is_read: boolean;
-  actor: {
+  actor?: {
     nickname: string;
     avatar_url: string;
   };
@@ -35,31 +35,64 @@ const Notifications = () => {
     if (!authUser) return;
     
     const fetchNotifications = async () => {
-      // 제약 조건 이름 대신 actor_id 컬럼을 명시하여 조인합니다.
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*, actor:profiles!actor_id(nickname, avatar_url)')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('[Notifications] Fetch error:', error);
-      } else if (data) {
-        setNotifications(data as any);
-        // 페이지 진입 시 읽지 않은 알림을 모두 읽음 처리
-        await supabase
+      try {
+        // 1. 알림 목록만 먼저 가져옵니다 (조인 제외)
+        const { data: notifs, error: notifError } = await supabase
           .from('notifications')
-          .update({ is_read: true })
+          .select('*')
           .eq('user_id', authUser.id)
-          .eq('is_read', false);
+          .order('created_at', { ascending: false });
+
+        if (notifError) throw notifError;
+
+        if (notifs && notifs.length > 0) {
+          // 2. 알림 발신자(actor_id)들의 고유 ID 목록을 추출합니다.
+          const actorIds = Array.from(new Set(notifs.map(n => n.actor_id)));
+
+          // 3. 해당 ID들의 프로필 정보를 한 번에 가져옵니다.
+          const { data: profiles, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, nickname, avatar_url')
+            .in('id', actorIds);
+
+          if (profileError) throw profileError;
+
+          // 4. 프로필 정보를 맵 형태로 변환하여 빠르게 찾을 수 있게 합니다.
+          const profileMap = (profiles || []).reduce((acc, p) => {
+            acc[p.id] = p;
+            return acc;
+          }, {} as Record<string, any>);
+
+          // 5. 알림 데이터와 프로필 정보를 결합합니다.
+          const combinedNotifs = notifs.map(n => ({
+            ...n,
+            actor: profileMap[n.actor_id] || { nickname: '알 수 없는 사용자', avatar_url: null }
+          }));
+
+          setNotifications(combinedNotifs);
+
+          // 6. 읽지 않은 알림을 모두 읽음 처리합니다.
+          await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', authUser.id)
+            .eq('is_read', false);
+        } else {
+          setNotifications([]);
+        }
+      } catch (error) {
+        console.error('[Notifications] Fetch error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchNotifications();
 
+    // 실시간 구독 설정
+    const channelName = `realtime_notifs_page_${authUser.id}_${Date.now()}`;
     const channel = supabase
-      .channel(`realtime_notifications_${authUser.id}`)
+      .channel(channelName)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
@@ -73,12 +106,17 @@ const Notifications = () => {
           .eq('id', payload.new.actor_id)
           .single();
         
-        const newNotif = { ...payload.new, actor: actorProfile } as Notification;
+        const newNotif = { 
+          ...payload.new, 
+          actor: actorProfile || { nickname: '알 수 없는 사용자', avatar_url: null } 
+        } as Notification;
+        
         setNotifications(prev => [newNotif, ...prev]);
       })
       .subscribe();
 
     return () => { 
+      channel.unsubscribe();
       supabase.removeChannel(channel); 
     };
   }, [authUser]);
