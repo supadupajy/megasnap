@@ -17,12 +17,13 @@ const Header = () => {
   const fetchCounts = useCallback(async () => {
     if (!authUser?.id) return;
     try {
-      // 1. 알림 개수 (읽지 않은 것)
+      // 1. 알림 개수 (읽지 않은 것, 단 메시지 알림 제외)
       const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', authUser.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .neq('type', 'message'); // 메시지 알림은 메시지 뱃지에서 처리
       
       setUnreadNotifCount(notifCount || 0);
 
