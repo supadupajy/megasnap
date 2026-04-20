@@ -1,18 +1,21 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+// 경로를 "@/lib/mock-data"로 정확히 지정했습니다.
 import { 
   MAJOR_CITIES, 
   UNSPLASH_IDS, 
-  YOUTUBE_IDS_50, 
+  YOUTUBE_IDS_POOL, 
   FOOD_UNSPLASH_IDS, 
   getUnsplashUrl,
   REALISTIC_COMMENTS,
   AD_COMMENTS,
-  createMockPosts // 이제 정상적으로 import 됩니다
-} from "./mock-data";
+  createMockPosts
+} from "@/lib/mock-data"; 
 
-// 유튜브 재생 가능 여부 체크 (oEmbed)
+/**
+ * 유튜브 재생 가능 여부 체크 (oEmbed)
+ */
 async function checkYoutubePlayable(videoId: string): Promise<boolean> {
   try {
     const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
@@ -30,7 +33,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   try {
     // 1. 유튜브 클린 리스트 확보
     const validYoutubeIds: string[] = [];
-    for (const id of YOUTUBE_IDS_50) {
+    for (const id of YOUTUBE_IDS_POOL) {
       const ok = await checkYoutubePlayable(id);
       if (ok) validYoutubeIds.push(id);
       await new Promise(r => setTimeout(r, 30)); 
@@ -45,8 +48,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     for (const city of MAJOR_CITIES) {
       console.log(`📍 ${city.name} 생성 중 (${city.density}개)...`);
       
-      // mock-data.ts에서 export한 함수 사용
-      const mockPoints = createMockPosts(city.lat, city.lng, city.density, 0.1, city.bounds);
+      // mock-data에서 가져온 함수 사용
+      const mockPoints = createMockPosts(city.lat, city.lng, city.density, 0.1, undefined, city.bounds);
       const cityBatch: any[] = [];
 
       for (let i = 0; i < mockPoints.length; i++) {
