@@ -177,8 +177,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       <div className="absolute top-4 right-6 z-[1100]"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button></div>
       <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-4">
         <div className="w-full max-w-[420px] h-[82vh] relative pointer-events-auto">
-          {getStaticDetailCardClass() && <div className={getStaticDetailCardClass()} />}
           <div className="w-full h-full flex flex-col bg-white rounded-[40px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
+            {getStaticDetailCardClass() && <div className={cn(getStaticDetailCardClass(), "z-20")} />}
+
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
