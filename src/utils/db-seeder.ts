@@ -40,25 +40,10 @@ const AD_COMMENTS = [
 const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
 
 /**
- * Generates a truly random like count with a realistic distribution.
- * 70% of posts: 0-49 likes (None/Normal)
- * 20% of posts: 50-199 likes (Popular)
- * 7% of posts: 200-499 likes (Silver)
- * 2.5% of posts: 500-999 likes (Gold)
- * 0.5% of posts: 1000+ likes (Diamond)
+ * Generates a truly random like count between 0 and 10000 with flat distribution.
  */
 const getRandomLikesFlat = () => {
-  const r = Math.random();
-  // Normal/None (0-49) - 70%
-  if (r < 0.70) return Math.floor(Math.random() * 50);
-  // Popular (50-199) - 20%
-  if (r < 0.90) return Math.floor(Math.random() * 150 + 50);
-  // Silver (200-499) - 7%
-  if (r < 0.97) return Math.floor(Math.random() * 300 + 200);
-  // Gold (500-999) - 2.5%
-  if (r < 0.995) return Math.floor(Math.random() * 500 + 500);
-  // Diamond (1000+) - 0.5%
-  return Math.floor(Math.random() * 5000 + 1000);
+  return Math.floor(Math.random() * 10001);
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
@@ -192,19 +177,12 @@ export const randomizeExistingLikes = async () => {
     for (let i = 0; i < allPosts.length; i += chunkSize) {
       const chunk = allPosts.slice(i, i + chunkSize);
       
-      // Update each post one by one to respect RLS or avoid upsert issues
-      // Since upsert might fail if the user doesn't own all posts, 
-      // we need to be careful. However, for admin-like tasks, 
-      // we'll try to update the likes specifically.
-      
       for (const p of chunk) {
         const { error: updateError } = await supabase
           .from('posts')
           .update({ likes: getRandomLikesFlat() })
           .eq('id', p.id);
         
-        // If we hit an RLS error, we log it and continue 
-        // (some posts might be protected or owned by others)
         if (updateError) {
           console.warn(`⚠️ [Seeder] Could not update post ${p.id}:`, updateError.message);
         }
