@@ -17,6 +17,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostItemProps {
@@ -145,6 +146,34 @@ const PostItem = ({
     checkLikeStatus();
   }, [authUser, id]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadComments = async () => {
+      if (!isPersistedPostId(id)) {
+        setLocalComments(initialComments || []);
+        return;
+      }
+
+      try {
+        const dbComments = await fetchCommentsByPostId(id);
+        if (!cancelled) {
+          setLocalComments(dbComments);
+        }
+      } catch (err) {
+        console.error('[PostItem] Failed to load comments:', err);
+        if (!cancelled) {
+          setLocalComments(initialComments || []);
+        }
+      }
+    };
+
+    loadComments();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, initialComments]);
+
   const handleLikeToggleLocal = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
@@ -172,12 +201,20 @@ const PostItem = ({
     const newCommentText = commentInput.trim();
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     try {
-      const { error } = await supabase.from('comments').insert({ post_id: id, user_id: authUser.id, user_name: displayName, user_avatar: profile?.avatar_url, content: newCommentText });
-      if (error) throw error;
-      setLocalComments([...localComments, { user: displayName, text: newCommentText }]);
+      const savedComment = await insertComment({
+        postId: id,
+        userId: authUser.id,
+        userName: displayName,
+        userAvatar: profile?.avatar_url,
+        content: newCommentText,
+      });
+      setLocalComments((prev) => [...prev, savedComment]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
-    } catch (err) { showError('댓글 등록에 실패했습니다.'); } finally { setIsSubmittingComment(false); }
+    } catch (err: any) {
+      console.error('[PostItem] Comment insert failed:', err);
+      showError(err.message || '댓글 등록에 실패했습니다.');
+    } finally { setIsSubmittingComment(false); }
   };
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {

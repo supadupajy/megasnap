@@ -17,6 +17,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostDetailProps {
@@ -82,6 +83,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [currentIndex, isOpen, onViewPost, posts]);
 
   useEffect(() => {
+    let cancelled = false;
+    const currentPost = posts[currentIndex];
+
+    const loadComments = async () => {
+      if (!isOpen || !currentPost) return;
+      if (!isPersistedPostId(currentPost.id)) {
+        setLocalComments(currentPost.comments || []);
+        return;
+      }
+
+      try {
+        const dbComments = await fetchCommentsByPostId(currentPost.id);
+        if (!cancelled) {
+          setLocalComments(dbComments);
+        }
+      } catch (err) {
+        console.error('[PostDetail] Failed to load comments:', err);
+        if (!cancelled) {
+          setLocalComments(currentPost.comments || []);
+        }
+      }
+    };
+
+    loadComments();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentIndex, isOpen, posts]);
+
+  useEffect(() => {
     const currentPost = posts[currentIndex];
     if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
     const observer = new IntersectionObserver(([entry]) => { setIsPlayingVideo(entry.isIntersecting); }, { threshold: 0.6 });
@@ -102,12 +133,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const newCommentText = commentInput.trim();
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     try {
-      const { error } = await supabase.from('comments').insert({ post_id: post.id, user_id: authUser.id, user_name: displayName, user_avatar: profile?.avatar_url, content: newCommentText });
-      if (error) throw error;
-      setLocalComments([...localComments, { user: displayName, text: newCommentText }]);
+      const savedComment = await insertComment({
+        postId: post.id,
+        userId: authUser.id,
+        userName: displayName,
+        userAvatar: profile?.avatar_url,
+        content: newCommentText,
+      });
+      setLocalComments((prev) => [...prev, savedComment]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
-    } catch (err) { showError('댓글 등록에 실패했습니다.'); } finally { setIsSubmittingComment(false); }
+    } catch (err: any) {
+      console.error('[PostDetail] Comment insert failed:', err);
+      showError(err.message || '댓글 등록에 실패했습니다.');
+    } finally { setIsSubmittingComment(false); }
   };
 
   if (!isOpen || posts.length === 0) return null;
