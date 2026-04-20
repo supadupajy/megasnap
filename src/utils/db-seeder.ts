@@ -191,17 +191,25 @@ export const randomizeExistingLikes = async () => {
     const chunkSize = 100;
     for (let i = 0; i < allPosts.length; i += chunkSize) {
       const chunk = allPosts.slice(i, i + chunkSize);
-      const updates = chunk.map(p => ({
-        id: p.id,
-        likes: getRandomLikesFlat()
-      }));
-
-      // In Supabase, upsert with IDs works as an update
-      const { error: updateError } = await supabase
-        .from('posts')
-        .upsert(updates);
       
-      if (updateError) throw updateError;
+      // Update each post one by one to respect RLS or avoid upsert issues
+      // Since upsert might fail if the user doesn't own all posts, 
+      // we need to be careful. However, for admin-like tasks, 
+      // we'll try to update the likes specifically.
+      
+      for (const p of chunk) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ likes: getRandomLikesFlat() })
+          .eq('id', p.id);
+        
+        // If we hit an RLS error, we log it and continue 
+        // (some posts might be protected or owned by others)
+        if (updateError) {
+          console.warn(`⚠️ [Seeder] Could not update post ${p.id}:`, updateError.message);
+        }
+      }
+      
       if (i % 500 === 0) console.log(`   - 진행 상황: ${i}/${allPosts.length} 완료...`);
     }
 
