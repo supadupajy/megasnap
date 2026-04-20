@@ -39,7 +39,7 @@ const UserProfile = () => {
 
   // 전역 글쓰기 이벤트 리스너
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen(true);
+    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);

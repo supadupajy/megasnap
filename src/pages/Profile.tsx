@@ -34,7 +34,7 @@ const Profile = () => {
   const postListStartRef = useRef<HTMLDivElement>(null); // 포스팅 리스트 시작점 Ref
 
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen(true);
+    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);

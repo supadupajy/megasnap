@@ -23,7 +23,7 @@ const Search = () => {
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen(true);
+    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
