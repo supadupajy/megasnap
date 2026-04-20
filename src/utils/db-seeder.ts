@@ -83,9 +83,9 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         } else if (globalIndex % 2 === 0) {
           const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
           finalYoutubeUrl = candidateUrl;
-          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
+          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
         } else {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
+          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
         }
 
         const finalContent = isAd
