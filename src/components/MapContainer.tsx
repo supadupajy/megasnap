@@ -11,7 +11,6 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
-  level?: number; 
   selectionLocation?: { lat: number; lng: number } | null;
   searchResultLocation?: { lat: number; lng: number } | null;
 }
@@ -26,7 +25,6 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level: externalLevel, 
   selectionLocation,
   searchResultLocation
 }: MapContainerProps) => {
@@ -38,7 +36,6 @@ const MapContainer = ({
   const lastDragEnd = useRef<number>(0);
   const isProgrammaticMove = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
-  const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapChangeRef = useRef(onMapChange);
@@ -62,12 +59,11 @@ const MapContainer = ({
 
         const options = {
           center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: externalLevel || 6
+          level: 6
         };
 
         const map = new kakao.maps.Map(mapElement.current!, options);
-        // ✅ setMaxLevel을 14로 올려서 10단계 축소가 가능하도록 수정
-        map.setMaxLevel(14);
+        map.setMaxLevel(10);
         mapInstance.current = map;
 
         const updateMapData = () => {
@@ -133,20 +129,6 @@ const MapContainer = ({
     }, 100);
     return () => clearInterval(timer);
   }, []);
-
-  // ✅ 외부 레벨 변경 감지 - 딜레이로 지도 초기화 완료 보장
-  useEffect(() => {
-    if (!isMapReady || !mapInstance.current || externalLevel === undefined) return;
-
-    const timer = setTimeout(() => {
-      const map = mapInstance.current;
-      if (!map) return;
-      map.setLevel(externalLevel, { animate: false });
-      setCurrentLevel(externalLevel);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [externalLevel, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
@@ -268,63 +250,14 @@ const MapContainer = ({
     return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2px solid #ffffff;`} overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
   };
 
-  const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
-    const timeoutId = removalTimeoutsRef.current.get(id);
-    if (timeoutId) {
-      window.clearTimeout(timeoutId);
-      removalTimeoutsRef.current.delete(id);
-    }
-    if (content) {
-      content.classList.remove('animate-marker-disappear');
-    }
-  };
-
-  const removeOverlayWithAnimation = (id: string, overlay: any) => {
-    if (removalTimeoutsRef.current.has(id)) return;
-
-    const content = overlay.getContent();
-    if (!(content instanceof HTMLElement)) {
-      overlay.setMap(null);
-      overlaysRef.current.delete(id);
-      return;
-    }
-
-    content.classList.remove('animate-marker-appear');
-    content.classList.add('animate-marker-disappear');
-
-    const timeoutId = window.setTimeout(() => {
-      overlay.setMap(null);
-      if (overlaysRef.current.get(id) === overlay) {
-        overlaysRef.current.delete(id);
-      }
-      removalTimeoutsRef.current.delete(id);
-    }, 260);
-
-    removalTimeoutsRef.current.set(id, timeoutId);
-  };
-
-  useEffect(() => {
-    return () => {
-      removalTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-      removalTimeoutsRef.current.clear();
-    };
-  }, []);
-
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    
-    if (currentLevel >= 11) {
-      overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
-      return;
-    }
+    // 줌 레벨 제한을 11로 늘려 전국 단위에서도 마커가 보이도록 수정
+    if (currentLevel >= 11) { overlaysRef.current.forEach((overlay) => overlay.setMap(null)); overlaysRef.current.clear(); return; }
 
     const currentPostIds = new Set(posts.map(p => p.id));
-    overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) {
-        removeOverlayWithAnimation(id, overlay);
-      }
-    });
+    overlaysRef.current.forEach((overlay, id) => { if (!currentPostIds.has(id)) { overlay.setMap(null); overlaysRef.current.delete(id); } });
 
     posts.forEach(post => {
       if (!post) return;
@@ -334,6 +267,7 @@ const MapContainer = ({
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
+      // 줌 레벨에 따른 마커 크기 조정 (멀어질수록 작게)
       let scale = 1;
       if (currentLevel === 7) scale = 0.6;
       else if (currentLevel === 8) scale = 0.4;
@@ -361,7 +295,6 @@ const MapContainer = ({
         const content = existingOverlay.getContent();
         existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
-          cancelPendingRemoval(post.id, content);
           content.style.setProperty('--marker-scale', scale.toString());
           if (isHighlighted) content.classList.add('highlighted'); else content.classList.remove('highlighted');
           if (content.getAttribute('data-content-state') !== contentStateKey) {

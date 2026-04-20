@@ -141,15 +141,6 @@
   animation: marker-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
 }
 
-@keyframes marker-disappear {
-  0% { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0) translateY(24px); }
-}
-.animate-marker-disappear {
-  pointer-events: none;
-  animation: marker-disappear 0.26s ease-in forwards;
-}
-
 @keyframes shine-sweep {
   0% { left: -100%; }
   20% { left: 100%; }

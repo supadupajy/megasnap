@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
-import { searchProfilesByNickname } from '@/utils/profile-search';
 
 const FriendList = () => {
   const navigate = useNavigate();
@@ -26,8 +25,16 @@ const FriendList = () => {
 
     setIsLoading(true);
     try {
-      const data = await searchProfilesByNickname(trimmedQuery, authUser?.id, 30);
-      setUsers(data);
+      // bio 컬럼을 제외하고 검색
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar_url')
+        .ilike('nickname', `%${trimmedQuery}%`)
+        .neq('id', authUser?.id)
+        .limit(30);
+
+      if (error) throw error;
+      setUsers(data || []);
     } catch (err) {
       console.error('User search error:', err);
     } finally {

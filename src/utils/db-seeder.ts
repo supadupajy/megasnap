@@ -1,245 +1,123 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  createMockPosts,
-  getDiverseUnsplashUrl,
-  getVerifiedYoutubeUrlByIndex,
-  initializeYoutubePool,
-} from "@/lib/mock-data";
-import { getYoutubeThumbnail } from "@/lib/utils";
-import { OFFLINE_REGION_CITIES, resolveOfflineLocationName, shouldEnrichLocationName } from "./offline-location";
-import { sanitizeYoutubeMedia } from "./youtube-utils";
+import { 
+  MAJOR_CITIES, 
+  YOUTUBE_IDS_50, 
+  getUnsplashUrl,
+  REALISTIC_COMMENTS,
+  AD_COMMENTS,
+  FOOD_IMAGES,
+  createMockPosts
+} from "@/lib/mock-data"; 
 
-const REALISTIC_COMMENTS = [
-  '여기 분위기 진짜 대박이에요! 꼭 가보세요. 😍',
-  '오늘 날씨랑 찰떡인 장소 발견! 기분 전환 제대로 되네요. ✨',
-  '숨은 명소 발견! 나만 알고 싶지만 공유합니다. 📍',
-  '주말 나들이로 딱 좋은 곳인 것 같아요. 강력 추천!',
-  '사진 찍기 너무 좋은 스팟이에요. 인생샷 건졌습니다. 📸',
-  '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
-  '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
-  '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
-  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
-  '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
-  '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
-  '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
-  '여기 진짜 뷰 맛집이네요. 눈이 호강하는 기분입니다. 🌊',
-  '디테일 하나하나 신경 쓴 게 느껴지는 멋진 공간이에요.',
-  '혼자 와서 조용히 생각 정리하기에도 너무 좋을 것 같아요.'
-];
-
-const AD_COMMENTS = [
-  '[AD] 지금 바로 특별한 혜택을 만나보세요! 놓치면 후회합니다.',
-  '[AD] 당신만을 위한 프리미엄 서비스를 경험할 시간입니다.',
-  '[AD] 인기 폭발! 지금 가장 핫한 아이템을 확인해보세요.',
-  '[AD] 오늘만 진행되는 특별 프로모션, 지금 확인하세요!',
-  '[AD] 최고의 선택, 당신의 일상을 더 특별하게 만들어드립니다.'
-];
-
-const getRandomLikesFlat = () => {
-  const r = Math.random();
-  if (r < 0.5) return Math.floor(Math.random() * 1001);
-  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000);
-  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000);
-  return Math.floor(Math.random() * 10001 + 10000);
-};
+async function validateYoutube(videoId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+    if (res.status !== 200) return false;
+    const data = await res.json();
+    return !!data.title && !data.title.toLowerCase().includes("private");
+  } catch { return false; }
+}
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  console.log("🚀 [Seeder] 전역 데이터 생성 프로세스를 시작합니다...");
+  const confirmClear = confirm("DB 제약 조건을 해결한 광고 포함 생성을 시작할까요?");
+  if (!confirmClear) return 0;
 
   try {
-    await initializeYoutubePool();
+    console.log("🧹 데이터 초기화 중...");
+    await supabase.from('posts').delete().neq('id', '_root_');
 
-    console.log("👥 [Seeder] 사용자 프로필 목록을 가져오는 중...");
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
-    const userPool = (profiles && profiles.length > 0)
-      ? profiles
-      : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
-    console.log(`✅ [Seeder] ${userPool.length}명의 사용자 풀이 준비되었습니다.`);
+    const playableIds = [];
+    for (const id of YOUTUBE_IDS_50) {
+      if (await validateYoutube(id)) playableIds.push(id);
+    }
 
-    const allInsertData: any[] = [];
-    let globalIndex = 0;
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').neq('id', currentUserId).limit(100);
+    const otherUsers = profiles || [];
+    
+    let globalCount = 0;
+    let myPostCounter = 0; 
+    const MAX_MY_POSTS = 80;
 
-    for (const city of OFFLINE_REGION_CITIES.filter((region) => region.density)) {
-      console.log(`📍 [Seeder] ${city.shortName} 지역 데이터 생성 중... (목표: ${city.density}개)`);
-      const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
+    for (const region of MAJOR_CITIES) {
+      console.log(`📍 ${region.name} 시딩 중...`);
+      const mockPoints = createMockPosts(region.lat, region.lng, region.density, undefined, region.bounds);
+      let batch: any[] = [];
 
-      for (let i = 0; i < mockPosts.length; i++) {
-        const p = mockPosts[i];
-        const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
-        const detailedLocation = resolveOfflineLocationName(p.lat, p.lng);
-        const finalLikes = getRandomLikesFlat();
-        const isAd = p.isAd;
-
-        let finalYoutubeUrl = null;
-        let finalImage = "";
-
+      for (let i = 0; i < mockPoints.length; i++) {
+        const p = mockPoints[i];
+        const uniqueSeed = Date.now() + globalCount;
+        
+        const isAd = i % 30 === 0;
+        let postUser = { id: "", name: "", avatar: "" };
+        
         if (isAd) {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'food', i);
-        } else if (globalIndex % 2 === 0) {
-          const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
-          finalYoutubeUrl = candidateUrl;
-          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
+          // [해결] 광고 포스팅도 DB 제약 조건을 피하기 위해 내 ID(currentUserId)를 할당합니다.
+          // UI에서는 is_ad: true 값으로 광고 여부를 판단하므로 ID는 상관없습니다.
+          postUser = { id: currentUserId, name: "공식 파트너", avatar: "https://i.pravatar.cc/150?u=ad" };
+        } else if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.015) {
+          postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
+          myPostCounter++;
+        } else if (otherUsers.length > 0) {
+          const u = otherUsers[Math.floor(Math.random() * otherUsers.length)];
+          postUser = { id: u.id, name: u.nickname || "탐험가", avatar: u.avatar_url || `https://i.pravatar.cc/150?u=${u.id}` };
         } else {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'general', i);
+          // 가상 유저인 경우에도 실제 UUID가 아닌 문자열은 DB에서 튕길 수 있습니다. 
+          // 안전하게 내 ID나 기존 유저 ID를 재활용합니다.
+          const fallbackUser = otherUsers.length > 0 ? otherUsers[uniqueSeed % otherUsers.length] : { id: currentUserId };
+          postUser = { id: fallbackUser.id, name: `Explorer_${uniqueSeed%1000}`, avatar: `https://i.pravatar.cc/150?u=${uniqueSeed%500}` };
         }
 
-        const finalContent = isAd
-          ? AD_COMMENTS[globalIndex % AD_COMMENTS.length]
-          : REALISTIC_COMMENTS[globalIndex % REALISTIC_COMMENTS.length];
+        const isYoutube = !isAd && i % 2 === 0 && playableIds.length > 0;
+        let finalImage = "";
+        let finalYoutubeUrl = null;
 
-        allInsertData.push({
-          content: finalContent,
-          location_name: detailedLocation,
-          latitude: p.lat,
+        if (isAd) {
+          finalImage = FOOD_IMAGES[globalCount % FOOD_IMAGES.length];
+        } else if (isYoutube) {
+          const ytId = playableIds[uniqueSeed % playableIds.length];
+          finalYoutubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
+          finalImage = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+        } else {
+          finalImage = getUnsplashUrl(uniqueSeed);
+        }
+
+        batch.push({
+          content: isAd ? AD_COMMENTS[globalCount % AD_COMMENTS.length] : REALISTIC_COMMENTS[uniqueSeed % REALISTIC_COMMENTS.length],
+          location_name: region.name,
+          latitude: p.lat, 
           longitude: p.lng,
           image_url: finalImage,
           youtube_url: finalYoutubeUrl,
-          user_id: randomUser.id,
-          user_name: randomUser.nickname || "탐험가",
-          user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-          likes: finalLikes,
-          created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString(),
+          user_id: postUser.id, // 반드시 유효한 UUID여야 함
+          user_name: postUser.name,
+          user_avatar: postUser.avatar,
+          is_ad: isAd,
+          likes: Math.floor(Math.random() * 20000),
+          created_at: new Date(Date.now() - Math.random() * 120 * 3600000).toISOString()
         });
 
-        globalIndex++;
-
-        if (globalIndex % 500 === 0) {
-          console.log(`   - 진행 상황: ${globalIndex}개 생성 완료...`);
+        globalCount++;
+        if (batch.length >= 100) {
+          const { error } = await supabase.from('posts').insert([...batch]);
+          if (error) {
+            console.error("❌ 배치 인서트 오류:", error.message);
+            throw error;
+          }
+          batch = [];
         }
       }
-    }
-
-    console.log(`📦 [Seeder] 총 ${allInsertData.length}개의 데이터 생성이 완료되었습니다.`);
-    console.log("📤 [Seeder] 데이터베이스에 저장을 시작합니다 (Chunk 단위)...");
-
-    const chunkSize = 50;
-    const totalChunks = Math.ceil(allInsertData.length / chunkSize);
-
-    for (let i = 0; i < allInsertData.length; i += chunkSize) {
-      const chunk = allInsertData.slice(i, i + chunkSize);
-      const currentChunkNum = Math.floor(i / chunkSize) + 1;
-
-      const { error } = await supabase.from('posts').insert(chunk);
-      if (error) throw error;
-
-      if (currentChunkNum % 10 === 0 || currentChunkNum === totalChunks) {
-        console.log(`   - DB 저장 중: ${currentChunkNum}/${totalChunks} 청크 완료...`);
+      if (batch.length > 0) {
+        const { error } = await supabase.from('posts').insert(batch);
+        if (error) console.error("❌ 최종 배치 오류:", error.message);
       }
     }
-
-    console.log("✨ [Seeder] 모든 데이터가 성공적으로 저장되었습니다!");
-    return allInsertData.length;
-  } catch (err: any) {
-    console.error("❌ [Seeder] 데이터 생성 중 오류 발생:", err);
-    throw err;
+    return globalCount;
+  } catch (err) { 
+    console.error("❌ 전체 시딩 실패:", err); 
+    return 0; 
   }
 };
 
-export const randomizeExistingLikes = async () => {
-  console.log("🎲 [Seeder] 전체 좋아요 수치 랜덤화 작업을 시작합니다...");
-  try {
-    const { data, error } = await supabase.rpc('randomize_all_likes');
-    if (error) throw error;
-    console.log(`✅ [Seeder] ${data}개 포스팅의 수치가 성공적으로 변경되었습니다.`);
-    return data || 0;
-  } catch (err) {
-    console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
-    throw err;
-  }
-};
-
-export const enrichExistingPostLocations = async () => {
-  console.log("🗺️ [Seeder] 기존 포스팅 지역명 보정 작업을 시작합니다...");
-
-  try {
-    const { data: posts, error } = await supabase
-      .from('posts')
-      .select('id, location_name, latitude, longitude');
-
-    if (error) throw error;
-    if (!posts || posts.length === 0) {
-      console.log("ℹ️ [Seeder] 보정할 포스팅이 없습니다.");
-      return 0;
-    }
-
-    const targets = posts.filter((post) => shouldEnrichLocationName(post.location_name));
-    if (targets.length === 0) {
-      console.log("ℹ️ [Seeder] 이미 상세 지역명이 저장되어 있습니다.");
-      return 0;
-    }
-
-    let updatedCount = 0;
-
-    for (const post of targets) {
-      const nextLocation = resolveOfflineLocationName(post.latitude, post.longitude);
-      if (nextLocation === post.location_name) continue;
-
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ location_name: nextLocation })
-        .eq('id', post.id);
-
-      if (updateError) throw updateError;
-      updatedCount += 1;
-    }
-
-    console.log(`✅ [Seeder] ${updatedCount}개 포스팅의 지역명을 상세 주소 형식으로 보정했습니다.`);
-    return updatedCount;
-  } catch (err) {
-    console.error("❌ [Seeder] 지역명 보정 실패:", err);
-    throw err;
-  }
-};
-
-export const cleanupInvalidYoutubePosts = async () => {
-  console.log("🧹 [Seeder] 재생 불가 유튜브 포스팅 정리를 시작합니다...");
-
-  try {
-    const { data: posts, error } = await supabase
-      .from('posts')
-      .select('id, youtube_url, image_url')
-      .not('youtube_url', 'is', null);
-
-    if (error) throw error;
-    if (!posts || posts.length === 0) {
-      console.log("ℹ️ [Seeder] 정리할 유튜브 포스팅이 없습니다.");
-      return 0;
-    }
-
-    let cleanedCount = 0;
-    const chunkSize = 20;
-
-    for (let i = 0; i < posts.length; i += chunkSize) {
-      const chunk = posts.slice(i, i + chunkSize);
-      const sanitizedChunk = await Promise.all(chunk.map((post) => sanitizeYoutubeMedia(post)));
-
-      const updateTargets = sanitizedChunk.filter(
-        (post, index) =>
-          post.youtube_url !== chunk[index].youtube_url || post.image_url !== chunk[index].image_url,
-      );
-
-      for (const post of updateTargets) {
-        const { error: updateError } = await supabase
-          .from('posts')
-          .update({
-            youtube_url: post.youtube_url,
-            image_url: post.image_url,
-          })
-          .eq('id', post.id);
-
-        if (updateError) throw updateError;
-        cleanedCount += 1;
-      }
-
-      console.log(`🧹 [Seeder] 유튜브 검수 진행: ${Math.min(i + chunk.length, posts.length)}/${posts.length}`);
-    }
-
-    console.log(`✅ [Seeder] 재생 불가 유튜브 포스팅 ${cleanedCount}개를 정리했습니다.`);
-    return cleanedCount;
-  } catch (err) {
-    console.error("❌ [Seeder] 유튜브 포스팅 정리 실패:", err);
-    throw err;
-  }
-};
+export const randomizeExistingLikes = async () => { await supabase.rpc('randomize_all_likes'); };

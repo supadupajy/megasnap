@@ -1,1 +1,0 @@
-select pg_get_functiondef('public.handle_new_notification()'::regprocedure) as definition;

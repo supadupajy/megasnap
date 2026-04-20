@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map, Loader2 } from 'lucide-react';
+import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from 'react-router-dom';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
+import { getUserById, createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,176 +19,48 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
-import { supabase } from '@/integrations/supabase/client';
-import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
-import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
-import { useAuth } from '@/components/AuthProvider';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
 const UserProfile = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
-  const { user: authUser } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
-  const [followerCount, setFollowerCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [targetUser, setTargetUser] = useState<any>(null); // 실제 DB에서 가져온 유저 정보
 
-  // 전역 글쓰기 이벤트 리스너
+  const user = useMemo(() => {
+    return getUserById(userId || 'traveler');
+  }, [userId]);
+
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen(true);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
-
-  const getTierFromId = (id: string) => {
-    let h = 0;
-    for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-    const val = Math.abs(h % 1000) / 1000;
-    if (val < 0.01) return 'diamond';
-    if (val < 0.03) return 'gold';
-    if (val < 0.07) return 'silver';
-    if (val < 0.15) return 'popular';
-    return 'none';
-  };
-
-  const mapDbToPost = async (p: any): Promise<Post> => {
-    const sanitized = await sanitizeYoutubeMedia(p);
-    const isAd = sanitized.content?.trim().startsWith('[AD]');
-    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
+    // GIF 제거 요청에 따라 모든 포스팅을 일반 포스팅으로 생성
+    const rawPosts = createMockPosts(37.5665, 126.9780, 30);
     
-    const finalImage = sanitized.youtube_url 
-      ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url)
-      : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+    const userPosts = rawPosts.map((p) => {
+      return {
+        ...p,
+        isGif: false,
+        user: {
+          id: user.id,
+          name: user.nickname || user.name,
+          avatar: user.avatar
+        }
+      };
+    }).sort(() => Math.random() - 0.5);
 
-    return {
-      id: sanitized.id,
-      isAd,
-      isGif: false,
-      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-      user: {
-        id: sanitized.user_id,
-        name: sanitized.user_name || '탐험가',
-        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
-      },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: sanitized.location_name || '알 수 없는 장소',
-      lat: sanitized.latitude,
-      lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0),
-      commentsCount: 0,
-      comments: [],
-      image: finalImage,
-      youtubeUrl: sanitized.youtube_url,
-      videoUrl: sanitized.video_url,
-      isLiked: false,
-      createdAt: new Date(sanitized.created_at),
-      borderType,
-      category: sanitized.category || 'none',
-    };
-  };
+    setPosts(userPosts);
 
-  const fetchUserData = useCallback(async () => {
-    if (!userId) return;
-    setIsLoading(true);
-    try {
-      // 1. 타겟 유저 프로필 정보 가져오기
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nickname, avatar_url, bio')
-        .eq('id', userId)
-        .single();
+    const saved = createMockPosts(37.5665, 126.9780, 12)
+      .filter(p => p.user.id !== user.id)
+      .map(p => ({ ...p, isLiked: true }));
+    setSavedPosts(saved);
+  }, [user]);
 
-      if (profileError || !profileData) throw new Error('User not found');
-      setTargetUser(profileData);
-
-      // 2. 유저 게시물 가져오기
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*, category')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      const formatted = await Promise.all((data || []).map(mapDbToPost));
-      setPosts(formatted);
-
-      // 3. 팔로워/팔로잉 카운트 가져오기
-      const [followersRes, followingRes] = await Promise.all([
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
-      ]);
-
-      setFollowerCount(followersRes.count || 0);
-      setFollowingCount(followingRes.count || 0);
-
-      // 4. 팔로우 상태 확인
-      if (authUser) {
-        const { data: followData } = await supabase
-          .from('follows')
-          .select('id')
-          .eq('follower_id', authUser.id)
-          .eq('following_id', userId)
-          .maybeSingle();
-        
-        setIsFollowing(!!followData);
-      }
-
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-      setTargetUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, authUser]);
-
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
-
-  const handleFollowToggle = async () => {
-    if (!authUser || !userId) {
-      showError('로그인이 필요합니다.');
-      return;
-    }
-
-    try {
-      if (isFollowing) {
-        const { error } = await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', authUser.id)
-          .eq('following_id', userId);
-        if (error) throw error;
-        setIsFollowing(false);
-        setFollowerCount(prev => prev - 1);
-        showSuccess('팔로우를 취소했습니다.');
-      } else {
-        const { error } = await supabase
-          .from('follows')
-          .insert({
-            follower_id: authUser.id,
-            following_id: userId
-          });
-        if (error) throw error;
-        setIsFollowing(true);
-        setFollowerCount(prev => prev + 1);
-        showSuccess('팔로우를 시작했습니다! ✨');
-      }
-    } catch (err) {
-      console.error('Follow toggle error:', err);
-      showError('처리에 실패했습니다.');
-    }
-  };
-
-  const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
-    const setter = isFromSaved ? setSavedPosts : setPosts;
+  const handleLikeToggle = useCallback((postId: string, isSaved: boolean) => {
+    const setter = isSaved ? setSavedPosts : setPosts;
     setter(prev => prev.map(post => {
       if (post.id === postId) {
         const isLiked = !post.isLiked;
@@ -220,9 +95,8 @@ const UserProfile = () => {
   };
 
   const handleMessageClick = () => {
-    if (!targetUser) return;
-    chatStore.getOrCreateRoom(targetUser.id, targetUser.nickname || targetUser.name, targetUser.avatar_url);
-    navigate(`/chat/${targetUser.id}`);
+    chatStore.getOrCreateRoom(user.id, user.nickname || user.name, user.avatar);
+    navigate(`/chat/${user.id}`);
   };
 
   const handleReport = () => {
@@ -230,35 +104,17 @@ const UserProfile = () => {
   };
 
   const handleBlock = () => {
-    if (!targetUser) return;
-    showError(`${targetUser.nickname} 님을 차단했습니다.`);
+    showError(`${user.nickname} 님을 차단했습니다.`);
   };
 
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!targetUser) {
-    return (
-      <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-        <div className="pt-[88px] p-6 text-center">
-          <h2 className="text-xl font-black text-gray-900 mb-4">사용자를 찾을 수 없습니다.</h2>
-          <Button onClick={() => navigate(-1)}>뒤로가기</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
+      <Header />
+
       <div className="pt-[88px]">
         <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
@@ -271,7 +127,7 @@ const UserProfile = () => {
               </button>
               <div>
                 <h2 className="text-xl font-black text-gray-900">유저 프로필</h2>
-                <p className="text-xs text-gray-400 font-medium">@{targetUser.nickname} 님의 활동</p>
+                <p className="text-xs text-gray-400 font-medium">@{user.id} 님의 활동</p>
               </div>
             </div>
             
@@ -306,7 +162,7 @@ const UserProfile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-indigo-600">
                 <img 
-                  src={targetUser.avatar_url || `https://i.pravatar.cc/150?u=${targetUser.id}`} 
+                  src={user.avatar} 
                   alt="profile" 
                   className="w-full h-full rounded-full object-cover border-4 border-white"
                   onError={handleImageError}
@@ -314,25 +170,19 @@ const UserProfile = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{targetUser.nickname}</h2>
-              <p className="text-sm text-gray-500 mb-4">{targetUser.bio || 'Chora 탐험가'}</p>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{user.nickname}</h2>
+              <p className="text-sm text-gray-500 mb-4">{user.bio}</p>
               <div className="flex gap-4">
                 <div className="text-center">
                   <p className="font-bold text-gray-900">{posts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                <div 
-                  className="text-center cursor-pointer active:scale-95 transition-transform"
-                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
-                >
-                  <p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{user.followers?.toLocaleString() || '856'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                <div 
-                  className="text-center cursor-pointer active:scale-95 transition-transform"
-                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
-                >
-                  <p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{user.following?.toLocaleString() || '320'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
               </div>
@@ -341,7 +191,7 @@ const UserProfile = () => {
 
           <div className="flex gap-2 mb-8">
             <Button 
-              onClick={handleFollowToggle}
+              onClick={() => setIsFollowing(!isFollowing)}
               className={`flex-1 font-bold rounded-xl gap-2 h-12 transition-all ${
                 isFollowing 
                   ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
@@ -429,21 +279,18 @@ const UserProfile = () => {
                     />
                   </div>
                 ))}
-                {savedPosts.length === 0 && !isLoading && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
-                )}
               </>
             ) : (
               <>
                 <div 
-                  onClick={() => navigate('/', { state: { filterUserId: userId } })}
+                  onClick={() => navigate('/', { state: { filterUserId: user.id } })}
                   className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
                 >
                   <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
                     <Map className="w-4 h-4 fill-indigo-600" />
                     지도에서 보기
                   </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{targetUser.nickname} 님의 추억들을 지도에서 확인하세요</p>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{user.nickname} 님의 추억들을 지도에서 확인하세요</p>
                 </div>
 
                 {(viewMode === 'list' || viewMode === 'gif-list') ? (
@@ -491,6 +338,7 @@ const UserProfile = () => {
         </div>
       </div>
 
+      <BottomNav onWriteClick={() => setIsWriteOpen(true)} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );

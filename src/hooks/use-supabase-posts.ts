@@ -4,8 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 import { getYoutubeThumbnail } from "@/lib/utils";
-import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
-import { remapUnsplashDisplayUrl } from "@/lib/mock-data";
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -18,8 +16,7 @@ const getTierFromId = (id: string) => {
   return 'none';
 };
 
-const mapDbToPost = async (rawPost: any): Promise<Post> => {
-  const p = await sanitizeYoutubeMedia(rawPost);
+const mapDbToPost = (p: any): Post => {
   const likes = Number(p.likes || 0);
   const isAd = p.content?.trim().startsWith('[AD]');
   const borderType = isAd ? 'none' : getTierFromId(p.id);
@@ -30,7 +27,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   // 유튜브 영상인 경우 썸네일을 우선 사용, 아니면 DB의 image_url 사용
   const finalImage = p.youtube_url 
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+    : p.image_url;
 
   return {
     id: p.id,
@@ -52,7 +49,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     image: finalImage,
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
-    category: p.category || 'none',
+    category: 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),
     borderType: borderType,
@@ -70,7 +67,7 @@ export const useSupabasePosts = (limit = 50) => {
         .limit(limit);
 
       if (error) throw error;
-      return Promise.all((data || []).map(mapDbToPost));
+      return (data || []).map(mapDbToPost);
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -79,7 +76,7 @@ export const useSupabasePosts = (limit = 50) => {
 export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {lat: number, lng: number}) => {
   const { data, error } = await supabase
     .from("posts")
-    .select('*, category')
+    .select("*")
     .gte("latitude", sw.lat)
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
@@ -87,5 +84,5 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .limit(1000); // 300에서 1000으로 상향 조정
 
   if (error) throw error;
-  return Promise.all((data || []).map(mapDbToPost));
+  return (data || []).map(mapDbToPost);
 };

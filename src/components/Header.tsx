@@ -1,99 +1,88 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { chatStore } from '@/utils/chat-store';
 
 const Header = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  const timeoutRef = useRef<number | null>(null);
 
   const fetchCounts = useCallback(async () => {
-    if (!authUser?.id) return;
+    if (!authUser) return;
     try {
-      // 1. 알림 개수 (읽지 않은 것, 단 메시지 알림 제외)
+      // 1. 알림 개수 (읽지 않은 것)
       const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', authUser.id)
-        .eq('is_read', false)
-        .neq('type', 'message'); // 메시지 알림은 메시지 뱃지에서 처리
+        .eq('is_read', false);
       
       setUnreadNotifCount(notifCount || 0);
 
-      // 2. 메시지 개수 (내가 수신자이고 읽지 않은 것)
+      // 2. Supabase 메시지 개수 (내가 수신자이고 읽지 않은 것)
       const { count: dbMsgCount } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', authUser.id)
         .eq('is_read', false);
       
-      setUnreadMsgCount(dbMsgCount || 0);
+      // 3. 로컬 chatStore 메시지 개수 합산
+      const localUnreadCount = chatStore.getRooms().filter(r => r.unread).length;
+      
+      setUnreadMsgCount((dbMsgCount || 0) + localUnreadCount);
     } catch (err) {
       console.error('[Header] Failed to fetch counts:', err);
     }
-  }, [authUser?.id]);
-
-  const handleRealtimeUpdate = useCallback(() => {
-    // Realtime 이벤트 발생 시 100ms 지연 후 카운트 업데이트
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = window.setTimeout(() => {
-      fetchCounts();
-    }, 100);
-  }, [fetchCounts]);
+  }, [authUser]);
 
   useEffect(() => {
-    if (!authUser?.id) return;
+    if (!authUser) return;
 
     fetchCounts();
 
-    // 실시간 업데이트 구독
-    const channelName = `header_updates_${authUser.id}_${Date.now()}`;
-    const channel = supabase.channel(channelName);
+    // 실시간 업데이트 구독 (필터를 제거하여 UPDATE 이벤트를 확실히 수신)
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    const channel = supabase.channel(`header_updates_${authUser.id}_${uniqueId}`);
 
     channel
       .on('postgres_changes', { 
-        event: 'INSERT', // 새 알림/활동 발생 시
+        event: '*', 
         schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
-      }, handleRealtimeUpdate)
+        table: 'notifications'
+      }, (payload: any) => {
+        // 내 알림인 경우에만 갱신
+        if (payload.new?.user_id === authUser.id || payload.old?.user_id === authUser.id) {
+          fetchCounts();
+        }
+      })
       .on('postgres_changes', { 
-        event: 'UPDATE', // 알림 읽음 처리 시 (is_read 변경)
+        event: '*', 
         schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
-      }, handleRealtimeUpdate)
-      .on('postgres_changes', { 
-        event: 'INSERT', // 새 메시지 수신 시
-        schema: 'public', 
-        table: 'messages',
-        filter: `receiver_id=eq.${authUser.id}`
-      }, handleRealtimeUpdate)
-      .on('postgres_changes', { 
-        event: 'UPDATE', // 메시지 읽음 처리 시 (is_read 변경)
-        schema: 'public', 
-        table: 'messages',
-        filter: `receiver_id=eq.${authUser.id}`
-      }, handleRealtimeUpdate)
+        table: 'messages'
+      }, (payload: any) => {
+        // 내가 수신자이거나 발신자인 메시지의 변화(읽음 처리 포함)가 생기면 갱신
+        const msg = payload.new || payload.old;
+        if (msg?.receiver_id === authUser.id || msg?.sender_id === authUser.id) {
+          fetchCounts();
+        }
+      })
       .subscribe();
 
+    // 로컬 스토어 구독
+    const unsubscribeChatStore = chatStore.subscribe(fetchCounts);
+
     return () => { 
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      channel.unsubscribe();
       supabase.removeChannel(channel);
+      unsubscribeChatStore();
     };
-  }, [authUser?.id, handleRealtimeUpdate]);
+  }, [authUser, fetchCounts]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
