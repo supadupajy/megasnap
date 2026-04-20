@@ -55,48 +55,39 @@ const MapContainer = ({
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 강력한 차단
+  // ✅ [FINAL FIX] IndexSizeError 근본적 차단을 위한 Selection API 몽키 패치
   useEffect(() => {
-    const preventSelectionError = (e?: Event) => {
-      try {
-        if (window.getSelection) {
-          const selection = window.getSelection();
-          if (selection) {
-            // 모든 선택 범위를 제거하여 확장 프로그램이 참조할 범위를 없앰
-            if (selection.rangeCount > 0) {
-              selection.removeAllRanges();
-            }
-            // 강제로 포커스를 해제하여 브라우저의 선택 상태를 초기화
-            if (document.activeElement instanceof HTMLElement) {
-              document.activeElement.blur();
-            }
-          }
-        }
-      } catch (err) {
-        // 에러 발생 시 무시
+    const originalGetRangeAt = Selection.prototype.getRangeAt;
+
+    // getRangeAt 메서드를 가로채서 에러가 발생하는 상황(rangeCount가 0일 때)을 방어
+    Selection.prototype.getRangeAt = function(index: number) {
+      if (index === 0 && this.rangeCount === 0) {
+        // 에러를 내지 않고 빈 범위를 반환하여 확장 프로그램을 속임
+        return document.createRange();
+      }
+      return originalGetRangeAt.apply(this, [index]);
+    };
+
+    const preventSelectionError = () => {
+      if (window.getSelection) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
       }
     };
 
     const container = containerRef.current;
     if (container) {
-      const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick'];
+      const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
       events.forEach(evt => container.addEventListener(evt, preventSelectionError, { passive: true }));
-      
-      // 전역 이벤트에 대해서도 더 빈번하게 체크 (지도 자동 이동 시 대응)
-      document.addEventListener('selectionchange', preventSelectionError, { passive: true });
-      window.addEventListener('scroll', preventSelectionError, { passive: true });
     }
 
-    // 초기 실행으로 현재 있는 선택 영역 제거
-    preventSelectionError();
-
     return () => {
+      // 원래의 브라우저 함수로 복구
+      Selection.prototype.getRangeAt = originalGetRangeAt;
       if (container) {
-        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick'];
+        const events = ['selectstart', 'dragstart', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click'];
         events.forEach(evt => container.removeEventListener(evt, preventSelectionError));
       }
-      document.removeEventListener('selectionchange', preventSelectionError);
-      window.removeEventListener('scroll', preventSelectionError);
     };
   }, []);
 
