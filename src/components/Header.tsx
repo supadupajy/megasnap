@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { chatStore } from '@/utils/chat-store';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ const Header = () => {
     } catch (err) {
       console.error('[Header] Failed to fetch counts:', err);
     }
-  }, [authUser]);
+  }, [authUser?.id]); // authUser 전체가 아닌 id만 의존성으로 설정
 
   useEffect(() => {
     if (!authUser) return;
@@ -45,9 +44,9 @@ const Header = () => {
     fetchCounts();
 
     // 실시간 업데이트 구독
-    const channel = supabase.channel(`header_updates_${authUser.id}`);
-
-    channel
+    // .on() 메서드들을 모두 호출한 뒤 마지막에 .subscribe()를 호출해야 합니다.
+    const channel = supabase
+      .channel(`header_updates_${authUser.id}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
@@ -69,7 +68,7 @@ const Header = () => {
     return () => { 
       supabase.removeChannel(channel);
     };
-  }, [authUser, fetchCounts]);
+  }, [authUser?.id, fetchCounts]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
