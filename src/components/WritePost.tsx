@@ -64,7 +64,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       return;
     }
 
-    setAddress('위치를 선택해주세요');
+    setAddress('위치 없음');
     setIsLoadingAddress(false);
   }, [isOpen, initialLocation]);
 
@@ -128,12 +128,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     const finalAddress = address || '대한민국';
 
     try {
-      console.log('🚀 [WritePost] Starting post save...', { 
-        content: draft.content, 
-        initialLocation, 
-        address 
-      });
-
       let finalVideoUrl = null;
 
       if (videoFile) {
@@ -179,16 +173,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         .select();
 
       if (error) {
-        console.error('❌ [WritePost] Supabase Insert Error:', error);
         // Fallback: If video_url column is missing/stale, try inserting without it
         if (error.code === 'PGRST204' || error.message?.includes('video_url')) {
           console.warn('Retrying insert without video_url due to schema cache issue');
           delete postData.video_url;
           const retry = await supabase.from('posts').insert([postData]).select();
-          if (retry.error) {
-            console.error('❌ [WritePost] Retry Insert Error:', retry.error);
-            throw retry.error;
-          }
+          if (retry.error) throw retry.error;
           // Use retry data
           const retryData = retry.data;
           processNewPost(retryData[0], finalVideoUrl);
@@ -197,10 +187,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         throw error;
       }
 
-      console.log('✅ [WritePost] Post saved successfully:', data[0]);
       processNewPost(data[0], finalVideoUrl);
     } catch (err) {
-      console.error('❌ [WritePost] General Error saving post:', err);
+      console.error('Error saving post:', err);
       showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
