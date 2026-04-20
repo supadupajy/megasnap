@@ -22,12 +22,14 @@ import { chatStore } from '@/utils/chat-store';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { useAuth } from '@/components/AuthProvider';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
 const UserProfile = () => {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const { user: authUser } = useAuth();
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
@@ -87,40 +89,87 @@ const UserProfile = () => {
     };
   };
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!userId) return;
-      setIsLoading(true);
-      try {
-        // 1. 유저 게시물 가져오기
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+  const fetchUserData = useCallback(async () => {
+    if (!userId) return;
+    setIsLoading(true);
+    try {
+      // 1. 유저 게시물 가져오기
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        const formatted = await Promise.all((data || []).map(mapDbToPost));
-        setPosts(formatted);
+      if (error) throw error;
+      const formatted = await Promise.all((data || []).map(mapDbToPost));
+      setPosts(formatted);
 
-        // 2. 팔로워/팔로잉 카운트 가져오기
-        const [followersRes, followingRes] = await Promise.all([
-          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
-          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
-        ]);
+      // 2. 팔로워/팔로잉 카운트 가져오기
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
+      ]);
 
-        setFollowerCount(followersRes.count || 0);
-        setFollowingCount(followingRes.count || 0);
+      setFollowerCount(followersRes.count || 0);
+      setFollowingCount(followingRes.count || 0);
 
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      } finally {
-        setIsLoading(false);
+      // 3. 팔로우 상태 확인
+      if (authUser) {
+        const { data: followData } = await supabase
+          .from('follows')
+          .select('id')
+          .eq('follower_id', authUser.id)
+          .eq('following_id', userId)
+          .maybeSingle();
+        
+        setIsFollowing(!!followData);
       }
-    };
 
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, authUser]);
+
+  useEffect(() => {
     fetchUserData();
-  }, [userId]);
+  }, [fetchUserData]);
+
+  const handleFollowToggle = async () => {
+    if (!authUser || !userId) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      if (isFollowing) {
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', authUser.id)
+          .eq('following_id', userId);
+        if (error) throw error;
+        setIsFollowing(false);
+        setFollowerCount(prev => prev - 1);
+        showSuccess('팔로우를 취소했습니다.');
+      } else {
+        const { error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: authUser.id,
+            following_id: userId
+          });
+        if (error) throw error;
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+        showSuccess('팔로우를 시작했습니다! ✨');
+      }
+    } catch (err) {
+      console.error('Follow toggle error:', err);
+      showError('처리에 실패했습니다.');
+    }
+  };
 
   const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
     const setter = isFromSaved ? setSavedPosts : setPosts;
@@ -190,7 +239,7 @@ const UserProfile = () => {
               </button>
               <div>
                 <h2 className="text-xl font-black text-gray-900">유저 프로필</h2>
-                <p className="text-xs text-gray-400 font-medium">@{user.id} 님의 활동</p>
+                <p className="text-xs text-gray-400 font-medium">@{userId?.substring(0, 8)} 님의 활동</p>
               </div>
             </div>
             
@@ -260,7 +309,7 @@ const UserProfile = () => {
 
           <div className="flex gap-2 mb-8">
             <Button 
-              onClick={() => setIsFollowing(!isFollowing)}
+              onClick={handleFollowToggle}
               className={`flex-1 font-bold rounded-xl gap-2 h-12 transition-all ${
                 isFollowing 
                   ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
@@ -355,7 +404,7 @@ const UserProfile = () => {
             ) : (
               <>
                 <div 
-                  onClick={() => navigate('/', { state: { filterUserId: user.id } })}
+                  onClick={() => navigate('/', { state: { filterUserId: userId } })}
                   className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
                 >
                   <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">

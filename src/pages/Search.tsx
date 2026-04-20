@@ -13,24 +13,39 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { searchProfilesByNickname } from '@/utils/profile-search';
+import { showError, showSuccess } from '@/utils/toast';
 
 const Search = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 초기 추천 사용자 (최근 가입순 또는 랜덤) 가져오기
+  // 내가 팔로우 중인 유저 ID 목록 가져오기
+  const fetchFollowingList = useCallback(async () => {
+    if (!authUser) return;
+    const { data, error } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', authUser.id);
+    
+    if (!error && data) {
+      setFollowingIds(new Set(data.map(f => f.following_id)));
+    }
+  }, [authUser]);
+
   const fetchRecommendedUsers = useCallback(async () => {
     if (!authUser) return;
     setIsLoading(true);
     try {
+      await fetchFollowingList();
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nickname, avatar_url, bio')
-        .neq('id', authUser.id) // 자기 자신 제외
+        .neq('id', authUser.id)
         .not('nickname', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(15);
@@ -42,9 +57,8 @@ const Search = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser]);
+  }, [authUser, fetchFollowingList]);
 
-  // 검색 기능
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) {
@@ -54,6 +68,7 @@ const Search = () => {
 
     setIsLoading(true);
     try {
+      await fetchFollowingList();
       const results = await searchProfilesByNickname(trimmed, authUser?.id, 20);
       setUsers(results);
     } catch (err) {
@@ -61,7 +76,7 @@ const Search = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, fetchRecommendedUsers]);
+  }, [authUser, fetchRecommendedUsers, fetchFollowingList]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,12 +85,50 @@ const Search = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, handleSearch]);
 
-  const toggleFollow = (e: React.MouseEvent, userId: string) => {
+  const toggleFollow = async (e: React.MouseEvent, targetUserId: string) => {
     e.stopPropagation();
-    // 실제 팔로우 로직은 DB 연동이 필요하나, 현재는 UI 피드백만 유지
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, isFollowing: !user.isFollowing } : user
-    ));
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    const isCurrentlyFollowing = followingIds.has(targetUserId);
+
+    try {
+      if (isCurrentlyFollowing) {
+        // 언팔로우
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', authUser.id)
+          .eq('following_id', targetUserId);
+        
+        if (error) throw error;
+        
+        setFollowingIds(prev => {
+          const next = new Set(prev);
+          next.delete(targetUserId);
+          return next;
+        });
+        showSuccess('팔로우를 취소했습니다.');
+      } else {
+        // 팔로우
+        const { error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: authUser.id,
+            following_id: targetUserId
+          });
+        
+        if (error) throw error;
+
+        setFollowingIds(prev => new Set(prev).add(targetUserId));
+        showSuccess('팔로우를 시작했습니다! ✨');
+      }
+    } catch (err) {
+      console.error('Follow toggle error:', err);
+      showError('처리에 실패했습니다.');
+    }
   };
 
   return (
@@ -107,40 +160,43 @@ const Search = () => {
           </p>
           
           <div className="space-y-1">
-            {users.map((user) => (
-              <div 
-                key={user.id} 
-                onClick={() => navigate(`/profile/${user.id}`)} 
-                className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
-              >
-                <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
-                  <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
-                      {user.nickname?.[0] || '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span>
-                    <span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
-                </div>
-                <Button 
-                  variant={user.isFollowing ? "secondary" : "default"} 
-                  size="sm" 
-                  onClick={(e) => toggleFollow(e, user.id)}
-                  className={user.isFollowing 
-                    ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold" 
-                    : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                  }
+            {users.map((user) => {
+              const isFollowing = followingIds.has(user.id);
+              return (
+                <div 
+                  key={user.id} 
+                  onClick={() => navigate(`/profile/${user.id}`)} 
+                  className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
                 >
-                  {user.isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                </Button>
-              </div>
-            ))}
+                  <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
+                    <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
+                        {user.nickname?.[0] || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span>
+                      <span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
+                  </div>
+                  <Button 
+                    variant={isFollowing ? "secondary" : "default"} 
+                    size="sm" 
+                    onClick={(e) => toggleFollow(e, user.id)}
+                    className={isFollowing 
+                      ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold" 
+                      : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                    }
+                  >
+                    {isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  </Button>
+                </div>
+              );
+            })}
 
             {!isLoading && users.length === 0 && (
               <div className="py-20 flex flex-col items-center justify-center text-center px-10">
