@@ -51,13 +51,20 @@ const ObservedPostItem = ({
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
-      <PostItem 
-        {...post}
-        isViewed={isViewed} 
-        onLikeToggle={() => onLikeToggle(post.id)}
-        onLocationClick={onLocationClick}
-        onDelete={onDelete}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.3 }}
+      >
+        <PostItem 
+          {...post}
+          isViewed={isViewed} 
+          onLikeToggle={() => onLikeToggle(post.id)}
+          onLocationClick={onLocationClick}
+          onDelete={onDelete}
+        />
+      </motion.div>
     </div>
   );
 };
@@ -270,15 +277,15 @@ const PostListOverlay = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, scale: 0.98, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98, y: 15 }}
           transition={{
-            duration: 0.22,
-            ease: [0.22, 1, 0.36, 1]
+            duration: 0.5,
+            ease: [0.25, 1, 0.5, 1]
           }}
           // ✅ 위치 및 높이 조정: top-[88px] (헤더 아래) bottom-[106px] (BottomNav 위)
-          className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar"
+          className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar origin-bottom"
         >
           <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
             <div>
