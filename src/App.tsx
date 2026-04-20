@@ -57,7 +57,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow", "/messages"].some(
+  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
     path => location.pathname.startsWith(path)
   );
 
