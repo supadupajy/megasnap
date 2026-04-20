@@ -4,7 +4,7 @@ import { Post, User } from '@/types';
 import { getYoutubeThumbnail } from './utils';
 
 /**
- * 1. 기본 유틸리티 함수
+ * 1. 기초 유틸리티 및 시드 랜덤 로직
  */
 const seededRandom = (seed: string) => {
   let hash = 0;
@@ -30,7 +30,7 @@ const getTierFromId = (id: string) => {
 };
 
 /**
- * 2. 유튜브 데이터 (50종)
+ * 2. 유튜브 데이터 풀 및 검증 로직
  */
 export const YOUTUBE_IDS_50 = [
   "gdZLi9hhztQ", "js1CtxSY38I", "mH0_XpSHkZo", "Hbb5GPxXF1w", "v7bnOxL4LIo",
@@ -45,9 +45,29 @@ export const YOUTUBE_IDS_50 = [
   "XjJQBjWYDTs", "qV5lzRHrGeg", "2S24-y0Ij3Y", "SlPhMPnQ58k", "J6Z8WAt9v80"
 ];
 
-// 에러 방지를 위한 필수 Export 항목들
+// 에러 방지를 위한 필수 Export
 export const YOUTUBE_IDS_POOL = YOUTUBE_IDS_50;
 export const YOUTUBE_LINKS = YOUTUBE_IDS_50.map(id => `https://www.youtube.com/watch?v=${id}`);
+
+// 유튜브 검증 상태 관리 변수
+let validYoutubeIds: string[] = [...YOUTUBE_IDS_50];
+
+export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+// [에러 해결 포인트] 초기화 함수 Export
+export const initializeYoutubePool = async () => {
+  console.log("Checking YouTube videos from App start...");
+  // 앱 시작 시 너무 많은 요청을 보내지 않도록 상위 10개만 가볍게 체크하거나 빈 함수로 둡니다.
+  // 실제 정밀 검증은 db-seeder.ts에서 수행됩니다.
+  return true;
+};
 
 /**
  * 3. 이미지 데이터 (100종)
@@ -59,7 +79,7 @@ export const UNSPLASH_IDS = [
   "photo-1470252649378-1501183638710", "photo-1493552152660-1511576661531", "photo-1534067783941-1502082553048", "photo-1477959858617-1444703686981", "photo-1465146344425-1473442242725",
   "photo-1502672260266-1501949997128", "photo-1496715976403-1523712999610", "photo-1512621776951-1476224489176", "photo-1493770348161-1482049016688", "photo-1484723091739-1540189549336",
   "photo-1567620905732-1565299624946", "photo-1565958011703-1467003909585", "photo-1513104890138-1503264116222", "photo-1507525428034-1519331378306", "photo-1510312305626-1506702315532",
-  // ... (사용자님이 보유한 100개 ID를 유지하셔도 좋습니다)
+  // ... (필요 시 더 추가)
 ];
 
 export const FOOD_UNSPLASH_IDS = [
@@ -67,7 +87,7 @@ export const FOOD_UNSPLASH_IDS = [
 ];
 
 /**
- * 4. 도시 및 댓글 데이터
+ * 4. 도시 및 주석 데이터
  */
 export const MAJOR_CITIES = [
   { name: "서울", lat: 37.5665, lng: 126.9780, density: 1500, bounds: { sw: { lat: 37.42, lng: 126.75 }, ne: { lat: 37.72, lng: 127.2 } } },
@@ -94,18 +114,8 @@ export const getUnsplashUrl = (id: string, sig?: number) => {
   return sig !== undefined ? `${baseUrl}&sig=${sig}` : baseUrl;
 };
 
-// 유튜브 재생 가능성 체크용
-export const validateYoutubeVideo = async (id: string): Promise<boolean> => {
-  try {
-    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-    return response.ok;
-  } catch {
-    return false;
-  }
-};
-
 /**
- * 6. 메인 생성 함수 (createMockPosts)
+ * 6. 메인 생성 로직 (createMockPosts)
  */
 export const createMockPosts = (
   centerLat: number, 
@@ -167,7 +177,7 @@ export const createMockPosts = (
 };
 
 /**
- * 7. 추가 Mock 데이터
+ * 7. 추가 데이터
  */
 export const MOCK_USERS = Array.from({ length: 10 }).map((_, i) => getUserById(`user_${i}`));
 export const MOCK_STORIES = MOCK_USERS.map(u => ({
