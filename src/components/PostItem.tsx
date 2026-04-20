@@ -74,7 +74,7 @@ const PostItem = ({
   lng,
   isLiked: initialIsLiked, 
   isSaved: initialIsSaved,
-  isAd: initialIsAd, // [수정] prop 이름을 잠시 변경
+  isAd: initialIsAd, 
   isGif: initialIsGif, 
   isInfluencer,
   isViewed,
@@ -89,8 +89,12 @@ const PostItem = ({
   onImageError,
   onClick
 }: PostItemProps) => {
-  // [수정] DB에 is_ad 컬럼이 없어도 '공식 파트너' 이름으로 광고 여부를 판단합니다.
-  const isAd = initialIsAd || user.name === '공식 파트너';
+
+  // [수정 핵심 1] 광고 판별을 최우선으로 합니다.
+  const isAd = initialIsAd || user.name?.includes('공식 파트너');
+  
+  // [수정 핵심 2] 광고가 아닐 때만 '나의 포스팅'으로 분류합니다.
+  const isMine = authUser && (user.id === authUser.id || user.id === 'me') && !isAd;
 
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
@@ -122,7 +126,6 @@ const PostItem = ({
   }, [isAd, images, image, youtubeId]);
 
   const adIndex = 1;
-  const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   useEffect(() => {
     if (!(videoUrl || youtubeId)) return;
@@ -251,13 +254,29 @@ const PostItem = ({
     <div ref={containerRef} onClick={onClick} className={cn("bg-white mb-1 last:mb-20 transition-all duration-500 cursor-pointer border-b border-gray-50", (borderType !== 'none' && !disablePulse) && "animate-influencer-float")}>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} /></div>
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} />
+          </div>
           <div>
-            <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{location}</span></div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>
+              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+            </div>
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+              <MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{location}</span>
+            </div>
           </div>
         </div>
-        <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
+            {isMine ? (
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>
+            ) : (
+              <><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="px-4">
@@ -274,7 +293,14 @@ const PostItem = ({
               )
             ) : (
               <div className="relative w-full h-full">
-                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img, idx) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />{idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
+                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  {displayImages.map((img, idx) => (
+                    <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                      <img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />
+                      {idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                    </div>
+                  ))}
+                </div>
                 {(videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
                 {displayImages.length > 1 && !(videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_, idx) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
               </div>
@@ -285,7 +311,11 @@ const PostItem = ({
 
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button></div>
+          <div className="flex items-center gap-4 pt-1.5">
+            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button>
+            <button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button>
+          </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-3">
               <button className="transition-transform active:scale-125" onClick={handleSaveToggle}><Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} /></button>
@@ -298,13 +328,7 @@ const PostItem = ({
               )}
             </div>
             {isAd && (
-              <a 
-                href="https://s.baemin.com/t3000fBqlbHGL" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                onClick={(e) => e.stopPropagation()} 
-                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
-              >
+              <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
                 <ShoppingBag className="w-3.5 h-3.5 fill-white" />
                 <span className="text-[10px] font-black">주문하기</span>
               </a>
