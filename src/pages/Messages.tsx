@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { showError, showSuccess } from '@/utils/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeleteChatDialog from '@/components/DeleteChatDialog';
+import { searchProfilesByNickname } from '@/utils/profile-search';
 
 interface Conversation {
   other_id: string;
@@ -139,19 +140,9 @@ const Messages = () => {
 
       setIsSearchingGlobal(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url')
-          .ilike('nickname', `%${trimmedQuery}%`)
-          .neq('id', authUser?.id)
-          .limit(10);
-
-        if (error) throw error;
-
-        if (data) {
-          const existingIds = new Set(conversations.map(c => c.other_id));
-          setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
-        }
+        const data = await searchProfilesByNickname(trimmedQuery, authUser?.id, 10);
+        const existingIds = new Set(conversations.map(c => c.other_id));
+        setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
       } catch (err: any) {
         console.error('Supabase search error:', err);
       } finally {

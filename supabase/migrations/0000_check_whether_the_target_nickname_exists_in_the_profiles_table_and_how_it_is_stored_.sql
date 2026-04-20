@@ -1,0 +1,1 @@
+select id, nickname, email from public.profiles where lower(coalesce(nickname, '')) like '%supadupajy%';
