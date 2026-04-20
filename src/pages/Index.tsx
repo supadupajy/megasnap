@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
+import Header from '@/components/Header';
+import BottomNav from '@/components/BottomNav';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import WritePost from '@/components/WritePost';
@@ -60,21 +62,6 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
 
-  // 전역 글쓰기 이벤트 리스너
-  useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen(true);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
-
-  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
-  useEffect(() => {
-    navigate(location.pathname, { 
-      replace: true, 
-      state: { ...location.state, isPostListOpen } 
-    });
-  }, [isPostListOpen]);
-
   const getTierFromId = (id: string) => {
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
@@ -106,6 +93,7 @@ const Index = () => {
       image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
       youtubeUrl: p.youtube_url,
       videoUrl: p.video_url,
+      category: p.category || 'none', // category 필드 포함
       isLiked: false,
       createdAt: new Date(p.created_at),
       borderType
@@ -299,6 +287,7 @@ const Index = () => {
 
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
+      
       setTimeout(() => {
         setCurrentZoom(10);
       }, 500);
