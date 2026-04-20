@@ -132,7 +132,6 @@ const Notifications = () => {
   };
 
   const handleNotifClick = (notif: Notification) => {
-    // 스와이프된 상태라면 이동하지 않고 닫기만 함
     if (swipedId) {
       setSwipedId(null);
       return;
@@ -150,7 +149,7 @@ const Notifications = () => {
     >
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={() => navigate('/')} 
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -171,7 +170,6 @@ const Notifications = () => {
                   const isSwiped = swipedId === notif.id;
                   return (
                     <div key={notif.id} className="relative group overflow-hidden">
-                      {/* 삭제 버튼 배경 */}
                       <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
                         <button 
                           onClick={(e) => {
@@ -185,7 +183,6 @@ const Notifications = () => {
                         </button>
                       </div>
 
-                      {/* 알림 콘텐츠 레이어 */}
                       <motion.div 
                         drag="x" 
                         dragConstraints={{ left: -80, right: 0 }} 
