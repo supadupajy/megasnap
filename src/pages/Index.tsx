@@ -282,7 +282,6 @@ const Index = () => {
         return prev;
       }
       
-      console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts`);
       return uniquePosts;
     });
   }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
