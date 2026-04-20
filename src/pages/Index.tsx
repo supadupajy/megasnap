@@ -362,6 +362,13 @@ const Index = () => {
     setFinalSelectedLocation(null); 
   };
 
+  const handlePostDeleted = (id: string) => {
+    setAllPosts(prev => prev.filter(p => p.id !== id));
+    setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
+    mapCache.posts = mapCache.posts.filter(p => p.id !== id);
+    showSuccess('포스팅이 삭제되었습니다.');
+  };
+
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
   const cancelLocationSelection = () => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => setIsWriteOpen(true), 100); };
   const startLocationSelection = () => { setIsWriteOpen(false); setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); };
@@ -439,6 +446,7 @@ const Index = () => {
         selectedCategories={selectedCategories}
         timeValueHours={timeValue}
         authUserId={authUser?.id}
+        onDeletePost={handlePostDeleted}
       />
     </>
   );
