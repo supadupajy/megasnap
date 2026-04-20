@@ -145,33 +145,61 @@ const Chat = () => {
         return;
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('nickname, avatar_url, last_seen')
         .eq('id', chatId)
         .single();
-      setOtherUser(data || { nickname: '사용자', avatar_url: null, last_seen: null });
+      
+      if (data) {
+        setOtherUser({
+          nickname: data.nickname || '사용자',
+          avatar_url: data.avatar_url,
+          last_seen: data.last_seen
+        });
+        
+        // 초기 온라인 상태 즉시 계산
+        if (data.last_seen) {
+          const lastSeen = new Date(data.last_seen);
+          const now = new Date();
+          const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
+          setIsOnline(diffMinutes < 5);
+        }
+      }
       setIsLoading(false);
     };
+
     fetchOtherUser();
 
     // Subscribe to profile changes for real-time online status
+    let channel: any;
     if (chatId && isValidUUID(chatId)) {
-      const channel = supabase
-        .channel(`public:profiles:id=eq.${chatId}`)
+      channel = supabase
+        .channel(`online-status-${chatId}`)
         .on(
           'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${chatId}` },
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${chatId}`
+          },
           (payload) => {
+            console.log('[Chat] Profile update received:', payload.new.last_seen);
             setOtherUser(prev => prev ? ({ ...prev, last_seen: payload.new.last_seen }) : null);
           }
         )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+        .subscribe((status) => {
+          console.log(`[Chat] Realtime subscription status for ${chatId}:`, status);
+        });
     }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+
   }, [chatId]);
 
   useEffect(() => {
