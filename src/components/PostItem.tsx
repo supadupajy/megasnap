@@ -118,7 +118,11 @@ const PostItem = ({
     return [img1, AD_IMAGE, img3];
   }, [isAd, images, image, youtubeId]);
 
+// 기존 로직 아래에 추가
+// isAd 속성이 true거나, 작성자 이름이 '공식 파트너'면 광고로 간주합니다.
+const effectiveIsAd = isAd || user.name === '공식 파트너';
 
+// 그 후 아래에 있는 모든 'isAd' 변수를 'effectiveIsAd'로 교체하면 됩니다.
 
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
