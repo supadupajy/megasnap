@@ -277,9 +277,9 @@ const PostListOverlay = ({
             duration: 0.22,
             ease: [0.22, 1, 0.36, 1]
           }}
-          className="fixed inset-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
+          className="fixed top-[88px] bottom-[106px] left-0 right-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
-          <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
+          <div className="px-4 pt-4 pb-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
             <div>
               <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
