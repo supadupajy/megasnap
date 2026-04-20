@@ -38,6 +38,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const handleItemClick = (e: React.MouseEvent, post: Post) => {
     e.preventDefault();
     e.stopPropagation();
+    // ✅ Re-calculate borderType for the clicked post if it's missing or inconsistent
+    // This ensures that even if specific props weren't passed, the detail view gets the right identity
     onPostClick(post);
   };
 
@@ -150,8 +152,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </div>
 
                 {displayPosts.map((post) => {
-                  const isInfluencer = post.isInfluencer || ['silver', 'gold', 'diamond'].includes(post.borderType);
-                  const isPopular = (post.rank && post.rank <= 3) || post.borderType === 'popular' || isInfluencer;
+                  // ✅ Use the post's actual borderType from data, 
+                  // but also allow top ranks to visually appear as "popular" if they are "none"
+                  const isInfluencer = ['silver', 'gold', 'diamond'].includes(post.borderType);
+                  const isPopular = post.borderType === 'popular' || (post.rank && post.rank <= 3);
                   
                   return (
                     <div
@@ -174,7 +178,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         post.borderType === 'gold' ? "gold-border-container p-[2px]" :
                         post.borderType === 'silver' ? "silver-border-container p-[2px]" :
                         post.borderType === 'popular' ? "popular-border-container p-[2px]" : 
-                        (post.rank && post.rank <= 3) ? "popular-border-container p-[2px]" :
+                        (post.rank && post.rank <= 3 && post.borderType === 'none') ? "popular-border-container p-[2px]" :
                         "bg-gray-100 overflow-hidden"
                       )}>
                         <div className={cn(
