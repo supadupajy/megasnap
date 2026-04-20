@@ -24,7 +24,6 @@ const mapDbToPost = (p: any): Post => {
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
   
-  // 유튜브 영상인 경우 썸네일을 우선 사용, 아니면 DB의 image_url 사용
   const finalImage = p.youtube_url 
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : p.image_url;
@@ -49,7 +48,7 @@ const mapDbToPost = (p: any): Post => {
     image: finalImage,
     videoUrl: p.video_url,
     youtubeUrl: p.youtube_url,
-    category: 'none',
+    category: p.category || 'none',
     isLiked: false,
     createdAt: new Date(p.created_at),
     borderType: borderType,
@@ -81,7 +80,11 @@ export const fetchPostsInBounds = async (sw: {lat: number, lng: number}, ne: {la
     .lte("latitude", ne.lat)
     .gte("longitude", sw.lng)
     .lte("longitude", ne.lng)
+<<<<<<< HEAD
     .limit(1000); // 300에서 1000으로 상향 조정
+=======
+    .limit(1000); // 300에서 1000으로 상향
+>>>>>>> 4276c7ce3d5860f851efd72cb8fcac5f0cee0d0a
 
   if (error) throw error;
   return (data || []).map(mapDbToPost);
