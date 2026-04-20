@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 
 interface MapContainerProps {
@@ -21,132 +21,140 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 const MapContainer = ({ 
   posts, 
   viewedPostIds, 
-  highlightedPostId, 
+  highlightedPostId,
   onMarkerClick, 
   onMapChange, 
   onMapClick,
   center,
-  level: externalLevel, 
-  selectionLocation,
+  level,
   searchResultLocation
 }: MapContainerProps) => {
-  const { user: authUser } = useAuth();
-  const mapElement = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const overlaysRef = useRef<Map<string, any>>(new Map());
-  const searchOverlayRef = useRef<any>(null);
-  const lastDragEnd = useRef<number>(0);
-  const isProgrammaticMove = useRef<boolean>(false);
-  const animationFrameRef = useRef<number | null>(null);
-  const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
-  
-  const onMarkerClickRef = useRef(onMarkerClick);
-  const onMapChangeRef = useRef(onMapChange);
-  const onMapClickRef = useRef(onMapClick);
+  const markersRef = useRef<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
-  useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
-  useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
-
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(6);
-  const isDragging = useRef(false);
-
+  // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 강력한 차단
   useEffect(() => {
-    if (!mapElement.current || mapInstance.current) return;
-
-    const initMap = () => {
-      try {
-        const kakao = (window as any).kakao;
-        if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
-
-        const options = {
-          center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
-          level: externalLevel || 6
-        };
-
-        const map = new kakao.maps.Map(mapElement.current!, options);
-        // ✅ setMaxLevel을 14로 올려서 10단계 축소가 가능하도록 수정
-        map.setMaxLevel(14);
-        mapInstance.current = map;
-
-        const updateMapData = () => {
-          if (isProgrammaticMove.current) return;
-          try {
-            const bounds = map.getBounds();
-            const currentCenter = map.getCenter();
-            const sw = bounds.getSouthWest();
-            const ne = bounds.getNorthEast();
-            const level = map.getLevel();
-            
-            setCurrentLevel(level);
-            onMapChangeRef.current({
-              bounds: { 
-                sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-                ne: { lat: ne.getLat(), lng: ne.getLng() } 
-              },
-              center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-              level: level
-            });
-          } catch (e) {
-            console.error('Map update error:', e);
-          }
-        };
-
-        updateMapData();
-        setIsMapReady(true);
-
-        kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-        kakao.maps.event.addListener(map, 'dragstart', () => { 
-          isDragging.current = true; 
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            isProgrammaticMove.current = false;
-          }
-        });
-        kakao.maps.event.addListener(map, 'dragend', () => { 
-          isDragging.current = false; 
-          lastDragEnd.current = Date.now(); 
-        });
-
-        kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-          if (Date.now() - lastDragEnd.current < 200) return;
-          if (onMapClickRef.current) {
-            const latLng = mouseEvent.latLng;
-            onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
-          }
-        });
-
-        return true;
-      } catch (e) {
-        console.error('Kakao Map Init Error:', e);
-        return false;
+    const preventSelectionError = (e: Event) => {
+      // 지도 영역 내에서의 모든 드래그/선택 시도 시 기존 선택 범위를 초기화
+      if (window.getSelection) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          selection.removeAllRanges();
+        }
       }
     };
 
-    const timer = setInterval(() => { 
-      try {
-        if (initMap()) clearInterval(timer); 
-      } catch (e) {
-        console.error('Map init interval error:', e);
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('selectstart', preventSelectionError);
+      container.addEventListener('dragstart', preventSelectionError);
+      // 일부 확장 프로그램이 참조하는 selectionchange 이벤트에 대응
+      document.addEventListener('selectionchange', preventSelectionError);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener('selectstart', preventSelectionError);
+        container.removeEventListener('dragstart', preventSelectionError);
       }
-    }, 100);
-    return () => clearInterval(timer);
+      document.removeEventListener('selectionchange', preventSelectionError);
+    };
+  }, []);
+
+  const initMap = useCallback(() => {
+    try {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
+
+      const options = {
+        center: new kakao.maps.LatLng(center?.lat || 37.5665, center?.lng || 126.9780),
+        level: level || 6
+      };
+
+      const map = new kakao.maps.Map(containerRef.current!, options);
+      // ✅ setMaxLevel을 14로 올려서 10단계 축소가 가능하도록 수정
+      map.setMaxLevel(14);
+      mapInstance.current = map;
+
+      const updateMapData = () => {
+        if (isProgrammaticMove.current) return;
+        try {
+          const bounds = map.getBounds();
+          const currentCenter = map.getCenter();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const level = map.getLevel();
+          
+          setCurrentLevel(level);
+          onMapChangeRef.current({
+            bounds: { 
+              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+              ne: { lat: ne.getLat(), lng: ne.getLng() } 
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            level: level
+          });
+        } catch (e) {
+          console.error('Map update error:', e);
+        }
+      };
+
+      updateMapData();
+      setIsMapReady(true);
+
+      kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
+      kakao.maps.event.addListener(map, 'dragstart', () => { 
+        isDragging.current = true; 
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          isProgrammaticMove.current = false;
+        }
+      });
+      kakao.maps.event.addListener(map, 'dragend', () => { 
+        isDragging.current = false; 
+        lastDragEnd.current = Date.now(); 
+      });
+
+      kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
+        if (Date.now() - lastDragEnd.current < 200) return;
+        if (onMapClickRef.current) {
+          const latLng = mouseEvent.latLng;
+          onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
+        }
+      });
+
+      return true;
+    } catch (e) {
+      console.error('Kakao Map Init Error:', e);
+      return false;
+    }
+  }, []);
+
+  const timer = setInterval(() => { 
+    try {
+      if (initMap()) clearInterval(timer); 
+    } catch (e) {
+      console.error('Map init interval error:', e);
+    }
+  }, 100);
+  return () => clearInterval(timer);
   }, []);
 
   // ✅ 외부 레벨 변경 감지 - 딜레이로 지도 초기화 완료 보장
   useEffect(() => {
-    if (!isMapReady || !mapInstance.current || externalLevel === undefined) return;
+    if (!isMapReady || !mapInstance.current || level === undefined) return;
 
     const timer = setTimeout(() => {
       const map = mapInstance.current;
       if (!map) return;
-      map.setLevel(externalLevel, { animate: false });
-      setCurrentLevel(externalLevel);
+      map.setLevel(level, { animate: false });
+      setCurrentLevel(level);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [externalLevel, isMapReady]);
+  }, [level, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
@@ -388,23 +396,17 @@ const MapContainer = ({
 
   return (
     <div 
-      ref={mapElement} 
-      className="w-full h-full relative touch-none select-none" 
+      ref={containerRef} 
+      className="w-full h-full relative select-none touch-none" 
       style={{ 
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
         userSelect: 'none',
         msUserSelect: 'none',
-        touchAction: 'pan-x pan-y' // 터치 조작 허용
-      }}
-      onMouseDown={(e) => {
-        // 마우스 오른쪽 버튼이 아닐 때만 선택 방지 시도
-        if (e.button === 0 && window.getSelection) {
-          window.getSelection()?.removeAllRanges();
-        }
+        WebkitTouchCallout: 'none'
       }}
     >
-      {isMapReady && (
+      {isLoading && (
         <div className="w-full h-full" style={{ pointerEvents: 'auto' }} />
       )}
     </div>
