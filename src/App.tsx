@@ -90,13 +90,16 @@ const AnimatedRoutes = () => {
       {!hideLayout && session && <Header />}
 
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ 
+              duration: 0.3,
+              ease: [0.32, 0.72, 0, 1] 
+            }}
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
             <Routes location={location}>
