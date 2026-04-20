@@ -195,13 +195,15 @@ const Index = () => {
   }, [mapData, syncPostsWithSupabase]);
 
   const inBoundsMarkers = useMemo(() => {
-    if (!mapData?.bounds || currentZoom >= 13) return [];
+    if (!mapData?.bounds) return [];
     
+    // ✅ 축소 레벨 제한을 아예 제거하여 모든 레벨에서 마커 렌더링 시도
+    // currentZoom >= 13 체크를 제거
+
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 좌표 범위 안정화
     const latMin = Math.min(sw.lat, ne.lat);
     const latMax = Math.max(sw.lat, ne.lat);
     const lngMin = Math.min(sw.lng, ne.lng);
@@ -210,16 +212,15 @@ const Index = () => {
     const latSpan = latMax - latMin;
     const lngSpan = lngMax - lngMin;
     
-    // ✅ 필터링 버퍼를 대폭 확장 (1.0배 마진)
-    // 지도를 조작하는 동안 마커가 사라지는 것을 방지하기 위해 화면 밖 영역까지 넉넉히 포함
-    const latMargin = latSpan * 1.0;
-    const lngMargin = lngSpan * 1.0;
+    // ✅ 마진을 200%로 늘려서 화면 밖에서도 미리 렌더링되게 함
+    const latMargin = latSpan * 2.0;
+    const lngMargin = lngSpan * 2.0;
     
-    return allPosts.filter(post => {
+    const filtered = allPosts.filter(post => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // ✅ 위치 기반 필터링 완화: 중심부 누락 방지를 위해 넉넉한 범위 적용
+      // ✅ 필터링 조건을 극도로 완화
       if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
           post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
       
@@ -232,7 +233,10 @@ const Index = () => {
       
       return matchesCategory;
     });
-  }, [allPosts, mapData?.bounds, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
+
+    // 정렬 후 상위 1000개 반환
+    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
+  }, [allPosts, mapData?.bounds, timeValue, selectedCategories, blockedIds, authUser]);
 
   // ✅ 마커 업데이트를 위한 별도 Effect 분리
   useEffect(() => {

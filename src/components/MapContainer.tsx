@@ -380,9 +380,9 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 레벨 변경 감지 시 엔진 동기화 강화
+    // ✅ 레벨이 변경될 때만 Hard Reset을 수행하되, 
+    // currentLevel 상태 업데이트와 마커 삭제를 분리하여 엔진 안정성 확보
     if (level !== undefined && currentLevel !== level) {
-      // 기존 오버레이 즉시 완전 제거
       overlaysRef.current.forEach((overlay) => {
         if (overlay) overlay.setMap(null);
       });
@@ -390,14 +390,8 @@ const MapContainer = ({
       removalTimeoutsRef.current.forEach((t) => window.clearTimeout(t));
       removalTimeoutsRef.current.clear();
       
-      // 즉시 레벨 상태 업데이트하여 Hard Redraw 유도
       setCurrentLevel(level);
-      return; // 이번 사이클은 정리만 하고 다음 렌더링에서 새로 그림
-    }
-
-    if (currentLevel >= 13) {
-      overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
-      return;
+      return; 
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
