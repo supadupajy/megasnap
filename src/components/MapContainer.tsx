@@ -70,6 +70,10 @@ const MapContainer = ({
     if (container) {
       container.addEventListener('selectstart', preventSelectionError);
       container.addEventListener('dragstart', preventSelectionError);
+      // ✅ 마우스 업/다운 시에도 선택 영역을 초기화하여 드래그 후 발생하는 에러 차단
+      container.addEventListener('mousedown', preventSelectionError);
+      container.addEventListener('mouseup', preventSelectionError);
+      // 일부 확장 프로그램이 참조하는 selectionchange 이벤트에 대응
       document.addEventListener('selectionchange', preventSelectionError);
     }
 
@@ -77,6 +81,8 @@ const MapContainer = ({
       if (container) {
         container.removeEventListener('selectstart', preventSelectionError);
         container.removeEventListener('dragstart', preventSelectionError);
+        container.removeEventListener('mousedown', preventSelectionError);
+        container.removeEventListener('mouseup', preventSelectionError);
       }
       document.removeEventListener('selectionchange', preventSelectionError);
     };
