@@ -376,6 +376,17 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
+    
+    // ✅ 9단계 이상일 때는 모든 마커를 안전하게 비움
+    if (currentLevel >= 9) {
+      if (overlaysRef.current.size > 0) {
+        overlaysRef.current.forEach((overlay) => {
+          overlay.setMap(null);
+        });
+        overlaysRef.current.clear();
+      }
+      return;
+    }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
@@ -394,6 +405,9 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
+      // ✅ 9단계 이상인 경우 렌더링하지 않도록 보장
+      if (currentLevel >= 9) return;
+
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)

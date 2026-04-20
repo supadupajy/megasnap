@@ -235,6 +235,12 @@ const Index = () => {
     if (!mapData?.bounds) {
       return;
     }
+    
+    // ✅ 9단계 이상일 때는 모든 마커를 숨김
+    if (currentZoom >= 9) { 
+      if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
+      return; 
+    }
 
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
@@ -279,7 +285,7 @@ const Index = () => {
       console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts`);
       return uniquePosts;
     });
-  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser]);
+  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -419,7 +425,7 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 12) setIsPostListOpen(true); };
+  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); };
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
@@ -479,21 +485,21 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 12 && (
+                  {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
                   <button
                     onClick={handleViewAllClick}
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 12}
+                    disabled={displayedMarkers.length === 0 || currentZoom >= 9}
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 12 && "opacity-50 grayscale cursor-not-allowed"
+                      currentZoom >= 9 && "opacity-50 grayscale cursor-not-allowed"
                     )}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {displayedMarkers.length > 0 && currentZoom < 12 && (
+                  {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>
