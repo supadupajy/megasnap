@@ -143,24 +143,21 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
-    if (throttleTimer.current) return;
-    throttleTimer.current = setTimeout(() => {
-      setMapData(data);
-      mapCache.lastCenter = data.center;
-      if (data.level !== undefined) {
-        setCurrentZoom(data.level);
-        mapCache.lastZoom = data.level;
-      }
-      if (isSelectingLocation) setTempSelectedLocation(data.center);
-      throttleTimer.current = null;
-    }, 100); // 100ms는 너무 빠를 수 있어 syncPostsWithSupabase와 조율 필요
+    // 줌 레벨이나 중심점이 바뀌면 즉시 상태 업데이트 (throttle 제거 시도)
+    setMapData(data);
+    mapCache.lastCenter = data.center;
+    if (data.level !== undefined) {
+      setCurrentZoom(data.level);
+      mapCache.lastZoom = data.level;
+    }
+    if (isSelectingLocation) setTempSelectedLocation(data.center);
   }, [isSelectingLocation]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds || isSyncing.current) return;
     
-    // ✅ 축소 레벨이 너무 낮으면(넓은 지역) 데이터 Fetch 중단 (성능 보호)
+    // 축소 레벨이 너무 낮으면(넓은 지역) 데이터 Fetch 중단 (성능 보호)
     if (currentZoom >= 13) return;
 
     isSyncing.current = true;
@@ -170,6 +167,8 @@ const Index = () => {
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
+        if (newUnique.length === 0) return prev; // 변경사항 없으면 참조 유지
+        
         const combined = [...prev, ...newUnique];
         mapCache.posts = combined;
         return combined;
@@ -181,41 +180,50 @@ const Index = () => {
     }
   }, [mapData, currentZoom]);
 
-  useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
-
-  useEffect(() => {
-    if (!mapData?.bounds) return;
-    
-    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
-    // 지도를 아주 많이 축소했을 때만 마커를 숨기도록 변경하여 전국 단위 가시성 확보
-    if (currentZoom >= 13) { 
-      setDisplayedMarkers([]); 
-      return; 
+  useEffect(() => { 
+    if (mapData) {
+      syncPostsWithSupabase(); 
     }
+  }, [mapData, syncPostsWithSupabase]);
 
+  const inBoundsMarkers = useMemo(() => {
+    if (!mapData?.bounds || currentZoom >= 13) return [];
+    
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    const inBoundsCandidates = allPosts.filter(post => {
-      // ✅ 위치 정보가 없는 포스팅(null)은 지도 마커 대상에서 제외
+    return allPosts.filter(post => {
+      // 위치 정보 필수
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       
+      // 차단 유저 제외
       if (blockedIds.has(post.user.id)) return false;
-      if (!(post.lat >= sw.lat && post.lat <= ne.lat && post.lng >= sw.lng && post.lng <= ne.lng)) return false;
       
-      if (post.isAd) return true;
-      if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
+      // 현재 지도 영역(Bounds) 내에 있는지 확인 (여유 범위 10% 추가하여 깜빡임 방지)
+      const latMargin = (ne.lat - sw.lat) * 0.1;
+      const lngMargin = (ne.lng - sw.lng) * 0.1;
       
+      if (!(post.lat >= sw.lat - latMargin && post.lat <= ne.lat + latMargin && 
+            post.lng >= sw.lng - lngMargin && post.lng <= ne.lng + lngMargin)) return false;
+      
+      // 시간 필터
+      if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      
+      // 카테고리 필터
       let matchesCategory = false;
       if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matchesCategory = true;
       else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      
       return matchesCategory;
     });
-    
-    setDisplayedMarkers(inBoundsCandidates);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+  }, [allPosts, mapData, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
+
+  // displayedMarkers 업데이트 로직을 useMemo 기반으로 교체
+  useEffect(() => {
+    setDisplayedMarkers(inBoundsMarkers);
+  }, [inBoundsMarkers]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {

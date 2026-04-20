@@ -152,13 +152,17 @@ const MapContainer = ({
           const currentLevel = map.getLevel();
           
           setCurrentLevel(currentLevel);
-          onMapChangeRef.current({
-            bounds: { 
-              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-              ne: { lat: ne.getLat(), lng: ne.getLng() } 
-            },
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: currentLevel
+          
+          // RequestAnimationFrame을 사용하여 브라우저 렌더링 주기에 맞춰 업데이트
+          requestAnimationFrame(() => {
+            onMapChangeRef.current({
+              bounds: { 
+                sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+                ne: { lat: ne.getLat(), lng: ne.getLng() } 
+              },
+              center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+              level: currentLevel
+            });
           });
         } catch (e) {
           console.error('Map update error:', e);
@@ -395,12 +399,12 @@ const MapContainer = ({
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       let scale = 1;
-      if (currentLevel === 7) scale = 0.6;
-      else if (currentLevel === 8) scale = 0.4;
-      else if (currentLevel === 9) scale = 0.3; // 살짝 키움
-      else if (currentLevel === 10) scale = 0.2; // 살짝 키움
-      else if (currentLevel === 11) scale = 0.15; // 추가
-      else if (currentLevel === 12) scale = 0.1; // 추가
+      if (currentLevel === 7) scale = 0.7;
+      else if (currentLevel === 8) scale = 0.5;
+      else if (currentLevel === 9) scale = 0.35;
+      else if (currentLevel === 10) scale = 0.25;
+      else if (currentLevel === 11) scale = 0.18;
+      else if (currentLevel >= 12) scale = 0.12;
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
