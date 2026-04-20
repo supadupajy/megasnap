@@ -14,20 +14,21 @@ async function validateYoutube(videoId: string): Promise<boolean> {
     const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
     if (res.status !== 200) return false;
     const data = await res.json();
-    return !!data.title && !data.title.includes("Private video");
+    return !!data.title && !data.title.toLowerCase().includes("private");
   } catch {
     return false;
   }
 }
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  const confirmClear = confirm("썸네일 깨짐 방지 로직을 적용하여 새로 생성하시겠습니까?");
+  const confirmClear = confirm("초고밀도 지도를 생성하시겠습니까? (기존 데이터와 깨진 썸네일은 삭제됩니다)");
   if (!confirmClear) return;
 
   try {
+    console.log("🧹 기존 데이터 삭제 중...");
     await supabase.from('posts').delete().neq('id', '_root_');
 
-    console.log("📺 고유 재생 가능 영상 선별 중...");
+    console.log("📺 유튜브 영상 정밀 검사 중...");
     const playableIds = [];
     for (const id of YOUTUBE_IDS_50) {
       const ok = await validateYoutube(id);
@@ -39,10 +40,10 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     
     let globalCount = 0;
     let myPostCounter = 0; 
-    const MAX_MY_POSTS = 80; 
+    const MAX_MY_POSTS = 80; // 내 포스팅 80개 제한
 
     for (const region of MAJOR_CITIES) {
-      console.log(`📍 ${region.name} 생성 중...`);
+      console.log(`📍 ${region.name} 생성 중 (${region.density}개)...`);
       const mockPoints = createMockPosts(region.lat, region.lng, region.density, undefined, region.bounds);
       let batch: any[] = [];
 
@@ -51,7 +52,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const uniqueSeed = Date.now() + globalCount;
         let postUser = { id: "", name: "", avatar: "" };
         
-        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.02) {
+        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.015) {
           postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
           myPostCounter++;
         } else if (otherUsers.length > 0) {
@@ -69,7 +70,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         if (isYoutube) {
           const ytId = playableIds[uniqueSeed % playableIds.length];
           finalYoutubeUrl = `https://www.youtube.com/watch?v=${ytId}`;
-          // [중요] maxresdefault 대신 hqdefault 사용 (404 방지)
+          // 인기 포스팅 썸네일 깨짐 방지: hqdefault 사용
           finalImage = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
         } else {
           finalImage = getUnsplashUrl(uniqueSeed);
@@ -90,13 +91,13 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
         globalCount++;
         if (batch.length >= 100) {
-          await supabase.from('posts').insert(batch);
+          await supabase.from('posts').insert([...batch]);
           batch = [];
         }
       }
       if (batch.length > 0) await supabase.from('posts').insert(batch);
     }
-    alert("✨ 생성 완료! 이제 모든 썸네일이 정상적으로 보일 것입니다.");
+    alert(`✨ 완료! 전국 ${globalCount}개 생성됨. 내 포스팅은 ${myPostCounter}개입니다.`);
   } catch (err) {
     console.error(err);
   }
