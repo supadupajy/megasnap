@@ -201,7 +201,7 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
-    // 축소 시 영역 판정 안전장치 강화
+    // 좌표 범위 안정화
     const latMin = Math.min(sw.lat, ne.lat);
     const latMax = Math.max(sw.lat, ne.lat);
     const lngMin = Math.min(sw.lng, ne.lng);
@@ -210,16 +210,16 @@ const Index = () => {
     const latSpan = latMax - latMin;
     const lngSpan = lngMax - lngMin;
     
-    // 레벨 7 이상부터는 렌더링 버퍼를 넉넉하게 (0.5배)
-    const marginMultiplier = currentZoom >= 7 ? 0.5 : 0.2;
-    const latMargin = latSpan * marginMultiplier;
-    const lngMargin = lngSpan * marginMultiplier;
+    // ✅ 필터링 버퍼를 대폭 확장 (1.0배 마진)
+    // 지도를 조작하는 동안 마커가 사라지는 것을 방지하기 위해 화면 밖 영역까지 넉넉히 포함
+    const latMargin = latSpan * 1.0;
+    const lngMargin = lngSpan * 1.0;
     
-    const filtered = allPosts.filter(post => {
-      if (post.lat === null || post.lng === null) return false;
+    return allPosts.filter(post => {
+      if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       if (blockedIds.has(post.user.id)) return false;
       
-      // 좌표 범위 체크
+      // ✅ 위치 기반 필터링 완화: 중심부 누락 방지를 위해 넉넉한 범위 적용
       if (post.lat < (latMin - latMargin) || post.lat > (latMax + latMargin) || 
           post.lng < (lngMin - lngMargin) || post.lng > (lngMax + lngMargin)) return false;
       
@@ -232,15 +232,13 @@ const Index = () => {
       
       return matchesCategory;
     });
+  }, [allPosts, mapData?.bounds, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
 
-    // ✅ [IMPORTANT] 지도 엔진 보호를 위해 화면에 표시할 마커 개수를 최대 1000개로 제한
-    // 지도를 축소했을 때 너무 많은 마커가 한꺼번에 그려지면 엔진 오류로 마커가 사라질 수 있습니다.
-    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 1000);
-  }, [allPosts, mapData, currentZoom, timeValue, selectedCategories, blockedIds, authUser]);
-
+  // ✅ 마커 업데이트를 위한 별도 Effect 분리
   useEffect(() => {
+    // 줌 레벨이나 데이터가 바뀌면 즉시 마커 상태 업데이트
     setDisplayedMarkers([...inBoundsMarkers]);
-  }, [inBoundsMarkers]);
+  }, [inBoundsMarkers, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
