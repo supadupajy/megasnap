@@ -153,16 +153,13 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 100); // 100ms는 너무 빠를 수 있어 syncPostsWithSupabase와 조율 필요
+    }, 100);
   }, [isSelectingLocation]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds || isSyncing.current) return;
     
-    // ✅ 축소 레벨이 너무 낮으면(넓은 지역) 데이터 Fetch 중단 (성능 보호)
-    if (currentZoom >= 13) return;
-
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
     try {
@@ -179,20 +176,13 @@ const Index = () => {
     } finally { 
       isSyncing.current = false; 
     }
-  }, [mapData, currentZoom]);
+  }, [mapData]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
   useEffect(() => {
     if (!mapData?.bounds) return;
-    
-    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
-    // 지도를 아주 많이 축소했을 때만 마커를 숨기도록 변경하여 전국 단위 가시성 확보
-    if (currentZoom >= 13) { 
-      setDisplayedMarkers([]); 
-      return; 
-    }
-
+    if (currentZoom >= 11) { setDisplayedMarkers([]); return; }
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
@@ -356,10 +346,7 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-  const handleViewAllClick = () => { 
-    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
-    if (displayedMarkers.length > 0 && currentZoom < 13) setIsPostListOpen(true); 
-  };
+  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 11) setIsPostListOpen(true); };
 
   const handlePostCreated = (newPost: Post) => {
     setAllPosts(prev => [newPost, ...prev]);
@@ -420,21 +407,21 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 13 && (
+                  {displayedMarkers.length > 0 && currentZoom < 11 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
                   <button
                     onClick={handleViewAllClick}
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 13}
+                    disabled={displayedMarkers.length === 0 || currentZoom >= 11}
                     className={cn(
                       "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all disabled:opacity-50 border-2 border-white/20 group overflow-hidden relative",
-                      currentZoom >= 13 && "opacity-50 grayscale cursor-not-allowed"
+                      currentZoom >= 11 && "opacity-50 grayscale cursor-not-allowed"
                     )}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {displayedMarkers.length > 0 && currentZoom < 13 && (
+                  {displayedMarkers.length > 0 && currentZoom < 11 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedMarkers.length}
                     </div>

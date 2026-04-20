@@ -375,9 +375,7 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 축소 레벨 제한 완화 (기존 11 -> 13)
-    // 전국 단위로 지도를 축소했을 때도 마커가 유지되도록 변경
-    if (currentLevel >= 13) {
+    if (currentLevel >= 11) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
     }
@@ -397,10 +395,8 @@ const MapContainer = ({
       let scale = 1;
       if (currentLevel === 7) scale = 0.6;
       else if (currentLevel === 8) scale = 0.4;
-      else if (currentLevel === 9) scale = 0.3; // 살짝 키움
-      else if (currentLevel === 10) scale = 0.2; // 살짝 키움
-      else if (currentLevel === 11) scale = 0.15; // 추가
-      else if (currentLevel === 12) scale = 0.1; // 추가
+      else if (currentLevel === 9) scale = 0.25;
+      else if (currentLevel === 10) scale = 0.15;
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
