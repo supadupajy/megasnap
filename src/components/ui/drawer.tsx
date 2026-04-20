@@ -29,7 +29,9 @@ const DrawerOverlay = React.forwardRef<
   <DrawerPrimitive.Overlay
     ref={ref}
     // z-index를 1000으로 설정하여 BottomNav (z-1002) 아래에 위치하도록 함
+    // BottomNav의 높이(106px)만큼 위에서 끝나도록 bottom: 106px 추가
     className={cn("fixed inset-0 z-[1000] bg-black/80", className)}
+    style={{ bottom: '106px' }} // BottomNav 영역을 제외
     {...props}
   />
 ));
