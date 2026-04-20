@@ -176,19 +176,27 @@ const Index = () => {
     const center = mapData?.center;
 
     try {
-      // ✅ 현재 줌 레벨과 중심 좌표를 넘겨서 최적의 데이터를 가져옴
       const dbPosts = await fetchPostsInBounds(sw, ne, currentZoom, center);
       
-      // DB 데이터를 Post 객체로 변환
       const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
       const validMappedPosts = mappedPosts.filter(p => p !== null);
 
       setAllPosts(prev => {
+        // ✅ [FIX] 단순히 ID 중복만 체크하는 게 아니라, 
+        // 현재 화면 중앙에서 가까운 데이터가 배열의 앞쪽(렌더링 우선순위)에 오도록 정렬
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
         
-        // ✅ [FIX] 기존 데이터를 뒤로 밀고, 현재 화면(중심부 우선)의 데이터를 앞으로 배치
-        const combined = [...newUnique, ...prev].slice(0, 10000);
+        // 현재 중앙 좌표가 있다면 거리순으로 정렬하여 머지
+        if (center) {
+          newUnique.sort((a, b) => {
+            const distA = Math.hypot(a.lat - center.lat, a.lng - center.lng);
+            const distB = Math.hypot(b.lat - center.lat, b.lng - center.lng);
+            return distA - distB;
+          });
+        }
+
+        const combined = [...newUnique, ...prev].slice(0, 15000); // 더 많은 데이터 유지
         mapCache.posts = combined;
         return combined;
       });
