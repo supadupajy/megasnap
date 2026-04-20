@@ -191,10 +191,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{
+            duration: 0.3,
+            ease: [0.22, 1, 0.36, 1]
+          }}
           className="fixed top-0 left-0 right-0 z-[2000] bg-white flex flex-col overflow-hidden"
           style={{ 
             height: isKeyboardOpen ? `calc(100dvh - ${keyboardHeight}px)` : '100dvh',
