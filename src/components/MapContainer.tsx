@@ -530,7 +530,11 @@ const MapContainer = ({
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </div>
       )}
-      <div id="kakao-map" className="w-full h-full select-none" />
+      
+      <div
+            ref={containerRef} 
+
+      id="kakao-map" className="w-full h-full select-none" />
     </div>
   );
 };
