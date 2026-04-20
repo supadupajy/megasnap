@@ -250,13 +250,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent 
           className={cn(
-            "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
+            "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl",
             isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh] rounded-t-[40px]"
           )}
           style={{ 
             bottom: 0,
             height: isKeyboardOpen ? '100%' : '92vh',
             top: 'auto',
+            // 드로어 애니메이션 최적화
+            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), height 0.3s ease-in-out',
+            willChange: 'transform'
           }}
         >
           {/* Accessibility requirements for Radix Dialog/Drawer */}
