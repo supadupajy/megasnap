@@ -163,6 +163,7 @@ const Profile = () => {
     navigate('/', { 
       state: { 
         filterUserId: 'me',
+        post: latestPost, // 포스팅 객체 전달
         center: latestPost ? { lat: latestPost.lat, lng: latestPost.lng } : undefined
       } 
     });

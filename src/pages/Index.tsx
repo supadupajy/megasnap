@@ -284,28 +284,29 @@ const Index = () => {
     
     if (!routeState) return;
 
-    // 1. 특정 포스트 포커싱 처리
-    if (routeState.post) {
-      focusPostOnMap(routeState.post, routeState.center);
-    } 
-    // 2. 단순 좌표 이동 처리
-    else if (routeState.center) {
-      setSelectedPostId(null);
-      setSearchResultLocation(null);
-      setMapCenter(routeState.center);
-    }
-
-    // 3. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
+    // 1. "내 포스팅 보기" 요청 처리 (Profile 페이지에서 넘어온 경우)
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
-      setCurrentZoom(8); // 지도를 8단계로 변경
+      setCurrentZoom(10); // 지도를 10단계로 변경
       
-      // 좌표가 전달되었다면 해당 좌표로, 없다면 현재 위치로
-      if (routeState.center) {
+      // 가장 최근 포스팅이 있다면 해당 위치로 강조 이동
+      if (routeState.post) {
+        focusPostOnMap(routeState.post, routeState.center);
+      } else if (routeState.center) {
         setMapCenter(routeState.center);
       } else {
         handleCurrentLocation();
       }
+    }
+    // 2. 일반적인 특정 포스트 포커싱 처리
+    else if (routeState.post) {
+      focusPostOnMap(routeState.post, routeState.center);
+    } 
+    // 3. 단순 좌표 이동 처리
+    else if (routeState.center) {
+      setSelectedPostId(null);
+      setSearchResultLocation(null);
+      setMapCenter(routeState.center);
     }
 
     navigate(location.pathname, { replace: true, state: null });
