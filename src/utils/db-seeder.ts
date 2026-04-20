@@ -251,7 +251,10 @@ export const cleanupInvalidYoutubePosts = async () => {
       const chunk = posts.slice(i, i + chunkSize);
       const sanitizedChunk = await Promise.all(chunk.map((post) => sanitizeYoutubeMedia(post)));
 
-      const updateTargets = sanitizedChunk.filter((post, index) => post.youtube_url !== chunk[index].youtube_url);
+      const updateTargets = sanitizedChunk.filter(
+        (post, index) =>
+          post.youtube_url !== chunk[index].youtube_url || post.image_url !== chunk[index].image_url,
+      );
 
       for (const post of updateTargets) {
         const { error: updateError } = await supabase

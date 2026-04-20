@@ -74,8 +74,10 @@ const Popular = () => {
         const borderType = getTierFromId(p.id);
         const isAd = p.content?.trim().startsWith('[AD]');
         
-        // DB 데이터 매핑 시 유튜브 URL이 없는데 썸네일이 들어있는 경우를 대비해 보정
-        let finalImage = p.image_url;
+        let finalImage = p.youtube_url
+          ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
+          : p.image_url;
+
         if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) {
           finalImage = getUnsplashUrl(UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)]);
         }

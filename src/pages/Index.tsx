@@ -15,7 +15,7 @@ import PostListOverlay from '@/components/PostListOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2 } from 'lucide-react';
 import { createMockPosts } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
@@ -89,7 +89,7 @@ const Index = () => {
       likes: Number(p.likes || 0),
       commentsCount: 0,
       comments: [],
-      image: p.image_url,
+      image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : p.image_url,
       youtubeUrl: p.youtube_url,
       videoUrl: p.video_url,
       isLiked: false,

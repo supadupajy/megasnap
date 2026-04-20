@@ -1,6 +1,6 @@
 "use client";
 
-import { getYoutubeId } from "@/lib/utils";
+import { getYoutubeId, getYoutubeThumbnail } from "@/lib/utils";
 
 const YOUTUBE_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 const verificationCache = new Map<string, Promise<boolean>>();
@@ -8,6 +8,10 @@ const verificationCache = new Map<string, Promise<boolean>>();
 const toCanonicalYoutubeUrl = (url: string) => {
   const id = getYoutubeId(url);
   return id ? `https://www.youtube.com/watch?v=${id}` : null;
+};
+
+const isYoutubeThumbnailUrl = (url?: string | null) => {
+  return typeof url === "string" && (url.includes("img.youtube.com") || url.includes("i.ytimg.com"));
 };
 
 /**
@@ -35,9 +39,20 @@ export const sanitizeYoutubeMedia = async <T extends { youtube_url?: string | nu
   if (!item.youtube_url) return item;
 
   const isValid = await verifyYoutubeUrl(item.youtube_url);
-  if (isValid) return item;
+  if (isValid) {
+    const preferredThumbnail = getYoutubeThumbnail(item.youtube_url);
 
-  const nextImage = item.image_url?.includes("img.youtube.com") ? YOUTUBE_FALLBACK_IMAGE : item.image_url;
+    if (preferredThumbnail && (!item.image_url || isYoutubeThumbnailUrl(item.image_url)) && item.image_url !== preferredThumbnail) {
+      return {
+        ...item,
+        image_url: preferredThumbnail,
+      };
+    }
+
+    return item;
+  }
+
+  const nextImage = isYoutubeThumbnailUrl(item.image_url) ? YOUTUBE_FALLBACK_IMAGE : item.image_url;
 
   return {
     ...item,

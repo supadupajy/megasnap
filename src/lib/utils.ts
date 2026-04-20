@@ -16,5 +16,6 @@ export function getYoutubeId(url: string) {
 export function getYoutubeThumbnail(url: string) {
   const id = getYoutubeId(url);
   if (!id) return null;
-  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+  // maxresdefault는 일부 영상에서 깨질 수 있어 더 안정적인 hqdefault를 기본값으로 사용
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
