@@ -187,7 +187,7 @@ const PostListOverlay = ({
       let nextStep = expansionStep + 1;
       let foundPosts: Post[] = [];
 
-      while (nextStep <= 8 && foundPosts.length === 0) {
+      while (nextStep <= 12 && foundPosts.length === 0) {
         const previousBounds = getExpandedBounds(nextStep - 1);
         const nextBounds = getExpandedBounds(nextStep);
         const ringPosts = await fetchPostsInBounds(nextBounds.sw, nextBounds.ne);
@@ -223,7 +223,7 @@ const PostListOverlay = ({
 
       if (foundPosts.length <= 12) {
         setExpansionStep(nextStep);
-        if (nextStep >= 8) {
+        if (nextStep >= 12) {
           setHasMore(false);
         }
       }
