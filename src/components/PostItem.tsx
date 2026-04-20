@@ -118,6 +118,8 @@ const PostItem = ({
     return [img1, AD_IMAGE, img3];
   }, [isAd, images, image, youtubeId]);
 
+
+
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
