@@ -383,7 +383,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 onClick={handlePost}
                 disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !selectedCategory}
               >
-                {isSubmitting ? '저장 중...' : '지도에 등록하기'}
+                {isSubmitting ? '저장 중...' : '등록하기'}
               </Button>
             </div>
           </div>
