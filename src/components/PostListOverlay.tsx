@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import PostItem from '@/components/PostItem';
@@ -74,20 +74,30 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const filteredPosts = useMemo(() => {
-    return posts.filter(p => !blockedIds.has(p.user.id));
-  }, [posts, blockedIds]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
       setPosts(initialPosts);
+      return;
     }
+
+    setPosts([]);
+    setIsLoadingMore(false);
   }, [isOpen, initialPosts]);
+
+  const visiblePosts = useMemo(() => {
+    if (!isOpen) return posts;
+    if (posts.length === 0 && initialPosts.length > 0) return initialPosts;
+    return posts;
+  }, [isOpen, posts, initialPosts]);
+
+  const filteredPosts = useMemo(() => {
+    return visiblePosts.filter(p => !blockedIds.has(p.user.id));
+  }, [visiblePosts, blockedIds]);
 
   const loadMorePosts = useCallback(() => {
     if (isLoadingMore || !isOpen) return;
@@ -108,7 +118,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
     
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && posts.length > 0) {
+        if (entry.isIntersecting && visiblePosts.length > 0) {
           loadMorePosts();
         }
       },
@@ -118,7 +128,7 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
       observer.observe(loadMoreRef.current);
     }
     return () => observer.disconnect();
-  }, [loadMorePosts, posts.length, isOpen]);
+  }, [loadMorePosts, visiblePosts.length, isOpen]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
@@ -131,10 +141,10 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
   }, []);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
-    const post = posts.find(p => p.lat === lat && p.lng === lng);
+    const post = visiblePosts.find(p => p.lat === lat && p.lng === lng);
     onClose();
     navigate('/', { state: { center: { lat, lng }, post } });
-  }, [navigate, posts, onClose]);
+  }, [navigate, visiblePosts, onClose]);
 
   const handleLocalDelete = (id: string) => {
     setPosts(prev => prev.filter(p => p.id !== id));
@@ -145,12 +155,12 @@ const PostListOverlay = ({ isOpen, onClose, initialPosts, mapCenter, onDeletePos
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
           transition={{
-            duration: 0.4,
-            ease: [0.4, 0, 0.2, 1]
+            duration: 0.22,
+            ease: [0.22, 1, 0.36, 1]
           }}
           className="fixed inset-0 z-[1200] bg-white overflow-y-auto shadow-2xl no-scrollbar"
         >
