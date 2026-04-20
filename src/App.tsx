@@ -9,6 +9,7 @@ import { App as CapApp } from '@capacitor/app';
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
+import Follow from "./pages/Follow"; // 추가
 import Popular from "./pages/Popular";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
@@ -55,7 +56,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends"].some(
+  const hideLayout = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
     path => location.pathname.startsWith(path)
   );
 
@@ -105,6 +106,7 @@ const AnimatedRoutes = () => {
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/profile/follow/:userId" element={<ProtectedRoute><Follow /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -125,7 +127,6 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // 유튜브 풀 초기화 실행
     initializeYoutubePool();
     const timer = setTimeout(() => { setShowSplash(false); }, 1500);
     return () => clearTimeout(timer);

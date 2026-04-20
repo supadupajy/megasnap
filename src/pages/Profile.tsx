@@ -88,7 +88,6 @@ const Profile = () => {
     setIsDataLoading(true);
 
     try {
-      // 내 포스팅 로드
       const { data: myData, error: myError } = await supabase
         .from('posts')
         .select('*')
@@ -99,7 +98,6 @@ const Profile = () => {
       const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
       setMyPosts(formattedMyPosts);
 
-      // 저장된 포스팅 로드
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select('post_id, posts(*)')
@@ -163,7 +161,7 @@ const Profile = () => {
     navigate('/', { 
       state: { 
         filterUserId: 'me',
-        post: latestPost, // 포스팅 객체 전달
+        post: latestPost,
         center: latestPost ? { lat: latestPost.lat, lng: latestPost.lng } : undefined
       } 
     });
@@ -217,9 +215,26 @@ const Profile = () => {
               <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
               <p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p>
               <div className="flex gap-4">
-                <div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div>
-                <div className="text-center"><p className="font-bold text-gray-900">1.2k</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div>
-                <div className="text-center"><p className="font-bold text-gray-900">850</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{myPosts.length}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
+                </div>
+                {/* 팔로워 클릭 시 이동 */}
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform"
+                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
+                >
+                  <p className="font-bold text-gray-900">1.2k</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
+                </div>
+                {/* 팔로잉 클릭 시 이동 */}
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform"
+                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
+                >
+                  <p className="font-bold text-gray-900">850</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
+                </div>
               </div>
             </div>
           </div>

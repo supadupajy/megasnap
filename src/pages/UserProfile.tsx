@@ -99,9 +99,6 @@ const UserProfile = () => {
         if (error) throw error;
         const formatted = await Promise.all((data || []).map(mapDbToPost));
         setPosts(formatted);
-        
-        // 타인의 프로필에서는 저장된 포스팅 탭을 비우거나 본인의 것만 보여주는 것이 일반적이나,
-        // 요청에 따라 샘플 데이터를 제거하고 빈 상태로 둡니다.
         setSavedPosts([]);
       } catch (err) {
         console.error('Error fetching user posts:', err);
@@ -231,11 +228,19 @@ const UserProfile = () => {
                   <p className="font-bold text-gray-900">{posts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                <div className="text-center">
+                {/* 팔로워 클릭 시 이동 */}
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform"
+                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
+                >
                   <p className="font-bold text-gray-900">{user.followers?.toLocaleString() || '856'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                <div className="text-center">
+                {/* 팔로잉 클릭 시 이동 */}
+                <div 
+                  className="text-center cursor-pointer active:scale-95 transition-transform"
+                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
+                >
                   <p className="font-bold text-gray-900">{user.following?.toLocaleString() || '320'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
