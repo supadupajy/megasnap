@@ -180,6 +180,14 @@ const Notifications = () => {
     else navigate(`/profile/${notif.actor_id}`);
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div 
       className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
@@ -187,7 +195,7 @@ const Notifications = () => {
     >
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
         <button 
-          onClick={() => navigate('/')} 
+          onClick={handleBack} 
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />

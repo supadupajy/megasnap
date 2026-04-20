@@ -108,12 +108,20 @@ const Messages = () => {
     } catch (err) { showError('대화 삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); setDeleteTargetId(null); }
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar" onClick={() => setSwipedId(null)}>
       {/* Direct Message 전용 헤더 */}
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
         <button 
-          onClick={() => navigate('/')} 
+          onClick={handleBack} 
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
