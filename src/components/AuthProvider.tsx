@@ -80,10 +80,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           fetchProfile(initialSession.user.id, initialSession.user.email);
           updateLastSeen(initialSession.user.id);
           
-          // 2분마다 마지막 활동 시간 업데이트
+          // 1분마다 마지막 활동 시간 업데이트
           lastSeenInterval = setInterval(() => {
             updateLastSeen(initialSession.user.id);
-          }, 1000 * 60 * 2);
+          }, 1000 * 60 * 1);
         }
       } catch (error) {
         console.error("Auth init error:", error);
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (lastSeenInterval) clearInterval(lastSeenInterval);
           lastSeenInterval = setInterval(() => {
             updateLastSeen(currentSession.user.id);
-          }, 1000 * 60 * 2);
+          }, 1000 * 60 * 1);
         } else {
           setProfile(null);
           if (lastSeenInterval) clearInterval(lastSeenInterval);
