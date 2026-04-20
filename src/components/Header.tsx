@@ -54,6 +54,7 @@ const Header = () => {
         table: 'notifications',
         filter: `user_id=eq.${authUser.id}` // 내가 수신자인 알림만 필터링
       }, () => {
+        // 알림이 들어오면 카운트 새로고침
         fetchCounts();
       })
       .on('postgres_changes', { 
@@ -62,6 +63,7 @@ const Header = () => {
         table: 'messages',
         filter: `receiver_id=eq.${authUser.id}` // 내가 수신자인 메시지만 필터링
       }, () => {
+        // 메시지가 들어오면 카운트 새로고침
         fetchCounts();
       })
       .subscribe();
