@@ -40,7 +40,8 @@ const Profile = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
-  const scrollToPostList = useCallback(() => {
+  // 탭 변경 시 스크롤 이동
+  useEffect(() => {
     if (postListStartRef.current && scrollContainerRef.current) {
       const offsetTop = postListStartRef.current.offsetTop;
       // 헤더 높이만큼 여백을 두고 스크롤
@@ -49,12 +50,7 @@ const Profile = () => {
         behavior: 'smooth',
       });
     }
-  }, []);
-
-  // 탭 변경 시 스크롤 이동 (viewMode 변경 시에만 실행)
-  useEffect(() => {
-    scrollToPostList();
-  }, [viewMode, scrollToPostList]);
+  }, [viewMode]);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
@@ -118,12 +114,6 @@ const Profile = () => {
   const handlePostDelete = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
   const handleViewOnMap = () => { const latestPost = myPosts[0]; navigate('/', { state: { filterUserId: 'me', post: latestPost, center: latestPost ? { lat: latestPost.lat, lng: latestPost.lng } : undefined } }); };
 
-  const handleViewModeChange = (mode: 'grid' | 'gifs' | 'list' | 'gif-list' | 'saved') => {
-    setViewMode(mode);
-    // 탭 변경 후 스크롤 실행
-    setTimeout(scrollToPostList, 50);
-  };
-
   if (authLoading || (authUser && isDataLoading && myPosts.length === 0 && savedPosts.length === 0)) {
     return (<div className="min-h-screen bg-white flex items-center justify-center"><div className="flex flex-col items-center gap-4"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /><p className="text-xs font-bold text-gray-400">프로필을 불러오는 중...</p></div></div>);
   }
@@ -135,11 +125,7 @@ const Profile = () => {
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8"><div className="relative"><div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600"><img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} /></div></div><div className="flex-1"><h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2><p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p><div className="flex gap-4"><div className="text-center"><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}><p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}><p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div></div></div></div>
           <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
-          <div className="flex border-b border-gray-100 mb-4">
-            <button onClick={() => handleViewModeChange('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button>
-            <button onClick={() => handleViewModeChange('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button>
-            <button onClick={() => handleViewModeChange('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button>
-          </div>
+          <div className="flex border-b border-gray-100 mb-4"><button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button><button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button><button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button></div>
           <div ref={postListStartRef} className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
               <>{savedPosts.map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={() => handleImageError(post.id)} /></div>))}{savedPosts.length === 0 && !isDataLoading && (<div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>)}</>
