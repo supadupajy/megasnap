@@ -255,12 +255,23 @@ const Index = () => {
       return matchesCategory;
     });
     
-    // ✅ 중복 제거 (만약 ID가 중복된 포스팅이 있다면 제거)
+    // ✅ 중복 제거 및 최종 후보군 추출
     const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());
     
-    console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts (Strict Bounds)`);
-    setDisplayedMarkers(uniquePosts);
-  }, [mapData, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+    // ✅ [FIX] 무한 루프 방지: 현재 표시된 마커와 새로 계산된 마커의 ID 리스트를 비교
+    // 내용이 같으면 setDisplayedMarkers를 호출하지 않아 렌더링 루프를 끊습니다.
+    setDisplayedMarkers(prev => {
+      const prevIds = prev.map(p => p.id).sort().join(',');
+      const nextIds = uniquePosts.map(p => p.id).sort().join(',');
+      
+      if (prevIds === nextIds) {
+        return prev; // 변경 없으면 기존 상태 유지 (루프 차단)
+      }
+      
+      console.log(`📍 [Markers] Updating displayed markers: ${uniquePosts.length} posts (Strict Bounds)`);
+      return uniquePosts;
+    });
+  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
