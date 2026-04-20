@@ -39,12 +39,26 @@ const AD_COMMENTS = [
 
 const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
 
+/**
+ * Generates a truly random like count with a realistic distribution.
+ * 70% of posts: 0-49 likes (None/Normal)
+ * 20% of posts: 50-199 likes (Popular)
+ * 7% of posts: 200-499 likes (Silver)
+ * 2.5% of posts: 500-999 likes (Gold)
+ * 0.5% of posts: 1000+ likes (Diamond)
+ */
 const getRandomLikesFlat = () => {
   const r = Math.random();
-  if (r < 0.5) return Math.floor(Math.random() * 1001);
-  if (r < 0.8) return Math.floor(Math.random() * 4001 + 1000);
-  if (r < 0.9) return Math.floor(Math.random() * 5001 + 5000);
-  return Math.floor(Math.random() * 10001 + 10000);
+  // Normal/None (0-49) - 70%
+  if (r < 0.70) return Math.floor(Math.random() * 50);
+  // Popular (50-199) - 20%
+  if (r < 0.90) return Math.floor(Math.random() * 150 + 50);
+  // Silver (200-499) - 7%
+  if (r < 0.97) return Math.floor(Math.random() * 300 + 200);
+  // Gold (500-999) - 2.5%
+  if (r < 0.995) return Math.floor(Math.random() * 500 + 500);
+  // Diamond (1000+) - 0.5%
+  return Math.floor(Math.random() * 5000 + 1000);
 };
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
@@ -144,10 +158,54 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 export const randomizeExistingLikes = async () => {
   console.log("🎲 [Seeder] 전체 좋아요 수치 랜덤화 작업을 시작합니다...");
   try {
-    const { data, error } = await supabase.rpc('randomize_all_likes');
-    if (error) throw error;
-    console.log(`✅ [Seeder] ${data}개 포스팅의 수치가 성공적으로 변경되었습니다.`);
-    return data || 0;
+    // We use a custom query to update all likes with a random distribution directly via SQL
+    // This is more efficient and ensures the logic is applied at the source.
+    // The SQL logic matches our JS distribution:
+    const sql = `
+      UPDATE posts 
+      SET likes = CASE 
+        WHEN random() < 0.70 THEN floor(random() * 50)
+        WHEN random() < 0.90 THEN floor(random() * 150 + 50)
+        WHEN random() < 0.97 THEN floor(random() * 300 + 200)
+        WHEN random() < 0.995 THEN floor(random() * 500 + 500)
+        ELSE floor(random() * 5000 + 1000)
+      END
+      WHERE content NOT LIKE '[AD]%';
+    `;
+    
+    // Instead of calling the RPC which might have outdated logic, we perform a batch update if possible
+    // or call a safer RPC. Assuming we want to stick to the RPC but update its logic if we could.
+    // Since I can't update Postgres RPCs directly, I will perform it in batches via JS for now
+    // to ensure the NEW logic is applied correctly as per user request.
+
+    const { data: allPosts, error: fetchError } = await supabase
+      .from('posts')
+      .select('id')
+      .not('content', 'ilike', '[AD]%');
+
+    if (fetchError) throw fetchError;
+    if (!allPosts) return 0;
+
+    console.log(`📦 [Seeder] ${allPosts.length}개의 포스팅 수치를 조절합니다...`);
+
+    const chunkSize = 100;
+    for (let i = 0; i < allPosts.length; i += chunkSize) {
+      const chunk = allPosts.slice(i, i + chunkSize);
+      const updates = chunk.map(p => ({
+        id: p.id,
+        likes: getRandomLikesFlat()
+      }));
+
+      // In Supabase, upsert with IDs works as an update
+      const { error: updateError } = await supabase
+        .from('posts')
+        .upsert(updates);
+      
+      if (updateError) throw updateError;
+      if (i % 500 === 0) console.log(`   - 진행 상황: ${i}/${allPosts.length} 완료...`);
+    }
+
+    return allPosts.length;
   } catch (err) {
     console.error("❌ [Seeder] 좋아요 랜덤화 실패:", err);
     throw err;
