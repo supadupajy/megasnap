@@ -375,6 +375,17 @@ const MapContainer = ({
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
+  // 브라우저 텍스트 선택 에러(IndexSizeError) 방지를 위한 핸들러
+  const preventSelection = (e: React.UIEvent) => {
+    // 입력 요소가 아닐 경우에만 기본 동작(선택) 방지
+    if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+      // 이벤트 전파는 허용하되 브라우저의 기본 선택 동작만 막음
+      if (e.cancelable) {
+        // e.preventDefault(); // 지도 자체의 드래그를 막을 수 있으므로 주의 필요
+      }
+    }
+  };
+
   return (
     <div 
       ref={mapElement} 
@@ -383,7 +394,14 @@ const MapContainer = ({
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
         userSelect: 'none',
-        msUserSelect: 'none'
+        msUserSelect: 'none',
+        touchAction: 'pan-x pan-y' // 터치 조작 허용
+      }}
+      onMouseDown={(e) => {
+        // 마우스 오른쪽 버튼이 아닐 때만 선택 방지 시도
+        if (e.button === 0 && window.getSelection) {
+          window.getSelection()?.removeAllRanges();
+        }
       }}
     >
       {isMapReady && (
