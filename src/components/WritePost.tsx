@@ -212,7 +212,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={true}>
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
       <DrawerContent 
         className={cn(
           "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl transition-all duration-300",
@@ -289,7 +289,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
                   <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
                     <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                   </button>
