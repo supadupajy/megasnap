@@ -10,41 +10,45 @@ import {
 } from "@/lib/mock-data"; 
 
 /**
- * 유튜브 유효성 정밀 체크
+ * [강화된 검증] 유튜브 영상 재생 가능 여부 체크
  */
 async function validateYoutube(videoId: string): Promise<boolean> {
   try {
+    // 1단계: oEmbed 메타데이터 체크
     const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
     if (res.status !== 200) return false;
+    
     const data = await res.json();
-    return !!data.title && !data.title.includes("Private video");
+    
+    // 2단계: 임베드 차단 영상은 보통 oEmbed 데이터가 부실하거나 특정 키워드가 포함됨
+    if (!data.title || data.title.toLowerCase().includes("private") || data.title.toLowerCase().includes("deleted")) {
+      return false;
+    }
+    
+    return true;
   } catch {
     return false;
   }
 }
 
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
-  const confirmClear = confirm("중복 제거 및 '내 포스팅 80개 제한' 생성을 시작할까요?");
+  const confirmClear = confirm("초고밀도 전국구 분포 & 고성능 유튜브 검증을 시작할까요?");
   if (!confirmClear) return;
 
   try {
     console.log("🧹 기존 데이터 삭제 중...");
     await supabase.from('posts').delete().neq('id', '_root_');
 
-    console.log("📺 유튜브 재생 가능 영상 확인 중...");
+    // 재생 가능한 영상만 걸러내기
+    console.log("📺 유튜브 영상 정밀 검증 중...");
     const playableIds = [];
     for (const id of YOUTUBE_IDS_50) {
       const ok = await validateYoutube(id);
       if (ok) playableIds.push(id);
     }
+    console.log(`✅ 유효 영상 ${playableIds.length}개 확보`);
 
-    // [에러 해결] profiles로 받아서 정확히 참조합니다.
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, nickname, avatar_url')
-      .neq('id', currentUserId)
-      .limit(100);
-
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').neq('id', currentUserId).limit(100);
     const otherUsers = profiles || [];
     
     let globalCount = 0;
@@ -52,7 +56,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
     const MAX_MY_POSTS = 80; // [제한] 내 포스팅 최대 개수
 
     for (const region of MAJOR_CITIES) {
-      console.log(`📍 ${region.name} 생성 중...`);
+      console.log(`📍 ${region.name} 생성 중 (${region.density}개)...`);
       const mockPoints = createMockPosts(region.lat, region.lng, region.density, undefined, region.bounds);
       let batch: any[] = [];
 
@@ -61,8 +65,8 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const uniqueSeed = Date.now() + globalCount;
         let postUser = { id: "", name: "", avatar: "" };
         
-        // 내 포스팅 개수 조절
-        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.025) {
+        // 내 포스팅 개수 80개로 엄격 제한
+        if (myPostCounter < MAX_MY_POSTS && Math.random() < 0.015) {
           postUser = { id: currentUserId, name: currentNickname, avatar: currentAvatar };
           myPostCounter++;
         } else if (otherUsers.length > 0) {
@@ -100,13 +104,13 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
         globalCount++;
         if (batch.length >= 100) {
-          await supabase.from('posts').insert(batch);
+          await supabase.from('posts').insert([...batch]);
           batch = [];
         }
       }
       if (batch.length > 0) await supabase.from('posts').insert(batch);
     }
-    alert(`✨ 성공! 전국 분산 배치 및 유튜브 검증 완료. 내 포스팅: ${myPostCounter}개.`);
+    alert(`✨ 완료! 전국 ${globalCount}개 생성. 내 포스팅은 딱 ${myPostCounter}개입니다.`);
   } catch (err) {
     console.error(err);
   }
