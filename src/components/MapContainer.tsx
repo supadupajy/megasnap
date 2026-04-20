@@ -377,8 +377,8 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 축소 제한 단계를 12단계로 완화 (Index.tsx와 일치)
-    if (currentLevel >= 12) {
+    // ✅ [DEBUG] 7단계 이상일 때 오버레이를 모두 제거 (Index.tsx와 동기화)
+    if (currentLevel >= 7) {
       overlaysRef.current.forEach((overlay, id) => removeOverlayWithAnimation(id, overlay));
       return;
     }

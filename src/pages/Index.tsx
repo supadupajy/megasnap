@@ -211,12 +211,12 @@ const Index = () => {
 
   useEffect(() => {
     if (!mapData?.bounds) {
-      console.log('ℹ️ [Markers] Map bounds not ready yet');
       return;
     }
     
-    // ✅ 축소 단계 제한을 12단계로 유지
-    if (currentZoom >= 12) { 
+    // ✅ [DEBUG] 지도를 축소(7단계 이상)하면 모든 마커를 숨김
+    // 우선 지도의 확대/축소 및 이동 인터랙션이 정상인지 확인하기 위함
+    if (currentZoom >= 7) { 
       setDisplayedMarkers([]); 
       return; 
     }
