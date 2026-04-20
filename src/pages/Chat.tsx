@@ -15,7 +15,9 @@ interface Message {
   id: string;
   content: string;
   sender_id: string;
+  receiver_id?: string;
   created_at: string;
+  is_read?: boolean | null;
 }
 
 interface OtherUser {
@@ -161,7 +163,9 @@ const Chat = () => {
           id: m.id.toString(),
           content: m.text,
           sender_id: m.sender === 'me' ? authUser.id : chatId,
+          receiver_id: m.sender === 'me' ? chatId : authUser.id,
           created_at: new Date().toISOString(),
+          is_read: m.sender === 'other',
         }));
         setMessages(formatted);
         markAsRead();
@@ -194,14 +198,42 @@ const Chat = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${authUser.id}`,
         },
         (payload) => {
           const newMsg = payload.new as Message;
+          const isCurrentConversation =
+            (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) ||
+            (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId);
+
+          if (!isCurrentConversation) return;
+
+          setMessages((prev) => {
+            const withoutDuplicate = prev.filter((msg) => msg.id !== newMsg.id);
+            return [...withoutDuplicate, newMsg].sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+            );
+          });
+
           if (newMsg.sender_id === chatId) {
-            setMessages((prev) => [...prev, newMsg]);
             markAsRead();
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${authUser.id}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          if (updatedMsg.receiver_id !== chatId) return;
+
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === updatedMsg.id ? { ...msg, ...updatedMsg } : msg))
+          );
         }
       )
       .subscribe();
@@ -218,20 +250,31 @@ const Chat = () => {
       id: tempId,
       content,
       sender_id: authUser.id,
+      receiver_id: chatId,
       created_at: new Date().toISOString(),
+      is_read: false,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
 
     if (isValidUUID(chatId)) {
-      const { error } = await supabase.from('messages').insert([
-        { sender_id: authUser.id, receiver_id: chatId, content },
-      ]);
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
+        .select('*')
+        .single();
 
       if (error) {
         showError('메시지 전송에 실패했습니다.');
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        return;
+      }
+
+      if (data) {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === tempId ? data : msg))
+        );
       }
     } else {
       chatStore.getOrCreateRoom(
@@ -325,7 +368,14 @@ const Chat = () => {
               >
                 {msg.content}
               </div>
-              <span className="text-[9px] text-gray-400 mt-1 px-1 font-bold">{time}</span>
+              <div className={cn('mt-1 px-1 flex items-center gap-1.5', isMe ? 'justify-end' : 'justify-start')}>
+                {isMe && (
+                  <span className="text-[9px] text-gray-400 font-bold">
+                    {msg.is_read ? '읽음' : '읽지 않음'}
+                  </span>
+                )}
+                <span className="text-[9px] text-gray-400 font-bold">{time}</span>
+              </div>
             </div>
           );
         })}
