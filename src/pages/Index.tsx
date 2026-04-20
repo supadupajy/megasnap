@@ -67,6 +67,14 @@ const Index = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
+  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
+  useEffect(() => {
+    navigate(location.pathname, { 
+      replace: true, 
+      state: { ...location.state, isPostListOpen } 
+    });
+  }, [isPostListOpen]);
+
   const getTierFromId = (id: string) => {
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
