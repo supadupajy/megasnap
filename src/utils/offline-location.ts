@@ -14,6 +14,9 @@ export type OfflineRegion = {
   districts: string[];
 };
 
+// [수정] 이 값을 변경하면 모든 지역의 밀도가 한꺼번에 바뀝니다.
+const DEFAULT_REGION_DENSITY = 200; 
+
 export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
   {
     key: 'seoul',
@@ -21,7 +24,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '서울시',
     lat: 37.5665,
     lng: 126.978,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 37.42, lng: 126.75 }, ne: { lat: 37.72, lng: 127.2 } },
     districts: [
       '종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구', '강북구', '도봉구',
@@ -35,7 +38,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '부산시',
     lat: 35.1796,
     lng: 129.0756,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 35.0485, lng: 128.8905 }, ne: { lat: 35.3156, lng: 129.2333 } },
     districts: [
       '중구', '서구', '동구', '영도구', '부산진구', '동래구', '남구', '북구',
@@ -48,7 +51,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '인천시',
     lat: 37.4563,
     lng: 126.7052,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 37.3689, lng: 126.5841 }, ne: { lat: 37.5856, lng: 126.7712 } },
     districts: ['중구', '동구', '미추홀구', '연수구', '남동구', '부평구', '계양구', '서구', '강화군', '옹진군'],
   },
@@ -58,7 +61,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '대구시',
     lat: 35.8714,
     lng: 128.6014,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 35.7756, lng: 128.4523 }, ne: { lat: 35.9542, lng: 128.7234 } },
     districts: ['중구', '동구', '서구', '남구', '북구', '수성구', '달서구', '달성군', '군위군'],
   },
@@ -68,7 +71,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '대전시',
     lat: 36.3504,
     lng: 127.3845,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 36.2654, lng: 127.2845 }, ne: { lat: 36.4856, lng: 127.4856 } },
     districts: ['동구', '중구', '서구', '유성구', '대덕구'],
   },
@@ -78,7 +81,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '광주시',
     lat: 35.1595,
     lng: 126.8526,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 35.0856, lng: 126.7542 }, ne: { lat: 35.2542, lng: 126.9542 } },
     districts: ['동구', '서구', '남구', '북구', '광산구'],
   },
@@ -88,7 +91,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '울산시',
     lat: 35.5384,
     lng: 129.3114,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 35.4542, lng: 129.1542 }, ne: { lat: 35.6542, lng: 129.4542 } },
     districts: ['중구', '남구', '동구', '북구', '울주군'],
   },
@@ -98,7 +101,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '경기도 수원시',
     lat: 37.2636,
     lng: 127.0286,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 37.2142, lng: 126.9542 }, ne: { lat: 37.3542, lng: 127.1542 } },
     districts: ['장안구', '권선구', '팔달구', '영통구'],
   },
@@ -108,7 +111,7 @@ export const OFFLINE_REGION_CITIES: OfflineRegion[] = [
     displayPrefix: '제주특별자치도',
     lat: 33.4996,
     lng: 126.5312,
-    density: 200,
+    density: DEFAULT_REGION_DENSITY,
     bounds: { sw: { lat: 33.2142, lng: 126.2142 }, ne: { lat: 33.5542, lng: 126.9142 } },
     districts: ['제주시', '서귀포시'],
   },
