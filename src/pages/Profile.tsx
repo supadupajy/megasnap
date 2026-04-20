@@ -59,38 +59,95 @@ const Profile = () => {
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     const finalImage = sanitized.youtube_url ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url) : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+    
+    // Check if liked and saved by current user
+    let isLiked = false;
+    let isSaved = false;
+    
+    if (authUser?.id) {
+      const [{ data: likeData }, { data: saveData }] = await Promise.all([
+        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
+      ]);
+      isLiked = !!likeData;
+      isSaved = !!saveData;
+    }
+
     return {
       id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
       likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked: false, isSaved: true, createdAt: new Date(sanitized.created_at), borderType
+      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType
     };
   };
 
   const loadProfileData = useCallback(async (uid: string) => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
+    // Reset fetch ref to allow re-fetching when needed
     setIsDataLoading(true);
     try {
+      // 1. Fetch My Posts
       const { data: myData } = await supabase.from('posts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
       const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
       setMyPosts(formattedMyPosts);
-      const { data: savedData } = await supabase.from('saved_posts').select('post_id, posts(*)').eq('user_id', uid).order('created_at', { ascending: false });
-      const formattedSavedPosts = await Promise.all((savedData || []).filter(item => item.posts).map(item => mapDbToPost(item.posts)));
-      setSavedPosts(formattedSavedPosts);
+
+      // 2. Fetch Saved Posts (Joining with posts table)
+      const { data: savedData, error: savedError } = await supabase
+        .from('saved_posts')
+        .select(`
+          post_id,
+          posts:posts (*)
+        `)
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (savedError) throw savedError;
+
+      if (savedData) {
+        // Extract the nested post objects and format them
+        const validPosts = savedData
+          .filter(item => item.posts)
+          .map(item => item.posts);
+          
+        const formattedSavedPosts = await Promise.all(validPosts.map(mapDbToPost));
+        setSavedPosts(formattedSavedPosts);
+      }
+      
       const [followersRes, followingRes] = await Promise.all([supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid), supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)]);
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
     } catch (err) { hasFetched.current = false; } finally { setIsDataLoading(false); }
   }, []);
 
-  useEffect(() => { if (!authLoading && authUser?.id) loadProfileData(authUser.id); }, [authLoading, authUser?.id, loadProfileData]);
+  useEffect(() => { 
+    if (!authLoading && authUser?.id) {
+      hasFetched.current = false; // Force refresh on component mount/auth change
+      loadProfileData(authUser.id); 
+    } 
+  }, [authLoading, authUser?.id, loadProfileData]);
 
   const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
-    const setter = isFromSaved ? setSavedPosts : setMyPosts;
-    setter(prev => prev.map(post => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post));
+    const updatePost = (prev: Post[]) => prev.map(post => 
+      post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post
+    );
+    setMyPosts(updatePost);
+    setSavedPosts(updatePost);
   }, []);
+
+  const handleSaveToggle = useCallback((postId: string, isSaved: boolean) => {
+    if (isSaved) {
+      // If we're removing from saved, filter it out of savedPosts but keep in myPosts (if it's mine)
+      setSavedPosts(prev => prev.filter(p => p.id !== postId));
+      setMyPosts(prev => prev.map(p => p.id === postId ? { ...p, isSaved: false } : p));
+    } else {
+      // If we're adding to saved, we need to re-fetch or find the post
+      // For simplicity in this case, we refresh the data
+      if (authUser?.id) {
+        hasFetched.current = false;
+        loadProfileData(authUser.id);
+      }
+    }
+  }, [authUser?.id, loadProfileData]);
 
   const handleGridItemClick = (postId: string) => {
     setViewMode(viewMode === 'gifs' ? 'gif-list' : 'list');
@@ -128,9 +185,24 @@ const Profile = () => {
           <div ref={postListStartRef} className="flex border-b border-gray-100 mb-4"><button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} /></button><button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300")}><Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} /></button><button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}><Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} /></button></div>
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
-              <>{savedPosts.map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, true)} onImageError={() => handleImageError(post.id)} /></div>))}{savedPosts.length === 0 && !isDataLoading && (<div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>)}</>
+              <div className="flex flex-col">
+                {savedPosts.map((post) => (
+                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                    <PostItem 
+                      {...post}
+                      disablePulse={true} 
+                      onLikeToggle={() => handleLikeToggle(post.id, true)}
+                      onSaveToggle={() => handleSaveToggle(post.id, true)}
+                      onImageError={() => handleImageError(post.id)} 
+                    />
+                  </div>
+                ))}
+                {savedPosts.length === 0 && !isDataLoading && (
+                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
+                )}
+              </div>
             ) : (
-              <><div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>{(viewMode === 'list' || viewMode === 'gif-list') ? (<div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>) : (<div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>)}</>
+              <><div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>{(viewMode === 'list' || viewMode === 'gif-list') ? (<div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem {...post} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>) : (<div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>)}</>
             )}
           </div>
         </div>

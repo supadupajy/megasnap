@@ -53,6 +53,7 @@ interface PostItemProps {
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
   onImageError?: (postId: string) => void;
+  onSaveToggle?: (isSaved: boolean) => void;
   onClick?: () => void;
 }
 
@@ -88,6 +89,7 @@ const PostItem = ({
   onLocationClick,
   onDelete,
   onImageError,
+  onSaveToggle,
   onClick
 }: PostItemProps) => {
   const navigate = useNavigate();
@@ -256,6 +258,8 @@ const PostItem = ({
         await supabase.from('saved_posts').insert({ post_id: id, user_id: authUser.id });
         showSuccess('포스팅을 저장했습니다! ✨');
       }
+      
+      if (onSaveToggle) onSaveToggle(!prevSaved);
     } catch (err) {
       setIsSaved(prevSaved);
       showError('저장 처리 중 오류가 발생했습니다.');
