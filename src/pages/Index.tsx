@@ -26,6 +26,37 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 
+const CATEGORY_IMAGES: Record<string, string[]> = {
+  food: [
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7bb7445?q=80&w=1000&auto=format&fit=crop'
+  ],
+  accident: [
+    'https://images.unsplash.com/photo-1574672280600-4accfa5b6f98?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1599423300746-b62533397364?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1580234797602-22c37b2a6230?q=80&w=1000&auto=format&fit=crop'
+  ],
+  place: [
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop'
+  ],
+  animal: [
+    'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1472491235688-bdc81a63246e?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=1000&auto=format&fit=crop'
+  ],
+  general: [
+    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1532274402911-5a3b027c90be?q=80&w=1000&auto=format&fit=crop'
+  ]
+};
+
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,6 +121,18 @@ const Index = () => {
     const p = await sanitizeYoutubeMedia(rawPost);
     const isAd = p.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(p.id);
+    const category = p.category || 'none';
+    
+    // Determine image based on category
+    let imageUrl = p.image_url;
+    if (!p.youtube_url && !p.video_url && imageUrl.includes('unsplash.com')) {
+      const categoryKey = (category === 'none' || !CATEGORY_IMAGES[category]) ? 'general' : category;
+      const images = CATEGORY_IMAGES[categoryKey];
+      // Use post ID to pick a consistent image from the list
+      const index = Math.abs(p.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)) % images.length;
+      imageUrl = images[index];
+    }
+
     return {
       id: p.id,
       isAd,
@@ -103,10 +146,10 @@ const Index = () => {
       likes: Number(p.likes || 0),
       commentsCount: 0,
       comments: [],
-      image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url,
+      image: p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || imageUrl) : imageUrl,
       youtubeUrl: p.youtube_url,
       videoUrl: p.video_url,
-      category: p.category || 'none', // category 필드 포함
+      category: category,
       isLiked: false,
       createdAt: new Date(p.created_at),
       borderType
