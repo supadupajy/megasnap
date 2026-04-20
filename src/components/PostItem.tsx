@@ -89,17 +89,12 @@ const PostItem = ({
   onImageError,
   onClick
 }: PostItemProps) => {
-
-  // [수정 핵심 1] 광고 판별을 최우선으로 합니다.
-  const isAd = initialIsAd || user.name?.includes('공식 파트너');
-  
-  // [수정 핵심 2] 광고가 아닐 때만 '나의 포스팅'으로 분류합니다.
-  const isMine = authUser && (user.id === authUser.id || user.id === 'me') && !isAd;
-
-  const navigate = useNavigate();
+  // 1. Hooks (데이터를 가져오는 로직을 가장 위로 올립니다)
   const { user: authUser, profile } = useAuth();
   const { blockUser } = useBlockedUsers();
-  
+  const navigate = useNavigate();
+
+  // 2. 상태 관리 (State)
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved || false);
@@ -110,10 +105,19 @@ const PostItem = ({
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
-  
+
+  // 3. Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 4. 변수 및 파생 데이터 계산 (여기서 authUser를 안전하게 사용할 수 있습니다)
   
+  // [수정 핵심 1] 광고 판별
+  const isAd = initialIsAd || user.name?.includes('공식 파트너');
+  
+  // [수정 핵심 2] 광고가 아닐 때만 '나의 포스팅'으로 분류 (이제 authUser 참조 에러가 나지 않습니다)
+  const isMine = !!authUser && (user.id === authUser.id || user.id === 'me') && !isAd;
+
   const youtubeId = getYoutubeId(youtubeUrl || '');
   
   const displayImages = useMemo(() => {
@@ -124,6 +128,8 @@ const PostItem = ({
     const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
   }, [isAd, images, image, youtubeId]);
+
+  // ... 이하 로직 및 return 문
 
   const adIndex = 1;
 
