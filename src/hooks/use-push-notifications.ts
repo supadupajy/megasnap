@@ -15,6 +15,18 @@ export const usePushNotifications = () => {
 
     const register = async () => {
       try {
+        // 1. 커스텀 사운드를 위한 알림 채널 생성 (Android 8.0+)
+        await PushNotifications.createChannel({
+          id: 'messages',
+          name: 'Messages',
+          description: '채팅 메시지 알림',
+          sound: 'message_chime', // res/raw/ 폴더에 넣은 파일명 (확장자 제외)
+          importance: 5, // 최고 중요도
+          visibility: 1, // 잠금 화면에도 표시
+          vibration: true,
+        });
+        console.log('[Push] Notification channel created: messages');
+
         let permStatus = await PushNotifications.checkPermissions();
 
         if (permStatus.receive === 'prompt') {
