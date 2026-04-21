@@ -208,7 +208,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
                 className="pl-9 h-11 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                autoFocus
                 autoComplete="off"
               />
               {isLoading && (
