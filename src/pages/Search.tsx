@@ -24,10 +24,26 @@ const Search = () => {
 
   // 스크롤 시 상단 헤더 밀림 방지 (iOS/Android Safari 바운스 차단 보조)
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
+    // 터치 이동 시 기본 스크롤 동작 방지 (iOS 바운스 방지)
+    const preventDefault = (e: TouchEvent) => {
+      // 스크롤 가능한 요소 내부가 아닌 경우에만 방지
+      const target = e.target as HTMLElement;
+      if (!target.closest('.scrollable-content')) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchmove', preventDefault, { passive: false });
+    const originalStyle = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
     return () => {
+      document.removeEventListener('touchmove', preventDefault);
       document.body.style.overflow = originalStyle;
+      document.body.style.position = '';
+      document.body.style.width = '';
     };
   }, []);
 
@@ -96,11 +112,11 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 88px 헤더 공간 확보 */}
-      <div className="h-[88px] shrink-0 bg-white" />
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden overscroll-none">
+      {/* 88px 헤더 공간 확보 - 헤더와 겹치지 않게 투명 영역 배치 */}
+      <div className="h-[88px] shrink-0 pointer-events-none" />
       
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-28 scrollable-content overscroll-contain">
         <div className="px-4">
           <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-20">
             <button 
