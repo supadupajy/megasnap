@@ -276,9 +276,9 @@ const Chat = () => {
 
           setMessages((prev) => {
             // 중복 제거 및 낙관적 업데이트 메시지 교체
-            // 낙관적 업데이트는 Math.random().toString() 형식의 ID를 가짐
+            // 낙관적 업데이트는 temp- 형식의 ID를 가짐
             const filtered = prev.filter((msg) => {
-              const isTemp = msg.id.includes('.'); // Math.random() ID는 보통 소수점을 포함함
+              const isTemp = msg.id.startsWith('temp-');
               const isDuplicate = msg.id === newMsg.id;
               // 내용과 보낸 사람이 같으면 낙관적 메시지로 간주하고 제거
               const isOptimisticMatch = isTemp && msg.content === newMsg.content && msg.sender_id === newMsg.sender_id;
@@ -286,9 +286,10 @@ const Chat = () => {
               return !isDuplicate && !isOptimisticMatch;
             });
             
-            return [...filtered, newMsg].sort(
+            const updated = [...filtered, newMsg].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
+            return updated;
           });
 
           if (newMsg.sender_id === chatId) {
@@ -337,34 +338,35 @@ const Chat = () => {
     setInputValue('');
 
     if (isValidUUID(chatId)) {
-      // 1. 메시지 저장
-      const { data, error } = await supabase
-        .from('messages')
-        .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
-        .select('*')
-        .single();
+      try {
+        // 1. 메시지 저장
+        const { data, error } = await supabase
+          .from('messages')
+          .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
+          .select('*')
+          .single();
 
-      if (error) {
+        if (error) throw error;
+
+        // 2. 상대방에게 알림 생성
+        await supabase.from('notifications').insert([{
+          user_id: chatId,
+          type: 'message',
+          title: '새 메시지',
+          content: content.length > 20 ? content.substring(0, 20) + '...' : content,
+          is_read: false,
+          related_id: authUser.id
+        }]);
+
+        if (data) {
+          // 낙관적 메시지를 실제 서버 데이터로 즉시 교체
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === tempId ? data : msg))
+          );
+        }
+      } catch (error) {
         showError('메시지 전송에 실패했습니다.');
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        return;
-      }
-
-      // 2. 상대방에게 알림 생성 (실시간 뱃지용)
-      await supabase.from('notifications').insert([{
-        user_id: chatId,
-        type: 'message',
-        title: '새 메시지',
-        content: content.length > 20 ? content.substring(0, 20) + '...' : content,
-        is_read: false,
-        related_id: authUser.id
-      }]);
-
-      if (data) {
-        // DB 응답 데이터를 상태에 즉시 반영 (실시간 채널에서 중복 처리될 것임)
-        setMessages((prev) =>
-          prev.map((msg) => (msg.id === tempId ? data : msg))
-        );
       }
     } else {
       chatStore.getOrCreateRoom(
