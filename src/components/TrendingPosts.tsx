@@ -192,23 +192,31 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         </div>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs font-bold text-gray-800 truncate">
+                      <div className="flex-1 min-w-0 pr-1">
+                        <div className="flex items-center gap-1.5 justify-between">
+                          <p className="text-xs font-bold text-gray-800 truncate max-w-[85%]">
                             {post.content}
                           </p>
-                          {post.isAd && (
-                            <span className="bg-blue-500 text-white text-[7px] font-black px-1 py-0.5 rounded-sm shrink-0">Ad</span>
+                          {(post.isAd || (post.rank && post.rank <= 4)) && (
+                            <div className="shrink-0 flex items-center justify-center">
+                              {post.isAd ? (
+                                <span className="bg-blue-500 text-white text-[7px] font-black px-1 py-0.5 rounded-sm">Ad</span>
+                              ) : (
+                                <div className="bg-orange-50/50 rounded-full p-1 border border-orange-100">
+                                  <Flame className="w-2.5 h-2.5 text-orange-500 fill-orange-500" />
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
                           <div className="flex items-center gap-0.5">
-                            <Flame className={cn("w-2.5 h-2.5", isPopular ? "text-red-500 fill-red-500" : "text-gray-300")} />
-                            <span className="text-[9px] font-bold text-gray-400">{post.likes}</span>
+                            <span className="text-[9px] font-bold text-gray-400 tracking-tighter">👍 {post.likes}</span>
                           </div>
                         </div>
                       </div>
+
                     </div>
                   );
                 })}
