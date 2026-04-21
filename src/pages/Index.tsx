@@ -566,7 +566,7 @@ const Index = () => {
               <div 
                 className={cn(
                   "absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out",
-                  isTrendingExpanded ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto"
+                  (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto"
                 )}
               >
                 <TimeSlider value={timeValue} onChange={setTimeValue} />
