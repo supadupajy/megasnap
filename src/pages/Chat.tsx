@@ -50,10 +50,18 @@ const Chat = () => {
 
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/messages');
+    console.log('[Chat] Back button clicked');
+    // 프리뷰 환경 및 모바일 웹 앱 환경에서의 뒤로가기 호환성 강화
+    try {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        // 히스토리가 없는 경우(예: 직접 URL로 들어온 경우) 홈이나 메시지 목록으로 강제 이동
+        navigate('/', { replace: true });
+      }
+    } catch (e) {
+      console.error('[Chat] Navigation error:', e);
+      window.location.href = '/'; // 최후의 수단: 강제 새로고침 이동
     }
   }, [navigate]);
 
@@ -416,18 +424,18 @@ const Chat = () => {
     <div className="bg-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 h-[88px] z-50 bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
+        className="fixed top-0 left-0 right-0 h-[88px] z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
         style={{
           paddingTop: 'max(32px, env(safe-area-inset-top))',
         }}
       >
         <div className="flex items-center gap-3">
-          <button
+          <div 
             onClick={handleBack}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95 cursor-pointer"
           >
             <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </button>
+          </div>
           <div className="flex items-center gap-2">
             <div
               className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer relative"
