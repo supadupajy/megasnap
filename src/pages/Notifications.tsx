@@ -190,8 +190,11 @@ const Notifications = () => {
 
   return (
     <div 
-      className="h-[calc(100vh-88px)] mt-[88px] overflow-y-auto bg-white no-scrollbar"
+      className="min-h-screen bg-white pb-24 no-scrollbar"
       onClick={() => setSwipedId(null)}
+      style={{
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
+      }}
     >
       <div className="flex flex-col">
         {isLoading ? (

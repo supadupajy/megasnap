@@ -137,11 +137,14 @@ const Messages = () => {
 
   return (
     <div 
-      className="h-[calc(100vh-88px)] mt-[88px] overflow-y-auto bg-white no-scrollbar" 
+      className="min-h-screen bg-white pb-24 no-scrollbar" 
       onClick={() => setSwipedId(null)}
+      style={{
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
+      }}
     >
       <div className="flex flex-col">
-        <div className="sticky top-0 z-40 bg-white px-4 py-4 border-b border-gray-50">
+        <div className="sticky top-[88px] z-40 bg-white px-4 py-4 border-b border-gray-50">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
