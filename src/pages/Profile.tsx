@@ -58,9 +58,20 @@ const Profile = () => {
     const sanitized = await sanitizeYoutubeMedia(p);
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
-    const finalImage = sanitized.youtube_url ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url) : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+    
+    // 동영상 썸네일(image_url)이 있다면 우선적으로 사용, 아니면 유튜브 썸네일, 그외 unsplash 리맵핑
+    let finalImage = sanitized.image_url;
+    
+    if (!finalImage || finalImage.includes('unsplash.com')) {
+      if (sanitized.youtube_url) {
+        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url;
+      } else {
+        finalImage = remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+      }
+    }
     
     // Check if liked and saved by current user
+
     let isLiked = false;
     let isSaved = false;
     

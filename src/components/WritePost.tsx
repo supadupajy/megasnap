@@ -179,25 +179,39 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
         // 동영상 썸네일 업로드 (추출된 캡처본이 있는 경우)
         if (videoThumbnail) {
-          const thumbName = `thumb-${timestamp}-${Math.random().toString(36).substring(7)}.jpg`;
-          const thumbPath = `${authUser.id}/${thumbName}`;
-          
-          // DataURL을 Blob으로 변환
-          const response = await fetch(videoThumbnail);
-          const blob = await response.blob();
-          
-          console.log('[WritePost] Uploading video thumbnail...');
-          const { error: thumbError } = await supabase.storage
-            .from('post-images')
-            .upload(thumbPath, blob, { contentType: 'image/jpeg' });
+          try {
+            const thumbName = `thumb-${timestamp}-${Math.random().toString(36).substring(7)}.jpg`;
+            const thumbPath = `${authUser.id}/${thumbName}`;
             
-          if (!thumbError) {
-            const { data: { publicUrl: thumbPublicUrl } } = supabase.storage
+            // DataURL을 Blob으로 변환
+            const byteString = atob(videoThumbnail.split(',')[1]);
+            const mimeString = videoThumbnail.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([ab], {type: mimeString});
+            
+            console.log('[WritePost] Uploading video thumbnail to post-images bucket...');
+            const { error: thumbError } = await supabase.storage
               .from('post-images')
-              .getPublicUrl(thumbPath);
-            finalImageUrl = thumbPublicUrl;
+              .upload(thumbPath, blob, { contentType: 'image/jpeg', upsert: true });
+              
+            if (thumbError) {
+              console.error('[WritePost] Thumbnail upload error:', thumbError);
+            } else {
+              const { data: { publicUrl: thumbPublicUrl } } = supabase.storage
+                .from('post-images')
+                .getPublicUrl(thumbPath);
+              finalImageUrl = thumbPublicUrl;
+              console.log('[WritePost] Thumbnail public URL:', finalImageUrl);
+            }
+          } catch (thumbErr) {
+            console.error('[WritePost] Error processing thumbnail:', thumbErr);
           }
         }
+
       }
 
       const postData = {
