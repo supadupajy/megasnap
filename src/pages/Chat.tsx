@@ -379,7 +379,7 @@ const Chat = () => {
           </button>
           <div className="flex items-center gap-2">
             <div
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer relative"
               onClick={() => navigate(`/profile/${chatId}`)}
             >
               <img
@@ -387,19 +387,26 @@ const Chat = () => {
                 alt="user"
                 className="w-full h-full rounded-full object-cover border-2 border-white"
               />
+              <div className={cn(
+                "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white z-10 transition-colors duration-300",
+                isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-400"
+              )} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-black text-gray-900">
                 {otherUser?.nickname || '사용자'}
               </span>
-              <div className="flex items-center gap-1.5">
-                <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-400")} />
-                <span className={cn("text-[10px] font-bold uppercase tracking-tight", isOnline ? "text-green-500" : "text-gray-400")}>
+              <div className="flex items-center gap-1">
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-tight transition-colors duration-300",
+                  isOnline ? "text-green-500" : "text-gray-400"
+                )}>
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
           </div>
+
         </div>
         <div className="flex items-center gap-3">
           <button className="p-1 text-gray-600"><Phone className="w-5 h-5" /></button>
