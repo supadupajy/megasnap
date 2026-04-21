@@ -106,130 +106,93 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </div>
         )}
         
-        <ChevronDown 
-          className={cn(
-            "w-4 h-4 text-gray-400 transition-transform duration-300",
-            isExpanded && "rotate-180"
-          )} 
-        />
+        {isExpanded ? (
+          <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+        )}
       </div>
 
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            ref={trendingContainerRef}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden border-t border-gray-50"
-          >
-            <div className="max-h-[450px] overflow-y-auto no-scrollbar overscroll-contain p-2 space-y-1">
-              <div className="relative h-[112px] w-full rounded-xl overflow-hidden mb-2 group cursor-pointer">
-                <img 
-                  src="https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80" 
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  alt="Ad Background"
-                  onError={handleImageError}
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center px-4">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-sm">AD</span>
-                    <Sparkles className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                  </div>
-                  <h3 className="text-white font-black text-sm leading-tight mb-1">
-                    프리미엄 멤버십<br/>첫 달 0원 혜택!
-                  </h3>
-                  <p className="text-white/70 text-[10px] font-medium flex items-center gap-1">
-                    지금 바로 시작하기 <ExternalLink className="w-2.5 h-2.5" />
+      <div 
+        className={cn(
+          "flex flex-col relative",
+          isExpanded ? "max-h-[70vh] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+        )}
+      >
+        {/* 광고 구좌 (고정) - 리스트 상단에 고정하고 싶으므로 리스트 외부(스크롤 영역 밖)로 배치 */}
+        <div className="px-5 py-3 border-b border-gray-100">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800 to-indigo-950 text-white shadow-lg relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
+                <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+              </div>
+              <h3 className="text-lg font-black leading-tight mb-1">
+                프리미엄 멤버십<br />첫 달 0원 혜택!
+              </h3>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-[11px] text-white/60 font-bold">지금 바로 시작하기</p>
+                <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 스크롤 가능한 포스팅 리스트 */}
+        <div className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh]">
+          {posts.map((post) => (
+            <div 
+              key={post.id}
+              onClick={() => onPostClick(post)}
+              className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
+            >
+              <div className="w-6 text-center shrink-0">
+                <span className={cn(
+                  "text-sm font-black italic",
+                  post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
+                )}>
+                  {post.rank}
+                </span>
+              </div>
+              
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                <img src={post.image} alt="" className="w-full h-full object-cover" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
+                  {post.content}
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[11px] font-medium text-gray-400 truncate">
+                    {post.location || '위치 정보 없음'}
                   </p>
+                  <div className="flex items-center gap-0.5 text-rose-500">
+                    <Heart className="w-3 h-3 fill-rose-500" />
+                    <span className="text-[10px] font-black">{post.likes}</span>
+                  </div>
                 </div>
               </div>
 
-              {displayPosts.map((post) => {
-                const isInfluencer = ['silver', 'gold', 'diamond'].includes(post.borderType);
-                // ✅ 인기 포스팅 판정 시 순위(rank) 강제 부여 로직을 제거하고 실제 데이터(borderType)만 따릅니다.
-                const isPopular = post.borderType === 'popular' || isInfluencer;
-                
-                return (
-                  <div
-                    key={post.id}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group"
-                    onClick={(e) => handleItemClick(e, post)}
-                  >
-                    <span
-                      className={cn(
-                        "text-sm font-black italic w-4 shrink-0 transition-colors",
-                        post.rank && post.rank <= 3 ? "text-indigo-600" : "text-gray-300 group-hover:text-gray-400",
-                      )}
-                    >
-                      {post.rank}
-                    </span>
-                    
-                    <div className={cn(
-                      "w-11 h-11 rounded-xl flex-shrink-0 relative transition-all duration-300",
-                      post.borderType === 'diamond' ? "diamond-border-container p-[2px]" :
-                      post.borderType === 'gold' ? "gold-border-container p-[2px]" :
-                      post.borderType === 'silver' ? "silver-border-container p-[2px]" :
-                      post.borderType === 'popular' ? "popular-border-container p-[2px]" : 
-                      "bg-gray-100 overflow-hidden"
-                    )}>
-                      <div className={cn(
-                        "w-full h-full relative bg-white",
-                        post.borderType !== 'none' ? "rounded-[9px] overflow-hidden" : ""
-                      )}>
-                        <img
-                          src={post.image}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={handleImageError}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 pr-1">
-                      <div className="flex items-center gap-1.5 justify-between">
-                        <p className="text-xs font-bold text-gray-800 truncate max-w-[85%]">
-                          {post.content}
-                        </p>
-                        {(post.isAd || (post.rank === 1 || post.rank === 4)) && (
-                          <div className="shrink-0 flex items-center justify-center">
-                            {post.isAd ? (
-                              <span className="bg-blue-500 text-white text-[7px] font-black px-1 py-0.5 rounded-sm">Ad</span>
-                            ) : (
-                              <div className="bg-orange-50/50 rounded-full p-1 border border-orange-100">
-                                <Flame className="w-2.5 h-2.5 text-orange-500 fill-orange-500" />
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[9px] font-bold text-gray-400 tracking-tighter">❤️ {post.likes}</span>
-                        </div>
-                      </div>
-
-                    </div>
-
-                  </div>
-                );
-              })}
+              {(post.rank === 1 || post.rank === 4) && (
+                <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                  <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+                </div>
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 하단 스크롤 안내 화살표 */}
-      {isExpanded && posts.length > 5 && (
-        <div className="sticky bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2">
-          <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce">
-            <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
-          </div>
+          ))}
         </div>
-      )}
+
+        {/* 하단 스크롤 안내 화살표 */}
+        {isExpanded && posts.length > 5 && (
+          <div className="sticky bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2">
+            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce">
+              <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
