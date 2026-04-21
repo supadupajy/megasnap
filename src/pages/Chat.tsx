@@ -276,12 +276,19 @@ const Chat = () => {
           if (!isRelevant) return;
 
           setMessages((prev) => {
-            // 중복 확인만 수행 (ID 기준)
-            if (prev.some(m => m.id === newMsg.id)) return prev;
+            // 중복 확인 (ID 기준)
+            const exists = prev.some(m => m.id === newMsg.id);
+            if (exists) return prev;
 
-            return [...prev, newMsg].sort(
+            // 새로운 메시지 추가 및 정렬
+            const updated = [...prev, newMsg].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
+
+            // 상대방 메시지가 오거나 내가 보낸 메시지가 확정되었을 때 스크롤
+            setTimeout(scrollToBottom, 10);
+            
+            return updated;
           });
 
           if (newMsg.sender_id === chatId) {
@@ -319,15 +326,18 @@ const Chat = () => {
     setInputValue('');
 
     if (isValidUUID(chatId)) {
+      // 보낼 메시지 데이터 미리 생성
+      const messageToInsert = { 
+        sender_id: authUser.id, 
+        receiver_id: chatId, 
+        content 
+      };
+
       try {
         // 1. DB 저장
         const { data, error } = await supabase
           .from('messages')
-          .insert([{ 
-            sender_id: authUser.id, 
-            receiver_id: chatId, 
-            content
-          }])
+          .insert([messageToInsert])
           .select('*')
           .single();
 
@@ -336,17 +346,18 @@ const Chat = () => {
         // 2. 서버 데이터 즉시 반영
         if (data) {
           setMessages((prev) => {
-            // 실시간 채널에서 이미 들어왔을 수 있으므로 중복 체크
-            if (prev.some(m => m.id === data.id)) return prev;
+            // 중복 체크 (실시간 채널 대응)
+            const exists = prev.some(m => m.id === data.id);
+            if (exists) return prev;
             
-            const newMsgs = [...prev, data].sort(
+            // 데이터 추가 및 시간순 정렬
+            return [...prev, data].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
-            return newMsgs;
           });
-          setTimeout(scrollToBottom, 50);
+          // 즉시 스크롤 이동
+          setTimeout(scrollToBottom, 0);
         }
-
       } catch (error) {
         console.error('[Chat] Send error:', error);
         showError('메시지 전송에 실패했습니다.');
