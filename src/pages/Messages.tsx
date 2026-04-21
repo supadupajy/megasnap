@@ -10,7 +10,9 @@ import { chatStore } from '@/utils/chat-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { showError, showSuccess } from '@/utils/toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import DeleteChatDialog from '@/components/DeleteChatDialog';
+
 import { searchProfilesByNickname } from '@/utils/profile-search';
 
 interface Conversation {
@@ -21,6 +23,7 @@ interface Conversation {
   profile: {
     nickname: string | null;
     avatar_url: string | null;
+    last_seen?: string | null;
   };
 }
 
@@ -59,9 +62,10 @@ const Messages = () => {
       const convList = Array.from(convMap.values());
       const results = await Promise.all(convList.map(async (conv) => {
         if (conv.profile) return conv;
-        const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', conv.other_id).single();
-        return { ...conv, profile: profile || { nickname: '사용자', avatar_url: null } };
+        const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url, last_seen').eq('id', conv.other_id).single();
+        return { ...conv, profile: profile || { nickname: '사용자', avatar_url: null, last_seen: null } };
       }));
+
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);
     } catch (err) {} finally { setIsLoading(false); }
@@ -72,7 +76,21 @@ const Messages = () => {
     if (!authUser) return;
     const channel = supabase.channel('messages_list_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchConversations).subscribe();
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
-    return () => { supabase.removeChannel(channel); unsubscribeChatStore(); };
+    
+    // Profiles real-time subscription for online status
+    const profileChannel = supabase.channel('messages_profiles_updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+        setConversations(prev => prev.map(conv =>
+          conv.other_id === payload.new.id ? { ...conv, profile: { ...conv.profile, last_seen: payload.new.last_seen } } : conv
+        ));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(profileChannel);
+      unsubscribeChatStore();
+    };
   }, [authUser]);
 
   useEffect(() => {
@@ -156,15 +174,38 @@ const Messages = () => {
               <AnimatePresence initial={false}>{filteredConversations.map((conv) => {
                 const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const isSwiped = swipedId === conv.other_id;
+                const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 5;
+                
                 return (
                   <div key={conv.other_id} className="relative group overflow-hidden rounded-[24px]">
                     <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={(e) => handleDeleteClick(e, conv.other_id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
                     <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} animate={{ x: isSwiped ? -80 : 0 }} onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(conv.other_id); else setSwipedId(null); }} onClick={() => { if (!swipedId) navigate(`/chat/${conv.other_id}`); }} className="relative bg-white flex items-center gap-4 p-3 cursor-pointer z-10">
-                      <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}><img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" /></div>
-                      <div className="flex-1 min-w-0"><div className="flex items-center justify-between mb-0.5"><p className={`text-sm ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p><span className="text-[10px] text-gray-400 font-medium">{time}</span></div><div className="flex items-center gap-2"><p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>{conv.unread_count > 0 && <div className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}</div></div>
+                      <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
+                        <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
+                        <div className={cn(
+                          "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
+                          isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <p className={`text-sm truncate ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
+                            {isOnline && (
+                              <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px] shrink-0">Online</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-400 font-medium shrink-0">{time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
+                          {conv.unread_count > 0 && <div className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
+                        </div>
+                      </div>
                     </motion.div>
                   </div>
                 );
+
               })}</AnimatePresence>
             </div>
           </div>
