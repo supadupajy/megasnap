@@ -275,8 +275,18 @@ const Chat = () => {
           if (!isCurrentConversation) return;
 
           setMessages((prev) => {
-            const withoutDuplicate = prev.filter((msg) => msg.id !== newMsg.id);
-            return [...withoutDuplicate, newMsg].sort(
+            // 중복 제거 및 낙관적 업데이트 메시지 교체
+            // 낙관적 업데이트는 Math.random().toString() 형식의 ID를 가짐
+            const filtered = prev.filter((msg) => {
+              const isTemp = msg.id.includes('.'); // Math.random() ID는 보통 소수점을 포함함
+              const isDuplicate = msg.id === newMsg.id;
+              // 내용과 보낸 사람이 같으면 낙관적 메시지로 간주하고 제거
+              const isOptimisticMatch = isTemp && msg.content === newMsg.content && msg.sender_id === newMsg.sender_id;
+              
+              return !isDuplicate && !isOptimisticMatch;
+            });
+            
+            return [...filtered, newMsg].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
           });
@@ -312,7 +322,8 @@ const Chat = () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    const tempId = Math.random().toString();
+    // 임시 ID 형식 변경 (구분하기 쉽게)
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
     const optimisticMsg: Message = {
       id: tempId,
       content,
@@ -350,6 +361,7 @@ const Chat = () => {
       }]);
 
       if (data) {
+        // DB 응답 데이터를 상태에 즉시 반영 (실시간 채널에서 중복 처리될 것임)
         setMessages((prev) =>
           prev.map((msg) => (msg.id === tempId ? data : msg))
         );
