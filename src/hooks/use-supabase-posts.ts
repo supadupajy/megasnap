@@ -26,9 +26,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
   
-  const finalImage = p.youtube_url 
+  const finalImage = p.youtube_url
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
   return {
     id: p.id,

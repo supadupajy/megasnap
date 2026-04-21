@@ -261,8 +261,8 @@ export const createMockPosts = (
     const image = isAd
       ? getDiverseUnsplashUrl(imageSeed, 'food', i)
       : youtubeUrl
-        ? (getYoutubeThumbnail(youtubeUrl) || getDiverseUnsplashUrl(imageSeed, category, i)) // 카테고리 적용
-        : getDiverseUnsplashUrl(imageSeed, category, i); // 카테고리 적용
+        ? (getYoutubeThumbnail(youtubeUrl) || getDiverseUnsplashUrl(imageSeed, category, i)) 
+        : getDiverseUnsplashUrl(imageSeed, category, i);
 
     return {
       id,
