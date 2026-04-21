@@ -470,7 +470,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white overflow-hidden flex flex-col min-h-screen" style={{ paddingTop: '88px' }}>
+    <div className="bg-white overflow-hidden flex flex-col h-screen relative" style={{ paddingTop: '88px' }}>
       <header
         ref={headerRef}
         className="fixed top-[88px] left-0 right-0 h-14 z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
@@ -522,7 +522,11 @@ const Chat = () => {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-24"
+        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
+        style={{
+          paddingTop: '64px', // 내부 헤더 높이만큼 여백
+          paddingBottom: '80px', // 입력창과 하단 탭바를 고려한 충분한 여백
+        }}
       >
         <div className="flex flex-col gap-4 py-4">
           {messages.map((msg) => {
@@ -565,10 +569,7 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
-        style={{
-          paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
-        }}
+        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-24 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform mb-[env(safe-area-inset-bottom)]"
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
           <Input
