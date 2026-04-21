@@ -49,20 +49,25 @@ const FriendList = () => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar">
-      {/* Direct Message 전용 헤더 */}
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
+    <div 
+      className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
+      style={{
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
+      }}
+    >
+      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-100">
         <button 
           onClick={() => navigate(-1)} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
         <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">새 메시지</h1>
-      </header>
+      </div>
 
-      <div className="pt-[88px]">
-        {/* THE NORTH FACE 광고 배너로 변경 */}
+      <div className="flex flex-col">
+        {/* THE NORTH FACE 광고 배너 */}
         <div className="px-4 py-2 mt-2">
           <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
             <img 
