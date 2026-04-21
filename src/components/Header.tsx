@@ -4,8 +4,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { motion, AnimatePresence } from 'framer-motion';
+import Notifications from '@/pages/Notifications';
+import Messages from '@/pages/Messages';
 
 // 사운드 파일 경로 (더 명확하고 호환성 높은 MP3 파일로 교체)
 const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
@@ -14,10 +18,29 @@ const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  // 초기값을 true로 설정하여 시도라도 해보게 함 (네이티브 앱 환경 고려)
   const [canPlaySound, setCanPlaySound] = useState(true); 
+  const [activePanel, setActivePanel] = useState<'notifications' | 'messages' | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // 패널 외부 클릭 시 닫기
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        setActivePanel(null);
+      }
+    };
+    if (activePanel) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activePanel]);
+
+  // 경로 이동 시 패널 닫기
+  useEffect(() => {
+    setActivePanel(null);
+  }, [location.pathname]);
 
   // 사용자 상호작용 감지 및 사운드 허용 처리
   useEffect(() => {
@@ -163,42 +186,79 @@ const Header = () => {
   }, [user, checkMessages, checkNotifications, playSound]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
-  <h1 
-    className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
-    onClick={() => navigate('/')}
-  >
-    <span className="text-gray-900">Chora</span>
-    <span className="text-indigo-600">Snap</span>
-  </h1>
-
-      <HeaderAdBanner />
-
-      <div className="flex items-center gap-4 shrink-0">
-        <button 
-          className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-          onClick={() => navigate('/notifications')}
+    <>
+      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-[100] flex items-center justify-between px-4 border-b border-gray-100">
+        <h1 
+          className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
+          onClick={() => {
+            setActivePanel(null);
+            navigate('/');
+          }}
         >
-          <Bell className="w-6 h-6 text-gray-600" />
-          {hasNewNotifications && (
-            <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
-              {hasNewNotifications ? '1' : ''}
-            </span>
-          )}
-        </button>
-        <button 
-          className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-          onClick={() => navigate('/messages')}
-        >
-          <MessageSquare className="w-6 h-6 text-gray-600" />
-          {unreadMsgCount > 0 && (
-            <span className="absolute top-0 right-0 w-4 h-4 bg-indigo-600 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
-              {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
-            </span>
-          )}
-        </button>
-      </div>
-    </header>
+          <span className="text-gray-900">Chora</span>
+          <span className="text-indigo-600">Snap</span>
+        </h1>
+
+        <HeaderAdBanner />
+
+        <div className="flex items-center gap-4 shrink-0">
+          <button 
+            className={cn(
+              "relative p-1 rounded-full transition-colors",
+              activePanel === 'notifications' ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50 text-gray-600"
+            )}
+            onClick={() => setActivePanel(prev => prev === 'notifications' ? null : 'notifications')}
+          >
+            <Bell className="w-6 h-6" />
+            {hasNewNotifications && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
+                1
+              </span>
+            )}
+          </button>
+          <button 
+            className={cn(
+              "relative p-1 rounded-full transition-colors",
+              activePanel === 'messages' ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50 text-gray-600"
+            )}
+            onClick={() => setActivePanel(prev => prev === 'messages' ? null : 'messages')}
+          >
+            <MessageSquare className="w-6 h-6" />
+            {unreadMsgCount > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-indigo-600 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
+                {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* 알림/메시지 오버레이 패널 */}
+      <AnimatePresence>
+        {activePanel && (
+          <motion.div
+            ref={panelRef}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed top-[88px] left-0 right-0 bottom-0 z-[90] bg-white overflow-hidden shadow-2xl"
+          >
+            <div className="h-full w-full max-w-lg mx-auto border-x border-gray-100 bg-white overflow-y-auto no-scrollbar">
+              {activePanel === 'notifications' ? (
+                <div className="pb-20">
+                  <Notifications isEmbedded={true} />
+                </div>
+              ) : (
+                <div className="pb-20">
+                  <Messages isEmbedded={true} />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
