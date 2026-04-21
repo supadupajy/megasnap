@@ -257,12 +257,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       },
       content: draft.content,
       location: finalAddress,
-      lat: finalLat as any, // allow null for non-map posts
-      lng: finalLng as any, // allow null for non-map posts
+      lat: finalLat as any,
+      lng: finalLng as any,
       likes: 0,
       commentsCount: 0,
       comments: [],
-      image: dbPost.image_url,
+      image: dbPost.image_url, // DB에 저장된 실제 캡처 URL 사용
       videoUrl: finalVideoUrl,
       isLiked: false,
       createdAt: new Date(),
