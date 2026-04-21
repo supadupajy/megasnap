@@ -128,7 +128,7 @@ const Search = () => {
               )}
             </div>
           </div>
-          <div className="pb-2">
+          <div className="pb-0">
             <SearchAdBanner />
           </div>
         </div>
@@ -136,9 +136,9 @@ const Search = () => {
       
       {/* 3. 실제 스크롤이 일어나는 추천 리스트 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-4 pb-32 pt-2">
+        <div className="px-4 pb-32 pt-0">
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 pt-4">
               {searchQuery ? '검색 결과' : '추천 사용자'}
             </p>
             <div className="space-y-1">
