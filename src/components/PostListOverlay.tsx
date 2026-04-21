@@ -177,84 +177,93 @@ const PostListOverlay = ({
     if (isLoadingMore || !hasMore || !isOpen) return;
 
     setIsLoadingMore(true);
-    const nextStep = expansionStep + 1;
     
     try {
-      // 영역을 아주 조금씩 점진적으로 확장 (기존 반경의 1.1배, 1.2배...)
-      // 기존 1.5배에서 0.5배로 축소하여 범위를 더 정교하게 조절
-      const factor = Math.pow(0.5, nextStep);
-      const expandLat = baseLatSpan * factor;
-      const expandLng = baseLngSpan * factor;
+      let currentStep = expansionStep;
+      let foundNewPosts = false;
+      let newPostsBatch: Post[] = [];
 
-      const expandedBounds = {
-        sw: { lat: mapCenter.lat - expandLat, lng: mapCenter.lng - expandLng },
-        ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
-      };
+      // 데이터가 발견될 때까지 최대 5번의 확장을 한 번에 시도 (Step 점진적 증가)
+      for (let i = 0; i < 5; i++) {
+        const nextStep = currentStep + 1;
+        if (nextStep > 30) { // 최대 30단계까지 확장
+          setHasMore(false);
+          break;
+        }
 
-      console.log(`[PostList] Expanding search area... Step: ${nextStep}, Factor: ${factor.toFixed(2)}`);
-      
-      const newRawPosts = await fetchPostsInBounds(
-        expandedBounds.sw,
-        expandedBounds.ne,
-        1, // low level to use high limit
-        mapCenter
-      );
+        // 지수적 확장이 아닌 점진적 선형 확장으로 변경하여 정밀도 확보
+        // 기본 반경의 (1 + 0.2 * step) 배로 확장
+        const multiplier = 1 + (0.3 * nextStep);
+        const expandLat = baseLatSpan * multiplier;
+        const expandLng = baseLngSpan * multiplier;
 
-      // Raw DB 데이터를 Post 타입으로 매핑 (fetchPostsInBounds는 DB 데이터를 반환함)
-      // fetchPostsInBounds 내부에서 사용하는 mapDbToPost는 내보내지지 않았으므로
-      // 임시로 수동 매핑하거나 Index.tsx의 로직을 참고해야 함.
-      // 여기서는 mapDbToPost와 유사한 변환 로직이 필요.
-      
-      const uniqueNewRawPosts = newRawPosts.filter(p => !loadedPostIds.current.has(p.id));
-      
-      if (uniqueNewRawPosts.length > 0) {
-        // mapDbToPost의 비동기 로직 재구현 (Profile.tsx 등에서 쓰는 로직 참고)
-        const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
-          const isAd = p.content?.trim().startsWith('[AD]');
-          return {
-            id: p.id,
-            isAd,
-            isGif: false,
-            isInfluencer: false,
-            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
-            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-            location: p.location_name || '알 수 없는 장소',
-            lat: p.latitude,
-            lng: p.longitude,
-            likes: Number(p.likes || 0),
-            commentsCount: 0,
-            comments: [],
-            image: p.image_url,
-            videoUrl: p.video_url,
-            youtubeUrl: p.youtube_url,
-            category: p.category || 'none',
-            isLiked: false,
-            createdAt: new Date(p.created_at),
-            borderType: 'none',
-          } as Post;
-        }));
+        const expandedBounds = {
+          sw: { lat: mapCenter.lat - expandLat, lng: mapCenter.lng - expandLng },
+          ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
+        };
 
-        mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
+        console.log(`[PostList] Searching... Step: ${nextStep}, Multiplier: ${multiplier.toFixed(1)}x`);
         
-        // 현재 위치(mapCenter)에서 가까운 순으로 정렬
-        const sortedNewPosts = mappedPosts.sort((a, b) => {
+        const newRawPosts = await fetchPostsInBounds(
+          expandedBounds.sw,
+          expandedBounds.ne,
+          1,
+          mapCenter
+        );
+
+        const uniqueNewRawPosts = newRawPosts.filter(p => !loadedPostIds.current.has(p.id));
+        
+        if (uniqueNewRawPosts.length > 0) {
+          const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
+            const isAd = p.content?.trim().startsWith('[AD]');
+            return {
+              id: p.id,
+              isAd,
+              isGif: false,
+              isInfluencer: false,
+              user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+              location: p.location_name || '알 수 없는 장소',
+              lat: p.latitude,
+              lng: p.longitude,
+              likes: Number(p.likes || 0),
+              commentsCount: 0,
+              comments: [],
+              image: p.image_url,
+              videoUrl: p.video_url,
+              youtubeUrl: p.youtube_url,
+              category: p.category || 'none',
+              isLiked: false,
+              createdAt: new Date(p.created_at),
+              borderType: 'none',
+            } as Post;
+          }));
+
+          mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
+          newPostsBatch = [...newPostsBatch, ...mappedPosts];
+          foundNewPosts = true;
+          currentStep = nextStep;
+          break; // 데이터를 찾았으므로 루프 종료
+        }
+        
+        currentStep = nextStep;
+      }
+
+      if (foundNewPosts) {
+        // 거리순 정렬
+        const sortedNewPosts = newPostsBatch.sort((a, b) => {
           const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
           const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
           return distA - distB;
         });
 
         setPosts(prev => [...prev, ...sortedNewPosts]);
-        setExpansionStep(nextStep);
+        setExpansionStep(currentStep);
+      } else if (currentStep >= 30) {
+        setHasMore(false);
       } else {
-
-        // 이번 확장 영역에서 새로 발견된 게 없다면 다음 스텝으로 바로 넘어가거나 종료
-        if (nextStep > 15) { // 스텝을 잘게 쪼갰으므로 최대 시도 횟수를 15회로 증가
-          setHasMore(false);
-        } else {
-          setExpansionStep(nextStep);
-          // 재귀적으로 다음 단계 시도 (딜레이를 주어 무한루프 방지 및 부드러운 로딩)
-          setTimeout(() => loadMorePosts(), 400); // 딜레이 소폭 증가
-        }
+        // 이번 묶음에서 못 찾았다면 다음 호출에서 이어서 검색
+        setExpansionStep(currentStep);
       }
     } catch (err) {
       console.error('[PostList] Load more error:', err);
@@ -262,7 +271,7 @@ const PostListOverlay = ({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore, isOpen, expansionStep, mapCenter, baseLatSpan, baseLngSpan, selectedCategories, timeValueHours, authUserId]);
+  }, [isLoadingMore, hasMore, isOpen, expansionStep, mapCenter, baseLatSpan, baseLngSpan]);
 
   useEffect(() => {
     if (!isOpen || !hasMore) return;
