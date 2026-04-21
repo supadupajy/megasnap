@@ -438,10 +438,10 @@ const Index = () => {
     // 3. 게시물이 등록된 위치로 지도 중심 이동
     if (newPost.lat && newPost.lng) {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-      // 줌 레벨도 적절히 조정 (필요 시)
-      setCurrentZoom(3); 
+      // 줌 레벨도 디폴트인 6으로 조정
+      setCurrentZoom(6);
     }
-    
+
     // 4. 성공 메시지 및 닫기
     setIsWriteOpen(false);
     setSelectedPostId(newPost.id); // 등록한 게시물 즉시 상세 보기 (선택 사항)
