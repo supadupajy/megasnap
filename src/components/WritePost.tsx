@@ -36,6 +36,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [draft, setDraft] = useState(postDraftStore.get());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
@@ -101,6 +102,30 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
       postDraftStore.set({ image: null });
+
+      // 동영상 썸네일 추출 (첫 프레임)
+      const video = document.createElement('video');
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      
+      video.onloadeddata = () => {
+        // 비디오를 살짝 뒤로 이동시켜 검은 화면 방지
+        video.currentTime = 0.5;
+      };
+
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
+          setVideoThumbnail(thumbnailUrl);
+          console.log('[WritePost] Video thumbnail captured');
+        }
+      };
     }
   };
 
@@ -130,36 +155,49 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
     try {
       let finalVideoUrl = null;
+      let finalImageUrl = draft.image;
 
+      // 동영상 업로드 처리
       if (videoFile) {
-        // 고유한 파일명 생성
         const timestamp = new Date().getTime();
         const fileExt = videoFile.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
 
-        console.log('[WritePost] Uploading video to storage path:', filePath);
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        console.log('[WritePost] Uploading video...');
+        const { error: uploadError } = await supabase.storage
           .from('post-videos')
-          .upload(filePath, videoFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(filePath, videoFile);
 
-        if (uploadError) {
-          console.error('[WritePost] Storage upload error details:', uploadError);
-          throw new Error(`동영상 업로드 실패: ${uploadError.message}`);
-        }
-
-        console.log('[WritePost] Upload success, data:', uploadData);
+        if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
           .from('post-videos')
           .getPublicUrl(filePath);
         
         finalVideoUrl = publicUrl;
-        console.log('[WritePost] Public URL:', finalVideoUrl);
+
+        // 동영상 썸네일 업로드 (추출된 캡처본이 있는 경우)
+        if (videoThumbnail) {
+          const thumbName = `thumb-${timestamp}-${Math.random().toString(36).substring(7)}.jpg`;
+          const thumbPath = `${authUser.id}/${thumbName}`;
+          
+          // DataURL을 Blob으로 변환
+          const response = await fetch(videoThumbnail);
+          const blob = await response.blob();
+          
+          console.log('[WritePost] Uploading video thumbnail...');
+          const { error: thumbError } = await supabase.storage
+            .from('post-images')
+            .upload(thumbPath, blob, { contentType: 'image/jpeg' });
+            
+          if (!thumbError) {
+            const { data: { publicUrl: thumbPublicUrl } } = supabase.storage
+              .from('post-images')
+              .getPublicUrl(thumbPath);
+            finalImageUrl = thumbPublicUrl;
+          }
+        }
       }
 
       const postData = {
@@ -167,7 +205,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
-        image_url: draft.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
+        image_url: finalImageUrl || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -238,6 +276,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     postDraftStore.clear();
     setVideoUrl(null);
     setVideoFile(null);
+    setVideoThumbnail(null);
     setSelectedCategory(null);
     onClose();
   };
@@ -326,10 +365,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                     {draft.image ? (
                       <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                      <div className="relative w-full h-full">
+                        <video src={videoUrl!} className="w-full h-full object-contain" controls />
+                        {videoThumbnail && (
+                          <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-lg text-[10px] text-white font-bold border border-white/20">
+                            Thumbnail Captured
+                          </div>
+                        )}
+                      </div>
                     )}
                     <button 
-                      onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); }}
+                      onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); setVideoThumbnail(null); }}
                       className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
                     >
                       <X className="w-4 h-4" />
