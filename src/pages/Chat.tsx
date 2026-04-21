@@ -11,6 +11,10 @@ import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
 
+// 사운드 파일 경로 (공용 리소스 사용 권장)
+const IN_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'; // 가벼운 팝
+const OUT_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'; // 더 알림 같은 소리
+
 interface Message {
   id: string;
   content: string;
@@ -43,6 +47,7 @@ const Chat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -67,6 +72,26 @@ const Chat = () => {
         top: scrollHeight,
         behavior: 'auto'
       });
+    }
+  }, []);
+
+  // 페이지 가시성 감지
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // 사운드 재생 함수
+  const playNotificationSound = useCallback((inChat: boolean) => {
+    try {
+      const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('[Chat] Audio play blocked by browser policy:', e));
+    } catch (e) {
+      console.error('[Chat] Sound play error:', e);
     }
   }, []);
 
@@ -306,6 +331,13 @@ const Chat = () => {
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId);
           
           if (!isRelevant) return;
+
+          // 상대방이 보낸 새로운 메시지일 때만 사운드 재생
+          if (newMsg.sender_id === chatId) {
+            // 채팅창(페이지)을 보고 있는지 여부에 따라 사운드 구분
+            playNotificationSound(isPageVisible);
+            markAsRead();
+          }
 
           setMessages((prev) => {
             // 중복 확인 (ID 기준)

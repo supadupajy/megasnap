@@ -7,6 +7,9 @@ import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
+// 사운드 파일 경로 (채팅방 외부 알림용)
+const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+
 const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
@@ -16,6 +19,17 @@ const Header = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    // 사운드 재생 함수
+    const playSound = () => {
+      try {
+        const audio = new Audio(NOTIFICATION_SOUND);
+        audio.volume = 0.4;
+        audio.play().catch(e => console.log('[Header] Audio play blocked:', e));
+      } catch (e) {
+        console.error('[Header] Sound play error:', e);
+      }
+    };
 
     // 초기 알림 체크
     const checkNotifications = async () => {
@@ -75,6 +89,11 @@ const Header = () => {
         (payload: any) => {
           console.log('[Header] New message detected', payload);
           setUnreadMsgCount(prev => prev + 1);
+          
+          // 현재 채팅방(/chat/...) 안에 있지 않을 때만 헤더에서 소리를 재생
+          if (!window.location.pathname.startsWith('/chat/')) {
+            playSound();
+          }
         }
       )
       // 3. 알림/메시지 읽음 처리 감지
