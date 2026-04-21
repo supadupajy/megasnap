@@ -426,17 +426,25 @@ const Index = () => {
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
   const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); };
 
-  const handlePostCreated = (newPost: Post) => {
+  const handlePostCreated = (newPost: any) => {
+    console.log('[Index] New post created, adding to state:', newPost);
+    
+    // 1. 전체 게시물 목록에 추가
     setAllPosts(prev => [newPost, ...prev]);
     
-    if (newPost.lat !== null && newPost.lng !== null) {
+    // 2. 현재 지도에 즉시 표시되도록 필터링된 목록에도 강제 추가
+    setDisplayedMarkers(prev => [newPost, ...prev]);
+    
+    // 3. 게시물이 등록된 위치로 지도 중심 이동
+    if (newPost.lat && newPost.lng) {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-      setTimeout(() => { 
-        setHighlightedPostId(newPost.id); 
-        setTimeout(() => setHighlightedPostId(null), 3000); 
-      }, 1500);
+      // 줌 레벨도 적절히 조정 (필요 시)
+      setCurrentZoom(3); 
     }
-    setFinalSelectedLocation(null); 
+    
+    // 4. 성공 메시지 및 닫기
+    setIsWriteOpen(false);
+    setSelectedPostId(newPost.id); // 등록한 게시물 즉시 상세 보기 (선택 사항)
   };
 
   const handlePostDeleted = (id: string) => {
