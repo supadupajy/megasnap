@@ -60,11 +60,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const { isKeyboardOpen } = useKeyboard();
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubscribe = postDraftStore.subscribe(() => {
-      setDraft(postDraftStore.get());
+      const currentDraft = postDraftStore.get();
+      setDraft(currentDraft);
+      
+      // 드래프트가 비워지면(clear) 미디어 파일들도 비워줌
+      if (!currentDraft.image && !currentDraft.content) {
+        setMediaFiles([]);
+      }
     });
     return () => {
       unsubscribe();
