@@ -151,7 +151,7 @@ const App = () => {
   useEffect(() => {
     initializeYoutubePool();
     // 6초(2.5초 로딩 + 여유 시간) 후 스플래시 종료 (사용자 요청: 광고를 끝까지 볼 수 있게)
-    const timer = setTimeout(() => { setShowSplash(false); }, 6000);
+    const timer = setTimeout(() => { setShowSplash(false); }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
