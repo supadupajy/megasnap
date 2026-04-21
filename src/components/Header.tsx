@@ -33,7 +33,7 @@ const Header = () => {
     // 초기 미확인 메시지 체크
     const checkMessages = async () => {
       const { count, error } = await supabase
-        .from('chat_messages')
+        .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', user.id)
         .eq('is_read', false);
@@ -70,7 +70,7 @@ const Header = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages'
+          table: 'messages'
         },
         (payload: any) => {
           if (payload.new && payload.new.receiver_id === user.id && payload.new.is_read === false) {
@@ -85,7 +85,7 @@ const Header = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'chat_messages'
+          table: 'messages'
         },
         (payload: any) => {
           if (payload.new && payload.new.receiver_id === user.id && payload.new.is_read === true) {
