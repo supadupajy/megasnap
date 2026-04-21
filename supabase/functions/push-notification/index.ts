@@ -15,10 +15,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// FCM 서버 키 (환경 변수에서 가져와야 함)
-// 실제 키는 Supabase Secrets에 저장되어 있어야 합니다.
-// 여기서는 임시로 더미 키를 사용합니다. 실제 배포 시에는 Secrets를 사용해야 합니다.
+// FCM 서버 키 (Legacy API용 - 여전히 백업으로 유지하거나 v1 전환 시 제거 가능)
 const FCM_SERVER_KEY = Deno.env.get('FIREBASE_SERVER_KEY') || 'YOUR_FCM_SERVER_KEY_HERE';
+const PROJECT_ID = 'gen-lang-client-0536770943';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -106,10 +105,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No push token" }), { status: 200, headers: corsHeaders });
     }
 
-    // 3. FCM 푸시 알림 발송
+    // 3. FCM 푸시 알림 발송 (Legacy API 및 v1 준비)
     let fcmResult = { message: "FCM call skipped or failed" };
     
     try {
+      // 1. Legacy API (현재 사용 중)
+      const LEGACY_FCM_URL = 'https://fcm.googleapis.com/fcm/send';
+      
+      // 2. HTTP v1 API (최신 규격 - 프로젝트 ID 적용)
+      const V1_FCM_URL = `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`;
+
       const fcmPayload = {
         to: pushToken,
         priority: "high",
@@ -128,13 +133,15 @@ serve(async (req) => {
           notification: {
             channel_id: "messages_v2", 
             sound: "message_chime", 
+            notification_priority: "PRIORITY_MAX",
+            visibility: "PUBLIC"
           }
         }
       };
 
-      console.log(`[push-notification] FETCHING_FCM to: ${receiverId}`);
+      console.log(`[push-notification] SENDING_FCM to Project: ${PROJECT_ID}`);
       
-      const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
+      const fcmResponse = await fetch(LEGACY_FCM_URL, {
         method: 'POST',
         headers: {
           'Authorization': `key=${FCM_SERVER_KEY}`,
@@ -144,11 +151,10 @@ serve(async (req) => {
       });
 
       const responseText = await fcmResponse.text();
-      // 이 로그가 매우 중요합니다. FCM 서버에서 어떤 오류가 오는지 실시간으로 확인합니다.
-      console.log(`[push-notification] FCM_SERVER_RAW_RESPONSE: ${fcmResponse.status} - ${responseText}`);
+      console.log(`[push-notification] FCM_SERVER_RESPONSE: ${fcmResponse.status} - ${responseText}`);
 
       if (!fcmResponse.ok) {
-        throw new Error(`FCM server returned ${fcmResponse.status}: ${responseText}`);
+        throw new Error(`FCM server returned ${fcmResponse.status}`);
       }
       
       fcmResult = JSON.parse(responseText);
