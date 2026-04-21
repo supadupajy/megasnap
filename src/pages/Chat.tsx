@@ -63,7 +63,7 @@ const Chat = () => {
 
     try {
       const { error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .update({ is_read: true })
         .eq('receiver_id', authUser.id)
         .eq('sender_id', chatId)
@@ -243,7 +243,7 @@ const Chat = () => {
 
     const fetchMessages = async () => {
       const { data } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .select('*')
         .or(
           `and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`
@@ -264,7 +264,7 @@ const Chat = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
+          table: 'chat_messages',
         },
         (payload) => {
           const newMsg = payload.new as Message;
@@ -291,7 +291,7 @@ const Chat = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'messages',
+          table: 'chat_messages',
           filter: `sender_id=eq.${authUser.id}`,
         },
         (payload) => {
@@ -327,7 +327,7 @@ const Chat = () => {
 
     if (isValidUUID(chatId)) {
       const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
         .select('*')
         .single();
