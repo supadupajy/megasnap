@@ -22,6 +22,18 @@ const Search = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  // 스크롤 시 상단 헤더 밀림 방지를 위한 핵심 로직
+  useEffect(() => {
+    // 1. 전체 body 스크롤을 막아 브라우저의 전체 페이지 밀림 현상 차단
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -29,13 +41,6 @@ const Search = () => {
       navigate('/');
     }
   }, [navigate]);
-
-  // 모든 강제 고정 및 바운스 차단 로직 제거하여 기본 레이아웃으로 복구
-  useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
 
   const fetchFollowingList = useCallback(async () => {
     if (!authUser) return;
@@ -88,11 +93,14 @@ const Search = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-28">
-      {/* 88px 상단 여백만 확보하고 기본 흐름을 따름 */}
-      <div className="pt-[88px]">
-        <div className="px-4">
-          <div className="relative py-6 flex items-center gap-3 bg-white">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* 1. 상단 헤더 공간 (88px) - 이 영역은 절대로 스크롤되지 않음 */}
+      <div className="h-[88px] w-full bg-white shrink-0 z-50 border-b border-gray-100" />
+      
+      {/* 2. 실제 스크롤이 일어나는 컨텐츠 영역 */}
+      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
+        <div className="px-4 pb-28">
+          <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-40">
             <button 
               onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
