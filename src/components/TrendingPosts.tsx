@@ -213,9 +213,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
                           <div className="flex items-center gap-0.5">
-                            <span className="text-[9px] font-bold text-gray-400 tracking-tighter">👍 {post.likes}</span>
+                            <span className="text-[9px] font-bold text-gray-400 tracking-tighter">❤️ {post.likes}</span>
                           </div>
                         </div>
+
                       </div>
 
                     </div>
