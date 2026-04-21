@@ -22,6 +22,14 @@ const Search = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  }, [navigate]);
+
   // 모든 강제 고정 및 바운스 차단 로직 제거하여 기본 레이아웃으로 복구
   useEffect(() => {
     const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
