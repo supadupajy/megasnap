@@ -135,7 +135,16 @@ serve(async (req) => {
       body: JSON.stringify(fcmPayload),
     });
 
-    const fcmResult = await fcmResponse.json();
+    // FCM 서버 응답이 JSON이 아닐 경우(예: HTML 오류 페이지)를 처리
+    const responseText = await fcmResponse.text();
+    let fcmResult;
+    try {
+      fcmResult = JSON.parse(responseText);
+    } catch (e) {
+      console.error("[push-notification] FCM response was not JSON:", responseText);
+      throw new Error(`FCM response was not JSON: ${responseText.substring(0, 100)}`);
+    }
+
     console.log(`[push-notification] FCM sent to ${receiverId}. Result:`, fcmResult);
 
     return new Response(JSON.stringify({ success: true, fcmResult }), {
