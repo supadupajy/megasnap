@@ -414,6 +414,7 @@ const Chat = () => {
       };
 
       try {
+        console.log('[Chat] Sending message to DB:', messageToInsert);
         // 1. DB 저장
         const { data, error } = await supabase
           .from('messages')
@@ -421,7 +422,12 @@ const Chat = () => {
           .select('*')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[Chat] DB insert error:', error);
+          throw error;
+        }
+
+        console.log('[Chat] DB insert success, data:', data);
 
         // 2. 서버 데이터 즉시 반영
         if (data) {
