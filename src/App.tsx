@@ -61,36 +61,8 @@ const AnimatedRoutes = () => {
     path => location.pathname.startsWith(path)
   );
 
-  // 경로별 우선순위 정의 (왼쪽 탭일수록 낮은 숫자)
-  const getPathPriority = (pathname: string) => {
-    if (pathname === '/') return 0;          // 지도
-    if (pathname === '/popular') return 1;   // 인기
-    if (pathname === '/search') return 2;    // 검색/친구
-    if (pathname === '/profile') return 3;   // 내 정보
-    return 5; // 기타 페이지
-  };
-
-  // 이전 경로와 현재 경로의 우선순위 비교하여 방향 결정
-  const [prevPath, setPrevPath] = useState(location.pathname);
-  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
-
-  useEffect(() => {
-    const prevPriority = getPathPriority(prevPath);
-    const currPriority = getPathPriority(location.pathname);
-
-    // 명시적인 back direction state가 있으면 그것을 우선시함
-    if ((location.state as any)?.direction === 'back') {
-      setDirection('back');
-    } else if (prevPriority > currPriority) {
-      setDirection('back');
-    } else {
-      setDirection('forward');
-    }
-    
-    setPrevPath(location.pathname);
-  }, [location.pathname, location.state]);
-
-  const isBackAction = direction === 'back';
+  // 현재 페이지의 애니메이션 방향 결정 (state를 통해 전달받거나 경로 기반으로 판단)
+  const isBackAction = (location.state as any)?.direction === 'back';
 
   // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
   const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
