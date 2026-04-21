@@ -63,6 +63,7 @@
     "framer-motion": "^11.0.0",
     "google-map-react": "^2.2.5",
     "input-otp": "^1.2.4",
+    "jose": "^6.2.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
