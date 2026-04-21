@@ -57,7 +57,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div 
       className={cn(
         "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-2 border-indigo-600/20",
-        isExpanded ? "max-h-[90vh]" : "max-h-[56px]"
+        isExpanded ? "max-h-[70vh]" : "max-h-[56px]"
       )}
     >
       <div 
