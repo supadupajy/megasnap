@@ -106,42 +106,59 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No push token" }), { status: 200, headers: corsHeaders });
     }
 
-    // 3. FCM 푸시 알림 발송 (Legacy API 404 문제 해결을 위해 로그 추가)
+    // 3. FCM 푸시 알림 발송
     let fcmResult = { message: "FCM call skipped or failed" };
     
     try {
+      // Legacy API 엔드포인트
+      const LEGACY_FCM_URL = 'https://fcm.googleapis.com/fcm/send';
+
       const fcmPayload = {
         to: pushToken,
+        priority: "high",
         notification: {
           title: notificationTitle,
           body: notificationBody,
           sound: "message_chime", 
+          icon: "fcm_push_icon", // 기본 아이콘 지정 시도
         },
-        data: dataPayload,
-        priority: "high", // 1. 우선순위 높임 (앱이 닫혀있을 때 즉시 전송을 유도)
+        data: {
+          ...dataPayload,
+          title: notificationTitle,
+          body: notificationBody,
+        },
         android: {
           priority: "high",
           notification: {
             channel_id: "messages_v2", 
             sound: "message_chime", 
-            click_action: "FCM_PLUGIN_ACTIVITY", // 2. 클릭 시 앱 열기 유도
+            default_sound: false,
+            default_vibrate_timings: true,
+            notification_priority: "PRIORITY_MAX", // 안드로이드 시스템 우선순위 최대
+            visibility: "PUBLIC"
           }
         },
         apns: {
+          headers: {
+            "apns-priority": "10" // iOS 즉시 전송 우선순위
+          },
           payload: {
             aps: {
-              contentAvailable: 1,
-              sound: "message_chime.caf"
+              alert: {
+                title: notificationTitle,
+                body: notificationBody
+              },
+              sound: "message_chime.caf",
+              badge: 1,
+              "content-available": 1
             },
           },
         },
       };
 
-      console.log(`[push-notification] Attempting to send HIGH PRIORITY FCM to token: ${pushToken.substring(0, 10)}...`);
+      console.log(`[push-notification] SENDING_FCM to: ${receiverId}, channel: messages_v2`);
       
-      // 구글의 Legacy API (https://fcm.googleapis.com/fcm/send)는 2024년 6월부터 중단되기 시작했습니다.
-      // 만약 404가 계속 발생한다면 HTTP v1 API로의 전환이 필요합니다.
-      const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
+      const fcmResponse = await fetch(LEGACY_FCM_URL, {
         method: 'POST',
         headers: {
           'Authorization': `key=${FCM_SERVER_KEY}`,
@@ -151,7 +168,7 @@ serve(async (req) => {
       });
 
       const responseText = await fcmResponse.text();
-      console.log(`[push-notification] FCM Server Response: ${fcmResponse.status} - ${responseText}`);
+      console.log(`[push-notification] FCM_RESPONSE: Status ${fcmResponse.status}, Body: ${responseText}`);
 
       if (!fcmResponse.ok) {
         console.warn(`[push-notification] FCM server returned error ${fcmResponse.status}:`, responseText.substring(0, 200));

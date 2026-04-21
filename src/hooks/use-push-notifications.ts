@@ -48,11 +48,16 @@ export const usePushNotifications = () => {
     const addListeners = () => {
       PushNotifications.addListener('registration', async (token) => {
         console.log('Push registration success, token: ' + token.value);
-        // DB에 토큰 저장
-        await supabase
+        // 토큰 갱신 로그 (추적용)
+        console.log('[Push] Updating token in DB for user:', authUser.id);
+        
+        const { error } = await supabase
           .from('profiles')
           .update({ push_token: token.value })
           .eq('id', authUser.id);
+
+        if (error) console.error('[Push] Token update failed:', error);
+        else console.log('[Push] Token successfully saved to DB');
       });
 
       PushNotifications.addListener('registrationError', (error) => {
@@ -60,10 +65,8 @@ export const usePushNotifications = () => {
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push received: ' + JSON.stringify(notification));
-        
-        // 중요: 포그라운드 수신 시 Capacitor의 기본 동작은 알림을 띄우지 않을 수 있습니다.
-        // 하지만 OS 수준에서 소리를 재생하게 하려면, 알림 수신 시 사용자에게 시각적으로 표시하는 것이 좋습니다.
+        console.log('Push received: ', notification);
+        // 포그라운드 수신 시 상단 팝업을 수동으로 띄우거나 앱 내 UI 업데이트
         showSuccess(`${notification.title || '새 알림'}: ${notification.body}`);
       });
 
