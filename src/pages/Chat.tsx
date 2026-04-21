@@ -268,36 +268,34 @@ const Chat = () => {
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          const isCurrentConversation =
+          
+          // 현재 채팅방과 관련 없는 메시지는 무시
+          const isRelevant =
             (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) ||
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId);
-
-          if (!isCurrentConversation) return;
+          
+          if (!isRelevant) return;
 
           setMessages((prev) => {
-            // 이미 상태에 있는 메시지인지 확인 (handleSend에서 이미 넣었을 수 있음)
-            const isAlreadyPresent = prev.some(m => m.id === newMsg.id);
-            if (isAlreadyPresent) return prev;
+            // 1. 중복 확인 (이미 ID가 존재함)
+            if (prev.some(m => m.id === newMsg.id)) return prev;
 
-            // 낙관적 업데이트 메시지(temp-) 찾아서 교체하거나 추가
-            const tempMsgIndex = prev.findIndex(m =>
-              m.id.startsWith('temp-') &&
-              m.content === newMsg.content &&
-              m.sender_id === newMsg.sender_id
-            );
-
-            let newMessages;
-            if (tempMsgIndex !== -1) {
-              // 임시 메시지가 있으면 교체
-              newMessages = [...prev];
-              newMessages[tempMsgIndex] = newMsg;
-            } else {
-              // 없으면 새로 추가
-              newMessages = [...prev, newMsg];
+            // 2. 내가 보낸 메시지인 경우 낙관적 업데이트(temp-) 교체 시도
+            if (newMsg.sender_id === authUser.id) {
+              const tempIndex = prev.findIndex(m =>
+                m.id.startsWith('temp-') && m.content === newMsg.content
+              );
+              
+              if (tempIndex !== -1) {
+                const updated = [...prev];
+                updated[tempIndex] = newMsg;
+                return updated;
+              }
             }
 
-            return newMessages.sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+            // 3. 상대방이 보낸 메시지거나 낙관적 메시지를 못 찾은 경우 추가
+            return [...prev, newMsg].sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
           });
 
@@ -332,23 +330,24 @@ const Chat = () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    // 임시 ID 형식 (확실한 구분자 사용)
-    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    const tempId = `temp-${Date.now()}`;
+    const now = new Date().toISOString();
+    
     const optimisticMsg: Message = {
       id: tempId,
       content,
       sender_id: authUser.id,
       receiver_id: chatId,
-      created_at: new Date().toISOString(),
+      created_at: now,
       is_read: false,
     };
 
-    // 1. 즉시 화면에 표시
+    // 1. 즉시 상태 반영 및 입력창 초기화
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
     
     // 즉시 하단 스크롤
-    setTimeout(scrollToBottom, 10);
+    setTimeout(scrollToBottom, 0);
 
     if (isValidUUID(chatId)) {
       try {
@@ -359,28 +358,27 @@ const Chat = () => {
             sender_id: authUser.id, 
             receiver_id: chatId, 
             content,
-            created_at: new Date().toISOString() // 클라이언트 시간 명시
+            created_at: now
           }])
           .select('*')
           .single();
 
         if (error) throw error;
 
-        // 3. 상태 업데이트 (서버 데이터로 교체)
+        // 3. 서버 데이터로 교체 (이미 실시간 채널에서 처리했을 수도 있음)
         if (data) {
           setMessages((prev) => {
-            // tempId를 가진 메시지를 실제 서버 데이터로 교환
-            const exists = prev.some(m => m.id === data.id);
-            if (exists) {
+            // 이미 실시간 채널을 통해 서버 ID가 들어와 있다면 임시 메시지만 제거
+            const serverMsgExists = prev.some(m => m.id === data.id);
+            if (serverMsgExists) {
               return prev.filter(m => m.id !== tempId);
             }
+            // 아직 없다면 임시 메시지를 서버 데이터로 교체
             return prev.map((msg) => (msg.id === tempId ? data : msg));
           });
-          // 교체 후에도 스크롤 보정
-          setTimeout(scrollToBottom, 50);
         }
 
-        // 4. 알림 생성 (비동기로 처리하여 메시지 표시 지연 방지)
+        // 4. 알림 생성 (완전 비동기)
         supabase.from('notifications').insert([{
           user_id: chatId,
           type: 'message',
@@ -388,14 +386,12 @@ const Chat = () => {
           content: content.length > 20 ? content.substring(0, 20) + '...' : content,
           is_read: false,
           related_id: authUser.id
-        }]).then(({ error }) => {
-          if (error) console.error('[Chat] Notification error:', error);
-        });
+        }]);
 
       } catch (error) {
         console.error('[Chat] Send error:', error);
-        showError('메시지 전송에 실패했습니다.');
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        showError('메시지 전송에 실패했습니다.');
       }
     } else {
       chatStore.getOrCreateRoom(
