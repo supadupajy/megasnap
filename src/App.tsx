@@ -27,7 +27,6 @@ import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
 import { initializeYoutubePool } from "./lib/mock-data";
-import { cn } from "@/lib/utils";
 
 const queryClient = new QueryClient();
 
@@ -58,15 +57,12 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  // 헤더를 숨기지 않고 항상 고정할 페이지 목록
-  const isFullPage = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
+  const isFullPage = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow", "/messages", "/notifications"].some(
     path => location.pathname.startsWith(path)
   );
 
-  // 헤더를 항상 보여줄 페이지 (메시지, 알림 등)
-  const showHeader = session && !isFullPage;
-
-  // 현재 페이지의 애니메이션 방향 결정
+  // 하단 탭 메뉴(메인 메뉴)인지 확인
+  const isMainTab = ["/", "/popular", "/search", "/messages", "/profile"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
   // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
@@ -96,9 +92,8 @@ const AnimatedRoutes = () => {
   return (
     <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
       <AnimatePresence>
-        {showHeader && (
+        {!isFullPage && session && (
           <motion.div
-            key="global-header" // 고정된 키를 사용하여 페이지 전환 시에도 사라지지 않게 함
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -117,8 +112,8 @@ const AnimatedRoutes = () => {
             initial={{ 
               opacity: 0, 
               // 메인 탭 전환 시에는 방향성 없이 스케일/페이드만, 그 외(채팅 등)는 슬라이드
-              x: isBackAction ? -100 : 100,
-              scale: 1
+              x: isMainTab ? 0 : (isBackAction ? -100 : 100),
+              scale: isMainTab ? 0.98 : 1
             }}
             animate={{ 
               opacity: 1, 
@@ -127,8 +122,8 @@ const AnimatedRoutes = () => {
             }}
             exit={{ 
               opacity: 0, 
-              x: isBackAction ? 100 : -100,
-              scale: 1
+              x: isMainTab ? 0 : (isBackAction ? 100 : -100),
+              scale: isMainTab ? 0.98 : 1
             }}
             transition={{ 
               duration: 0.3,
