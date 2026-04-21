@@ -22,7 +22,10 @@ const HeaderAdBanner = () => {
       {/* Overlay Content */}
       <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/40 flex items-center justify-between px-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center p-0.5 shrink-0 shadow-sm">
+          {/* Shine Effect Overlay */}
+          <div className="absolute inset-0 z-10 pointer-events-none shine-overlay opacity-30" />
+          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center p-0.5 shrink-0 shadow-sm relative z-20">
+
             <img 
               src="https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg" 
               alt="BMW Logo" 
