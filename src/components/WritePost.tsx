@@ -304,7 +304,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
               <div className="space-y-6 px-1">
                 <div className="space-y-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부 (필수)</p>
                   <div className="w-full">
                     <button 
                       onClick={() => mediaInputRef.current?.click()}
