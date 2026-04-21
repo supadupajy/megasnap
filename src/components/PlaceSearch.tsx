@@ -37,21 +37,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
   const isSearching = useRef(false);
   const lastQuery = useRef('');
 
-  // 바디 스크롤 잠금
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    };
-  }, [isOpen]);
-
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao?.maps?.services) {
@@ -191,22 +176,25 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
+          exit={{ opacity: 0, y: 10 }}
           transition={{
-            duration: 0.3,
-            ease: [0.22, 1, 0.36, 1]
+            duration: 0.2,
+            ease: "easeOut"
           }}
-          className="fixed top-0 left-0 right-0 z-[2000] bg-white flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[40] bg-white flex flex-col overflow-hidden"
           style={{ 
-            paddingTop: '88px',
-            height: isKeyboardOpen ? `calc(100dvh - ${keyboardHeight}px)` : '100dvh',
+            marginTop: '88px',
+            marginBottom: '72px',
+            height: isKeyboardOpen 
+              ? `calc(100dvh - 88px - 72px - ${keyboardHeight}px)` 
+              : 'calc(100dvh - 88px - 72px)',
             touchAction: 'auto'
           }}
         >
           {/* Header */}
-          <div className="py-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
+          <div className="py-3 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
             <button 
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
