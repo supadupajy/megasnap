@@ -7,8 +7,8 @@ import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
-// 사운드 파일 경로 (채팅방 외부 알림용)
-const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+// 사운드 파일 경로 (더 명확하고 인지하기 쉬운 소리로 교체)
+const NOTIFICATION_SOUND = 'https://cdn.freesound.org/previews/235/235911_3541459-lq.mp3';
 
 const Header = () => {
   const { session, user } = useAuth();
@@ -24,7 +24,7 @@ const Header = () => {
     const playSound = () => {
       try {
         const audio = new Audio(NOTIFICATION_SOUND);
-        audio.volume = 0.4;
+        audio.volume = 0.6; // 명확하게 들리도록 볼륨 조정
         audio.play().catch(e => console.log('[Header] Audio play blocked:', e));
       } catch (e) {
         console.error('[Header] Sound play error:', e);

@@ -11,9 +11,9 @@ import { useAuth } from '@/components/AuthProvider';
 import { showError } from '@/utils/toast';
 import { chatStore } from '@/utils/chat-store';
 
-// 사운드 파일 경로 (공용 리소스 사용 권장)
-const IN_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'; // 가벼운 팝
-const OUT_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'; // 더 알림 같은 소리
+// 사운드 파일 경로 (더 명확하고 인지하기 쉬운 소리로 교체)
+const IN_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'; // 가벼운 팝 (기존 보고 있을 때 소리)
+const OUT_CHAT_SOUND = 'https://cdn.freesound.org/previews/235/235911_3541459-lq.mp3'; // 더 명확한 알림음 (띵동/디링 느낌)
 
 interface Message {
   id: string;
@@ -87,8 +87,10 @@ const Chat = () => {
   // 사운드 재생 함수
   const playNotificationSound = useCallback((inChat: boolean) => {
     try {
+      // 사용자의 요청: 안보고 있을 때 소리를 보고 있을 때 소리(IN_CHAT_SOUND)로 변경하고, 
+      // 진짜 안보고 있을 때(백그라운드 등)는 더 알아듣기 쉬운 소리(OUT_CHAT_SOUND)로 재생
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
-      audio.volume = 0.5;
+      audio.volume = inChat ? 0.4 : 0.7; // 안보고 있을 때 볼륨을 약간 더 높임
       audio.play().catch(e => console.log('[Chat] Audio play blocked by browser policy:', e));
     } catch (e) {
       console.error('[Chat] Sound play error:', e);
