@@ -101,7 +101,7 @@ const Header = () => {
         className="text-2xl font-black text-indigo-600 tracking-tighter cursor-pointer italic shrink-0"
         onClick={() => navigate('/')}
       >
-        <span className="text-black-600">Chora</span><span className="text-indigo-600">Snap</span>
+        Chora<span className="text-indigo-600">Snap</span>
       </h1>
 
       <HeaderAdBanner />
