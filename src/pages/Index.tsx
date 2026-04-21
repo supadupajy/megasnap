@@ -537,7 +537,22 @@ const Index = () => {
         </div>
       </motion.div>
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
-      <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={displayedMarkers} initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
+      <AnimatePresence>
+        {selectedPostId && (
+          <PostDetail
+            key="post-detail-modal"
+            posts={displayedMarkers}
+            initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
+            isOpen={true}
+            onClose={() => setSelectedPostId(null)}
+            onDelete={handlePostDeleted}
+            onViewPost={markAsViewed}
+            onLikeToggle={handleLikeToggle}
+            onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }}
+          />
+        )}
+      </AnimatePresence>
+
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} />
       <PostListOverlay
