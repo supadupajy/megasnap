@@ -70,34 +70,15 @@ const Index = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
-  // [핵심 수정] 하드웨어 뒤로가기 버튼 대응: 여기보기 창이 열려있을 때 뒤로가기를 누르면 창만 닫기
+  // [수정] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
   useEffect(() => {
-    if (isPostListOpen) {
-      // 1. 현재 히스토리에 가상의 상태를 추가하여 뒤로가기 이벤트를 가로챌 준비를 합니다
-      // 중복 추가 방지를 위해 체크
-      if (!window.history.state?.postListOpen) {
-        window.history.pushState({ postListOpen: true }, '');
-      }
-
-      const handlePopState = (e: PopStateEvent) => {
-        // 사용자가 뒤로가기를 누르면 이 이벤트가 트리거됩니다
+    const handleCloseOverlay = () => {
+      if (isPostListOpen) {
         setIsPostListOpen(false);
-      };
-
-      // 2. 이벤트 리스너를 가장 높은 우선순위로 등록하기 위해 캡처링 단계 고려 및 즉시 등록
-      window.addEventListener('popstate', handlePopState);
-      
-      // 3. Capacitor/Native 환경에서 뒤로가기 버튼 이벤트를 전역적으로 관리할 수 있도록 보조
-      // (App.tsx의 ExitDialog보다 먼저 실행되도록 유도)
-      
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-        // 수동으로 닫혔을 때 (X 버튼 클릭 등) 히스토리에 남은 가상 상태 제거
-        if (window.history.state?.postListOpen) {
-          window.history.back();
-        }
-      };
-    }
+      }
+    };
+    window.addEventListener('close-post-list-overlay', handleCloseOverlay);
+    return () => window.removeEventListener('close-post-list-overlay', handleCloseOverlay);
   }, [isPostListOpen]);
 
   // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
@@ -485,7 +466,12 @@ const Index = () => {
 
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-  const handleViewAllClick = () => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); };
+  
+  const handleViewAllClick = () => { 
+    if (displayedMarkers.length > 0 && currentZoom < 9) {
+      setIsPostListOpen(true);
+    } 
+  };
 
   const handlePostCreated = (newPost: any) => {
     console.log('[Index] New post created, adding to state:', newPost);

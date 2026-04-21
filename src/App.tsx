@@ -70,6 +70,13 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      // [중요] 여기보기(PostListOverlay)가 열려있는지 먼저 확인
+      if (location.pathname === '/' && (location.state as any)?.isPostListOpen) {
+        // 커스텀 이벤트를 발생시켜 Index.tsx에서 인지하게 함
+        window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
+        return;
+      }
+
       if (location.pathname === '/') {
         setShowExitDialog(true);
       } else if (canGoBack) {
@@ -79,7 +86,7 @@ const AnimatedRoutes = () => {
       }
     });
     return () => { backButtonListener.then(l => l.remove()); };
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, location.state]);
 
   if (loading && location.pathname !== '/login') {
     return (
