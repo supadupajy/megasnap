@@ -329,11 +329,7 @@ const Chat = () => {
     fetchMessages();
 
     const channel = supabase
-      .channel(`chat:${chatId}`, {
-        config: {
-          presence: { key: authUser.id },
-        }
-      })
+      .channel(`chat:${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -397,15 +393,10 @@ const Chat = () => {
       )
       .subscribe((status) => {
         console.log(`[Chat] Realtime subscription status for ${chatId}:`, status);
-        if (status === 'CLOSED') {
-          setTimeout(() => {
-            if (authUser && chatId) channel.subscribe();
-          }, 3000);
-        }
       });
 
     return () => { supabase.removeChannel(channel); };
-  }, [authUser, chatId, markAsRead]);
+  }, [authUser, chatId, markAsRead, isPageVisible, playNotificationSound, scrollToBottom]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;

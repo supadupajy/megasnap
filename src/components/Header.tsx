@@ -18,6 +18,46 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // 초기 알림 체크 (메모이제이션)
+  const checkNotifications = useCallback(async () => {
+    if (!user) return;
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+    
+    if (!error && count !== null) {
+      setHasNewNotifications(count > 0);
+    }
+  }, [user]);
+
+  // 초기 미확인 메시지 체크 (메모이제이션)
+  const checkMessages = useCallback(async () => {
+    if (!user) return;
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', user.id)
+      .eq('is_read', false);
+    
+    if (!error && count !== null) {
+      setUnreadMsgCount(count);
+    }
+  }, [user]);
+
+  // 사운드 재생 함수 (메모이제이션)
+  const playSound = useCallback(() => {
+    if (!canPlaySound) return;
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND);
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('[Header] Audio play blocked:', e));
+    } catch (e) {
+      console.error('[Header] Sound play error:', e);
+    }
+  }, [canPlaySound]);
+
   // 사용자 상호작용 감지 및 사운드 허용 처리
   useEffect(() => {
     const enableAudio = () => {
@@ -45,63 +85,17 @@ const Header = () => {
     };
   }, []);
 
-  // 사운드 재생 함수 (사용자가 화면을 한 번이라도 클릭했다면 무조건 실행)
-  const playSound = () => {
-    // canPlaySound 상태와 관계없이 직접 재생 시도 (실제 에러가 날 때만 catch)
-    try {
-      const audio = new Audio(NOTIFICATION_SOUND);
-      audio.volume = 0.5;
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(e => {
-          console.warn('[Header] Audio play failed:', e.name);
-        });
-      }
-    } catch (e) {
-      console.error('[Header] Sound play error:', e);
-    }
-  };
-
   useEffect(() => {
     if (!user) return;
-
-    // 초기 알림 체크
-    const checkNotifications = async () => {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      
-      if (!error && count !== null) {
-        setHasNewNotifications(count > 0);
-      }
-    };
-
-    // 초기 미확인 메시지 체크
-    const checkMessages = async () => {
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
-        .eq('is_read', false);
-      
-      if (!error && count !== null) {
-        setUnreadMsgCount(count);
-      }
-    };
 
     checkNotifications();
     checkMessages();
 
     // 실시간 구독 통합 관리
     const channel = supabase
-      .channel(`user-updates-${user.id}`, {
-        config: {
-          presence: { key: user.id },
-        }
-      })
+      .channel(`user-updates-${user.id}`);
+
+    channel
       // 1. 알림 실시간 감지
       .on(
         'postgres_changes',
@@ -129,7 +123,6 @@ const Header = () => {
           console.log('[Header] New message detected', payload);
           setUnreadMsgCount(prev => prev + 1);
           
-          // 현재 채팅방(/chat/...) 안에 있지 않을 때만 헤더에서 소리를 재생
           if (!window.location.pathname.startsWith('/chat/')) {
             playSound();
           }
@@ -162,18 +155,12 @@ const Header = () => {
       )
       .subscribe((status) => {
         console.log(`[Header] Realtime status for user ${user.id}:`, status);
-        // 연결이 닫혔을 경우 (CLOSED) 3초 후 재시도
-        if (status === 'CLOSED') {
-          setTimeout(() => {
-            if (user) channel.subscribe();
-          }, 3000);
-        }
       });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, canPlaySound]); // canPlaySound가 바뀔 때 playSound 참조 갱신을 위해 추가
+  }, [user, checkMessages, checkNotifications, playSound]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
