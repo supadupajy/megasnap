@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, MessageSquare } from 'lucide-react';
+import { Bell, MessageSquare, ChevronLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,10 +14,20 @@ const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  // 초기값을 true로 설정하여 시도라도 해보게 함 (네이티브 앱 환경 고려)
   const [canPlaySound, setCanPlaySound] = useState(true); 
   const location = useLocation();
   const navigate = useNavigate();
+
+  // 알림/메시지 페이지 여부 확인
+  const isNavPage = location.pathname === '/notifications' || location.pathname === '/messages';
+
+  // 뒤로가기 핸들러 (애니메이션 포함)
+  const handleBack = useCallback(() => {
+    navigate('/', { 
+      replace: true, 
+      state: { direction: 'back' } 
+    });
+  }, [navigate]);
 
   // 사용자 상호작용 감지 및 사운드 허용 처리
   useEffect(() => {
@@ -164,13 +174,23 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
-  <h1 
-    className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
-    onClick={() => navigate('/')}
-  >
-    <span className="text-gray-900">Chora</span>
-    <span className="text-indigo-600">Snap</span>
-  </h1>
+      <div className="flex items-center gap-3">
+        {isNavPage && (
+          <button 
+            onClick={handleBack}
+            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-800" />
+          </button>
+        )}
+        <h1 
+          className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
+          onClick={() => navigate('/')}
+        >
+          <span className="text-gray-900">Chora</span>
+          <span className="text-indigo-600">Snap</span>
+        </h1>
+      </div>
 
       <HeaderAdBanner />
 

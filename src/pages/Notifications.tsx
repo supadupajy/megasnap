@@ -189,8 +189,8 @@ const Notifications = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-white pb-24 no-scrollbar"
+    <div
+      className="h-screen bg-white pb-24 no-scrollbar overflow-y-auto"
       onClick={() => setSwipedId(null)}
       style={{
         paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
