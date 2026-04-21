@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 
@@ -63,9 +63,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const handleScroll = () => {
       if (!listRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-      // 스크롤이 끝에 도달했는지 확인 (완전히 끝까지 가지 않아도 20px 여유를 줌)
+      
+      // 아래로 더 스크롤 가능한지 확인 (20px 여유)
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
       setShowScrollArrow(!isAtBottom);
+
+      // 위로 스크롤 가능한지 확인 (조금이라도 내려왔는지 확인)
+      const isAtTop = scrollTop < 10;
+      setShowScrollArrow(!isAtTop);
     };
 
     if (isExpanded && posts.length > 5) {
@@ -163,8 +168,17 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div 
           ref={listRef}
-          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh]"
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh] relative"
         >
+          {/* 상단 스크롤 안내 화살표 - 위로 스크롤 가능할 때만 나타남 */}
+          {isExpanded && showScrollArrow && (
+            <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
+              <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+                <ScrollUpIcon className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+          )}
+
           {posts.map((post) => (
             <div 
               key={post.id}
@@ -215,7 +229,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ))}
         </div>
 
-        {/* 하단 스크롤 안내 화살표 - 스크롤이 끝에 도달하면 숨김 */}
+        {/* 하단 스크롤 안내 화살표 - 아래로 스크롤 가능할 때만 나타남 */}
         {isExpanded && posts.length > 5 && showScrollArrow && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
             <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
