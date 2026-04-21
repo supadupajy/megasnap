@@ -242,7 +242,8 @@ const Chat = () => {
     }
 
     const fetchMessages = async () => {
-      const { data } = await supabase
+      // created_at 순으로 오름차순 정렬하여 전체 대화 내역을 가져옵니다.
+      const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(
@@ -250,9 +251,16 @@ const Chat = () => {
         )
         .order('created_at', { ascending: true });
 
+      if (error) {
+        console.error('[Chat] Error fetching messages:', error);
+      }
+
       setMessages(data || []);
       setIsLoading(false);
       markAsRead();
+      
+      // 데이터 로드 후 즉시 하단 스크롤
+      setTimeout(scrollToBottom, 100);
     };
 
     fetchMessages();
