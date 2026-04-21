@@ -115,20 +115,42 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        {/* 광고 구좌 (고정) */}
+        {/* 광고 구좌 (고정) - 나이키 광고로 변경 */}
         <div className="px-5 py-3 border-b border-gray-100">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800 to-indigo-950 text-white shadow-lg relative overflow-hidden group">
+          <div className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
-                <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+            
+            {/* 배경 이미지 */}
+            <div className="absolute inset-0 z-0">
+              <img 
+                src="/assets/nike-ad-banner.png" 
+                alt="Nike Ad" 
+                className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+            </div>
+
+            <div className="relative z-10 p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center gap-2">
+                <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg" 
+                  alt="Nike Logo" 
+                  className="h-3.5 invert brightness-200"
+                />
               </div>
-              <h3 className="text-lg font-black leading-tight mb-1">
-                프리미엄 멤버십<br />첫 달 0원 혜택!
-              </h3>
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-[11px] text-white/60 font-bold">지금 바로 시작하기</p>
+              
+              <div>
+                <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
+                  JUST DO IT.
+                </h3>
+                <p className="text-[12px] font-bold text-white/90 drop-shadow-md">
+                  새로운 나이키 러닝 컬렉션
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Shop Now</p>
                 <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
               </div>
             </div>
