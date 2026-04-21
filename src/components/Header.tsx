@@ -10,7 +10,9 @@ import { useAuth } from '@/components/AuthProvider';
 const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -29,6 +31,22 @@ const Header = () => {
     };
 
     checkNotifications();
+
+    // 초기 미확인 메시지 체크
+    const checkMessages = async () => {
+      if (!user) return;
+      const { count, error } = await supabase
+        .from('chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+      
+      if (!error && count !== null) {
+        setUnreadMsgCount(count);
+      }
+    };
+
+    checkMessages();
 
     // 실시간 알림 구독
     const channel = supabase
