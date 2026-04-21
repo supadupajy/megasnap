@@ -49,16 +49,20 @@ const Header = () => {
     // 실시간 구독 통합 관리
     const channel = supabase
       .channel(`user-updates-${user.id}`)
-      // 1. 알림 실시간 감지
+      // 1. 알림 실시간 감지 (전체 테이블 감시 후 클라이언트 사이드 필터링 시도)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          table: 'notifications'
         },
-        () => setHasNewNotifications(true)
+        (payload: any) => {
+          if (payload.new && payload.new.user_id === user.id && payload.new.is_read === false) {
+            console.log('[Header] New notification detected', payload);
+            setHasNewNotifications(true);
+          }
+        }
       )
       // 2. 메시지 실시간 감지
       .on(
@@ -66,11 +70,13 @@ const Header = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
-          filter: `receiver_id=eq.${user.id}`
+          table: 'chat_messages'
         },
-        () => {
-          setUnreadMsgCount(prev => prev + 1);
+        (payload: any) => {
+          if (payload.new && payload.new.receiver_id === user.id && payload.new.is_read === false) {
+            console.log('[Header] New message detected', payload);
+            setUnreadMsgCount(prev => prev + 1);
+          }
         }
       )
       // 3. 메시지 읽음 처리 감지
@@ -79,16 +85,17 @@ const Header = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'chat_messages',
-          filter: `receiver_id=eq.${user.id}`
+          table: 'chat_messages'
         },
-        (payload) => {
-          if (payload.new.is_read === true) {
-            checkMessages(); // 개수 다시 계산
+        (payload: any) => {
+          if (payload.new && payload.new.receiver_id === user.id && payload.new.is_read === true) {
+            checkMessages(); 
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Header] Realtime status for user ${user.id}:`, status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
