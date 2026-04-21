@@ -197,7 +197,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                           <p className="text-xs font-bold text-gray-800 truncate max-w-[85%]">
                             {post.content}
                           </p>
-                          {(post.isAd || (post.rank && post.rank <= 4)) && (
+                          {(post.isAd || (post.rank === 1 || post.rank === 4)) && (
                             <div className="shrink-0 flex items-center justify-center">
                               {post.isAd ? (
                                 <span className="bg-blue-500 text-white text-[7px] font-black px-1 py-0.5 rounded-sm">Ad</span>
@@ -208,6 +208,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                               )}
                             </div>
                           )}
+
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-medium text-gray-400">{post.location}</span>
