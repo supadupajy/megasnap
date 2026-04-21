@@ -181,8 +181,8 @@ const PostListOverlay = ({
     
     try {
       // 영역을 아주 조금씩 점진적으로 확장 (기존 반경의 1.1배, 1.2배...)
-      // 기존 1.5배에서 1.2배로 축소하여 범위를 더 정교하게 조절
-      const factor = Math.pow(1.2, nextStep);
+      // 기존 1.5배에서 0.5배로 축소하여 범위를 더 정교하게 조절
+      const factor = Math.pow(0.5, nextStep);
       const expandLat = baseLatSpan * factor;
       const expandLng = baseLngSpan * factor;
 
