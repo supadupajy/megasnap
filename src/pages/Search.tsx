@@ -87,46 +87,48 @@ const Search = () => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-[88px] px-4">
-        <div className="relative py-6 flex items-center gap-3">
-          <button 
-            onClick={handleBack}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </button>
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-            <input
-              placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
-            {isLoading && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-              </div>
-            )}
-          </div>
-        </div>
-        <SearchAdBanner />
-        <div className="space-y-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{searchQuery ? '검색 결과' : '추천 사용자'}</p>
-          <div className="space-y-1">
-            {users.map((user) => {
-              const isFollowing = followingIds.has(user.id);
-              return (
-                <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
-                  <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0"><Avatar className="w-14 h-14 border-2 border-white shadow-sm"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback></Avatar></div>
-                  <div className="flex-1 min-w-0"><div className="flex items-center gap-1"><span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span><span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span></div><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div>
-                  <Button variant={isFollowing ? "secondary" : "default"} size="sm" onClick={(e) => toggleFollow(e, user.id)} className={isFollowing ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold" : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"}>{isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}</Button>
+    <div className="h-screen overflow-hidden bg-white flex flex-col">
+      <div className="flex-1 overflow-y-auto pt-[88px] pb-28 no-scrollbar">
+        <div className="px-4">
+          <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-20">
+            <button 
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-800" />
+            </button>
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+              <input 
+                placeholder="닉네임으로 친구 찾기" 
+                className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                autoFocus
+              />
+              {isLoading && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
                 </div>
-              );
-            })}
-            {!isLoading && users.length === 0 && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Users className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{searchQuery ? '해당 닉네임을 가진 사용자가 없습니다.' : '추천할 사용자가 없습니다.'}</p></div>)}
+              )}
+            </div>
+          </div>
+          <SearchAdBanner />
+          <div className="space-y-4">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{searchQuery ? '검색 결과' : '추천 사용자'}</p>
+            <div className="space-y-1">
+              {users.map((user) => {
+                const isFollowing = followingIds.has(user.id);
+                return (
+                  <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
+                    <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0"><Avatar className="w-14 h-14 border-2 border-white shadow-sm"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback></Avatar></div>
+                    <div className="flex-1 min-w-0"><div className="flex items-center gap-1"><span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span><span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span></div><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div>
+                    <Button variant={isFollowing ? "secondary" : "default"} size="sm" onClick={(e) => toggleFollow(e, user.id)} className={isFollowing ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold" : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"}>{isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}</Button>
+                  </div>
+                );
+              })}
+              {!isLoading && users.length === 0 && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Users className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{searchQuery ? '해당 닉네임을 가진 사용자가 없습니다.' : '추천할 사용자가 없습니다.'}</p></div>)}
+            </div>
           </div>
         </div>
       </div>
