@@ -326,6 +326,7 @@ const Chat = () => {
     setInputValue('');
 
     if (isValidUUID(chatId)) {
+      // 1. 메시지 저장
       const { data, error } = await supabase
         .from('messages')
         .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
@@ -337,6 +338,16 @@ const Chat = () => {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         return;
       }
+
+      // 2. 상대방에게 알림 생성 (실시간 뱃지용)
+      await supabase.from('notifications').insert([{
+        user_id: chatId,
+        type: 'message',
+        title: '새 메시지',
+        content: content.length > 20 ? content.substring(0, 20) + '...' : content,
+        is_read: false,
+        related_id: authUser.id
+      }]);
 
       if (data) {
         setMessages((prev) =>
