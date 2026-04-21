@@ -23,9 +23,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const displayPosts = posts.slice(0, 20);
-  const trendingContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [showScrollArrow, setShowScrollArrow] = useState(false);
+  const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
+  const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
 
   useEffect(() => {
     if (isExpanded || displayPosts.length === 0) return;
@@ -66,11 +66,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       
       // 아래로 더 스크롤 가능한지 확인 (20px 여유)
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
-      setShowScrollArrow(!isAtBottom);
+      setShowScrollDownArrow(!isAtBottom);
 
       // 위로 스크롤 가능한지 확인 (조금이라도 내려왔는지 확인)
       const isAtTop = scrollTop < 10;
-      setShowScrollArrow(!isAtTop);
+      setShowScrollUpArrow(!isAtTop);
     };
 
     if (isExpanded && posts.length > 5) {
@@ -79,20 +79,21 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       el?.addEventListener('scroll', handleScroll);
       return () => el?.removeEventListener('scroll', handleScroll);
     } else {
-      setShowScrollArrow(false);
+      setShowScrollDownArrow(false);
+      setShowScrollUpArrow(false);
     }
   }, [isExpanded, posts.length]);
 
   return (
     <div 
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-all duration-500 overflow-hidden border-2 border-indigo-600/20",
-        isExpanded ? "max-h-[80vh]" : "max-h-[56px]"
+        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-2 border-indigo-600/20",
+        isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
       )}
     >
       <div 
-        className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors"
-        onClick={handleHeaderClick}
+        className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
+        onClick={onToggle}
       >
         <span className="text-indigo-600 font-black text-sm w-4 italic shrink-0">
           {isExpanded ? "HOT" : currentPost?.rank}
@@ -141,11 +142,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
       <div 
         className={cn(
-          "flex flex-col relative",
-          isExpanded ? "max-h-[70vh] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+          "flex flex-col relative transition-opacity duration-300",
+          isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        {/* 광고 구좌 (고정) - 리스트 상단에 고정하고 싶으므로 리스트 외부(스크롤 영역 밖)로 배치 */}
+        {/* 광고 구좌 (고정) */}
         <div className="px-5 py-3 border-b border-gray-100">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-800 to-indigo-950 text-white shadow-lg relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
@@ -171,7 +172,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh] relative"
         >
           {/* 상단 스크롤 안내 화살표 - 위로 스크롤 가능할 때만 나타남 */}
-          {isExpanded && showScrollArrow && (
+          {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
               <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
                 <ScrollUpIcon className="w-5 h-5 text-indigo-600" />
@@ -230,7 +231,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         </div>
 
         {/* 하단 스크롤 안내 화살표 - 아래로 스크롤 가능할 때만 나타남 */}
-        {isExpanded && posts.length > 5 && showScrollArrow && (
+        {isExpanded && posts.length > 5 && showScrollDownArrow && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
             <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
               <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
