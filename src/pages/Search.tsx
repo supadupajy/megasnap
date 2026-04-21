@@ -22,6 +22,15 @@ const Search = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
+  // 스크롤 시 상단 헤더 밀림 방지 (iOS/Android Safari 바운스 차단 보조)
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -87,8 +96,11 @@ const Search = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-white flex flex-col">
-      <div className="flex-1 overflow-y-auto pt-[88px] pb-28 no-scrollbar">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* 88px 헤더 공간 확보 */}
+      <div className="h-[88px] shrink-0 bg-white" />
+      
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
         <div className="px-4">
           <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-20">
             <button 
