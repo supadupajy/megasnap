@@ -30,11 +30,11 @@ const SplashScreen = () => {
           <motion.div
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
-            transition={{ 
+            transition={{
               type: "spring",
               stiffness: 260,
               damping: 20,
-              delay: 0.2
+              delay: 0.4
             }}
             className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-200"
           >
@@ -43,10 +43,10 @@ const SplashScreen = () => {
 
           {/* Brand Name */}
           <div className="flex flex-col items-center">
-            <motion.h1 
+            <motion.h1
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
               className="text-4xl font-black text-gray-900 tracking-tighter italic"
             >
               Chora<span className="text-indigo-600">Snap</span>
@@ -64,11 +64,12 @@ const SplashScreen = () => {
 
           {/* BMW Ad Image */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
             className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group"
           >
+
             <img 
               src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" 
               alt="BMW i7" 
