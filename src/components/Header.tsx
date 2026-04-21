@@ -97,12 +97,13 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
-      <h1 
-        className="text-2xl font-black text-indigo-600 tracking-tighter cursor-pointer italic shrink-0"
-        onClick={() => navigate('/')}
-      >
-        Chora<span className="text-indigo-600">Snap</span>
-      </h1>
+  <h1 
+    className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
+    onClick={() => navigate('/')}
+  >
+    <span className="text-black">Chora</span>
+    <span className="text-indigo-600">Snap</span>
+  </h1>
 
       <HeaderAdBanner />
 
