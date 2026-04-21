@@ -192,8 +192,8 @@ const PostListOverlay = ({
         }
 
         // 지수적 확장이 아닌 점진적 선형 확장으로 변경하여 정밀도 확보
-        // 기본 반경의 (1 + 0.05 * step) 배로 확장
-        const multiplier = 1 + (0.05 * nextStep);
+        // 기본 반경의 (1 + 0.08 * step) 배로 확장
+        const multiplier = 1 + (0.08 * nextStep);
         const expandLat = baseLatSpan * multiplier;
         const expandLng = baseLngSpan * multiplier;
 
