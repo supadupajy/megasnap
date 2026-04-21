@@ -63,12 +63,21 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
 
-  // 전역 글쓰기 이벤트 리스너
+  // [수정] PostListOverlay 상태를 App.tsx에 전달 (navigate 대신 직접 state 수정 시도)
+  // navigate replace를 사용하면 스크린 깜빡임(Re-mount)이 발생하므로
+  // transition 효과를 위해 state 관리를 최적화합니다.
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
+    // navigate replace는 페이지 전체를 리렌더링하게 하여 깜빡임을 유발할 수 있음
+    // history.replaceState를 사용하여 URL이나 히스토리 구조는 유지하면서 데이터만 조용히 업데이트
+    const currentState = window.history.state || {};
+    if (currentState.isPostListOpen !== isPostListOpen) {
+      window.history.replaceState({ 
+        ...currentState, 
+        isPostListOpen,
+        usr: { ...currentState.usr, isPostListOpen } // React Router v6 내부 구조 대응
+      }, '');
+    }
+  }, [isPostListOpen]);
 
   // ✅ [FIX] isPostListOpen 변경 시 window 플래그에 즉시 동기적으로 반영
   // navigate()를 통한 location.state 업데이트는 비동기라 App.tsx backButton 리스너에서
@@ -78,19 +87,18 @@ const Index = () => {
     console.log('[Index] window.__isPostListOpen set to:', isPostListOpen);
   }, [isPostListOpen]);
 
-  // ✅ [FIX] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
-  // App.tsx에서 window.__isPostListOpen을 확인한 후 이 이벤트를 dispatch함
+  // [수정] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
   useEffect(() => {
     const handleCloseOverlay = () => {
       console.log('[Index] Received close signal from native back button');
-      if ((window as any).__isPostListOpen) {
+      // window.history.state를 직접 참조하여 더 정확하게 판단
+      if (isPostListOpen || window.history.state?.isPostListOpen) {
         setIsPostListOpen(false);
       }
     };
     window.addEventListener('close-post-list-overlay', handleCloseOverlay);
     return () => window.removeEventListener('close-post-list-overlay', handleCloseOverlay);
-  // ✅ isPostListOpen 의존성 제거 — window 플래그를 직접 읽으므로 불필요
-  }, []);
+  }, [isPostListOpen]);
 
   // ✅ [REMOVED] location.state를 통한 isPostListOpen 동기화 useEffect 제거
   // 이 방식은 navigate()의 비동기 특성으로 인해 App.tsx backButton 리스너에서
