@@ -108,17 +108,17 @@ const AnimatedRoutes = () => {
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ 
-              opacity: 0, 
-              x: isBackAction ? -50 : 50 
+            initial={{
+              opacity: 0,
+              x: isBackAction ? -100 : 100
             }}
-            animate={{ 
-              opacity: 1, 
-              x: 0 
+            animate={{
+              opacity: 1,
+              x: 0
             }}
-            exit={{ 
-              opacity: 0, 
-              x: isBackAction ? 50 : -50 
+            exit={{
+              opacity: 0,
+              x: isBackAction ? 100 : -100
             }}
             transition={{ 
               duration: 0.35,
