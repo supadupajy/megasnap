@@ -129,46 +129,32 @@ const Messages = () => {
   const handleBack = () => {
     // Direct Message 창에서 뒤로가기는 항상 지도 화면('/')으로 이동
     // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
-    navigate('/', {
-      replace: true,
-      state: { direction: 'back' }
+    navigate('/', { 
+      replace: true, 
+      state: { direction: 'back' } 
     });
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar" onClick={() => setSwipedId(null)}>
-      {/* Direct Message 전용 헤더 */}
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
-        <button 
-          onClick={handleBack} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <h1 className="font-black text-lg text-gray-900">Direct Message</h1>
-        <button
-          onClick={() => navigate('/friends')}
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <Edit className="w-6 h-6 text-indigo-600" />
-        </button>
-
-      </header>
-
-      <div className="pt-[88px]">
-        <div className="sticky top-[88px] z-40 bg-white px-4 py-6">
+    <div 
+      className="h-[calc(100vh-88px)] mt-[88px] overflow-y-auto bg-white no-scrollbar" 
+      onClick={() => setSwipedId(null)}
+    >
+      <div className="flex flex-col">
+        <div className="sticky top-0 z-40 bg-white px-4 py-4 border-b border-gray-50">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input 
               placeholder="대화 상대 또는 메시지 검색" 
-              className="pl-12 h-12 bg-gray-50/50 border-2 border-indigo-600 rounded-full focus-visible:ring-0 font-bold placeholder:text-gray-400" 
+              className="pl-12 h-11 bg-gray-50/50 border-2 border-indigo-600 rounded-full focus-visible:ring-0 font-bold placeholder:text-gray-400" 
               value={query} 
               onChange={(e) => setQuery(e.target.value)} 
             />
             {isSearchingGlobal && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
           </div>
         </div>
-        <div className="space-y-6 px-4">
+        
+        <div className="space-y-6 px-4 pt-4">
           <div className="space-y-4">
             <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">{query ? '대화 목록 검색 결과' : '최근 메시지'}</h2>
             <div className="divide-y divide-gray-50 border-t border-gray-50">

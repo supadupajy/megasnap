@@ -34,6 +34,14 @@ const Notifications = () => {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const hasLoaded = useRef(false); // 데이터 초기 로딩 여부 플래그
 
+  // 뒤로가기 핸들러 (애니메이션 포함)
+  const handleBack = useCallback(() => {
+    navigate('/', { 
+      replace: true, 
+      state: { direction: 'back' } 
+    });
+  }, [navigate]);
+
   useEffect(() => {
     const handleOpenWrite = () => {}; // Notifications 페이지에서는 WritePost를 열지 않음
     window.addEventListener('open-write-post', handleOpenWrite);
@@ -180,30 +188,12 @@ const Notifications = () => {
     else navigate(`/profile/${notif.actor_id}`);
   };
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/', { replace: true });
-    }
-  };
-
   return (
     <div 
-      className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
+      className="h-[calc(100vh-88px)] mt-[88px] overflow-y-auto bg-white no-scrollbar"
       onClick={() => setSwipedId(null)}
     >
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
-        <button 
-          onClick={handleBack} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
-      </header>
-
-      <div className="pt-[88px] flex flex-col">
+      <div className="flex flex-col">
         {isLoading ? (
           <div className="py-20 flex justify-center">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -243,7 +233,7 @@ const Notifications = () => {
                         }}
                         className={cn(
                           "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
-                          notif.is_read ? "bg-white" : "bg-[#f0f4ff]"
+                          notif.is_read ? "bg-white" : "bg-white"
                         )} 
                         onClick={(e) => {
                           e.stopPropagation();
