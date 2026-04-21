@@ -120,8 +120,8 @@ serve(async (req) => {
         data: dataPayload,
         android: {
           notification: {
-            channel_id: "messages", // Android 알림 채널 ID
-            sound: "message_chime", // Android 커스텀 사운드
+            channel_id: "messages_v2", // 새 ID로 매칭
+            sound: "message_chime",
           }
         },
         apns: {

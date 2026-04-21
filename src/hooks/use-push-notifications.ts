@@ -16,16 +16,17 @@ export const usePushNotifications = () => {
     const register = async () => {
       try {
         // 1. 커스텀 사운드를 위한 알림 채널 생성 (Android 8.0+)
+        // 기존 채널과 충돌을 피하기 위해 ID를 'messages_v2'로 변경 (채널 설정 변경은 새 ID 필요)
         await PushNotifications.createChannel({
-          id: 'messages',
-          name: 'Messages',
+          id: 'messages_v2',
+          name: 'Chat Messages',
           description: '채팅 메시지 알림',
-          sound: 'message_chime', // res/raw/ 폴더에 넣은 파일명 (확장자 제외)
-          importance: 5, // 최고 중요도
-          visibility: 1, // 잠금 화면에도 표시
+          sound: 'message_chime', // res/raw/message_chime.mp3
+          importance: 5,
+          visibility: 1,
           vibration: true,
         });
-        console.log('[Push] Notification channel created: messages');
+        console.log('[Push] Notification channel created: messages_v2');
 
         let permStatus = await PushNotifications.checkPermissions();
 
@@ -60,8 +61,9 @@ export const usePushNotifications = () => {
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('Push received: ' + JSON.stringify(notification));
-        // 포그라운드에서 푸시 수신 시, 헤더의 뱃지 카운트를 강제로 새로고침 (Header.tsx의 Realtime 구독이 처리함)
-        // 여기서는 알림을 토스트로 표시하거나, 뱃지 카운트 업데이트를 트리거할 수 있습니다.
+        
+        // 중요: 포그라운드 수신 시 Capacitor의 기본 동작은 알림을 띄우지 않을 수 있습니다.
+        // 하지만 OS 수준에서 소리를 재생하게 하려면, 알림 수신 시 사용자에게 시각적으로 표시하는 것이 좋습니다.
         showSuccess(`${notification.title || '새 알림'}: ${notification.body}`);
       });
 
