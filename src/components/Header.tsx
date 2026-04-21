@@ -45,35 +45,23 @@ const Header = () => {
     };
   }, []);
 
-  // 사운드 재생 함수
-  const playSound = useCallback(() => {
-    // 1. 권한 체크 (상호작용 여부)
-    if (!canPlaySound) {
-      console.log('[Header] Sound skipped: Waiting for first user interaction');
-      return;
-    }
-
+  // 사운드 재생 함수 (사용자가 화면을 한 번이라도 클릭했다면 무조건 실행)
+  const playSound = () => {
+    // canPlaySound 상태와 관계없이 직접 재생 시도 (실제 에러가 날 때만 catch)
     try {
       const audio = new Audio(NOTIFICATION_SOUND);
       audio.volume = 0.5;
-      
-      // 2. 브라우저 호환성을 위한 play() 약속 처리
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          if (error.name === 'NotAllowedError' || error.name === 'NotSupportedError') {
-            console.warn('[Header] Playback blocked or not supported yet:', error.name);
-            setCanPlaySound(false); // 상호작용이 다시 필요할 수 있음
-          } else {
-            console.error('[Header] Audio playback error:', error);
-          }
+        playPromise.catch(e => {
+          console.warn('[Header] Audio play failed:', e.name);
         });
       }
     } catch (e) {
-      console.error('[Header] Audio initialization failed:', e);
+      console.error('[Header] Sound play error:', e);
     }
-  }, [canPlaySound]);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -109,7 +97,11 @@ const Header = () => {
 
     // 실시간 구독 통합 관리
     const channel = supabase
-      .channel(`user-updates-${user.id}`)
+      .channel(`user-updates-${user.id}`, {
+        config: {
+          presence: { key: user.id },
+        }
+      })
       // 1. 알림 실시간 감지
       .on(
         'postgres_changes',
@@ -170,12 +162,18 @@ const Header = () => {
       )
       .subscribe((status) => {
         console.log(`[Header] Realtime status for user ${user.id}:`, status);
+        // 연결이 닫혔을 경우 (CLOSED) 3초 후 재시도
+        if (status === 'CLOSED') {
+          setTimeout(() => {
+            if (user) channel.subscribe();
+          }, 3000);
+        }
       });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, canPlaySound]); // canPlaySound가 바뀔 때 playSound 참조 갱신을 위해 추가
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
