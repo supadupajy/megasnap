@@ -73,22 +73,18 @@ const Index = () => {
   // [핵심 수정] 하드웨어 뒤로가기 버튼 대응: 여기보기 창이 열려있을 때 뒤로가기를 누르면 창만 닫기
   useEffect(() => {
     if (isPostListOpen) {
-      // 1. 현재 히스토리에 가상의 상태를 추가
+      // 현재 히스토리에 가상의 상태를 추가하여 뒤로가기 이벤트를 가로챌 준비를 합니다
       window.history.pushState({ postListOpen: true }, '');
 
       const handlePopState = (e: PopStateEvent) => {
-        // 2. 뒤로가기 발생 시 창을 닫음
+        // 사용자가 뒤로가기를 누르면 이 이벤트가 트리거됩니다
         setIsPostListOpen(false);
-        // 3. 앱 종료 팝업이 뒤로가기를 감지하지 못하도록 전파 방지 시도
-        e.preventDefault();
-        e.stopPropagation();
       };
 
-      // 4. popstate 뿐만 아니라 다른 이벤트와 z-index 조절로 팝업 간섭 최소화
-      window.addEventListener('popstate', handlePopState, { capture: true });
+      window.addEventListener('popstate', handlePopState);
       
       return () => {
-        window.removeEventListener('popstate', handlePopState, { capture: true } as any);
+        window.removeEventListener('popstate', handlePopState);
         // 컴포넌트 내부에서 수동으로 닫았을 때(X 버튼 등) 히스토리를 정리합니다
         if (window.history.state?.postListOpen) {
           window.history.back();
