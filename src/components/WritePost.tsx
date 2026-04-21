@@ -317,14 +317,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                         {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨` : '사진/동영상 선택 (다중 선택 가능)'}
                       </span>
                     </button>
-                    <input 
-                      type="file" 
-                      ref={mediaInputRef} 
-                      className="hidden" 
-                      accept="image/*,video/*" 
+                    <input
+                      type="file"
+                      ref={mediaInputRef}
+                      className="hidden"
+                      accept="image/*,video/*"
                       multiple
-                      onChange={handleMediaSelect} 
+                      onChange={(e) => {
+                        handleMediaSelect(e);
+                        // ✅ 같은 파일을 다시 선택할 수 있도록 input 값을 초기화
+                        e.target.value = '';
+                      }}
                     />
+
                   </div>
                 </div>
 
