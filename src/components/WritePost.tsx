@@ -380,7 +380,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보 (선택)</p>
                     <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
                       <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                     </button>
@@ -398,7 +398,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택 (필수)</p>
                   <div className="grid grid-cols-5 gap-2">
                     {CATEGORIES.map((cat) => (
                       <button
@@ -421,7 +421,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력 (필수)</p>
                   <Textarea 
                     placeholder="이 장소에서의 추억을 기록해보세요..."
                     className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
