@@ -48,33 +48,17 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
-  const [canPlaySound, setCanPlaySound] = useState(false); // 오디오 권한 추적
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
-
-  // 사용자 상호작용 감지 (오디오 권한 획득)
-  useEffect(() => {
-    const enableAudio = () => {
-      setCanPlaySound(true);
-      window.removeEventListener('click', enableAudio);
-      window.removeEventListener('touchstart', enableAudio);
-    };
-    window.addEventListener('click', enableAudio);
-    window.addEventListener('touchstart', enableAudio);
-    return () => {
-      window.removeEventListener('click', enableAudio);
-      window.removeEventListener('touchstart', enableAudio);
-    };
-  }, []);
 
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
     console.log('[Chat] Back button clicked');
     // 메시지 창에서 뒤로가기는 항상 DM 목록(/messages)으로 이동
     // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
-    navigate('/messages', {
+    navigate('/messages', { 
       replace: true,
       state: { direction: 'back' }
     });
@@ -100,28 +84,22 @@ const Chat = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // 사운드 재생 함수
+  // 사운드 재생 함수 (권한 체크 없이 즉시 시도)
   const playNotificationSound = useCallback((inChat: boolean) => {
-    if (!canPlaySound) {
-      console.log('[Chat] Sound skipped: Interaction required');
-      return;
-    }
     try {
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
       audio.volume = inChat ? 0.4 : 0.7;
-      audio.play().catch(e => console.log('[Chat] Audio play blocked:', e));
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(e => {
+          console.warn('[Chat] Audio play skipped by browser:', e.name);
+        });
+      }
     } catch (e) {
       console.error('[Chat] Sound play error:', e);
     }
-  }, [canPlaySound]);
-
-  // 메시지 로드 시 스크롤
-  useEffect(() => {
-    if (!isLoading && messages.length > 0) {
-      const timer = setTimeout(scrollToBottom, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [messages.length, isLoading, scrollToBottom]);
+  }, []);
 
   // 메시지 읽음 처리 함수
   const markAsRead = useCallback(async () => {
@@ -147,7 +125,7 @@ const Chat = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages.length, scrollToBottom]);
 
   useEffect(() => {
     const vp = window.visualViewport;

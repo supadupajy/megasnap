@@ -14,22 +14,30 @@ const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  const [canPlaySound, setCanPlaySound] = useState(false); // 오디오 권한 추적
+  const [canPlaySound, setCanPlaySound] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 사용자 상호작용 감지 (오디오 재생 권한 획득)
+  // 사용자 상호작용 감지 및 사운드 허용 처리
   useEffect(() => {
     const enableAudio = () => {
+      // 오디오 컨텍스트를 활성화하여 브라우저의 차단을 완전히 해제
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
       setCanPlaySound(true);
-      // 권한 획득 후 이벤트 리스너 제거
       window.removeEventListener('click', enableAudio);
       window.removeEventListener('touchstart', enableAudio);
-      console.log('[Header] Audio playback enabled by user interaction');
+      console.log('[Header] Audio playback fully enabled');
     };
 
     window.addEventListener('click', enableAudio);
     window.addEventListener('touchstart', enableAudio);
+    
+    // 만약 이미 이전에 상호작용이 있었다면 (예: 네비게이션 이동 등) 자동으로 true로 설정될 수 있는 환경인지 체크
+    // 하지만 대부분의 브라우저는 새 세션마다 클릭이 필요하므로 위 리스너가 가장 정확합니다.
     
     return () => {
       window.removeEventListener('click', enableAudio);
@@ -40,16 +48,20 @@ const Header = () => {
   useEffect(() => {
     if (!user) return;
 
-    // 사운드 재생 함수
+    // 사운드 재생 함수 (사용자가 화면을 한 번이라도 클릭했다면 무조건 실행)
     const playSound = () => {
-      if (!canPlaySound) {
-        console.log('[Header] Sound skipped: User has not interacted yet');
-        return;
-      }
+      // canPlaySound 상태와 관계없이 직접 재생 시도 (실제 에러가 날 때만 catch)
       try {
         const audio = new Audio(NOTIFICATION_SOUND);
         audio.volume = 0.6;
-        audio.play().catch(e => console.log('[Header] Audio play failed:', e));
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            console.warn('[Header] Audio play failed (likely no interaction yet):', e.name);
+            setCanPlaySound(false); // 재생 실패 시 권한 없음으로 갱신
+          });
+        }
       } catch (e) {
         console.error('[Header] Sound play error:', e);
       }
