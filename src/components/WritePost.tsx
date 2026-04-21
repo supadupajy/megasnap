@@ -91,9 +91,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     }
   };
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    const isVideo = file.type.startsWith('video/');
+    
+    if (isVideo) {
       if (file.size > 50 * 1024 * 1024) {
         showError('동영상 용량은 50MB를 초과할 수 없습니다.');
         return;
@@ -110,7 +114,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       video.playsInline = true;
       
       video.onloadeddata = () => {
-        // 비디오를 살짝 뒤로 이동시켜 검은 화면 방지
         video.currentTime = 0.5;
       };
 
@@ -126,10 +129,21 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           console.log('[WritePost] Video thumbnail captured');
         }
       };
+    } else {
+      // 사진 처리
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        postDraftStore.set({ image: reader.result as string });
+        setVideoUrl(null);
+        setVideoFile(null);
+        setVideoThumbnail(null);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handlePost = async () => {
+
     if (!authUser) {
       showError('로그인이 필요합니다.');
       return;
@@ -358,28 +372,27 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <div className="space-y-6 px-1">
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={takePhoto}
-                      className={cn(
-                        "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                        draft.image ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                      )}
-                    >
-                      <ImageIcon className={cn("w-6 h-6", draft.image ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-xs font-bold", draft.image ? "text-indigo-600" : "text-gray-500")}>사진 선택</span>
-                    </button>
-                    <button 
+                  <div className="w-full">
+                    <button
                       onClick={() => videoInputRef.current?.click()}
                       className={cn(
-                        "h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                        videoUrl ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                        "w-full h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
+                        (draft.image || videoUrl) ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                       )}
                     >
-                      <Video className={cn("w-6 h-6", videoUrl ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-xs font-bold", videoUrl ? "text-indigo-600" : "text-gray-500")}>동영상 선택</span>
+                      <div className="flex items-center gap-3">
+                        <ImageIcon className={cn("w-6 h-6", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-400")} />
+                        <Video className={cn("w-6 h-6", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-400")} />
+                      </div>
+                      <span className={cn("text-xs font-bold", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-500")}>사진/동영상 선택</span>
                     </button>
-                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoSelect} />
+                    <input
+                      type="file"
+                      ref={videoInputRef}
+                      className="hidden"
+                      accept="image/*,video/*"
+                      onChange={handleMediaSelect}
+                    />
                   </div>
                 </div>
 
