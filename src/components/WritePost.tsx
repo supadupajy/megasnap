@@ -20,6 +20,7 @@ interface WritePostProps {
   onClose: () => void;
   onPostCreated?: (newPost: any) => void;
   onStartLocationSelection?: () => void;
+  onLocationReset?: () => void;
   initialLocation?: { lat: number; lng: number } | null;
 }
 
@@ -31,7 +32,8 @@ const CATEGORIES = [
   { key: 'animal', label: '동물', Icon: PawPrint, color: 'bg-purple-600' },
 ] as const;
 
-const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, initialLocation }: WritePostProps) => {
+const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, onLocationReset, initialLocation }: WritePostProps) => {
+
   const { user: authUser, profile } = useAuth();
   
   const [draft, setDraft] = useState(postDraftStore.get());
@@ -391,16 +393,32 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                       <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                     </button>
                   </div>
-                  <div onClick={onStartLocationSelection} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                      <MapPin className="w-5 h-5 text-indigo-600" />
+                  <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shrink-0 cursor-pointer hover:bg-indigo-100/50 transition-colors group relative">
+                    <div onClick={onStartLocationSelection} className="flex flex-1 items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <MapPin className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
+                          {address || '위치를 선택해주세요'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-sm font-bold truncate", initialLocation ? "text-gray-800" : "text-gray-400")}>
-                        {address || '위치를 선택해주세요'}
-                      </p>
-                    </div>
+                    {initialLocation && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onLocationReset) onLocationReset();
+                          setAddress('위치 없음');
+                        }}
+                        className="p-1 hover:bg-white/50 rounded-lg transition-colors z-20"
+                      >
+                        <X className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                      </button>
+                    )}
+
                   </div>
+
                 </div>
 
                 <div className="space-y-3">

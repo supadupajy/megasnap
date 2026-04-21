@@ -563,7 +563,15 @@ const Index = () => {
       </AnimatePresence>
 
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} />
+      <WritePost
+        isOpen={isWriteOpen}
+        onClose={() => setIsWriteOpen(false)}
+        initialLocation={finalSelectedLocation}
+        onPostCreated={handlePostCreated}
+        onStartLocationSelection={startLocationSelection}
+        onLocationReset={() => setFinalSelectedLocation(null)}
+      />
+
       <PostListOverlay
         isOpen={isPostListOpen}
         onClose={() => setIsPostListOpen(false)}
