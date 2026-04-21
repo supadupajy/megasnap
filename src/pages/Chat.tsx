@@ -569,9 +569,10 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed left-0 right-0 z-50 px-4 pt-2 pb-32 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
+        className="fixed left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
-          bottom: '0px',
+          bottom: '80px', // 하단 메뉴바(BottomNav) 높이인 80px만큼 위로 띄움
+          paddingBottom: '12px'
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
