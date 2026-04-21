@@ -14,6 +14,13 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface WritePostProps {
   isOpen: boolean;
@@ -22,6 +29,13 @@ interface WritePostProps {
   onStartLocationSelection?: () => void;
   onLocationReset?: () => void;
   initialLocation?: { lat: number; lng: number } | null;
+}
+
+interface MediaFile {
+  file: File;
+  url: string;
+  type: 'image' | 'video';
+  thumbnail?: string;
 }
 
 const CATEGORIES = [
@@ -37,8 +51,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const { user: authUser, profile } = useAuth();
   
   const [draft, setDraft] = useState(postDraftStore.get());
-  const [mediaFiles, setMediaFiles] = useState<{file: File | null, url: string, type: 'image' | 'video', thumbnail?: string}[]>([]);
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
@@ -79,7 +92,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     if (files.length === 0) return;
 
     const newMediaItems = await Promise.all(files.map(async (file) => {
-      const type = file.type.startsWith('video/') ? 'video' : 'image' as any;
+      const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
       let thumbnail = undefined;
 
@@ -87,7 +100,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         thumbnail = await captureVideoThumbnail(url);
       }
 
-      return { file, url, type, thumbnail };
+      return { file, url, type, thumbnail } as MediaFile;
     }));
 
     setMediaFiles(prev => [...prev, ...newMediaItems]);
@@ -124,16 +137,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       if (updated.length === 0) postDraftStore.set({ image: null });
       return updated;
     });
-    if (currentMediaIndex >= index && currentMediaIndex > 0) {
-      setCurrentMediaIndex(currentMediaIndex - 1);
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollLeft = e.currentTarget.scrollLeft;
-    const width = e.currentTarget.offsetWidth;
-    const index = Math.round(scrollLeft / width);
-    setCurrentMediaIndex(index);
   };
 
   const handlePost = async () => {
@@ -251,7 +254,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     
     postDraftStore.clear();
     setMediaFiles([]);
-    setCurrentMediaIndex(0);
     setSelectedCategory('none');
     onClose();
 
@@ -346,43 +348,50 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                 </div>
 
                 {mediaFiles.length > 0 && (
-                  <div className="relative w-full aspect-square rounded-[32px] overflow-hidden bg-black shadow-lg group">
-                    <div 
-                      ref={scrollRef}
-                      onScroll={handleScroll}
-                      className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                    >
-                      {mediaFiles.map((media, idx) => (
-                        <div key={idx} className="w-full h-full shrink-0 snap-center relative">
-                          {media.type === 'image' ? (
-                            <img src={media.url} alt="Preview" className="w-full h-full object-cover" />
-                          ) : (
-                            <video src={media.url} className="w-full h-full object-cover" controls />
-                          )}
-                          <button 
-                            onClick={() => removeMedia(idx)}
-                            className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center z-10 active:scale-90 transition-transform"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
+                  <div className="relative group">
+                    <Carousel className="w-full" opts={{ align: "start", containScroll: "trimSnaps" }}>
+                      <CarouselContent>
+                        {mediaFiles.map((media, idx) => (
+                          <CarouselItem key={idx}>
+                            <div className="relative aspect-square rounded-xl overflow-hidden bg-black/5">
+                              {media.type === 'image' ? (
+                                <img 
+                                  src={media.url} 
+                                  alt={`Preview ${idx}`} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <video 
+                                  src={media.url} 
+                                  className="w-full h-full object-cover"
+                                  controls={false}
+                                  autoPlay
+                                  muted
+                                  loop
+                                />
+                              )}
+                              <button
+                                onClick={() => removeMedia(idx)}
+                                className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      {mediaFiles.length > 1 && (
+                        <>
+                          <CarouselPrevious className="left-2 bg-white/80 border-none hover:bg-white" />
+                          <CarouselNext className="right-2 bg-white/80 border-none hover:bg-white" />
+                        </>
+                      )}
+                    </Carousel>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 px-2 py-1 bg-black/20 backdrop-blur-sm rounded-full">
+                      {mediaFiles.map((_, i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" />
                       ))}
                     </div>
-                    
-                    {/* 인디케이터 */}
-                    {mediaFiles.length > 1 && (
-                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                        {mediaFiles.map((_, idx) => (
-                          <div 
-                            key={idx} 
-                            className={cn(
-                              "h-1.5 rounded-full transition-all duration-300",
-                              currentMediaIndex === idx ? "bg-white w-4" : "bg-white/40 w-1.5"
-                            )} 
-                          />
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
 
