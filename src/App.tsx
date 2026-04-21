@@ -61,6 +61,9 @@ const AnimatedRoutes = () => {
     path => location.pathname.startsWith(path)
   );
 
+  // 현재 페이지의 애니메이션 방향 결정 (state를 통해 전달받거나 경로 기반으로 판단)
+  const isBackAction = (location.state as any)?.direction === 'back';
+
   // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
   const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
 
@@ -105,11 +108,20 @@ const AnimatedRoutes = () => {
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            initial={{ 
+              opacity: 0, 
+              x: isBackAction ? -50 : 50 
+            }}
+            animate={{ 
+              opacity: 1, 
+              x: 0 
+            }}
+            exit={{ 
+              opacity: 0, 
+              x: isBackAction ? 50 : -50 
+            }}
             transition={{ 
-              duration: 0.3,
+              duration: 0.35,
               ease: [0.32, 0.72, 0, 1] 
             }}
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}

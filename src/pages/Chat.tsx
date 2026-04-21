@@ -52,7 +52,11 @@ const Chat = () => {
   const handleBack = useCallback(() => {
     console.log('[Chat] Back button clicked');
     // 메시지 창에서 뒤로가기는 항상 DM 목록(/messages)으로 이동
-    navigate('/messages', { replace: true });
+    // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
+    navigate('/messages', {
+      replace: true,
+      state: { direction: 'back' }
+    });
   }, [navigate]);
 
   const scrollToBottom = useCallback(() => {

@@ -128,7 +128,11 @@ const Messages = () => {
 
   const handleBack = () => {
     // Direct Message 창에서 뒤로가기는 항상 지도 화면('/')으로 이동
-    navigate('/', { replace: true });
+    // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
+    navigate('/', {
+      replace: true,
+      state: { direction: 'back' }
+    });
   };
 
   return (
