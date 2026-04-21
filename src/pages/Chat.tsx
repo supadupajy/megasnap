@@ -48,11 +48,33 @@ const Chat = () => {
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
 
+  // 뒤로가기 핸들러
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/messages');
+    }
+  }, [navigate]);
+
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // scrollIntoView를 사용하여 하단 요소로 확실하게 이동
+      const scrollHeight = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollHeight,
+        behavior: 'auto'
+      });
     }
   }, []);
+
+  // 메시지 로드 시 스크롤
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      const timer = setTimeout(scrollToBottom, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages.length, isLoading, scrollToBottom]);
 
   // 메시지 읽음 처리 함수
   const markAsRead = useCallback(async () => {
@@ -391,7 +413,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="bg-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
       <header
         ref={headerRef}
         className="fixed top-0 left-0 right-0 h-[88px] z-50 bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
@@ -401,8 +423,8 @@ const Chat = () => {
       >
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors"
+            onClick={handleBack}
+            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
           >
             <ChevronLeft className="w-6 h-6 text-gray-800" />
           </button>
@@ -446,47 +468,48 @@ const Chat = () => {
 
       <div
         ref={scrollRef}
-        className="overflow-y-auto px-4 space-y-4 no-scrollbar"
+        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-20"
         style={{
-          height: '100dvh',
-          paddingTop: `${HEADER_HEIGHT + 16}px`,
+          marginTop: '88px', // 헤더 높이만큼 여백
         }}
       >
-        {messages.map((msg) => {
-          const isMe = msg.sender_id === authUser?.id;
-          const time = new Date(msg.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
-          return (
-            <div
-              key={msg.id}
-              className={cn(
-                'flex flex-col max-w-[85%]',
-                isMe ? 'ml-auto items-end' : 'mr-auto items-start'
-              )}
-            >
+        <div className="flex flex-col gap-4 py-4">
+          {messages.map((msg) => {
+            const isMe = msg.sender_id === authUser?.id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return (
               <div
+                key={msg.id}
                 className={cn(
-                  'px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm',
-                  isMe
-                    ? 'bg-indigo-600 text-white rounded-tr-none'
-                    : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                  'flex flex-col max-w-[85%]',
+                  isMe ? 'ml-auto items-end' : 'mr-auto items-start'
                 )}
               >
-                {msg.content}
+                <div
+                  className={cn(
+                    'px-4 py-2.5 rounded-[20px] text-sm font-bold shadow-sm',
+                    isMe
+                      ? 'bg-indigo-600 text-white rounded-tr-none'
+                      : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                  )}
+                >
+                  {msg.content}
+                </div>
+                <div className={cn('mt-1 px-1 flex items-center gap-1.5', isMe ? 'justify-end' : 'justify-start')}>
+                  {isMe && (
+                    <span className="text-[9px] text-gray-400 font-bold">
+                      {msg.is_read ? '읽음' : '읽지 않음'}
+                    </span>
+                  )}
+                  <span className="text-[9px] text-gray-400 font-bold">{time}</span>
+                </div>
               </div>
-              <div className={cn('mt-1 px-1 flex items-center gap-1.5', isMe ? 'justify-end' : 'justify-start')}>
-                {isMe && (
-                  <span className="text-[9px] text-gray-400 font-bold">
-                    {msg.is_read ? '읽음' : '읽지 않음'}
-                  </span>
-                )}
-                <span className="text-[9px] text-gray-400 font-bold">{time}</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <div
