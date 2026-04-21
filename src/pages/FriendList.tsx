@@ -48,17 +48,24 @@ const FriendList = () => {
     navigate(`/chat/${user.id}`);
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <div 
       className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
       style={{
-        paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
+        paddingTop: '88px', 
       }}
     >
-      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
       <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-100">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={handleBack} 
           className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -91,12 +98,12 @@ const FriendList = () => {
           </div>
         </div>
 
-        <div className="sticky top-[88px] z-40 bg-white px-4 py-6">
+        <div className="px-4 py-4 mt-2">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600" />
             <Input 
-              placeholder="닉네임으로 검색" 
-              className="pl-12 h-12 bg-gray-50/50 border-2 border-indigo-600 rounded-full focus-visible:ring-0 font-bold placeholder:text-gray-400" 
+              placeholder="닉네임으로 친구 찾기" 
+              className="pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl focus-visible:ring-0 font-bold placeholder:text-gray-400 shadow-sm" 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
             />
