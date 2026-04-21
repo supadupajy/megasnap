@@ -447,7 +447,7 @@ const Index = () => {
     setSelectedPostId(newPost.id); // 등록한 게시물 즉시 상세 보기 (선택 사항)
   };
 
-  const handlePostDeleted = (id: string) => {
+  const handlePostDeleted = useCallback((id: string) => {
     console.log('[Index] Handling post deletion for id:', id);
     // 1. 전체 게시물 목록에서 제거
     setAllPosts(prev => prev.filter(p => p.id !== id));
@@ -460,7 +460,7 @@ const Index = () => {
     
     // 4. 선택된 포스트 초기화
     setSelectedPostId(null);
-  };
+  }, []);
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
   const cancelLocationSelection = () => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => setIsWriteOpen(true), 100); };

@@ -395,6 +395,7 @@ const MapContainer = ({
     // 1. 제거될 마커 애니메이션 적용
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
+        console.log('[MapContainer] Post removed from list, animating removal:', id);
         // 이미 제거 대기 중인 경우 무시
         if (removalTimeoutsRef.current.has(id)) return;
 
@@ -406,6 +407,7 @@ const MapContainer = ({
           
           // 애니메이션 시간(300ms) 후에 실제로 지도에서 제거
           const timeoutId = window.setTimeout(() => {
+            console.log('[MapContainer] Animation finished, removing overlay from map:', id);
             overlay.setMap(null);
             overlaysRef.current.delete(id);
             removalTimeoutsRef.current.delete(id);
