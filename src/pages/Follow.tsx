@@ -49,12 +49,12 @@ const Follow = () => {
       if (activeTab === 'followers') {
         query = supabase
           .from('follows')
-          .select(`profiles:follower_id (id, nickname, avatar_url, bio)`)
+          .select(`profiles:follower_id (id, nickname, avatar_url, bio, last_seen)`)
           .eq('following_id', userId);
       } else {
         query = supabase
           .from('follows')
-          .select(`profiles:following_id (id, nickname, avatar_url, bio)`)
+          .select(`profiles:following_id (id, nickname, avatar_url, bio, last_seen)`)
           .eq('follower_id', userId);
       }
 
@@ -73,6 +73,28 @@ const Follow = () => {
   useEffect(() => {
     fetchFollowData();
   }, [fetchFollowData]);
+
+  useEffect(() => {
+    if (users.length === 0) return;
+
+    // 실시간 온라인 상태 업데이트 구독
+    const channel = supabase
+      .channel('follow-list-online-status')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload) => {
+          setUsers(prev => prev.map(user => 
+            user.id === payload.new.id ? { ...user, last_seen: payload.new.last_seen } : user
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [users.length]);
 
   const toggleFollow = async (e: React.MouseEvent, targetUserId: string) => {
     e.stopPropagation();
@@ -153,19 +175,34 @@ const Follow = () => {
           ) : users.length > 0 ? (
             users.map((user) => {
               const isFollowing = followingIds.has(user.id);
+              
+              // 온라인 상태 계산 (최근 5분 이내 활동)
+              const isOnline = user.last_seen && (new Date().getTime() - new Date(user.last_seen).getTime()) / (1000 * 60) < 5;
+
               return (
-                <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
-                  <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
+                <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all relative">
+                  <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
                     <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                       <AvatarImage src={user.avatar_url} />
                       <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
                     </Avatar>
+                    {/* 온라인 상태 점 표시 */}
+                    <div className={cn(
+                      "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10",
+                      isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
+                    )} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</p>
+                      {isOnline && (
+                        <span className="text-[9px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px]">Online</span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
                   </div>
                   {authUser?.id !== user.id && (
+
                     <Button 
                       variant={isFollowing ? "secondary" : "default"} 
                       size="sm" 
