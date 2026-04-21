@@ -21,43 +21,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   onToggle,
   onPostClick,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const displayPosts = posts.slice(0, 20);
   const listRef = useRef<HTMLDivElement>(null);
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
-
-  useEffect(() => {
-    if (isExpanded || displayPosts.length === 0) return;
-    const timer = setInterval(
-      () => setCurrentIndex((prev) => (prev + 1) % displayPosts.length),
-      5000,
-    );
-    return () => clearInterval(timer);
-  }, [isExpanded, displayPosts.length]);
-
-  const currentPost = displayPosts[currentIndex];
-
-  const handleItemClick = (e: React.MouseEvent, post: Post) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // ✅ Re-calculate borderType for the clicked post if it's missing or inconsistent
-    // This ensures that even if specific props weren't passed, the detail view gets the right identity
-    onPostClick(post);
-  };
-
-  const handleHeaderClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggle();
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = FALLBACK_IMAGE;
-  };
-
-  if (displayPosts.length === 0) return null;
 
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
@@ -70,10 +36,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     setShowScrollUpArrow(!isAtTop);
   }, []);
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80';
+  };
+
+  // FIX: Ensure useEffect doesn't change hook order based on props
   useEffect(() => {
+    const el = listRef.current;
     if (isExpanded && posts.length > 5) {
       handleScroll();
-      const el = listRef.current;
       el?.addEventListener('scroll', handleScroll);
       return () => el?.removeEventListener('scroll', handleScroll);
     } else {
@@ -94,14 +65,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         onClick={onToggle}
       >
         <span className="text-indigo-600 font-black text-sm w-4 italic shrink-0">
-          {isExpanded ? "HOT" : currentPost?.rank}
+          {isExpanded ? "HOT" : posts[0]?.rank}
         </span>
         
         {!isExpanded ? (
           <div className="flex flex-1 items-center gap-2 overflow-hidden">
             <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
               <img
-                src={currentPost?.image}
+                src={posts[0]?.image}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={handleImageError}
@@ -110,14 +81,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             <div className="flex-1 overflow-hidden relative h-5">
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={`${currentPost?.id}-${currentIndex}`}
+                  key={`${posts[0]?.id}-${0}`}
                   initial={{ y: 15, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -15, opacity: 0 }}
                   transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                   className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                 >
-                  {currentPost?.content}
+                  {posts[0]?.content}
                 </motion.p>
               </AnimatePresence>
             </div>
@@ -198,9 +169,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   src={post.image} 
                   alt="" 
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80';
-                  }}
+                  onError={handleImageError}
                 />
               </div>
 

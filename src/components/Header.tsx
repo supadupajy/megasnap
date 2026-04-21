@@ -51,7 +51,7 @@ const Header = () => {
     // 실시간 알림 구독
     let channel: any = null;
 
-    const setupRealtime = () => {
+    if (user) {
       channel = supabase
         .channel(`header-notifs-${user.id}`)
         .on(
@@ -64,23 +64,12 @@ const Header = () => {
           },
           () => setHasNewNotifications(true)
         )
-        .subscribe((status) => {
-          if (status === 'CLOSED') {
-            console.warn('[Header] Realtime connection closed');
-          }
-          if (status === 'CHANNEL_ERROR') {
-            console.error('[Header] Realtime connection error');
-          }
-        });
-    };
-
-    setupRealtime();
+        .subscribe();
+    }
 
     return () => {
       if (channel) {
-        supabase.removeChannel(channel).catch(err => {
-          console.warn('[Header] Error removing channel:', err);
-        });
+        supabase.removeChannel(channel);
       }
     };
   }, [user]);
