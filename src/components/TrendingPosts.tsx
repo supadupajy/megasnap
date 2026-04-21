@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Flame, ExternalLink, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 
@@ -221,6 +221,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 하단 스크롤 안내 화살표 */}
+      {isExpanded && posts.length > 5 && (
+        <div className="sticky bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2">
+          <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce">
+            <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
