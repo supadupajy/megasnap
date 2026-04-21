@@ -305,8 +305,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <div className="space-y-6 px-1">
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-  미디어 첨부 <span className="text-indigo-600">(필수)</span>
-</p>
+                  미디어 첨부 <span className="text-indigo-600">(필수)</span>
+                  </p>
                   <div className="w-full">
                     <button 
                       onClick={() => mediaInputRef.current?.click()}
@@ -382,7 +382,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보 (선택)</p>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+  장소 정보<span className="text-indigo-600">(선택)</span>
+</p>
                     <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
                       <MapIcon className="w-3 h-3" /> 지도에서 위치 선택
                     </button>
