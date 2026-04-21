@@ -22,31 +22,6 @@ const Search = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
 
-  // 스크롤 시 상단 헤더 밀림 방지 (iOS/Android Safari 바운스 차단 보조)
-  useEffect(() => {
-    // 터치 이동 시 기본 스크롤 동작 방지 (iOS 바운스 방지)
-    const preventDefault = (e: TouchEvent) => {
-      // 스크롤 가능한 요소 내부가 아닌 경우에만 방지
-      const target = e.target as HTMLElement;
-      if (!target.closest('.scrollable-content')) {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener('touchmove', preventDefault, { passive: false });
-    const originalStyle = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    
-    return () => {
-      document.removeEventListener('touchmove', preventDefault);
-      document.body.style.overflow = originalStyle;
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, []);
-
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -112,13 +87,15 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden overscroll-none">
-      {/* 88px 헤더 공간 확보 - 헤더와 겹치지 않게 투명 영역 배치 */}
-      <div className="h-[88px] shrink-0 pointer-events-none" />
-      
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-28 scrollable-content overscroll-contain">
+    <div className="h-full bg-white flex flex-col overflow-hidden relative">
+      {/* 
+        중요: 상단 헤더가 fixed이므로, 
+        본문 컨테이너에 padding-top: 88px을 주어 컨텐츠가 헤더 아래에서 시작하게 하고,
+        overflow-y-auto를 주어 헤더 영역은 건드리지 않고 내부에서만 스크롤되게 함.
+      */}
+      <div className="flex-1 overflow-y-auto no-scrollbar pt-[88px] pb-28">
         <div className="px-4">
-          <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-20">
+          <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-50">
             <button 
               onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
