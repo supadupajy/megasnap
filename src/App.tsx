@@ -57,7 +57,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFullPage = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
+  const isFullPage = ["/splash", "/login", "/settings", "/friends", "/profile/follow"].some(
     path => location.pathname.startsWith(path)
   );
 
@@ -90,7 +90,7 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
+    <div className={`relative bg-white min-h-[100dvh]`}>
       <AnimatePresence>
         {!isFullPage && session && (
           <motion.div
@@ -105,7 +105,7 @@ const AnimatedRoutes = () => {
         )}
       </AnimatePresence>
 
-      <main className={`relative ${isChatPage ? "h-full" : ""}`}>
+      <main className={`relative pt-[88px] min-h-[calc(100dvh-88px)]`}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
@@ -129,7 +129,7 @@ const AnimatedRoutes = () => {
               duration: 0.3,
               ease: [0.32, 0.72, 0, 1] 
             }}
-            className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
+            className="w-full"
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />

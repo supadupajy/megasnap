@@ -137,11 +137,8 @@ const Messages = () => {
 
   return (
     <div 
-      className="min-h-screen bg-white pb-24 no-scrollbar" 
+      className="h-[calc(100dvh-88px)] bg-white pb-24 no-scrollbar overflow-y-auto" 
       onClick={() => setSwipedId(null)}
-      style={{
-        paddingTop: '88px', // 글로벌 헤더 높이만큼 아래로 밀어내기
-      }}
     >
       {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
       <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">

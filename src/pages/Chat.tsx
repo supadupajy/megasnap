@@ -469,13 +469,10 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+    <div className="bg-white overflow-hidden flex flex-col h-full">
+      {/* 내부 헤더 - 글로벌 헤더 바로 아래 위치 */}
       <header
-        ref={headerRef}
-        className="fixed top-0 left-0 right-0 h-[88px] z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
-        style={{
-          paddingTop: 'max(32px, env(safe-area-inset-top))',
-        }}
+        className="sticky top-0 z-[40] bg-white flex items-center justify-between px-4 h-14 border-b border-gray-50"
       >
         <div className="flex items-center gap-3">
           <div 
@@ -486,7 +483,7 @@ const Chat = () => {
           </div>
           <div className="flex items-center gap-2">
             <div
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer relative"
+              className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer relative"
               onClick={() => navigate(`/profile/${chatId}`)}
             >
               <img
@@ -495,39 +492,33 @@ const Chat = () => {
                 className="w-full h-full rounded-full object-cover border-2 border-white"
               />
               <div className={cn(
-                "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white z-10 transition-colors duration-300",
+                "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
                 isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-400"
               )} />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black text-gray-900">
+              <span className="text-sm font-black text-gray-900 leading-tight">
                 {otherUser?.nickname || '사용자'}
               </span>
-              <div className="flex items-center gap-1">
-                <span className={cn(
-                  "text-[9px] font-black uppercase tracking-tight transition-colors duration-300",
-                  isOnline ? "text-green-500" : "text-gray-400"
-                )}>
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
+              <span className={cn(
+                "text-[8px] font-black uppercase tracking-tight",
+                isOnline ? "text-green-500" : "text-gray-400"
+              )}>
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
             </div>
           </div>
-
         </div>
-        <div className="flex items-center gap-3">
-          <button className="p-1 text-gray-600"><Phone className="w-5 h-5" /></button>
-          <button className="p-1 text-gray-600"><Video className="w-5 h-5" /></button>
-          <button className="p-1 text-gray-600"><MoreVertical className="w-5 h-5" /></button>
+        <div className="flex items-center gap-2">
+          <button className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-full"><Phone className="w-4 h-4" /></button>
+          <button className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-full"><Video className="w-4 h-4" /></button>
+          <button className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-full"><MoreVertical className="w-4 h-4" /></button>
         </div>
       </header>
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-20"
-        style={{
-          marginTop: '88px', // 헤더 높이만큼 여백
-        }}
+        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-24"
       >
         <div className="flex flex-col gap-4 py-4">
           {messages.map((msg) => {
