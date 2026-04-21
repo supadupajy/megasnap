@@ -228,16 +228,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       }
 
       showSuccess('포스팅이 삭제되었습니다.');
+      
+      // 1. 모든 다이얼로그와 팝업 상태를 즉시 닫기
       setIsDeleteDialogOpen(false);
       
+      // 2. 부모 컴포넌트에 삭제 알림
       if (onDelete) {
         onDelete(post.id);
       }
       
-      // 약간의 지연을 주어 UI 업데이트 보장
-      setTimeout(() => {
-        onClose();
-      }, 100);
+      // 3. 지연 없이 즉시 팝업 닫기
+      onClose();
       
     } catch (err: any) { 
       console.error('[PostDetail] Final delete error:', err);
@@ -294,7 +295,41 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
                       </div>
                     </div>
-                    <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
+                            <MoreHorizontal className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
+                          {isMine ? (
+                            <DropdownMenuItem 
+                              onClick={(e) => { 
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsDeleteDialogOpen(true); 
+                              }} 
+                              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                              <span className="text-sm font-bold text-red-600">삭제하기</span>
+                            </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+                                <AlertCircle className="w-4 h-4 text-gray-600" />
+                                <span className="text-sm font-bold text-gray-700">신고</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                                <Ban className="w-4 h-4 text-red-600" />
+                                <span className="text-sm font-bold text-red-600">차단</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <div className="px-4">
                     <div ref={videoContainerRef} className={cn("relative aspect-[4/3] w-full rounded-2xl", mediaBorderContainerClass)}>
