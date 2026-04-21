@@ -524,8 +524,8 @@ const Chat = () => {
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
-          paddingTop: '64px', // 내부 헤더 높이만큼 여백
-          paddingBottom: '80px', // 입력창과 하단 탭바를 고려한 충분한 여백
+          paddingTop: '64px',
+          paddingBottom: '160px',
         }}
       >
         <div className="flex flex-col gap-4 py-4">
@@ -569,7 +569,10 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-24 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform mb-[env(safe-area-inset-bottom)]"
+        className="fixed left-0 right-0 z-50 px-4 pt-2 pb-32 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
+        style={{
+          bottom: '0px',
+        }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
           <Input
