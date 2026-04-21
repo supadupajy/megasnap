@@ -30,11 +30,8 @@ const Header = () => {
       }
     };
 
-    checkNotifications();
-
     // 초기 미확인 메시지 체크
     const checkMessages = async () => {
-      if (!user) return;
       const { count, error } = await supabase
         .from('chat_messages')
         .select('*', { count: 'exact', head: true })
@@ -46,31 +43,55 @@ const Header = () => {
       }
     };
 
+    checkNotifications();
     checkMessages();
 
-    // 실시간 알림 구독
-    let channel: any = null;
-
-    if (user) {
-      channel = supabase
-        .channel(`header-notifs-${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => setHasNewNotifications(true)
-        )
-        .subscribe();
-    }
+    // 실시간 구독 통합 관리
+    const channel = supabase
+      .channel(`user-updates-${user.id}`)
+      // 1. 알림 실시간 감지
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => setHasNewNotifications(true)
+      )
+      // 2. 메시지 실시간 감지
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        () => {
+          setUnreadMsgCount(prev => prev + 1);
+        }
+      )
+      // 3. 메시지 읽음 처리 감지
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.new.is_read === true) {
+            checkMessages(); // 개수 다시 계산
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
