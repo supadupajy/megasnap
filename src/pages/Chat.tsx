@@ -275,21 +275,30 @@ const Chat = () => {
           if (!isCurrentConversation) return;
 
           setMessages((prev) => {
-            // 중복 제거 및 낙관적 업데이트 메시지 교체
-            // 낙관적 업데이트는 temp- 형식의 ID를 가짐
-            const filtered = prev.filter((msg) => {
-              const isTemp = msg.id.startsWith('temp-');
-              const isDuplicate = msg.id === newMsg.id;
-              // 내용과 보낸 사람이 같으면 낙관적 메시지로 간주하고 제거
-              const isOptimisticMatch = isTemp && msg.content === newMsg.content && msg.sender_id === newMsg.sender_id;
-              
-              return !isDuplicate && !isOptimisticMatch;
-            });
-            
-            const updated = [...filtered, newMsg].sort(
+            // 이미 상태에 있는 메시지인지 확인 (handleSend에서 이미 넣었을 수 있음)
+            const isAlreadyPresent = prev.some(m => m.id === newMsg.id);
+            if (isAlreadyPresent) return prev;
+
+            // 낙관적 업데이트 메시지(temp-) 찾아서 교체하거나 추가
+            const tempMsgIndex = prev.findIndex(m =>
+              m.id.startsWith('temp-') &&
+              m.content === newMsg.content &&
+              m.sender_id === newMsg.sender_id
+            );
+
+            let newMessages;
+            if (tempMsgIndex !== -1) {
+              // 임시 메시지가 있으면 교체
+              newMessages = [...prev];
+              newMessages[tempMsgIndex] = newMsg;
+            } else {
+              // 없으면 새로 추가
+              newMessages = [...prev, newMsg];
+            }
+
+            return newMessages.sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
             );
-            return updated;
           });
 
           if (newMsg.sender_id === chatId) {
@@ -323,7 +332,7 @@ const Chat = () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    // 임시 ID 형식 변경 (구분하기 쉽게)
+    // 임시 ID 형식 (확실한 구분자 사용)
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const optimisticMsg: Message = {
       id: tempId,
@@ -334,37 +343,57 @@ const Chat = () => {
       is_read: false,
     };
 
+    // 1. 즉시 화면에 표시
     setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue('');
+    
+    // 즉시 하단 스크롤
+    setTimeout(scrollToBottom, 10);
 
     if (isValidUUID(chatId)) {
       try {
-        // 1. 메시지 저장
+        // 2. DB 저장
         const { data, error } = await supabase
           .from('messages')
-          .insert([{ sender_id: authUser.id, receiver_id: chatId, content }])
+          .insert([{ 
+            sender_id: authUser.id, 
+            receiver_id: chatId, 
+            content,
+            created_at: new Date().toISOString() // 클라이언트 시간 명시
+          }])
           .select('*')
           .single();
 
         if (error) throw error;
 
-        // 2. 상대방에게 알림 생성
-        await supabase.from('notifications').insert([{
+        // 3. 상태 업데이트 (서버 데이터로 교체)
+        if (data) {
+          setMessages((prev) => {
+            // tempId를 가진 메시지를 실제 서버 데이터로 교환
+            const exists = prev.some(m => m.id === data.id);
+            if (exists) {
+              return prev.filter(m => m.id !== tempId);
+            }
+            return prev.map((msg) => (msg.id === tempId ? data : msg));
+          });
+          // 교체 후에도 스크롤 보정
+          setTimeout(scrollToBottom, 50);
+        }
+
+        // 4. 알림 생성 (비동기로 처리하여 메시지 표시 지연 방지)
+        supabase.from('notifications').insert([{
           user_id: chatId,
           type: 'message',
           title: '새 메시지',
           content: content.length > 20 ? content.substring(0, 20) + '...' : content,
           is_read: false,
           related_id: authUser.id
-        }]);
+        }]).then(({ error }) => {
+          if (error) console.error('[Chat] Notification error:', error);
+        });
 
-        if (data) {
-          // 낙관적 메시지를 실제 서버 데이터로 즉시 교체
-          setMessages((prev) =>
-            prev.map((msg) => (msg.id === tempId ? data : msg))
-          );
-        }
       } catch (error) {
+        console.error('[Chat] Send error:', error);
         showError('메시지 전송에 실패했습니다.');
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
       }
