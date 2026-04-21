@@ -191,21 +191,22 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
           transition={{
             duration: 0.3,
             ease: [0.22, 1, 0.36, 1]
           }}
           className="fixed top-0 left-0 right-0 z-[2000] bg-white flex flex-col overflow-hidden"
           style={{ 
+            paddingTop: '88px',
             height: isKeyboardOpen ? `calc(100dvh - ${keyboardHeight}px)` : '100dvh',
             touchAction: 'auto'
           }}
         >
           {/* Header */}
-          <div className="pt-12 pb-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
+          <div className="py-4 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
             <button 
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
