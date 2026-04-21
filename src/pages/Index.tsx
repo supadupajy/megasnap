@@ -70,29 +70,47 @@ const Index = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
-  // [수정] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
+  // ✅ [FIX] isPostListOpen 변경 시 window 플래그에 즉시 동기적으로 반영
+  // navigate()를 통한 location.state 업데이트는 비동기라 App.tsx backButton 리스너에서
+  // 타이밍 이슈가 발생하므로, window 플래그로 교체하여 즉시 반영 보장
+  useEffect(() => {
+    (window as any).__isPostListOpen = isPostListOpen;
+    console.log('[Index] window.__isPostListOpen set to:', isPostListOpen);
+  }, [isPostListOpen]);
+
+  // ✅ [FIX] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
+  // App.tsx에서 window.__isPostListOpen을 확인한 후 이 이벤트를 dispatch함
   useEffect(() => {
     const handleCloseOverlay = () => {
       console.log('[Index] Received close signal from native back button');
-      if (isPostListOpen) {
+      if ((window as any).__isPostListOpen) {
         setIsPostListOpen(false);
       }
     };
     window.addEventListener('close-post-list-overlay', handleCloseOverlay);
     return () => window.removeEventListener('close-post-list-overlay', handleCloseOverlay);
-  }, [isPostListOpen]);
+  // ✅ isPostListOpen 의존성 제거 — window 플래그를 직접 읽으므로 불필요
+  }, []);
 
-  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용 (기존 useEffect 수정)
+  // ✅ [REMOVED] location.state를 통한 isPostListOpen 동기화 useEffect 제거
+  // 이 방식은 navigate()의 비동기 특성으로 인해 App.tsx backButton 리스너에서
+  // 항상 이전 값을 읽는 타이밍 레이스 컨디션을 유발했음
+  //
+  // useEffect(() => {
+  //   if ((location.state as any)?.isPostListOpen !== isPostListOpen) {
+  //     navigate(location.pathname, { 
+  //       replace: true, 
+  //       state: { ...location.state, isPostListOpen } 
+  //     });
+  //   }
+  // }, [isPostListOpen, location.pathname, navigate]);
+
+  // ✅ [ADD] 컴포넌트 언마운트 시 플래그 초기화
   useEffect(() => {
-    // state가 바뀌었을 때만 navigate를 호출하여 무한 루프 방지
-    if ((location.state as any)?.isPostListOpen !== isPostListOpen) {
-      console.log('[Index] Syncing PostListOverlay state to history:', isPostListOpen);
-      navigate(location.pathname, { 
-        replace: true, 
-        state: { ...location.state, isPostListOpen } 
-      });
-    }
-  }, [isPostListOpen, location.pathname, navigate]);
+    return () => {
+      (window as any).__isPostListOpen = false;
+    };
+  }, []);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -116,14 +134,13 @@ const Index = () => {
       const isAd = p.content?.trim().startsWith('[AD]');
       const borderType = isAd ? 'none' : getTierFromId(p.id);
 
-      // 이미지 URL이 유효한지 확인하고 깨진 경우 대체 이미지 사용
       const rawImage = p.youtube_url 
         ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) 
-        : p.image_url; // remapUnsplashDisplayUrl 제거하여 불필요한 연산 및 트래픽 유도 방지
+        : p.image_url;
       
       const finalImage = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('data:'))) 
         ? rawImage 
-        : null; // DB 값이 없으면 null로 전달하여 클라이언트에서 FALLBACK_IMAGE를 쓰게 함
+        : null;
 
       return {
         id: p.id,
@@ -158,12 +175,11 @@ const Index = () => {
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(50); // 충분히 많은 데이터를 가져온 후 필터링
+        .limit(50);
       
       if (!error && data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
-        // 광고([AD])가 아닌 포스팅만 필터링하여 순위 매기기
-        const filtered = mapped.filter(p => p && !p.isAd).slice(0, 20); // 정확히 20개만 추출
+        const filtered = mapped.filter(p => p && !p.isAd).slice(0, 20);
         const ranked = filtered.map((p, idx) => ({
           ...p,
           rank: idx + 1
@@ -181,10 +197,8 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
-    // 지도를 직접 조작해서 움직인 경우(isSelectingLocation이 아닐 때) 위치 선택 정보 초기화
     if (!isSelectingLocation) {
       setFinalSelectedLocation(null);
-      // ✅ [ADD] 지도를 움직이면 글쓰기 드래프트 및 사진 정보도 초기화
       postDraftStore.clear();
     }
 
@@ -204,12 +218,8 @@ const Index = () => {
       
       if (isSelectingLocation) setTempSelectedLocation(data.center);
 
-      // 지도를 움직이면 글쓰기 선택 위치 초기화
       setFinalSelectedLocation(null);
       
-      // ✅ [FIX] 줌 복귀 시 displayedMarkers 재계산을 강제로 트리거하기 위해
-
-      // syncPostsWithSupabase를 호출하고 mapData도 함께 업데이트
       setTimeout(() => {
         syncPostsWithSupabase(data.bounds, data.level);
       }, 100);
@@ -229,7 +239,6 @@ const Index = () => {
     }, 100);
   }, [isSelectingLocation, currentZoom]);
 
-  // ✅ [FIX] forceZoom 파라미터 추가 — currentZoom 상태가 아직 반영 안됐을 때 사용
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds) return;
@@ -239,7 +248,6 @@ const Index = () => {
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
     const center = mapData?.center;
-    // ✅ forceZoom이 있으면 그것을 우선 사용 (상태 비동기 문제 우회)
     const zoomToUse = forceZoom ?? currentZoom;
 
     try {
@@ -278,7 +286,6 @@ const Index = () => {
       return;
     }
     
-    // ✅ 9단계 이상일 때는 모든 마커를 숨김
     if (currentZoom >= 9) { 
       if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
       return; 
@@ -286,7 +293,6 @@ const Index = () => {
 
     const { sw, ne } = mapData.bounds;
     
-    // ✅ 화면 밖 마커 유지 범위를 20% 확대하여 부드러운 스크롤 제공
     const latPadding = Math.abs(ne.lat - sw.lat) * 0.2;
     const lngPadding = Math.abs(ne.lng - sw.lng) * 0.2;
     
@@ -482,45 +488,34 @@ const Index = () => {
   const handlePostCreated = (newPost: any) => {
     console.log('[Index] New post created, adding to state:', newPost);
     
-    // 1. 전체 게시물 목록에 추가
     setAllPosts(prev => [newPost, ...prev]);
-    
-    // 2. 현재 지도에 즉시 표시되도록 필터링된 목록에도 강제 추가
     setDisplayedMarkers(prev => [newPost, ...prev]);
     
-    // 3. 게시물이 등록된 위치로 지도 중심 이동
     if (newPost.lat && newPost.lng) {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-      // 줌 레벨도 디폴트인 6으로 조정
       setCurrentZoom(6);
     }
 
-    // 4. 성공 메시지 및 닫기
     setIsWriteOpen(false);
-    // setSelectedPostId(newPost.id); // 제거: 쌩뚱맞은 포스팅이 뜨는 현상 방지
   };
 
   const handlePostDeleted = useCallback((id: string) => {
     console.log('[Index] Handling post deletion for id:', id);
     
-    // 1. 전체 게시물 목록에서 제거
     setAllPosts(prev => {
       const filtered = prev.filter(p => p.id !== id);
       console.log('[Index] allPosts updated, new count:', filtered.length);
       return filtered;
     });
     
-    // 2. 현재 지도 마커 목록에서 즉시 제거 (이게 중요!)
     setDisplayedMarkers(prev => {
       const filtered = prev.filter(p => p.id !== id);
       console.log('[Index] displayedMarkers updated, new count:', filtered.length);
       return filtered;
     });
     
-    // 3. 캐시에서도 제거
     mapCache.posts = mapCache.posts.filter(p => p.id !== id);
     
-    // 4. 선택된 포스트 초기화
     setSelectedPostId(null);
   }, []);
 
