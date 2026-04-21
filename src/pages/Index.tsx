@@ -456,7 +456,7 @@ const Index = () => {
 
     // 4. 성공 메시지 및 닫기
     setIsWriteOpen(false);
-    setSelectedPostId(newPost.id); // 등록한 게시물 즉시 상세 보기 (선택 사항)
+    // setSelectedPostId(newPost.id); // 제거: 쌩뚱맞은 포스팅이 뜨는 현상 방지
   };
 
   const handlePostDeleted = useCallback((id: string) => {
