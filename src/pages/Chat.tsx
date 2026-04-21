@@ -168,10 +168,10 @@ const Chat = () => {
           inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
           inputRef.current.style.paddingBottom = '8px';
         } else {
-          // 키보드가 닫히면 하단 메뉴바 바로 위에 위치 (스크린샷에 맞춰 88px로 조정)
-          inputRef.current.style.bottom = '88px'; 
+          // 키보드가 닫히면 하단 메뉴바 위에 위치 (사용자 피드백에 따라 더 높임)
+          inputRef.current.style.bottom = '100px'; 
           inputRef.current.style.transform = 'translateY(0px)';
-          inputRef.current.style.paddingBottom = '12px';
+          inputRef.current.style.paddingBottom = '16px';
         }
       }
 
@@ -576,8 +576,8 @@ const Chat = () => {
         ref={inputRef}
         className="fixed left-0 right-0 z-[120] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform transition-all duration-200"
         style={{
-          bottom: '88px', 
-          paddingBottom: '12px'
+          bottom: '100px', 
+          paddingBottom: '16px'
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
