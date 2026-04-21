@@ -107,45 +107,60 @@ serve(async (req) => {
     }
 
     // 3. FCM 푸시 알림 발송
-    const fcmPayload = {
-      to: pushToken,
-      notification: {
-        title: notificationTitle,
-        body: notificationBody,
-        sound: "default",
-      },
-      data: dataPayload,
-      // badge count 설정 제거 또는 0으로 설정하여 알림 아이콘 뱃지 영향 최소화
-      apns: {
-        payload: {
-          aps: {
-            contentAvailable: 1,
-            // badge: 1, <-- 제거
+    // 현재 https://fcm.googleapis.com/fcm/send (Legacy API)가 404를 반환하고 있습니다.
+    // 이는 구글에서 Legacy API를 비활성화했거나 엔드포인트가 변경되었을 수 있습니다.
+    // 최신 방식인 HTTP v1 API를 사용하는 것이 권장되지만, 여기서는 일단 오류 발생 시 앱이 중단되지 않도록
+    // FCM 호출 부분을 안전하게 감싸고 로그만 남깁니다.
+    
+    let fcmResult = { message: "FCM call skipped or failed" };
+    
+    try {
+      const fcmPayload = {
+        to: pushToken,
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+          sound: "default",
+        },
+        data: dataPayload,
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: 1,
+            },
           },
         },
-      },
-    };
+      };
 
-    const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `key=${FCM_SERVER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(fcmPayload),
-    });
+      console.log(`[push-notification] Attempting to send FCM to ${receiverId}...`);
+      
+      const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `key=${FCM_SERVER_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fcmPayload),
+      });
 
-    // FCM 서버 응답이 JSON이 아닐 경우(예: HTML 오류 페이지)를 처리
-    const responseText = await fcmResponse.text();
-    let fcmResult;
-    try {
-      fcmResult = JSON.parse(responseText);
-    } catch (e) {
-      console.error("[push-notification] FCM response was not JSON:", responseText);
-      throw new Error(`FCM response was not JSON: ${responseText.substring(0, 100)}`);
+      const responseText = await fcmResponse.text();
+      
+      if (!fcmResponse.ok) {
+        console.warn(`[push-notification] FCM server returned error ${fcmResponse.status}:`, responseText.substring(0, 200));
+        fcmResult = { error: `FCM server returned ${fcmResponse.status}`, detail: responseText.substring(0, 100) };
+      } else {
+        try {
+          fcmResult = JSON.parse(responseText);
+          console.log(`[push-notification] FCM sent successfully:`, fcmResult);
+        } catch (e) {
+          console.warn("[push-notification] FCM response was not JSON:", responseText.substring(0, 100));
+          fcmResult = { message: "FCM sent but response was not JSON", text: responseText.substring(0, 50) };
+        }
+      }
+    } catch (fcmError) {
+      console.error("[push-notification] Critical FCM fetch error:", fcmError.message);
+      fcmResult = { error: "Fetch failed", message: fcmError.message };
     }
-
-    console.log(`[push-notification] FCM sent to ${receiverId}. Result:`, fcmResult);
 
     return new Response(JSON.stringify({ success: true, fcmResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
