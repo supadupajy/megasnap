@@ -49,10 +49,37 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  // 키보드 대응 뷰포트 핸들러
+  useEffect(() => {
+    const vp = window.visualViewport;
+    if (!vp) return;
+
+    const handleViewport = () => {
+      const offsetTop = vp.offsetTop ?? 0;
+      const heightDiff = window.innerHeight - vp.height - offsetTop;
+      const isKeyboardOpen = heightDiff > 100;
+
+      if (isKeyboardOpen) {
+        setKeyboardHeight(heightDiff);
+      } else {
+        setKeyboardHeight(0);
+      }
+    };
+
+    vp.addEventListener('resize', handleViewport);
+    vp.addEventListener('scroll', handleViewport);
+    return () => {
+      vp.removeEventListener('resize', handleViewport);
+      vp.removeEventListener('scroll', handleViewport);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -282,8 +309,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
-      <div className="absolute top-5 right-6 z-[1100]"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button></div>
-      <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 pt-4 pb-[60px]">
+      <div 
+        className="absolute top-5 right-6 z-[1100] transition-transform duration-300"
+        style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)' }}
+      >
+        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button>
+      </div>
+      <div 
+        className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-300 ease-out"
+        style={{ 
+          paddingTop: '16px',
+          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 60}px` : '60px',
+          transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 3}px)` : 'translateY(0)'
+        }}
+      >
         <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
           <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
 
@@ -394,7 +433,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
                     </div>
                     <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}><p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p><div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div></div>
-                    <div className="border-t border-gray-100 pt-4"><form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} /><button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>{lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button></div>
+                    <div className="border-t border-gray-100 pt-4">
+                      <form 
+                        onSubmit={handleAddComment} 
+                        className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+                      >
+                        <Input 
+                          ref={commentInputRef}
+                          placeholder="댓글 달기..." 
+                          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
+                          value={commentInput} 
+                          onChange={(e) => setCommentInput(e.target.value)} 
+                          disabled={isSubmittingComment} 
+                        />
+                        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
+                      </form>
+                      {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
+                    </div>
                   </div>
                 </div>
               </div>
