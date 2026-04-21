@@ -7,8 +7,8 @@ import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
-// 사운드 파일 경로 (더 명확하고 인지하기 쉬운 소리로 교체)
-const NOTIFICATION_SOUND = 'https://cdn.freesound.org/previews/235/235911_3541459-lq.mp3';
+// 사운드 파일 경로 (더 명확하고 호환성 높은 MP3 파일로 교체)
+const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
 const Header = () => {
   const { session, user } = useAuth();
@@ -45,27 +45,38 @@ const Header = () => {
     };
   }, []);
 
+  // 사운드 재생 함수
+  const playSound = useCallback(() => {
+    // 1. 권한 체크 (상호작용 여부)
+    if (!canPlaySound) {
+      console.log('[Header] Sound skipped: Waiting for first user interaction');
+      return;
+    }
+
+    try {
+      const audio = new Audio(NOTIFICATION_SOUND);
+      audio.volume = 0.5;
+      
+      // 2. 브라우저 호환성을 위한 play() 약속 처리
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          if (error.name === 'NotAllowedError' || error.name === 'NotSupportedError') {
+            console.warn('[Header] Playback blocked or not supported yet:', error.name);
+            setCanPlaySound(false); // 상호작용이 다시 필요할 수 있음
+          } else {
+            console.error('[Header] Audio playback error:', error);
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[Header] Audio initialization failed:', e);
+    }
+  }, [canPlaySound]);
+
   useEffect(() => {
     if (!user) return;
-
-    // 사운드 재생 함수 (사용자가 화면을 한 번이라도 클릭했다면 무조건 실행)
-    const playSound = () => {
-      // canPlaySound 상태와 관계없이 직접 재생 시도 (실제 에러가 날 때만 catch)
-      try {
-        const audio = new Audio(NOTIFICATION_SOUND);
-        audio.volume = 0.6;
-        const playPromise = audio.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(e => {
-            console.warn('[Header] Audio play failed (likely no interaction yet):', e.name);
-            setCanPlaySound(false); // 재생 실패 시 권한 없음으로 갱신
-          });
-        }
-      } catch (e) {
-        console.error('[Header] Sound play error:', e);
-      }
-    };
 
     // 초기 알림 체크
     const checkNotifications = async () => {
