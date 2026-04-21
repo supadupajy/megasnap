@@ -24,6 +24,7 @@ interface WritePostProps {
 }
 
 const CATEGORIES = [
+  { key: 'none', label: '없음', Icon: X, color: 'bg-gray-500' },
   { key: 'food', label: '맛집', Icon: Utensils, color: 'bg-orange-500' },
   { key: 'accident', label: '사고', Icon: Car, color: 'bg-red-600' },
   { key: 'place', label: '명소', Icon: TreePine, color: 'bg-green-600' },
@@ -131,6 +132,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const handlePost = async () => {
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
     if (mediaFiles.length === 0) { showError('사진이나 동영상을 첨부해주세요.'); return; }
+    // 카테고리 필수 체크 해제 (이미 'none'이 기본값이거나 선택 가능하므로)
     if (!selectedCategory) { showError('카테고리를 선택해주세요.'); return; }
 
     setIsSubmitting(true);
@@ -334,7 +336,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 </div>
 
                 {mediaFiles.length > 0 && (
-                  <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-lg group">
+                  <div className="relative w-full aspect-square rounded-[32px] overflow-hidden bg-black shadow-lg group">
                     <div 
                       ref={scrollRef}
                       onScroll={handleScroll}
@@ -345,13 +347,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                           {media.type === 'image' ? (
                             <img src={media.url} alt="Preview" className="w-full h-full object-cover" />
                           ) : (
-                            <video src={media.url} className="w-full h-full object-contain" controls />
+                            <video src={media.url} className="w-full h-full object-cover" controls />
                           )}
                           <button 
                             onClick={() => removeMedia(idx)}
-                            className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center z-10"
+                            className="absolute top-4 right-4 w-9 h-9 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center z-10 active:scale-90 transition-transform"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-5 h-5" />
                           </button>
                         </div>
                       ))}
@@ -395,7 +397,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리 선택</p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {CATEGORIES.map((cat) => (
                       <button
                         key={cat.key}
