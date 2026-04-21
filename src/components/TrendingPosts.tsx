@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -59,18 +59,18 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
   if (displayPosts.length === 0) return null;
 
+  const handleScroll = useCallback(() => {
+    if (!listRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+    
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
+    setShowScrollDownArrow(!isAtBottom);
+
+    const isAtTop = scrollTop < 10;
+    setShowScrollUpArrow(!isAtTop);
+  }, []);
+
   useEffect(() => {
-    const handleScroll = () => {
-      if (!listRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-      
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
-      setShowScrollDownArrow(!isAtBottom);
-
-      const isAtTop = scrollTop < 10;
-      setShowScrollUpArrow(!isAtTop);
-    };
-
     if (isExpanded && posts.length > 5) {
       handleScroll();
       const el = listRef.current;
@@ -80,7 +80,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       setShowScrollDownArrow(false);
       setShowScrollUpArrow(false);
     }
-  }, [isExpanded, posts.length]);
+  }, [isExpanded, posts.length, handleScroll]);
 
   return (
     <div 

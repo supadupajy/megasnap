@@ -49,27 +49,38 @@ const Header = () => {
     checkMessages();
 
     // 실시간 알림 구독
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => setHasNewNotifications(true)
-      )
-      .subscribe((status) => {
-        if (status === 'CLOSED') {
-          console.warn('[Header] Realtime connection closed');
-        }
-      });
+    let channel: any = null;
+
+    const setupRealtime = () => {
+      channel = supabase
+        .channel(`header-notifs-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => setHasNewNotifications(true)
+        )
+        .subscribe((status) => {
+          if (status === 'CLOSED') {
+            console.warn('[Header] Realtime connection closed');
+          }
+          if (status === 'CHANNEL_ERROR') {
+            console.error('[Header] Realtime connection error');
+          }
+        });
+    };
+
+    setupRealtime();
 
     return () => {
       if (channel) {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(channel).catch(err => {
+          console.warn('[Header] Error removing channel:', err);
+        });
       }
     };
   }, [user]);
