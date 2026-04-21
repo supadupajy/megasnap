@@ -56,6 +56,7 @@ const Chat = () => {
 
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
+    console.log('[Chat] Back button clicked');
     navigate('/messages', { 
       replace: true,
       state: { direction: 'back' }
@@ -469,13 +470,10 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+    <div className="bg-white overflow-hidden flex flex-col min-h-screen" style={{ paddingTop: '88px' }}>
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 h-[88px] z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
-        style={{
-          paddingTop: 'max(32px, env(safe-area-inset-top))',
-        }}
+        className="fixed top-[88px] left-0 right-0 h-14 z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
       >
         <div className="flex items-center gap-3">
           <div 
@@ -524,10 +522,7 @@ const Chat = () => {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-20"
-        style={{
-          marginTop: '88px', // 헤더 높이만큼 여백
-        }}
+        className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar pb-24"
       >
         <div className="flex flex-col gap-4 py-4">
           {messages.map((msg) => {
@@ -570,7 +565,7 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
+        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
           paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
         }}
