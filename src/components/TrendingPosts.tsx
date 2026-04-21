@@ -24,6 +24,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const displayPosts = posts.slice(0, 20);
   const trendingContainerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [showScrollArrow, setShowScrollArrow] = useState(false);
 
   useEffect(() => {
     if (isExpanded || displayPosts.length === 0) return;
@@ -56,6 +58,25 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   };
 
   if (displayPosts.length === 0) return null;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!listRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+      // 스크롤이 끝에 도달했는지 확인 (완전히 끝까지 가지 않아도 20px 여유를 줌)
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
+      setShowScrollArrow(!isAtBottom);
+    };
+
+    if (isExpanded && posts.length > 5) {
+      handleScroll(); // 초기 상태 체크
+      const el = listRef.current;
+      el?.addEventListener('scroll', handleScroll);
+      return () => el?.removeEventListener('scroll', handleScroll);
+    } else {
+      setShowScrollArrow(false);
+    }
+  }, [isExpanded, posts.length]);
 
   return (
     <div 
@@ -140,7 +161,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         </div>
 
         {/* 스크롤 가능한 포스팅 리스트 */}
-        <div className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh]">
+        <div 
+          ref={listRef}
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh]"
+        >
           {posts.map((post) => (
             <div 
               key={post.id}
@@ -156,8 +180,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </span>
               </div>
               
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-                <img src={post.image} alt="" className="w-full h-full object-cover" />
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
+                <img 
+                  src={post.image} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80';
+                  }}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -184,10 +215,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ))}
         </div>
 
-        {/* 하단 스크롤 안내 화살표 */}
-        {isExpanded && posts.length > 5 && (
-          <div className="sticky bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2">
-            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce">
+        {/* 하단 스크롤 안내 화살표 - 스크롤이 끝에 도달하면 숨김 */}
+        {isExpanded && posts.length > 5 && showScrollArrow && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
+            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
               <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
             </div>
           </div>
