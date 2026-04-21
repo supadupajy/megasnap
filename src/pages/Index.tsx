@@ -449,11 +449,20 @@ const Index = () => {
 
   const handlePostDeleted = useCallback((id: string) => {
     console.log('[Index] Handling post deletion for id:', id);
-    // 1. 전체 게시물 목록에서 제거
-    setAllPosts(prev => prev.filter(p => p.id !== id));
     
-    // 2. 현재 지도 마커 목록에서 제거 (이때 MapContainer가 감지하여 애니메이션 실행)
-    setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
+    // 1. 전체 게시물 목록에서 제거
+    setAllPosts(prev => {
+      const filtered = prev.filter(p => p.id !== id);
+      console.log('[Index] allPosts updated, new count:', filtered.length);
+      return filtered;
+    });
+    
+    // 2. 현재 지도 마커 목록에서 즉시 제거 (이게 중요!)
+    setDisplayedMarkers(prev => {
+      const filtered = prev.filter(p => p.id !== id);
+      console.log('[Index] displayedMarkers updated, new count:', filtered.length);
+      return filtered;
+    });
     
     // 3. 캐시에서도 제거
     mapCache.posts = mapCache.posts.filter(p => p.id !== id);
