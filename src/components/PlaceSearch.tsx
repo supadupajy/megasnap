@@ -203,9 +203,9 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
             </button>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input 
-                placeholder="장소명 또는 주소 검색" 
-                className="pl-9 h-11 bg-gray-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+              <Input
+                placeholder="장소명 또는 주소 검색"
+                className="pl-9 h-11 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoFocus
