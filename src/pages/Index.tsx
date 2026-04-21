@@ -70,6 +70,29 @@ const Index = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
+  // [핵심 수정] 하드웨어 뒤로가기 버튼 대응: 여기보기 창이 열려있을 때 뒤로가기를 누르면 창만 닫기
+  useEffect(() => {
+    if (isPostListOpen) {
+      // 현재 히스토리에 가상의 상태를 추가하여 뒤로가기 이벤트를 가로챌 준비를 합니다
+      window.history.pushState({ postListOpen: true }, '');
+
+      const handlePopState = (e: PopStateEvent) => {
+        // 사용자가 뒤로가기를 누르면 이 이벤트가 트리거됩니다
+        setIsPostListOpen(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        // 컴포넌트 내부에서 수동으로 닫았을 때(X 버튼 등) 히스토리를 정리합니다
+        if (window.history.state?.postListOpen) {
+          window.history.back();
+        }
+      };
+    }
+  }, [isPostListOpen]);
+
   // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
   useEffect(() => {
     navigate(location.pathname, { 
