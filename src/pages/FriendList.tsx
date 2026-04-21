@@ -62,6 +62,28 @@ const FriendList = () => {
       </header>
 
       <div className="pt-[88px]">
+        {/* TIFFANY & CO 광고 배너 추가 */}
+        <div className="px-4 py-2 mt-2">
+          <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100">
+            <img 
+              src="/assets/tiffany-ad-banner.png" 
+              alt="Tiffany & Co. Ad" 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+            <div className="absolute inset-0 p-4 flex flex-col justify-between">
+              <div className="flex items-center gap-2">
+                <span className="bg-white/90 backdrop-blur-sm text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest text-gray-800 shadow-sm">AD</span>
+                <span className="text-[10px] font-black text-white tracking-[0.2em] uppercase drop-shadow-md">TIFFANY & CO.</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white italic tracking-tighter drop-shadow-lg">A Diamond is Forever.</h3>
+                <p className="text-[9px] font-bold text-white/80 drop-shadow-md">Explore the New Collection</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="sticky top-[88px] z-40 bg-white px-4 py-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
