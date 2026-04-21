@@ -288,7 +288,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             bottom: 0,
             height: isKeyboardOpen ? '100%' : '92vh',
             top: 'auto',
-            // 드로어 애니메이션 최적화
             transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), height 0.3s ease-in-out',
             willChange: 'transform'
           }}
@@ -300,7 +299,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           </div>
 
           {!isKeyboardOpen && (
-            <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+            <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
           )}
           
           <div className={cn("px-10 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
@@ -469,6 +468,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                     value={draft.content}
                     onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                    onPointerDown={(e) => e.stopPropagation()} // 텍스트 영역 내부 드래그 시 드로어 닫힘 방지
                   />
                 </div>
               </div>
