@@ -51,20 +51,8 @@ const Chat = () => {
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
     console.log('[Chat] Back button clicked');
-    // 프리뷰 환경 및 리프레시 후 히스토리가 끊긴 경우 대응
-    try {
-      // 리프레시를 했거나 직접 진입한 경우 history.length가 1이거나
-      // 이전 페이지가 현재 앱 외부일 수 있으므로 안전하게 홈(지도)으로 이동
-      if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
-        navigate(-1);
-      } else {
-        // 갈 곳이 없는 경우 메인 지도 화면으로 이동
-        navigate('/', { replace: true });
-      }
-    } catch (e) {
-      console.error('[Chat] Navigation error:', e);
-      navigate('/', { replace: true });
-    }
+    // 메시지 창에서 뒤로가기는 항상 DM 목록(/messages)으로 이동
+    navigate('/messages', { replace: true });
   }, [navigate]);
 
   const scrollToBottom = useCallback(() => {
