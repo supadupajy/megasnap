@@ -189,13 +189,24 @@ const Notifications = () => {
   };
 
   return (
-    <div
-      className="h-screen bg-white pb-24 no-scrollbar overflow-y-auto"
+    <div 
+      className="min-h-screen bg-white pb-24 no-scrollbar"
       onClick={() => setSwipedId(null)}
       style={{
-        paddingTop: '88px', // 글로벌 헤더 높이만큼 확실하게 밀어내기
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 아래로 밀어내기
       }}
     >
+      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+        <button 
+          onClick={handleBack} 
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-800" />
+        </button>
+        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
+      </div>
+
       <div className="flex flex-col">
         {isLoading ? (
           <div className="py-20 flex justify-center">

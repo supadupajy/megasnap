@@ -18,9 +18,6 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 알림/메시지 페이지 여부 확인
-  const isNavPage = location.pathname === '/notifications' || location.pathname === '/messages';
-
   // 뒤로가기 핸들러 (애니메이션 포함)
   const handleBack = useCallback(() => {
     navigate('/', { 
@@ -173,16 +170,8 @@ const Header = () => {
   }, [user, checkMessages, checkNotifications, playSound]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center justify-between px-4 border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-[100] flex items-center justify-between px-4 border-b border-gray-100">
       <div className="flex items-center gap-3">
-        {isNavPage && (
-          <button 
-            onClick={handleBack}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </button>
-        )}
         <h1 
           className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
           onClick={() => navigate('/')}
