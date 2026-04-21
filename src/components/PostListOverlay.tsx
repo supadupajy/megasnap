@@ -199,7 +199,7 @@ const PostListOverlay = ({
 
         const expandedBounds = {
           sw: { lat: mapCenter.lat - expandLat, lng: mapCenter.lng - expandLng },
-          ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
+          ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLat }
         };
 
         console.log(`[PostList] Searching... Step: ${nextStep}, Multiplier: ${multiplier.toFixed(1)}x`);
@@ -334,8 +334,8 @@ const PostListOverlay = ({
             duration: 0.5,
             ease: [0.25, 1, 0.5, 1]
           }}
-          // ✅ 위치 및 높이 조정: top-[88px] (헤더 아래) bottom-[106px] (BottomNav 위)
-          className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar origin-bottom"
+          // ✅ z-index를 최상위(2000)로 높여 종료 팝업(일반적으로 1000대)보다 위로 배치
+          className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[2000] bg-white overflow-y-auto shadow-2xl no-scrollbar origin-bottom"
         >
           <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
             <div>
