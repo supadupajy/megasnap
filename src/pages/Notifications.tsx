@@ -189,21 +189,8 @@ const Notifications = () => {
   };
 
   return (
-    <div 
-      className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
-      onClick={() => setSwipedId(null)}
-    >
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
-        <button 
-          onClick={handleBack} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
-      </header>
-
-      <div className="pt-[88px] flex flex-col">
+    <div className="h-screen bg-white pb-24 overflow-y-auto no-scrollbar">
+      <div className="pt-[88px] px-4 space-y-6">
         {isLoading ? (
           <div className="py-20 flex justify-center">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
