@@ -49,7 +49,7 @@ const SplashScreen = () => {
               transition={{ delay: 0.5, duration: 0.8 }}
               className="text-4xl font-black text-gray-900 tracking-tighter italic"
             >
-              Cho<span className="text-indigo-600">ra</span>
+              Chora<span className="text-indigo-600">Snap</span>
             </motion.h1>
             
             <motion.p
