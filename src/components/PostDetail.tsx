@@ -210,18 +210,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (post.id && post.id.length > 20) {
-        const { error } = await supabase.from('posts').delete().eq('id', post.id);
-        if (error) throw error;
+      if (!post.id) {
+        showError('유효하지 않은 포스팅입니다.');
+        return;
       }
+
+      console.log('[PostDetail] Attempting to delete post:', post.id);
+      
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', post.id);
+
+      if (error) {
+        console.error('[PostDetail] Delete query error:', error);
+        throw error;
+      }
+
       showSuccess('포스팅이 삭제되었습니다.');
-      setIsDeleteDialogOpen(false); // 먼저 다이얼로그 닫기
-      if (onDelete) onDelete(post.id);
-      onClose(); // 그 다음 팝업 닫기
-    } catch (err) {
-      console.error('[PostDetail] Delete error:', err);
-      showError('삭제 중 오류가 발생했습니다.');
-    } finally {
+      setIsDeleteDialogOpen(false);
+      
+      if (onDelete) {
+        onDelete(post.id);
+      }
+      
+      // 약간의 지연을 주어 UI 업데이트 보장
+      setTimeout(() => {
+        onClose();
+      }, 100);
+      
+    } catch (err: any) { 
+      console.error('[PostDetail] Final delete error:', err);
+      showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`); 
       setIsDeleteDialogOpen(false);
     }
   };

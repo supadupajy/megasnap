@@ -132,12 +132,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
       let finalVideoUrl = null;
 
       if (videoFile) {
+        // 고유한 파일명 생성
+        const timestamp = new Date().getTime();
         const fileExt = videoFile.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
 
-        console.log('[WritePost] Uploading video to storage:', filePath);
-        const { error: uploadError } = await supabase.storage
+        console.log('[WritePost] Uploading video to storage path:', filePath);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('post-videos')
           .upload(filePath, videoFile, {
             cacheControl: '3600',
@@ -145,19 +148,21 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
           });
 
         if (uploadError) {
-          console.error('[WritePost] Storage upload error:', uploadError);
-          throw uploadError;
+          console.error('[WritePost] Storage upload error details:', uploadError);
+          throw new Error(`동영상 업로드 실패: ${uploadError.message}`);
         }
+
+        console.log('[WritePost] Upload success, data:', uploadData);
 
         const { data: { publicUrl } } = supabase.storage
           .from('post-videos')
           .getPublicUrl(filePath);
         
-        console.log('[WritePost] Video public URL generated:', publicUrl);
         finalVideoUrl = publicUrl;
+        console.log('[WritePost] Public URL:', finalVideoUrl);
       }
 
-      const postData: any = {
+      const postData = {
         content: draft.content,
         location_name: finalAddress,
         latitude: finalLat,
@@ -168,26 +173,27 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         likes: 0,
         category: selectedCategory,
+        video_url: finalVideoUrl,
         created_at: new Date().toISOString()
       };
 
-      // Only add video_url if it's not null to avoid issues with potential schema cache desync
-      if (finalVideoUrl) {
-        postData.video_url = finalVideoUrl;
-      }
+      console.log('[WritePost] Inserting post data to DB:', postData);
 
-      const { data, error } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('posts')
         .insert([postData])
         .select();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('[WritePost] DB Insert error details:', insertError);
+        throw new Error(`DB 저장 실패: ${insertError.message}`);
+      }
 
-      processNewPost(data[0], finalVideoUrl);
-
-    } catch (err) {
-      console.error('Error saving post:', err);
-      showError('저장 중 오류가 발생했습니다.');
+      console.log('[WritePost] DB Insert success:', insertData);
+      processNewPost(insertData[0], finalVideoUrl);
+    } catch (err: any) {
+      console.error('[WritePost] Total failure during handlePost:', err);
+      showError(err.message || '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
