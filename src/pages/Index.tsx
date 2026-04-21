@@ -134,12 +134,15 @@ const Index = () => {
       
       if (!error && data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
-        const ranked = mapped.map((p, idx) => ({ 
-          ...p, 
+        // 광고([AD])가 아닌 포스팅만 필터링하여 순위 매기기
+        const filtered = mapped.filter(p => p && !p.isAd);
+        const ranked = filtered.map((p, idx) => ({
+          ...p,
           rank: idx + 1
         }));
         setGlobalTrendingPosts(ranked);
       }
+
     } catch (err) {
       console.error('[Trending] Fetch Error:', err);
     }
