@@ -6,8 +6,81 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// 서비스 계정 정보를 활용한 v1 마이그레이션 (임시 수동 토큰 방식 시도)
-// 2024년 7월 이후 Legacy API는 404/401 에러를 뱉으며 작동하지 않는 경우가 많습니다.
+// [FCM v1] 서비스 계정 정보 - 제공해주신 정보를 기반으로 구성
+const FB_SERVICE_ACCOUNT = {
+  "project_id": "gen-lang-client-0536770943",
+  "client_email": "firebase-adminsdk-fbsvc@gen-lang-client-0536770943.iam.gserviceaccount.com",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCccimy/uiZWoey\n+iQR2ClnaCGl7ixBzFRt7eq16gFahzNLEL297Sw8UCnbt2Ub1wgRIHGs/m/qFJ5r\nmxl7foqed4R7AVg9R9WV05j7lMbMmM8gfMHJ+HxwZrnZnbar/uQqB82lPvbo54nm\npCvkqUNqAWP/PEt/huiRQf8zz/MLWElo+QadsCksCVlq7Xr5SzSHNX5411nuGVc/\negNsctfrOpOZxsk+pQaxNQ+opM22QbxlkPG3rpOjm3bFzOn8B0GCJoYVNKmTNw74\nabVk5gBFNLBaQ2AV5ahf8KX+MHKSRGwsVtKc/6utCXMdDERGcAjOTlJ0Rssvt07Q\notj3VBqPAgMBAAECggEAF/xO1VvMozpkhLW3famOYNrFEeYWu03NrKml6xcXTF8J\n0lqc5KIYvp8saRHQkCNN4CZWbLH5IZfgrq8cXzky8oHGJNUQx3Bx2CNAGLj3fnB3\n4nYOK142t0Wgp93MycjuCAhN6KW4gFPYv4JFx9cwTUUs+iRZ5Ob1ACmbVsEX9RHq\nPe15Qps0Dba9JHdJYPWbujILBs3cuSYsJrWN+fe2J3CqOzdioe493Qvrf+N/1sge\nScGgMkOEE7Y2gMm+3FeNdPQEMsv+Ltns9NskLKbe6zCdhk8KzU4kmlmtnWUuAZXZ\ngS8LNR5BrsqCm/ClpEJWCXSWGpuWjsi0ZjeW1QF7qQKBgQDNWDLy6I6mGsEZI6nW\nCzaQviU7oT5Vd1uAm7yMW5uvWPDvZ+zjuMu0dyjQBi0I7NkhB2AWVLiFVot/LGhG\nZ6UW7Odk8hkDKhnsvhXwzJbOx8uE+K39CPo7SkA6NH2y9N7i6jttqqnQQpDLCita\nAKEXRuUT0OFELV6XEgcxDebOpwKBgQDDCfLXbbIGK+zGiM773it8EwHEUlmVri4t\nNXT/DxlSdCBMexXHPQBsMcGIZG7Q2hs7d5ptQ7CZGZ5vdxw2rxHcMwq1ZRdr0sgV\niFWitLDaewPXerl5Tztr2WV/zr1Zk6AMc+gy5AWWzVWTYNbhAEQx3L85LlYwh/oW\nWeFrAy552QKBgBrRTP4aTx70WYmd9b1Fg5/NpXEvMsPYrbOTI0G1aRSyaezqRq7K\n4Je2BDd+xvzmacj9fJgOAncvgVJfi1K+kHn5AJNXZtrZ8b7QaG8lWQCyaSr5i0eD\nl6KMpOy1FEF952n9Kzu8UScoul45+sVrVZ6DnMFEw1azEipqqVPHu//7AoGAHZQd\nqwQs0njI4NcQpOvtplRvmSlwAp42zI5l3uSYT4Pi/hZQmDWtIbtuAVRR5gSdyqf5\n2IZCewWCnJ7wvW5RhBaNkjLxmV2PEIzrh9BlXcz4KS6ogDg+571Bgl+FIdeclybg\n2Q7xtgwP5VjzXY4fyXwT2AUp9xQ4HjmlUQhbfQkCgYATRrBb8JUkyJ1SaKF3lo/q\nToSLpCM25qNb23/APGSF+vtAo2C34QeJlU3F7ujdZo7P7oTAsmyYVBg8izI9Fl3+\nnZcU8FB8mKikuIoJTVOv2l9WIzUkwcvKhb2pequl9cFuza68+ZrcT04hepWe2b/H\nNCJoFGy9i3NhOASWo4CTwg==\n-----END PRIVATE KEY-----\n"
+};
+
+/**
+ * Google OAuth2 Access Token 획득 (FCM v1 필수)
+ * 에지 펑션 라이브러리 제약으로 인해 가장 순수한 Deno 방식으로 구현 시도
+ */
+async function getAccessToken(): Promise<string> {
+  // Web Crypto API를 활용한 JWT 서명 로직
+  const header = { alg: "RS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: FB_SERVICE_ACCOUNT.client_email,
+    sub: FB_SERVICE_ACCOUNT.client_email,
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+    scope: "https://www.googleapis.com/auth/firebase.messaging"
+  };
+
+  const sHeader = btoa(JSON.stringify(header)).replace(/=/g, "");
+  const sPayload = btoa(JSON.stringify(payload)).replace(/=/g, "");
+  const unsignedToken = `${sHeader}.${sPayload}`;
+
+  // Private Key 파싱
+  const pemHeader = "-----BEGIN PRIVATE KEY-----";
+  const pemFooter = "-----END PRIVATE KEY-----";
+  const pemContents = FB_SERVICE_ACCOUNT.private_key.substring(
+    FB_SERVICE_ACCOUNT.private_key.indexOf(pemHeader) + pemHeader.length,
+    FB_SERVICE_ACCOUNT.private_key.indexOf(pemFooter)
+  ).replace(/\s/g, "");
+
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  const sSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+
+  const signedJwt = `${unsignedToken}.${sSignature}`;
+
+  // 엑세스 토큰 요청
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: signedJwt
+    })
+  });
+
+  const data = await response.json();
+  if (!data.access_token) {
+    throw new Error(`Auth Failed: ${JSON.stringify(data)}`);
+  }
+  return data.access_token;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -24,56 +97,73 @@ serve(async (req) => {
     const receiverId = record.receiver_id || record.user_id;
     const { data: profile } = await supabaseClient.from('profiles').select('push_token, nickname').eq('id', receiverId).single();
 
-    if (!profile?.push_token) {
-      console.log("[push] No token for user:", receiverId);
-      return new Response("No token", { status: 200 });
-    }
+    if (!profile?.push_token) return new Response("No token", { status: 200 });
 
     const senderId = record.sender_id || record.actor_id;
     const { data: senderProfile } = await supabaseClient.from('profiles').select('nickname').eq('id', senderId).single();
     const senderNickname = senderProfile?.nickname || "누군가";
 
-    let title = "ChoraSnap 알림";
-    let body = "새로운 활동이 있습니다.";
+    let title = "ChoraSnap";
+    let body = "알림이 도착했습니다.";
 
     if (record.receiver_id) {
       title = `${senderNickname}님의 메시지`;
       body = record.content;
     } else if (record.type === 'like_post') {
-      title = "좋아요 알림";
-      body = `${senderNickname}님이 회원님의 포스팅을 좋아합니다.`;
+      title = "좋아요";
+      body = `${senderNickname}님이 포스팅을 좋아합니다.`;
     }
 
-    // --- 최후의 수단: Legacy API를 다시 시도하되 페이로드를 극도로 단순화 ---
-    // 만약 이것도 안된다면 구글이 해당 엔드포인트를 완전히 폐쇄한 것입니다.
-    const fcmPayload = {
-      to: profile.push_token,
-      priority: "high",
-      notification: {
-        title: title,
-        body: body,
-        sound: "default"
+    // 1. OAuth2 토큰 생성
+    const accessToken = await getAccessToken();
+
+    // 2. FCM v1 전송 페이로드 구성
+    const fcmV1Payload = {
+      message: {
+        token: profile.push_token,
+        notification: {
+          title: title,
+          body: body
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channel_id: "messages_v2",
+            sound: "message_chime"
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "message_chime.caf",
+              badge: 1
+            }
+          }
+        },
+        data: {
+          chatId: record.sender_id || "",
+          type: record.receiver_id ? "message" : "notif"
+        }
       }
     };
 
-    const SERVER_KEY = Deno.env.get('FIREBASE_SERVER_KEY');
-    
-    const res = await fetch('https://fcm.googleapis.com/fcm/send', {
+    // 3. FCM v1 엔드포인트 호출
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FB_SERVICE_ACCOUNT.project_id}/messages:send`, {
       method: 'POST',
       headers: {
-        'Authorization': `key=${SERVER_KEY}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(fcmPayload),
+      body: JSON.stringify(fcmV1Payload)
     });
 
     const result = await res.json();
-    console.log("[push] Final Attempt Result:", JSON.stringify(result));
+    console.log("[FCM v1] Result:", JSON.stringify(result));
 
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (err) {
-    console.error("[push] Error:", err.message);
+    console.error("[FCM v1] Error:", err.message);
     return new Response(err.message, { status: 500, headers: corsHeaders });
   }
 })
