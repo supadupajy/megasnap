@@ -39,8 +39,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
   const { isKeyboardOpen } = useKeyboard();
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -245,8 +246,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     postDraftStore.clear();
     setMediaFiles([]);
     setCurrentMediaIndex(0);
-    setSelectedCategory(null);
+    setSelectedCategory('none');
     onClose();
+
   };
 
   return (
