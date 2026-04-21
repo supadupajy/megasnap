@@ -133,19 +133,27 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
       if (videoFile) {
         const fileExt = videoFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
 
+        console.log('[WritePost] Uploading video to storage:', filePath);
         const { error: uploadError } = await supabase.storage
           .from('post-videos')
-          .upload(filePath, videoFile);
+          .upload(filePath, videoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('[WritePost] Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('post-videos')
           .getPublicUrl(filePath);
         
+        console.log('[WritePost] Video public URL generated:', publicUrl);
         finalVideoUrl = publicUrl;
       }
 

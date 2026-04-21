@@ -210,11 +210,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (post.id.length > 20) { await supabase.from('posts').delete().eq('id', post.id); }
+      if (post.id && post.id.length > 20) {
+        const { error } = await supabase.from('posts').delete().eq('id', post.id);
+        if (error) throw error;
+      }
       showSuccess('포스팅이 삭제되었습니다.');
+      setIsDeleteDialogOpen(false); // 먼저 다이얼로그 닫기
       if (onDelete) onDelete(post.id);
-      onClose();
-    } catch (err) { showError('삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); }
+      onClose(); // 그 다음 팝업 닫기
+    } catch (err) {
+      console.error('[PostDetail] Delete error:', err);
+      showError('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   const renderCategoryBadge = () => {
