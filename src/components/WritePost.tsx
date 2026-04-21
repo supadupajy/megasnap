@@ -160,7 +160,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       // 첫 번째 미디어를 대표 미디어로 처리 (현재 posts 테이블 구조 유지용)
       const primaryMedia = mediaFiles[0];
       let finalVideoUrl = null;
-      let finalImageUrl = primaryMedia.type === 'image' ? primaryMedia.url : primaryMedia.thumbnail;
+      let finalImageUrl = null; // 기본값을 null로 설정하여 DB 저장 용량 및 Egress 절약
 
       // 실제 파일 업로드 로직 (대표 파일만 우선 업로드하는 간소화 버전)
       if (primaryMedia.file) {
@@ -199,7 +199,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
-        image_url: finalImageUrl || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
+        image_url: finalImageUrl, // 이미지가 없을 땐 null 저장
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,

@@ -345,7 +345,9 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    const displayImage = post.image;
+    
+    // 최적화: image_url이 없으면 Unsplash 기본 이미지를 사용 (Egress 절약)
+    const displayImage = post.image || FALLBACK_IMAGE;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
     if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }

@@ -103,11 +103,11 @@ const Index = () => {
       // 이미지 URL이 유효한지 확인하고 깨진 경우 대체 이미지 사용
       const rawImage = p.youtube_url 
         ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) 
-        : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+        : p.image_url; // remapUnsplashDisplayUrl 제거하여 불필요한 연산 및 트래픽 유도 방지
       
       const finalImage = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('data:'))) 
         ? rawImage 
-        : FALLBACK_IMAGE;
+        : null; // DB 값이 없으면 null로 전달하여 클라이언트에서 FALLBACK_IMAGE를 쓰게 함
 
       return {
         id: p.id,
