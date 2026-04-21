@@ -180,20 +180,20 @@ const PostListOverlay = ({
     
     try {
       let currentStep = expansionStep;
-      let foundNewPosts = false;
+      let foundPostsCount = 0;
       let newPostsBatch: Post[] = [];
 
-      // 데이터가 발견될 때까지 최대 5번의 확장을 한 번에 시도 (Step 점진적 증가)
-      for (let i = 0; i < 5; i++) {
+      // 한 번의 로딩 시도당 약 20개 내외를 목표로 검색
+      // 데이터를 충분히(약 20개) 모으거나, 최대 10단계까지 확장할 때까지 반복
+      for (let i = 0; i < 10; i++) {
         const nextStep = currentStep + 1;
-        if (nextStep > 30) { // 최대 30단계까지 확장
+        if (nextStep > 50) { // 총 탐색 한계치 증가
           setHasMore(false);
           break;
         }
 
-        // 지수적 확장이 아닌 점진적 선형 확장으로 변경하여 정밀도 확보
-        // 기본 반경의 (1 + 0.08 * step) 배로 확장
-        const multiplier = 1 + (0.08 * nextStep);
+        // 확장 반경을 더 세밀하게 조정 (0.1씩 증가)
+        const multiplier = 1 + (0.2 * nextStep);
         const expandLat = baseLatSpan * multiplier;
         const expandLng = baseLngSpan * multiplier;
 
@@ -211,6 +211,7 @@ const PostListOverlay = ({
           mapCenter
         );
 
+        // 아직 로딩되지 않은 새로운 데이터만 추출
         const uniqueNewRawPosts = newRawPosts.filter(p => !loadedPostIds.current.has(p.id));
         
         if (uniqueNewRawPosts.length > 0) {
@@ -239,30 +240,39 @@ const PostListOverlay = ({
             } as Post;
           }));
 
+          // 새로 찾은 포스트들을 ID 세트에 등록
           mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
-          newPostsBatch = [...newPostsBatch, ...mappedPosts];
-          foundNewPosts = true;
+          
+          // 현재 위치에서 가까운 순으로 정렬하여 배치에 추가
+          const sortedNew = mappedPosts.sort((a, b) => {
+            const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
+            const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
+            return distA - distB;
+          });
+
+          newPostsBatch = [...newPostsBatch, ...sortedNew];
+          foundPostsCount += sortedNew.length;
           currentStep = nextStep;
-          break; // 데이터를 찾았으므로 루프 종료
+
+          // 목표치(20개 내외)를 채웠다면 중단
+          if (foundPostsCount >= 15) {
+            // 너무 많이 가져오지 않도록 최대 25개로 제한
+            if (newPostsBatch.length > 25) {
+              newPostsBatch = newPostsBatch.slice(0, 25);
+            }
+            break;
+          }
+        } else {
+          currentStep = nextStep;
         }
-        
-        currentStep = nextStep;
       }
 
-      if (foundNewPosts) {
-        // 거리순 정렬
-        const sortedNewPosts = newPostsBatch.sort((a, b) => {
-          const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
-          const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
-          return distA - distB;
-        });
-
-        setPosts(prev => [...prev, ...sortedNewPosts]);
+      if (newPostsBatch.length > 0) {
+        setPosts(prev => [...prev, ...newPostsBatch]);
         setExpansionStep(currentStep);
-      } else if (currentStep >= 30) {
+      } else if (currentStep >= 50) {
         setHasMore(false);
       } else {
-        // 이번 묶음에서 못 찾았다면 다음 호출에서 이어서 검색
         setExpansionStep(currentStep);
       }
     } catch (err) {
