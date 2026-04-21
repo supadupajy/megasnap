@@ -51,20 +51,13 @@ const ObservedPostItem = ({
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.3 }}
-      >
-        <PostItem 
-          {...post}
-          isViewed={isViewed} 
-          onLikeToggle={() => onLikeToggle(post.id)}
-          onLocationClick={onLocationClick}
-          onDelete={onDelete}
-        />
-      </motion.div>
+      <PostItem 
+        {...post}
+        isViewed={isViewed} 
+        onLikeToggle={() => onLikeToggle(post.id)}
+        onLocationClick={onLocationClick}
+        onDelete={onDelete}
+      />
     </div>
   );
 };
@@ -327,17 +320,16 @@ const PostListOverlay = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.98, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: 15 }}
+          initial={{ opacity: 0, y: "100%" }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: "100%" }}
           transition={{
-            duration: 0.5,
-            ease: [0.25, 1, 0.5, 1]
+            duration: 0.4,
+            ease: [0.32, 0.72, 0, 1]
           }}
-          // ✅ 위치 및 높이 조정: top-[88px] (헤더 아래) bottom-[106px] (BottomNav 위)
           className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar origin-bottom"
         >
-          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-md z-30">
+          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white z-30">
             <div>
               <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
