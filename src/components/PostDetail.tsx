@@ -227,17 +227,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         throw error;
       }
 
+      console.log('[PostDetail] Delete success from DB');
+      
+      // 1. 성공 메시지 표시
       showSuccess('포스팅이 삭제되었습니다.');
       
-      // 1. 모든 다이얼로그와 팝업 상태를 즉시 닫기
+      // 2. 다이얼로그 즉시 닫기
       setIsDeleteDialogOpen(false);
       
-      // 2. 부모 컴포넌트에 삭제 알림
+      // 3. 부모 컴포넌트(Index.tsx)에 삭제 알림 - 여기서 지도의 markers가 업데이트됨
       if (onDelete) {
+        console.log('[PostDetail] Calling onDelete callback');
         onDelete(post.id);
       }
       
-      // 3. 지연 없이 즉시 팝업 닫기
+      // 4. 상세 팝업 닫기
       onClose();
       
     } catch (err: any) { 

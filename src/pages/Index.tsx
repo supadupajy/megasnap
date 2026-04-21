@@ -448,10 +448,18 @@ const Index = () => {
   };
 
   const handlePostDeleted = (id: string) => {
+    console.log('[Index] Handling post deletion for id:', id);
+    // 1. 전체 게시물 목록에서 제거
     setAllPosts(prev => prev.filter(p => p.id !== id));
+    
+    // 2. 현재 지도 마커 목록에서 제거 (이때 MapContainer가 감지하여 애니메이션 실행)
     setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
+    
+    // 3. 캐시에서도 제거
     mapCache.posts = mapCache.posts.filter(p => p.id !== id);
-    setSelectedPostId(null); // 추가: 선택된 포스팅 ID 초기화
+    
+    // 4. 선택된 포스트 초기화
+    setSelectedPostId(null);
   };
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
