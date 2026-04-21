@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search as SearchIcon, UserPlus, Check, Loader2, Users } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Check, Loader2, Users, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WritePost from '@/components/WritePost';
 import SearchAdBanner from '@/components/SearchAdBanner';
@@ -21,6 +21,14 @@ const Search = () => {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
   useEffect(() => {
     const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
@@ -81,11 +89,27 @@ const Search = () => {
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[88px] px-4">
-        <div className="relative py-6">
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input placeholder="닉네임으로 친구 찾기" className="pl-10 h-12 bg-gray-50 border-none rounded-2xl focus-visible:ring-indigo-600 font-bold" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            {isLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
+        <div className="relative py-6 flex items-center gap-3">
+          <button 
+            onClick={handleBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-800" />
+          </button>
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+            <input 
+              placeholder="닉네임으로 친구 찾기" 
+              className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              autoFocus
+            />
+            {isLoading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              </div>
+            )}
           </div>
         </div>
         <SearchAdBanner />
