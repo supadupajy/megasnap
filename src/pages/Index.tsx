@@ -258,6 +258,11 @@ const Index = () => {
     }
 
     const { sw, ne } = mapData.bounds;
+    
+    // ✅ 화면 밖 마커 유지 범위를 20% 확대하여 부드러운 스크롤 제공
+    const latPadding = Math.abs(ne.lat - sw.lat) * 0.2;
+    const lngPadding = Math.abs(ne.lng - sw.lng) * 0.2;
+    
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     
@@ -266,13 +271,13 @@ const Index = () => {
       if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
       if (blockedIds.has(post.user.id)) return false;
 
-      const isInStrictBounds = 
-        post.lat >= Math.min(sw.lat, ne.lat) && 
-        post.lat <= Math.max(sw.lat, ne.lat) && 
-        post.lng >= Math.min(sw.lng, ne.lng) && 
-        post.lng <= Math.max(sw.lng, ne.lng);
+      const isInExtendedBounds = 
+        post.lat >= (Math.min(sw.lat, ne.lat) - latPadding) && 
+        post.lat <= (Math.max(sw.lat, ne.lat) + latPadding) && 
+        post.lng >= (Math.min(sw.lng, ne.lng) - lngPadding) && 
+        post.lng <= (Math.max(sw.lng, ne.lng) + lngPadding);
 
-      if (!isInStrictBounds) return false;
+      if (!isInExtendedBounds) return false;
       if (post.isAd) return true;
       
       if (timeValue < 100) {
