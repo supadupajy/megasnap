@@ -107,11 +107,6 @@ serve(async (req) => {
     }
 
     // 3. FCM 푸시 알림 발송
-    // 현재 https://fcm.googleapis.com/fcm/send (Legacy API)가 404를 반환하고 있습니다.
-    // 이는 구글에서 Legacy API를 비활성화했거나 엔드포인트가 변경되었을 수 있습니다.
-    // 최신 방식인 HTTP v1 API를 사용하는 것이 권장되지만, 여기서는 일단 오류 발생 시 앱이 중단되지 않도록
-    // FCM 호출 부분을 안전하게 감싸고 로그만 남깁니다.
-    
     let fcmResult = { message: "FCM call skipped or failed" };
     
     try {
@@ -120,19 +115,26 @@ serve(async (req) => {
         notification: {
           title: notificationTitle,
           body: notificationBody,
-          sound: "default",
+          sound: "message_chime", // Android 커스텀 사운드 (확장자 제외)
         },
         data: dataPayload,
+        android: {
+          notification: {
+            channel_id: "messages", // Android 알림 채널 ID
+            sound: "message_chime", // Android 커스텀 사운드
+          }
+        },
         apns: {
           payload: {
             aps: {
               contentAvailable: 1,
+              sound: "message_chime.caf" // iOS 커스텀 사운드 (확장자 포함)
             },
           },
         },
       };
 
-      console.log(`[push-notification] Attempting to send FCM to ${receiverId}...`);
+      console.log(`[push-notification] Attempting to send FCM with custom sound to ${receiverId}...`);
       
       const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
         method: 'POST',
