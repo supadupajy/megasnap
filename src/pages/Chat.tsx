@@ -161,13 +161,18 @@ const Chat = () => {
       // 2. 입력창 위치 및 여백 조정 (Flutter의 SafeArea + viewInsets 로직)
       if (inputRef.current) {
         const bottomOffset = Math.max(0, keyboardHeight);
-        inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
         
-        // 키보드가 열리면 하단 여백을 8px로 줄여 밀착시키고, 
-        // 닫히면 env(safe-area-inset-bottom)을 사용하여 네비게이션 바를 피함
-        inputRef.current.style.paddingBottom = isKeyboardOpen 
-          ? '8px' 
-          : 'calc(12px + env(safe-area-inset-bottom))';
+        if (isKeyboardOpen) {
+          // 키보드가 열리면 하단 메뉴바(100px)를 무시하고 뷰포트 하단(0)에 밀착
+          inputRef.current.style.bottom = '0px';
+          inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
+          inputRef.current.style.paddingBottom = '8px';
+        } else {
+          // 키보드가 닫히면 다시 하단 메뉴바 위(100px)로 복귀
+          inputRef.current.style.bottom = '100px';
+          inputRef.current.style.transform = 'translateY(0px)';
+          inputRef.current.style.paddingBottom = 'calc(12px + env(safe-area-inset-bottom))';
+        }
       }
 
       // 3. 스크롤 영역 하단 패딩 동적 계산
@@ -569,9 +574,9 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed left-0 right-0 z-[60] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
+        className="fixed left-0 right-0 z-[120] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform transition-all duration-200"
         style={{
-          bottom: '100px', // 하단 메뉴바(80px) + 안전 여백(8px) 만큼 확실히 띄움
+          bottom: '100px', 
           paddingBottom: '12px'
         }}
       >
