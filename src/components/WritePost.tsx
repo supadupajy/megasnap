@@ -34,17 +34,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
   const { user: authUser, profile } = useAuth();
   
   const [draft, setDraft] = useState(postDraftStore.get());
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
-  const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<{file: File | null, url: string, type: 'image' | 'video', thumbnail?: string}[]>([]);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const { isKeyboardOpen } = useKeyboard();
   
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubscribe = postDraftStore.subscribe(() => {
@@ -57,66 +56,47 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   useEffect(() => {
     if (!isOpen) return;
-
     if (initialLocation) {
       setIsLoadingAddress(true);
       const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
       setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
       setIsLoadingAddress(false);
-      return;
+    } else {
+      setAddress('위치 없음');
     }
-
-    setAddress('위치 없음');
-    setIsLoadingAddress(false);
   }, [isOpen, initialLocation]);
 
-  const takePhoto = async () => {
-    try {
-      setIsTakingPhoto(true);
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl
-      });
-      
-      if (image.dataUrl) {
-        postDraftStore.set({ image: image.dataUrl });
-        setVideoUrl(null);
-        setVideoFile(null);
+  const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newMediaItems = await Promise.all(files.map(async (file) => {
+      const type = file.type.startsWith('video/') ? 'video' : 'image' as any;
+      const url = URL.createObjectURL(file);
+      let thumbnail = undefined;
+
+      if (type === 'video') {
+        thumbnail = await captureVideoThumbnail(url);
       }
-    } catch (error) {
-      console.error('Camera error:', error);
-    } finally {
-      setIsTakingPhoto(false);
+
+      return { file, url, type, thumbnail };
+    }));
+
+    setMediaFiles(prev => [...prev, ...newMediaItems]);
+    // 첫 이미지를 드래프트 썸네일로 설정 (호환성 유지)
+    if (newMediaItems[0].type === 'image') {
+      postDraftStore.set({ image: newMediaItems[0].url });
+    } else if (newMediaItems[0].thumbnail) {
+      postDraftStore.set({ image: newMediaItems[0].thumbnail });
     }
   };
 
-  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isVideo = file.type.startsWith('video/');
-    
-    if (isVideo) {
-      if (file.size > 50 * 1024 * 1024) {
-        showError('동영상 용량은 50MB를 초과할 수 없습니다.');
-        return;
-      }
-      setVideoFile(file);
-      const url = URL.createObjectURL(file);
-      setVideoUrl(url);
-      postDraftStore.set({ image: null });
-
-      // 동영상 썸네일 추출 (첫 프레임)
+  const captureVideoThumbnail = (url: string): Promise<string> => {
+    return new Promise((resolve) => {
       const video = document.createElement('video');
       video.src = url;
       video.muted = true;
-      video.playsInline = true;
-      
-      video.onloadeddata = () => {
-        video.currentTime = 0.5;
-      };
-
+      video.onloadeddata = () => { video.currentTime = 0.5; };
       video.onseeked = () => {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -124,116 +104,77 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
-          setVideoThumbnail(thumbnailUrl);
-          console.log('[WritePost] Video thumbnail captured');
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
         }
       };
-    } else {
-      // 사진 처리
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        postDraftStore.set({ image: reader.result as string });
-        setVideoUrl(null);
-        setVideoFile(null);
-        setVideoThumbnail(null);
-      };
-      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length === 0) postDraftStore.set({ image: null });
+      return updated;
+    });
+    if (currentMediaIndex >= index && currentMediaIndex > 0) {
+      setCurrentMediaIndex(currentMediaIndex - 1);
     }
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const width = e.currentTarget.offsetWidth;
+    const index = Math.round(scrollLeft / width);
+    setCurrentMediaIndex(index);
+  };
+
   const handlePost = async () => {
-
-    if (!authUser) {
-      showError('로그인이 필요합니다.');
-      return;
-    }
-
-    if (!draft.image && !videoUrl) {
-      showError('사진이나 동영상을 첨부해주세요.');
-      return;
-    }
-
-    if (!selectedCategory) {
-      showError('카테고리를 선택해주세요.');
-      return;
-    }
+    if (!authUser) { showError('로그인이 필요합니다.'); return; }
+    if (mediaFiles.length === 0) { showError('사진이나 동영상을 첨부해주세요.'); return; }
+    if (!selectedCategory) { showError('카테고리를 선택해주세요.'); return; }
 
     setIsSubmitting(true);
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-
-    // ✅ 위치 정보가 없는 경우 null로 설정하여 지도에 나타나지 않게 함
     const finalLat = initialLocation?.lat || null;
     const finalLng = initialLocation?.lng || null;
     const finalAddress = address || '위치 미지정';
 
     try {
+      // 첫 번째 미디어를 대표 미디어로 처리 (현재 posts 테이블 구조 유지용)
+      const primaryMedia = mediaFiles[0];
       let finalVideoUrl = null;
-      let finalImageUrl = null; // 초기화 수정: draft.image가 있어도 null로 시작하여 동영상 캡처 우선 순위 부여
+      let finalImageUrl = primaryMedia.type === 'image' ? primaryMedia.url : primaryMedia.thumbnail;
 
-      // 동영상 업로드 처리
-      if (videoFile) {
+      // 실제 파일 업로드 로직 (대표 파일만 우선 업로드하는 간소화 버전)
+      if (primaryMedia.file) {
         const timestamp = new Date().getTime();
-        const fileExt = videoFile.name.split('.').pop();
+        const folder = primaryMedia.type === 'video' ? 'post-videos' : 'post-images';
+        const fileExt = primaryMedia.file.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
 
-        console.log('[WritePost] Uploading video to storage path:', filePath);
         const { error: uploadError } = await supabase.storage
-          .from('post-videos')
-          .upload(filePath, videoFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .from(folder)
+          .upload(filePath, primaryMedia.file);
 
-        if (uploadError) {
-          console.error('[WritePost] Storage upload error:', uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('post-videos')
-          .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         
-        console.log('[WritePost] Video public URL generated:', publicUrl);
-        finalVideoUrl = publicUrl;
-
-        // 동영상 썸네일 업로드 (추출된 캡처본이 있는 경우)
-        if (videoThumbnail) {
-          try {
-            const thumbName = `thumb-${timestamp}-${Math.random().toString(36).substring(7)}.jpg`;
+        if (primaryMedia.type === 'video') {
+          finalVideoUrl = publicUrl;
+          if (primaryMedia.thumbnail) {
+            const thumbName = `thumb-${timestamp}.jpg`;
             const thumbPath = `${authUser.id}/${thumbName}`;
-            
-            // DataURL을 Blob으로 변환
-            const byteString = atob(videoThumbnail.split(',')[1]);
-            const mimeString = videoThumbnail.split(',')[0].split(':')[1].split(';')[0];
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-                ia[i] = byteString.charCodeAt(i);
-            }
-            const blob = new Blob([ab], {type: mimeString});
-            
-            console.log('[WritePost] Uploading captured thumbnail to post-images...');
-            const { error: thumbError } = await supabase.storage
-              .from('post-images')
-              .upload(thumbPath, blob, { contentType: 'image/jpeg', upsert: true });
-              
-            if (thumbError) {
-              console.error('[WritePost] Thumbnail upload error:', thumbError);
-            } else {
-              const { data: { publicUrl: thumbPublicUrl } } = supabase.storage
-                .from('post-images')
-                .getPublicUrl(thumbPath);
-              finalImageUrl = thumbPublicUrl;
-              console.log('[WritePost] Thumbnail public URL:', finalImageUrl);
-            }
-          } catch (thumbErr) {
-            console.error('[WritePost] Error processing thumbnail:', thumbErr);
+            const response = await fetch(primaryMedia.thumbnail);
+            const blob = await response.blob();
+            await supabase.storage.from('post-images').upload(thumbPath, blob, { contentType: 'image/jpeg' });
+            const { data: { publicUrl: tUrl } } = supabase.storage.from('post-images').getPublicUrl(thumbPath);
+            finalImageUrl = tUrl;
           }
+        } else {
+          finalImageUrl = publicUrl;
         }
-      } else {
-        finalImageUrl = draft.image;
       }
 
       const postData = {
@@ -241,7 +182,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
-        // 중요: 캡처된 이미지가 있으면 그 주소를 사용하고, 없으면 기본값 사용
         image_url: finalImageUrl || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
         user_id: authUser.id,
         user_name: displayName,
@@ -252,22 +192,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         created_at: new Date().toISOString()
       };
 
-      console.log('[WritePost] Inserting post data to DB:', postData);
+      const { data: insertData, error: insertError } = await supabase.from('posts').insert([postData]).select();
+      if (insertError) throw insertError;
 
-      const { data: insertData, error: insertError } = await supabase
-        .from('posts')
-        .insert([postData])
-        .select();
-
-      if (insertError) {
-        console.error('[WritePost] DB Insert error details:', insertError);
-        throw new Error(`DB 저장 실패: ${insertError.message}`);
-      }
-
-      console.log('[WritePost] DB Insert success:', insertData);
       processNewPost(insertData[0], finalVideoUrl);
     } catch (err: any) {
-      console.error('[WritePost] Total failure during handlePost:', err);
+      console.error('[WritePost] Error:', err);
       showError(err.message || '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
@@ -311,9 +241,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
     showSuccess('새로운 추억이 등록되었습니다! ✨');
     
     postDraftStore.clear();
-    setVideoUrl(null);
-    setVideoFile(null);
-    setVideoThumbnail(null);
+    setMediaFiles([]);
+    setCurrentMediaIndex(0);
     setSelectedCategory(null);
     onClose();
   };
@@ -373,49 +302,70 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
                   <div className="w-full">
-                    <button
-                      onClick={() => videoInputRef.current?.click()}
+                    <button 
+                      onClick={() => mediaInputRef.current?.click()}
                       className={cn(
                         "w-full h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                        (draft.image || videoUrl) ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                        mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <ImageIcon className={cn("w-6 h-6", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-400")} />
-                        <Video className={cn("w-6 h-6", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-400")} />
+                        <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                        <Video className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
                       </div>
-                      <span className={cn("text-xs font-bold", (draft.image || videoUrl) ? "text-indigo-600" : "text-gray-500")}>사진/동영상 선택</span>
+                      <span className={cn("text-xs font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
+                        {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨` : '사진/동영상 선택 (다중 선택 가능)'}
+                      </span>
                     </button>
-                    <input
-                      type="file"
-                      ref={videoInputRef}
-                      className="hidden"
-                      accept="image/*,video/*"
-                      onChange={handleMediaSelect}
+                    <input 
+                      type="file" 
+                      ref={mediaInputRef} 
+                      className="hidden" 
+                      accept="image/*,video/*" 
+                      multiple
+                      onChange={handleMediaSelect} 
                     />
                   </div>
                 </div>
 
-                {(draft.image || videoUrl) && (
-                  <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-lg">
-                    {draft.image ? (
-                      <img src={draft.image} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="relative w-full h-full">
-                        <video src={videoUrl!} className="w-full h-full object-contain" controls />
-                        {videoThumbnail && (
-                          <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-lg text-[10px] text-white font-bold border border-white/20">
-                            Thumbnail Captured
-                          </div>
-                        )}
+                {mediaFiles.length > 0 && (
+                  <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-lg group">
+                    <div 
+                      ref={scrollRef}
+                      onScroll={handleScroll}
+                      className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                    >
+                      {mediaFiles.map((media, idx) => (
+                        <div key={idx} className="w-full h-full shrink-0 snap-center relative">
+                          {media.type === 'image' ? (
+                            <img src={media.url} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <video src={media.url} className="w-full h-full object-contain" controls />
+                          )}
+                          <button 
+                            onClick={() => removeMedia(idx)}
+                            className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center z-10"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* 인디케이터 */}
+                    {mediaFiles.length > 1 && (
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                        {mediaFiles.map((_, idx) => (
+                          <div 
+                            key={idx} 
+                            className={cn(
+                              "h-1.5 rounded-full transition-all duration-300",
+                              currentMediaIndex === idx ? "bg-white w-4" : "bg-white/40 w-1.5"
+                            )} 
+                          />
+                        ))}
                       </div>
                     )}
-                    <button 
-                      onClick={() => { postDraftStore.set({ image: null }); setVideoUrl(null); setVideoFile(null); setVideoThumbnail(null); }}
-                      className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md text-white rounded-full flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
                   </div>
                 )}
 
@@ -477,7 +427,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <Button 
                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 mx-0.5"
                 onClick={handlePost}
-                disabled={(!draft.content || (!draft.image && !videoUrl)) || isTakingPhoto || isLoadingAddress || isSubmitting || !selectedCategory}
+                disabled={(!draft.content || mediaFiles.length === 0) || isLoadingAddress || isSubmitting || !selectedCategory}
               >
                 {isSubmitting ? '저장 중...' : '등록하기'}
               </Button>
