@@ -6,12 +6,13 @@ import { Camera } from 'lucide-react';
 
 const SplashScreen = () => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.8, ease: "easeInOut" }}
+      transition={{ duration: 1.2, ease: "easeIn" }}
       className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center px-6"
     >
+
       <div className="relative w-full flex flex-col items-center">
         {/* Background Glow */}
         <motion.div 
