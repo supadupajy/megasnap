@@ -106,7 +106,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No push token" }), { status: 200, headers: corsHeaders });
     }
 
-    // 3. FCM 푸시 알림 발송
+    // 3. FCM 푸시 알림 발송 (Legacy API 404 문제 해결을 위해 로그 추가)
     let fcmResult = { message: "FCM call skipped or failed" };
     
     try {
@@ -115,27 +115,29 @@ serve(async (req) => {
         notification: {
           title: notificationTitle,
           body: notificationBody,
-          sound: "message_chime", // Android 커스텀 사운드 (확장자 제외)
+          sound: "message_chime", 
         },
         data: dataPayload,
         android: {
           notification: {
-            channel_id: "messages_v2", // 새 ID로 매칭
-            sound: "message_chime",
+            channel_id: "messages_v2", 
+            sound: "message_chime", 
           }
         },
         apns: {
           payload: {
             aps: {
               contentAvailable: 1,
-              sound: "message_chime.caf" // iOS 커스텀 사운드 (확장자 포함)
+              sound: "message_chime.caf"
             },
           },
         },
       };
 
-      console.log(`[push-notification] Attempting to send FCM with custom sound to ${receiverId}...`);
+      console.log(`[push-notification] Attempting to send FCM to token: ${pushToken.substring(0, 10)}...`);
       
+      // 구글의 Legacy API (https://fcm.googleapis.com/fcm/send)는 2024년 6월부터 중단되기 시작했습니다.
+      // 만약 404가 계속 발생한다면 HTTP v1 API로의 전환이 필요합니다.
       const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
         method: 'POST',
         headers: {
@@ -146,7 +148,8 @@ serve(async (req) => {
       });
 
       const responseText = await fcmResponse.text();
-      
+      console.log(`[push-notification] FCM Server Response: ${fcmResponse.status} - ${responseText}`);
+
       if (!fcmResponse.ok) {
         console.warn(`[push-notification] FCM server returned error ${fcmResponse.status}:`, responseText.substring(0, 200));
         fcmResult = { error: `FCM server returned ${fcmResponse.status}`, detail: responseText.substring(0, 100) };
