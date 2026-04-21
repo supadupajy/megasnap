@@ -269,7 +269,6 @@ const Chat = () => {
         (payload) => {
           const newMsg = payload.new as Message;
           
-          // 현재 채팅방과 관련 없는 메시지는 무시
           const isRelevant =
             (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) ||
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId);
@@ -277,23 +276,9 @@ const Chat = () => {
           if (!isRelevant) return;
 
           setMessages((prev) => {
-            // 1. 중복 확인 (이미 ID가 존재함)
+            // 중복 확인만 수행 (ID 기준)
             if (prev.some(m => m.id === newMsg.id)) return prev;
 
-            // 2. 내가 보낸 메시지인 경우 낙관적 업데이트(temp-) 교체 시도
-            if (newMsg.sender_id === authUser.id) {
-              const tempIndex = prev.findIndex(m =>
-                m.id.startsWith('temp-') && m.content === newMsg.content
-              );
-              
-              if (tempIndex !== -1) {
-                const updated = [...prev];
-                updated[tempIndex] = newMsg;
-                return updated;
-              }
-            }
-
-            // 3. 상대방이 보낸 메시지거나 낙관적 메시지를 못 찾은 경우 추가
             return [...prev, newMsg].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
@@ -330,55 +315,43 @@ const Chat = () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    const tempId = `temp-${Date.now()}`;
-    const now = new Date().toISOString();
-    
-    const optimisticMsg: Message = {
-      id: tempId,
-      content,
-      sender_id: authUser.id,
-      receiver_id: chatId,
-      created_at: now,
-      is_read: false,
-    };
-
-    // 1. 즉시 상태 반영 및 입력창 초기화
-    setMessages((prev) => [...prev, optimisticMsg]);
+    // 1. 입력창 즉시 초기화
     setInputValue('');
-    
-    // 즉시 하단 스크롤
-    setTimeout(scrollToBottom, 0);
 
     if (isValidUUID(chatId)) {
       try {
-        // 2. DB 저장
+        // 2. DB 저장 시도 (낙관적 업데이트 제거)
+        // 사용자가 메시지를 보낼 때 화면이 밀리는 주된 원인은 
+        // 로컬 상태(temp ID)와 실시간 채널(DB ID) 간의 불일치 때문입니다.
+        // 가장 확실한 해결책은 DB 저장 후 반환된 실제 데이터를 즉시 상태에 넣는 것입니다.
+        
         const { data, error } = await supabase
           .from('messages')
           .insert([{ 
             sender_id: authUser.id, 
             receiver_id: chatId, 
-            content,
-            created_at: now
+            content
           }])
           .select('*')
           .single();
 
         if (error) throw error;
 
-        // 3. 서버 데이터로 교체 (이미 실시간 채널에서 처리했을 수도 있음)
+        // 3. 서버 데이터 즉시 반영
         if (data) {
           setMessages((prev) => {
-            // 이미 실시간 채널을 통해 서버 ID가 들어와 있다면 임시 메시지만 제거
-            const serverMsgExists = prev.some(m => m.id === data.id);
-            if (serverMsgExists) {
-              return prev.filter(m => m.id !== tempId);
-            }
-            // 아직 없다면 임시 메시지를 서버 데이터로 교체
-            return prev.map((msg) => (msg.id === tempId ? data : msg));
+            // 실시간 채널에서 이미 들어왔을 수 있으므로 중복 체크
+            if (prev.some(m => m.id === data.id)) return prev;
+            
+            const newMsgs = [...prev, data].sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            return newMsgs;
           });
+          setTimeout(scrollToBottom, 50);
         }
 
-        // 4. 알림 생성 (완전 비동기)
+        // 4. 알림 생성
         supabase.from('notifications').insert([{
           user_id: chatId,
           type: 'message',
@@ -390,8 +363,9 @@ const Chat = () => {
 
       } catch (error) {
         console.error('[Chat] Send error:', error);
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         showError('메시지 전송에 실패했습니다.');
+        // 실패 시 입력값 복구 (선택 사항)
+        setInputValue(content);
       }
     } else {
       chatStore.getOrCreateRoom(
