@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
+import { postDraftStore } from '@/utils/post-draft-store';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 
 const Index = () => {
@@ -156,6 +157,8 @@ const Index = () => {
     // 지도를 직접 조작해서 움직인 경우(isSelectingLocation이 아닐 때) 위치 선택 정보 초기화
     if (!isSelectingLocation) {
       setFinalSelectedLocation(null);
+      // ✅ [ADD] 지도를 움직이면 글쓰기 드래프트 및 사진 정보도 초기화
+      postDraftStore.clear();
     }
 
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
