@@ -150,8 +150,13 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
+    // 지도를 직접 조작해서 움직인 경우(isSelectingLocation이 아닐 때) 위치 선택 정보 초기화
+    if (!isSelectingLocation) {
+      setFinalSelectedLocation(null);
+    }
+
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
-    
+
     if (zoomChanged) {
       if (throttleTimer.current) {
         clearTimeout(throttleTimer.current);
