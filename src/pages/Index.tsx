@@ -165,8 +165,12 @@ const Index = () => {
       mapCache.lastZoom = data.level;
       
       if (isSelectingLocation) setTempSelectedLocation(data.center);
+
+      // 지도를 움직이면 글쓰기 선택 위치 초기화
+      setFinalSelectedLocation(null);
       
       // ✅ [FIX] 줌 복귀 시 displayedMarkers 재계산을 강제로 트리거하기 위해
+
       // syncPostsWithSupabase를 호출하고 mapData도 함께 업데이트
       setTimeout(() => {
         syncPostsWithSupabase(data.bounds, data.level);
