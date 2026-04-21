@@ -110,9 +110,6 @@ serve(async (req) => {
     let fcmResult = { message: "FCM call skipped or failed" };
     
     try {
-      // Legacy API 엔드포인트
-      const LEGACY_FCM_URL = 'https://fcm.googleapis.com/fcm/send';
-
       const fcmPayload = {
         to: pushToken,
         priority: "high",
@@ -120,7 +117,6 @@ serve(async (req) => {
           title: notificationTitle,
           body: notificationBody,
           sound: "message_chime", 
-          icon: "fcm_push_icon", // 기본 아이콘 지정 시도
         },
         data: {
           ...dataPayload,
@@ -132,33 +128,13 @@ serve(async (req) => {
           notification: {
             channel_id: "messages_v2", 
             sound: "message_chime", 
-            default_sound: false,
-            default_vibrate_timings: true,
-            notification_priority: "PRIORITY_MAX", // 안드로이드 시스템 우선순위 최대
-            visibility: "PUBLIC"
           }
-        },
-        apns: {
-          headers: {
-            "apns-priority": "10" // iOS 즉시 전송 우선순위
-          },
-          payload: {
-            aps: {
-              alert: {
-                title: notificationTitle,
-                body: notificationBody
-              },
-              sound: "message_chime.caf",
-              badge: 1,
-              "content-available": 1
-            },
-          },
-        },
+        }
       };
 
-      console.log(`[push-notification] SENDING_FCM to: ${receiverId}, channel: messages_v2`);
+      console.log(`[push-notification] FETCHING_FCM to: ${receiverId}`);
       
-      const fcmResponse = await fetch(LEGACY_FCM_URL, {
+      const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
         method: 'POST',
         headers: {
           'Authorization': `key=${FCM_SERVER_KEY}`,
@@ -168,20 +144,15 @@ serve(async (req) => {
       });
 
       const responseText = await fcmResponse.text();
-      console.log(`[push-notification] FCM_RESPONSE: Status ${fcmResponse.status}, Body: ${responseText}`);
+      // 이 로그가 매우 중요합니다. FCM 서버에서 어떤 오류가 오는지 실시간으로 확인합니다.
+      console.log(`[push-notification] FCM_SERVER_RAW_RESPONSE: ${fcmResponse.status} - ${responseText}`);
 
       if (!fcmResponse.ok) {
-        console.warn(`[push-notification] FCM server returned error ${fcmResponse.status}:`, responseText.substring(0, 200));
-        fcmResult = { error: `FCM server returned ${fcmResponse.status}`, detail: responseText.substring(0, 100) };
-      } else {
-        try {
-          fcmResult = JSON.parse(responseText);
-          console.log(`[push-notification] FCM sent successfully:`, fcmResult);
-        } catch (e) {
-          console.warn("[push-notification] FCM response was not JSON:", responseText.substring(0, 100));
-          fcmResult = { message: "FCM sent but response was not JSON", text: responseText.substring(0, 50) };
-        }
+        throw new Error(`FCM server returned ${fcmResponse.status}: ${responseText}`);
       }
+      
+      fcmResult = JSON.parse(responseText);
+      console.log(`[push-notification] FCM sent successfully:`, fcmResult);
     } catch (fcmError) {
       console.error("[push-notification] Critical FCM fetch error:", fcmError.message);
       fcmResult = { error: "Fetch failed", message: fcmError.message };
