@@ -370,6 +370,8 @@ const MapContainer = ({
     }
     if (content) {
       content.classList.remove('animate-marker-disappear');
+      content.style.opacity = "1";
+      content.style.visibility = "visible";
     }
   };
 
@@ -389,6 +391,8 @@ const MapContainer = ({
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
+    
+    // 1. 제거될 마커 애니메이션 적용
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
         // 이미 제거 대기 중인 경우 무시
@@ -396,7 +400,8 @@ const MapContainer = ({
 
         const content = overlay.getContent();
         if (content instanceof HTMLElement) {
-          content.classList.remove('animate-marker-appear');
+          // 기존 부유/호흡 애니메이션 제거 후 사라짐 애니메이션 추가
+          content.classList.remove('animate-marker-appear', 'animate-marker-float', 'animate-ad-breathing');
           content.classList.add('animate-marker-disappear');
           
           // 애니메이션 시간(300ms) 후에 실제로 지도에서 제거
@@ -414,7 +419,9 @@ const MapContainer = ({
       }
     });
 
+    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
+
       if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
