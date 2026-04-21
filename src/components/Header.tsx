@@ -14,18 +14,42 @@ const Header = () => {
   const { session, user } = useAuth();
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+  const [canPlaySound, setCanPlaySound] = useState(false); // 오디오 권한 추적
   const location = useLocation();
   const navigate = useNavigate();
+
+  // 사용자 상호작용 감지 (오디오 재생 권한 획득)
+  useEffect(() => {
+    const enableAudio = () => {
+      setCanPlaySound(true);
+      // 권한 획득 후 이벤트 리스너 제거
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+      console.log('[Header] Audio playback enabled by user interaction');
+    };
+
+    window.addEventListener('click', enableAudio);
+    window.addEventListener('touchstart', enableAudio);
+    
+    return () => {
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
 
     // 사운드 재생 함수
     const playSound = () => {
+      if (!canPlaySound) {
+        console.log('[Header] Sound skipped: User has not interacted yet');
+        return;
+      }
       try {
         const audio = new Audio(NOTIFICATION_SOUND);
-        audio.volume = 0.6; // 명확하게 들리도록 볼륨 조정
-        audio.play().catch(e => console.log('[Header] Audio play blocked:', e));
+        audio.volume = 0.6;
+        audio.play().catch(e => console.log('[Header] Audio play failed:', e));
       } catch (e) {
         console.error('[Header] Sound play error:', e);
       }

@@ -48,10 +48,26 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
+  const [canPlaySound, setCanPlaySound] = useState(false); // 오디오 권한 추적
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
+
+  // 사용자 상호작용 감지 (오디오 권한 획득)
+  useEffect(() => {
+    const enableAudio = () => {
+      setCanPlaySound(true);
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+    };
+    window.addEventListener('click', enableAudio);
+    window.addEventListener('touchstart', enableAudio);
+    return () => {
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+    };
+  }, []);
 
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
@@ -86,16 +102,18 @@ const Chat = () => {
 
   // 사운드 재생 함수
   const playNotificationSound = useCallback((inChat: boolean) => {
+    if (!canPlaySound) {
+      console.log('[Chat] Sound skipped: Interaction required');
+      return;
+    }
     try {
-      // 사용자의 요청: 안보고 있을 때 소리를 보고 있을 때 소리(IN_CHAT_SOUND)로 변경하고, 
-      // 진짜 안보고 있을 때(백그라운드 등)는 더 알아듣기 쉬운 소리(OUT_CHAT_SOUND)로 재생
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
-      audio.volume = inChat ? 0.4 : 0.7; // 안보고 있을 때 볼륨을 약간 더 높임
-      audio.play().catch(e => console.log('[Chat] Audio play blocked by browser policy:', e));
+      audio.volume = inChat ? 0.4 : 0.7;
+      audio.play().catch(e => console.log('[Chat] Audio play blocked:', e));
     } catch (e) {
       console.error('[Chat] Sound play error:', e);
     }
-  }, []);
+  }, [canPlaySound]);
 
   // 메시지 로드 시 스크롤
   useEffect(() => {
