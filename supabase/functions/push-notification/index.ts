@@ -115,12 +115,12 @@ serve(async (req) => {
         sound: "default",
       },
       data: dataPayload,
-      // badge count를 업데이트하기 위한 silent notification (iOS)
+      // badge count 설정 제거 또는 0으로 설정하여 알림 아이콘 뱃지 영향 최소화
       apns: {
         payload: {
           aps: {
             contentAvailable: 1,
-            badge: 1, // 실제 뱃지 카운트는 클라이언트에서 계산해야 하지만, 일단 1로 설정
+            // badge: 1, <-- 제거
           },
         },
       },

@@ -320,11 +320,7 @@ const Chat = () => {
 
     if (isValidUUID(chatId)) {
       try {
-        // 2. DB 저장 시도 (낙관적 업데이트 제거)
-        // 사용자가 메시지를 보낼 때 화면이 밀리는 주된 원인은 
-        // 로컬 상태(temp ID)와 실시간 채널(DB ID) 간의 불일치 때문입니다.
-        // 가장 확실한 해결책은 DB 저장 후 반환된 실제 데이터를 즉시 상태에 넣는 것입니다.
-        
+        // 1. DB 저장
         const { data, error } = await supabase
           .from('messages')
           .insert([{ 
@@ -337,7 +333,7 @@ const Chat = () => {
 
         if (error) throw error;
 
-        // 3. 서버 데이터 즉시 반영
+        // 2. 서버 데이터 즉시 반영
         if (data) {
           setMessages((prev) => {
             // 실시간 채널에서 이미 들어왔을 수 있으므로 중복 체크
@@ -350,16 +346,6 @@ const Chat = () => {
           });
           setTimeout(scrollToBottom, 50);
         }
-
-        // 4. 알림 생성
-        supabase.from('notifications').insert([{
-          user_id: chatId,
-          type: 'message',
-          title: '새 메시지',
-          content: content.length > 20 ? content.substring(0, 20) + '...' : content,
-          is_read: false,
-          related_id: authUser.id
-        }]);
 
       } catch (error) {
         console.error('[Chat] Send error:', error);
