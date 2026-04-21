@@ -155,7 +155,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
     try {
       let finalVideoUrl = null;
-      let finalImageUrl = draft.image;
+      let finalImageUrl = null; // 초기화 수정: draft.image가 있어도 null로 시작하여 동영상 캡처 우선 순위 부여
 
       // 동영상 업로드 처리
       if (videoFile) {
@@ -164,17 +164,24 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
 
-        console.log('[WritePost] Uploading video...');
+        console.log('[WritePost] Uploading video to storage path:', filePath);
         const { error: uploadError } = await supabase.storage
           .from('post-videos')
-          .upload(filePath, videoFile);
+          .upload(filePath, videoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('[WritePost] Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('post-videos')
           .getPublicUrl(filePath);
         
+        console.log('[WritePost] Video public URL generated:', publicUrl);
         finalVideoUrl = publicUrl;
 
         // 동영상 썸네일 업로드 (추출된 캡처본이 있는 경우)
@@ -193,7 +200,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             }
             const blob = new Blob([ab], {type: mimeString});
             
-            console.log('[WritePost] Uploading video thumbnail to post-images bucket...');
+            console.log('[WritePost] Uploading captured thumbnail to post-images...');
             const { error: thumbError } = await supabase.storage
               .from('post-images')
               .upload(thumbPath, blob, { contentType: 'image/jpeg', upsert: true });
@@ -211,7 +218,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
             console.error('[WritePost] Error processing thumbnail:', thumbErr);
           }
         }
-
+      } else {
+        finalImageUrl = draft.image;
       }
 
       const postData = {
@@ -219,6 +227,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
+        // 중요: 캡처된 이미지가 있으면 그 주소를 사용하고, 없으면 기본값 사용
         image_url: finalImageUrl || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80',
         user_id: authUser.id,
         user_name: displayName,
