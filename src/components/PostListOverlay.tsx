@@ -180,8 +180,9 @@ const PostListOverlay = ({
     const nextStep = expansionStep + 1;
     
     try {
-      // 영역을 점진적으로 확장 (기존 반경의 2배, 4배, 8배...)
-      const factor = Math.pow(1.5, nextStep);
+      // 영역을 아주 조금씩 점진적으로 확장 (기존 반경의 1.1배, 1.2배...)
+      // 기존 1.5배에서 1.2배로 축소하여 범위를 더 정교하게 조절
+      const factor = Math.pow(1.2, nextStep);
       const expandLat = baseLatSpan * factor;
       const expandLng = baseLngSpan * factor;
 
@@ -247,12 +248,12 @@ const PostListOverlay = ({
       } else {
 
         // 이번 확장 영역에서 새로 발견된 게 없다면 다음 스텝으로 바로 넘어가거나 종료
-        if (nextStep > 8) { // 최대 8번까지 확장 시도
+        if (nextStep > 15) { // 스텝을 잘게 쪼갰으므로 최대 시도 횟수를 15회로 증가
           setHasMore(false);
         } else {
           setExpansionStep(nextStep);
           // 재귀적으로 다음 단계 시도 (딜레이를 주어 무한루프 방지 및 부드러운 로딩)
-          setTimeout(() => loadMorePosts(), 300);
+          setTimeout(() => loadMorePosts(), 400); // 딜레이 소폭 증가
         }
       }
     } catch (err) {
