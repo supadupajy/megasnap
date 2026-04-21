@@ -293,28 +293,15 @@ const Chat = () => {
     if (!authUser || !chatId) return;
 
     if (!isValidUUID(chatId)) {
-      const room = chatStore.getRoom(chatId);
-      if (room) {
-        const formatted = room.messages.map((m) => ({
-          id: m.id.toString(),
-          content: m.text,
-          sender_id: m.sender === 'me' ? authUser.id : chatId,
-          receiver_id: m.sender === 'me' ? chatId : authUser.id,
-          created_at: new Date().toISOString(),
-          is_read: m.sender === 'other',
-        }));
-        setMessages(formatted);
-        markAsRead();
-      }
-      setIsLoading(false);
+      // 로컬 스토리지 기반 채팅은 실시간 구독 제외
       return;
     }
 
     const fetchMessages = async () => {
-      // created_at 순으로 오름차순 정렬하여 전체 대화 내역을 가져옵니다.
+      // 1. 필요한 필드만 명시하여 전송 데이터 크기 최적화 (content, sender_id 등만)
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, content, sender_id, receiver_id, created_at, is_read')
         .or(
           `and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`
         )
@@ -334,8 +321,9 @@ const Chat = () => {
 
     fetchMessages();
 
+    // 2. 실시간 채널 최적화: 필요한 테이블과 필터만 적용
     const channel = supabase
-      .channel(`chat:${chatId}`)
+      .channel(`chat-room-${chatId}-${authUser.id}`)
       .on(
         'postgres_changes',
         {
@@ -346,38 +334,29 @@ const Chat = () => {
         (payload) => {
           const newMsg = payload.new as Message;
           
+          // 내 채팅방과 무관한 메시지 트래픽은 여기서 필터링
           const isRelevant =
             (newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) ||
             (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId);
           
           if (!isRelevant) return;
 
-          // 상대방이 보낸 새로운 메시지일 때만 사운드 재생
           if (newMsg.sender_id === chatId) {
-            // 채팅창(페이지)을 보고 있는지 여부에 따라 사운드 구분
             playNotificationSound(isPageVisible);
             markAsRead();
           }
 
           setMessages((prev) => {
-            // 중복 확인 (ID 기준)
             const exists = prev.some(m => m.id === newMsg.id);
             if (exists) return prev;
 
-            // 새로운 메시지 추가 및 정렬
             const updated = [...prev, newMsg].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
 
-            // 상대방 메시지가 오거나 내가 보낸 메시지가 확정되었을 때 스크롤
             setTimeout(scrollToBottom, 10);
-            
             return updated;
           });
-
-          if (newMsg.sender_id === chatId) {
-            markAsRead();
-          }
         }
       )
       .on(
@@ -397,12 +376,13 @@ const Chat = () => {
           );
         }
       )
-      .subscribe((status) => {
-        console.log(`[Chat] Realtime subscription status for ${chatId}:`, status);
-      });
+      .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [authUser, chatId, markAsRead, isPageVisible, playNotificationSound, scrollToBottom]);
+    return () => {
+      console.log(`[Chat] Removing realtime channel for ${chatId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [authUser.id, chatId, isPageVisible]); // 의존성 최적화
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;

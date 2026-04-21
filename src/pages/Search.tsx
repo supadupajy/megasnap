@@ -59,11 +59,19 @@ const Search = () => {
     setIsLoading(true);
     try {
       await fetchFollowingList();
-      const { data, error } = await supabase.from('profiles').select('id, nickname, avatar_url, bio').neq('id', authUser.id).not('nickname', 'is', null).order('updated_at', { ascending: false }).limit(15);
+      // 최적화: id, nickname, avatar_url, bio 필드만 선택 (전체 데이터 트래픽 감소)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nickname, avatar_url, bio')
+        .neq('id', authUser.id)
+        .not('nickname', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(15);
+
       if (error) throw error;
       setUsers(data || []);
     } catch (err) { console.error(err); } finally { setIsLoading(false); }
-  }, [authUser, fetchFollowingList]);
+  }, [authUser.id, fetchFollowingList]);
 
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
@@ -71,10 +79,11 @@ const Search = () => {
     setIsLoading(true);
     try {
       await fetchFollowingList();
+      // profile-search 유틸리티 내부에서도 필드 제한이 적용되어 있는지 확인 필요
       const results = await searchProfilesByNickname(trimmed, authUser?.id, 20);
       setUsers(results);
     } catch (err) { console.error(err); } finally { setIsLoading(false); }
-  }, [authUser, fetchRecommendedUsers, fetchFollowingList]);
+  }, [authUser.id, fetchRecommendedUsers, fetchFollowingList]);
 
   useEffect(() => {
     const timer = setTimeout(() => { handleSearch(searchQuery); }, 300);

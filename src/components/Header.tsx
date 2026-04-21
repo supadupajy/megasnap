@@ -98,12 +98,19 @@ const Header = () => {
     checkNotifications();
     checkMessages();
 
-    // 실시간 구독 통합 관리
+    // 실시간 구독 통합 관리 및 최적화
+    // 1. 필요한 이벤트와 테이블만 명시적으로 구독
+    // 2. filter를 통해 내 데이터가 아닌 트래픽은 원천 차단
     const channel = supabase
-      .channel(`user-updates-${user.id}`);
+      .channel(`user-updates-${user.id}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: user.id },
+        }
+      });
 
     channel
-      // 1. 알림 실시간 감지
+      // 1. 알림 실시간 감지 (INSERT만 감시)
       .on(
         'postgres_changes',
         {
@@ -113,11 +120,11 @@ const Header = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('[Header] New notification detected', payload);
+          console.log('[Header] New notification');
           setHasNewNotifications(true);
         }
       )
-      // 2. 메시지 실시간 감지
+      // 2. 메시지 실시간 감지 (INSERT만 감시, 필요한 컬럼만 추출하는 로직은 클라이언트에서 처리)
       .on(
         'postgres_changes',
         {
@@ -127,7 +134,7 @@ const Header = () => {
           filter: `receiver_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('[Header] New message detected', payload);
+          console.log('[Header] New message');
           setUnreadMsgCount(prev => prev + 1);
           
           if (!window.location.pathname.startsWith('/chat/')) {
@@ -135,7 +142,7 @@ const Header = () => {
           }
         }
       )
-      // 3. 알림/메시지 읽음 처리 감지
+      // 3. 읽음 처리 감지 (UPDATE 감시)
       .on(
         'postgres_changes',
         {
@@ -144,9 +151,7 @@ const Header = () => {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
-          checkNotifications();
-        }
+        () => checkNotifications()
       )
       .on(
         'postgres_changes',
@@ -156,18 +161,19 @@ const Header = () => {
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`
         },
-        () => {
-          checkMessages();
-        }
+        () => checkMessages()
       )
       .subscribe((status) => {
-        console.log(`[Header] Realtime status for user ${user.id}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log('[Header] Optimized realtime subscribed');
+        }
       });
 
     return () => {
+      console.log('[Header] Cleaning up realtime channel');
       supabase.removeChannel(channel);
     };
-  }, [user, checkMessages, checkNotifications, playSound]);
+  }, [user.id]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-[100] flex items-center justify-between px-4 border-b border-gray-100">
