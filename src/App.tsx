@@ -158,8 +158,9 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
+        <Sonner position="top-center" expand={false} richColors />
         <BrowserRouter>
+
           <AuthProvider>
             <div className="min-h-[100dvh] w-full bg-white overflow-hidden">
               <AnimatePresence mode="wait">
