@@ -173,22 +173,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
         .insert([postData])
         .select();
 
-      if (error) {
-        // Fallback: If video_url column is missing/stale, try inserting without it
-        if (error.code === 'PGRST204' || error.message?.includes('video_url')) {
-          console.warn('Retrying insert without video_url due to schema cache issue');
-          delete postData.video_url;
-          const retry = await supabase.from('posts').insert([postData]).select();
-          if (retry.error) throw retry.error;
-          // Use retry data
-          const retryData = retry.data;
-          processNewPost(retryData[0], finalVideoUrl);
-          return;
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       processNewPost(data[0], finalVideoUrl);
+
     } catch (err) {
       console.error('Error saving post:', err);
       showError('저장 중 오류가 발생했습니다.');
