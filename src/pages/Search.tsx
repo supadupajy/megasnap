@@ -27,10 +27,16 @@ const Search = () => {
     // 1. 전체 body 스크롤을 막아 브라우저의 전체 페이지 밀림 현상 차단
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
     
     return () => {
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
     };
   }, []);
 
@@ -99,7 +105,7 @@ const Search = () => {
       
       {/* 2. 실제 스크롤이 일어나는 컨텐츠 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
-        <div className="px-4 pb-28">
+        <div className="px-4 pb-[120px]">
           <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-40">
             <button 
               onClick={handleBack}
