@@ -64,17 +64,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       if (!listRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
       
-      // 아래로 더 스크롤 가능한지 확인 (20px 여유)
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
       setShowScrollDownArrow(!isAtBottom);
 
-      // 위로 스크롤 가능한지 확인 (조금이라도 내려왔는지 확인)
       const isAtTop = scrollTop < 10;
       setShowScrollUpArrow(!isAtTop);
     };
 
     if (isExpanded && posts.length > 5) {
-      handleScroll(); // 초기 상태 체크
+      handleScroll();
       const el = listRef.current;
       el?.addEventListener('scroll', handleScroll);
       return () => el?.removeEventListener('scroll', handleScroll);

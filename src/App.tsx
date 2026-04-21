@@ -57,7 +57,6 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isIndexPage = location.pathname === "/";
   const isFullPage = ["/chat", "/splash", "/login", "/settings", "/friends", "/profile/follow", "/messages", "/notifications"].some(
     path => location.pathname.startsWith(path)
   );
@@ -103,43 +102,35 @@ const AnimatedRoutes = () => {
       </AnimatePresence>
 
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
-        {isIndexPage ? (
-          /* 메인 지도 페이지는 페이지 전환 애니메이션에서 제외 (흰색 화면 깜빡임 방지) */
-          <div className="w-full h-full">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ 
+              duration: 0.3,
+              ease: [0.32, 0.72, 0, 1] 
+            }}
+            className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
+          >
             <Routes location={location}>
+              <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
+              <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+              <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+              <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/profile/follow/:userId" element={<ProtectedRoute><Follow /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </div>
-        ) : (
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ 
-                duration: 0.3,
-                ease: [0.32, 0.72, 0, 1] 
-              }}
-              className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
-            >
-              <Routes location={location}>
-                <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-                <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
-                <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-                <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                <Route path="/profile/follow/:userId" element={<ProtectedRoute><Follow /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </motion.div>
-          </AnimatePresence>
-        )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* BottomNav를 AnimatePresence 바깥으로 이동하여 항상 고정 */}
