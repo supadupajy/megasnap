@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
@@ -167,6 +168,21 @@ const App = () => {
 
   useEffect(() => {
     initializeYoutubePool();
+    
+    // 스마트폰 상단 상태바 설정 (검은색 배경에 흰색 아이콘)
+    const setupStatusBar = async () => {
+      try {
+        // 배경색을 검은색으로 설정 (Android 전용)
+        await StatusBar.setBackgroundColor({ color: '#000000' });
+        // 아이콘/텍스트를 밝은 색(흰색)으로 설정 (Android/iOS 공통)
+        await StatusBar.setStyle({ style: Style.Dark }); // Style.Dark는 '어두운 배경용 밝은 콘텐츠'를 의미함
+      } catch (e) {
+        console.warn('StatusBar adjustment failed:', e);
+      }
+    };
+
+    setupStatusBar();
+
     // 6초(2.5+@) 동안 스플래시 유지하여 안정적인 로딩 도모
     const timer = setTimeout(() => { 
       setShowSplash(false); 
