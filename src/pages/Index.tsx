@@ -142,12 +142,12 @@ const Index = () => {
         .from('posts')
         .select('*')
         .order('likes', { ascending: false })
-        .limit(20);
+        .limit(50); // 충분히 많은 데이터를 가져온 후 필터링
       
       if (!error && data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
         // 광고([AD])가 아닌 포스팅만 필터링하여 순위 매기기
-        const filtered = mapped.filter(p => p && !p.isAd);
+        const filtered = mapped.filter(p => p && !p.isAd).slice(0, 20); // 정확히 20개만 추출
         const ranked = filtered.map((p, idx) => ({
           ...p,
           rank: idx + 1
