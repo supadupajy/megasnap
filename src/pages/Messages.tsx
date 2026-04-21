@@ -127,11 +127,8 @@ const Messages = () => {
   };
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/', { replace: true });
-    }
+    // Direct Message 창에서 뒤로가기는 항상 지도 화면('/')으로 이동
+    navigate('/', { replace: true });
   };
 
   return (
