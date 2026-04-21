@@ -99,6 +99,7 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [expansionStep, setExpansionStep] = useState(0);
+  const loadedPostIds = useRef<Set<string>>(new Set(initialPosts.map(p => p.id)));
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -116,15 +117,10 @@ const PostListOverlay = ({
   useLayoutEffect(() => {
     if (isOpen) {
       setPosts(initialPosts);
+      loadedPostIds.current = new Set(initialPosts.map(p => p.id));
       setHasMore(true);
       setExpansionStep(0);
-      return;
     }
-
-    setPosts([]);
-    setIsLoadingMore(false);
-    setHasMore(true);
-    setExpansionStep(0);
   }, [isOpen, initialPosts]);
 
   const matchesOverlayFilters = useCallback((post: Post) => {
@@ -178,79 +174,113 @@ const PostListOverlay = ({
   }, [mapCenter.lat, mapCenter.lng]);
 
   const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !isOpen || !hasMore) return;
+    if (isLoadingMore || !hasMore || !isOpen) return;
 
     setIsLoadingMore(true);
-
+    const nextStep = expansionStep + 1;
+    
     try {
-      const loadedIds = new Set(posts.map((post) => post.id));
-      let nextStep = expansionStep + 1;
-      let foundPosts: Post[] = [];
+      // 영역을 점진적으로 확장 (기존 반경의 2배, 4배, 8배...)
+      const factor = Math.pow(1.5, nextStep);
+      const expandLat = baseLatSpan * factor;
+      const expandLng = baseLngSpan * factor;
 
-      while (nextStep <= 8 && foundPosts.length === 0) {
-        const previousBounds = getExpandedBounds(nextStep - 1);
-        const nextBounds = getExpandedBounds(nextStep);
-        const ringPosts = await fetchPostsInBounds(nextBounds.sw, nextBounds.ne);
+      const expandedBounds = {
+        sw: { lat: mapCenter.lat - expandLat, lng: mapCenter.lng - expandLng },
+        ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
+      };
 
-        foundPosts = ringPosts
-          .filter((post) => !loadedIds.has(post.id))
-          .filter((post) => !isWithinBounds(post, previousBounds))
-          .filter(matchesOverlayFilters)
-          .sort((a, b) => getDistanceFromCenter(a) - getDistanceFromCenter(b));
+      console.log(`[PostList] Expanding search area... Step: ${nextStep}, Factor: ${factor.toFixed(2)}`);
+      
+      const newRawPosts = await fetchPostsInBounds(
+        expandedBounds.sw,
+        expandedBounds.ne,
+        1, // low level to use high limit
+        mapCenter
+      );
 
-        if (foundPosts.length > 0) {
-          break;
-        }
+      // Raw DB 데이터를 Post 타입으로 매핑 (fetchPostsInBounds는 DB 데이터를 반환함)
+      // fetchPostsInBounds 내부에서 사용하는 mapDbToPost는 내보내지지 않았으므로
+      // 임시로 수동 매핑하거나 Index.tsx의 로직을 참고해야 함.
+      // 여기서는 mapDbToPost와 유사한 변환 로직이 필요.
+      
+      const uniqueNewRawPosts = newRawPosts.filter(p => !loadedPostIds.current.has(p.id));
+      
+      if (uniqueNewRawPosts.length > 0) {
+        // mapDbToPost의 비동기 로직 재구현 (Profile.tsx 등에서 쓰는 로직 참고)
+        const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
+          const isAd = p.content?.trim().startsWith('[AD]');
+          return {
+            id: p.id,
+            isAd,
+            isGif: false,
+            isInfluencer: false,
+            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+            location: p.location_name || '알 수 없는 장소',
+            lat: p.latitude,
+            lng: p.longitude,
+            likes: Number(p.likes || 0),
+            commentsCount: 0,
+            comments: [],
+            image: p.image_url,
+            videoUrl: p.video_url,
+            youtubeUrl: p.youtube_url,
+            category: p.category || 'none',
+            isLiked: false,
+            createdAt: new Date(p.created_at),
+            borderType: 'none',
+          } as Post;
+        }));
 
-        nextStep += 1;
-      }
+        mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
+        
+        // 현재 위치(mapCenter)에서 가까운 순으로 정렬
+        const sortedNewPosts = mappedPosts.sort((a, b) => {
+          const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
+          const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
+          return distA - distB;
+        });
 
-      if (foundPosts.length === 0) {
-        setHasMore(false);
-        return;
-      }
-
-      const batch = foundPosts.slice(0, 12);
-      setPosts((prev) => {
-        const combined = [...prev, ...batch];
-        const existingCacheIds = new Set(mapCache.posts.map((post) => post.id));
-        const newCachePosts = batch.filter((post) => !existingCacheIds.has(post.id));
-        if (newCachePosts.length > 0) {
-          mapCache.posts = [...mapCache.posts, ...newCachePosts];
-        }
-        return combined;
-      });
-
-      if (foundPosts.length <= 12) {
+        setPosts(prev => [...prev, ...sortedNewPosts]);
         setExpansionStep(nextStep);
-        if (nextStep >= 8) {
+      } else {
+
+        // 이번 확장 영역에서 새로 발견된 게 없다면 다음 스텝으로 바로 넘어가거나 종료
+        if (nextStep > 8) { // 최대 8번까지 확장 시도
           setHasMore(false);
+        } else {
+          setExpansionStep(nextStep);
+          // 재귀적으로 다음 단계 시도 (딜레이를 주어 무한루프 방지 및 부드러운 로딩)
+          setTimeout(() => loadMorePosts(), 300);
         }
       }
-    } catch (error) {
-      console.error('[PostListOverlay] Failed to load more real posts:', error);
+    } catch (err) {
+      console.error('[PostList] Load more error:', err);
       setHasMore(false);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [expansionStep, getDistanceFromCenter, getExpandedBounds, hasMore, isLoadingMore, isOpen, isWithinBounds, matchesOverlayFilters, posts]);
+  }, [isLoadingMore, hasMore, isOpen, expansionStep, mapCenter, baseLatSpan, baseLngSpan, selectedCategories, timeValueHours, authUserId]);
 
   useEffect(() => {
     if (!isOpen || !hasMore) return;
-    
+
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && visiblePosts.length > 0) {
+      (entries) => {
+        if (entries[0].isIntersecting) {
           loadMorePosts();
         }
       },
       { threshold: 0.1 }
     );
+
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
+
     return () => observer.disconnect();
-  }, [hasMore, loadMorePosts, visiblePosts.length, isOpen]);
+  }, [isOpen, hasMore, loadMorePosts]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
