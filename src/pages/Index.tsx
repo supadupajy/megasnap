@@ -451,7 +451,7 @@ const Index = () => {
     setAllPosts(prev => prev.filter(p => p.id !== id));
     setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
     mapCache.posts = mapCache.posts.filter(p => p.id !== id);
-    showSuccess('포스팅이 삭제되었습니다.');
+    setSelectedPostId(null); // 추가: 선택된 포스팅 ID 초기화
   };
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };

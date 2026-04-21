@@ -391,11 +391,26 @@ const MapContainer = ({
     const currentPostIds = new Set(posts.map(p => p.id));
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
-        const timeoutId = removalTimeoutsRef.current.get(id);
-        if (timeoutId) window.clearTimeout(timeoutId);
-        removalTimeoutsRef.current.delete(id);
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
+        // 이미 제거 대기 중인 경우 무시
+        if (removalTimeoutsRef.current.has(id)) return;
+
+        const content = overlay.getContent();
+        if (content instanceof HTMLElement) {
+          content.classList.remove('animate-marker-appear');
+          content.classList.add('animate-marker-disappear');
+          
+          // 애니메이션 시간(300ms) 후에 실제로 지도에서 제거
+          const timeoutId = window.setTimeout(() => {
+            overlay.setMap(null);
+            overlaysRef.current.delete(id);
+            removalTimeoutsRef.current.delete(id);
+          }, 300);
+          
+          removalTimeoutsRef.current.set(id, timeoutId);
+        } else {
+          overlay.setMap(null);
+          overlaysRef.current.delete(id);
+        }
       }
     });
 
