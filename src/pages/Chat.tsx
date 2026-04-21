@@ -48,7 +48,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
-  const [canPlaySound, setCanPlaySound] = useState(false);
+  const [canPlaySound, setCanPlaySound] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -72,7 +72,7 @@ const Chat = () => {
     }
   }, []);
 
-  // 오디오 권한 획득 리스너
+  // 사용자 상호작용 감지 (오디오 권한 획득)
   useEffect(() => {
     const enableAudio = () => {
       setCanPlaySound(true);
