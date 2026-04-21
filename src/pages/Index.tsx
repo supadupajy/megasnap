@@ -562,18 +562,26 @@ const Index = () => {
                   )}
                 </div>
               </div>
-              <AnimatePresence>
-                {!isTrendingExpanded && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: 20 }} 
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                  >
-                    <TimeSlider value={timeValue} onChange={setTimeValue} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              
+              <div className="absolute bottom-6 left-0 right-0 z-10 pointer-events-none flex justify-center">
+                <AnimatePresence mode="wait">
+                  {!isTrendingExpanded && (
+                    <motion.div 
+                      key="time-slider"
+                      initial={{ opacity: 0, y: 20 }} 
+                      animate={{ opacity: 1, y: 0 }} 
+                      exit={{ opacity: 0, y: 30 }} 
+                      transition={{ 
+                        duration: 0.5, 
+                        ease: [0.32, 0.72, 0, 1] 
+                      }}
+                      className="pointer-events-auto"
+                    >
+                      <TimeSlider value={timeValue} onChange={setTimeValue} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </>
           )}
         </div>
