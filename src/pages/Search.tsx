@@ -100,13 +100,13 @@ const Search = () => {
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 1. 상단 헤더 공간 (88px) - 이 영역은 절대로 스크롤되지 않음 */}
+      {/* 1. 상단 헤더 공간 (88px) */}
       <div className="h-[88px] w-full bg-white shrink-0 z-50 border-b border-gray-100" />
       
-      {/* 2. 실제 스크롤이 일어나는 컨텐츠 영역 */}
-      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
-        <div className="px-4 pb-[120px]">
-          <div className="relative py-6 flex items-center gap-3 bg-white sticky top-0 z-40">
+      {/* 2. 고정 영역: 뒤로가기 + 검색창 + 광고 배너 */}
+      <div className="shrink-0 bg-white z-40 border-b border-gray-50">
+        <div className="px-4">
+          <div className="relative py-4 flex items-center gap-3 bg-white">
             <button 
               onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0"
@@ -115,11 +115,11 @@ const Search = () => {
             </button>
             <div className="relative flex-1">
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-              <input
-                placeholder="닉네임으로 친구 찾기"
-                className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+              <input 
+                placeholder="닉네임으로 친구 찾기" 
+                className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
               />
               {isLoading && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -128,9 +128,19 @@ const Search = () => {
               )}
             </div>
           </div>
-          <SearchAdBanner />
+          <div className="pb-4">
+            <SearchAdBanner />
+          </div>
+        </div>
+      </div>
+      
+      {/* 3. 실제 스크롤이 일어나는 추천 리스트 영역 */}
+      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+        <div className="px-4 pb-32 pt-4">
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{searchQuery ? '검색 결과' : '추천 사용자'}</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+              {searchQuery ? '검색 결과' : '추천 사용자'}
+            </p>
             <div className="space-y-1">
               {users.map((user) => {
                 const isFollowing = followingIds.has(user.id);
