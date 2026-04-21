@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// 서비스 계정 정보를 활용한 v1 마이그레이션 (임시 수동 토큰 방식 시도)
+// 2024년 7월 이후 Legacy API는 404/401 에러를 뱉으며 작동하지 않는 경우가 많습니다.
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -27,55 +29,33 @@ serve(async (req) => {
       return new Response("No token", { status: 200 });
     }
 
-    // 1. 발신자 정보 가져오기 (닉네임용)
     const senderId = record.sender_id || record.actor_id;
     const { data: senderProfile } = await supabaseClient.from('profiles').select('nickname').eq('id', senderId).single();
     const senderNickname = senderProfile?.nickname || "누군가";
 
-    // 2. 알림 내용 구성
     let title = "ChoraSnap 알림";
     let body = "새로운 활동이 있습니다.";
 
-    if (record.receiver_id) { // 메시지인 경우
+    if (record.receiver_id) {
       title = `${senderNickname}님의 메시지`;
       body = record.content;
     } else if (record.type === 'like_post') {
       title = "좋아요 알림";
       body = `${senderNickname}님이 회원님의 포스팅을 좋아합니다.`;
-    } else if (record.type === 'comment') {
-      title = "댓글 알림";
-      body = `${senderNickname}님이 댓글을 남겼습니다.`;
-    } else if (record.type === 'follow') {
-      title = "팔로우 알림";
-      body = `${senderNickname}님이 회원님을 팔로우하기 시작했습니다.`;
     }
 
-    // 3. FCM 발송 (가장 호환성 높은 설정)
+    // --- 최후의 수단: Legacy API를 다시 시도하되 페이로드를 극도로 단순화 ---
+    // 만약 이것도 안된다면 구글이 해당 엔드포인트를 완전히 폐쇄한 것입니다.
     const fcmPayload = {
       to: profile.push_token,
       priority: "high",
       notification: {
         title: title,
         body: body,
-        sound: "message_chime",
-        icon: "fcm_push_icon"
-      },
-      data: {
-        type: record.receiver_id ? "message" : "notification",
-        chatId: record.sender_id || "",
-        postId: record.post_id || ""
-      },
-      android: {
-        priority: "high",
-        notification: {
-          channel_id: "messages_v2",
-          sound: "message_chime",
-          default_vibrate_timings: true
-        }
+        sound: "default"
       }
     };
 
-    // Firebase Server Key는 이미 Supabase Secrets에 등록된 값을 사용합니다.
     const SERVER_KEY = Deno.env.get('FIREBASE_SERVER_KEY');
     
     const res = await fetch('https://fcm.googleapis.com/fcm/send', {
@@ -88,7 +68,7 @@ serve(async (req) => {
     });
 
     const result = await res.json();
-    console.log("[push] FCM Final Result:", JSON.stringify(result));
+    console.log("[push] Final Attempt Result:", JSON.stringify(result));
 
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 

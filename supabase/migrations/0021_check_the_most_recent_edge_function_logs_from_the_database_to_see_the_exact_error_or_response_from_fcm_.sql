@@ -1,0 +1,1 @@
+SELECT * FROM public.push_logs ORDER BY created_at DESC LIMIT 5;
