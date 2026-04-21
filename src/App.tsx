@@ -65,19 +65,19 @@ const AnimatedRoutes = () => {
   const isMainTab = ["/", "/popular", "/search", "/messages", "/profile"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
-  // 지도 페이지에서 특정 오버레이가 열렸을 때 Nav를 숨기기 위한 상태 감지
-  const isPostListOpen = location.pathname === '/' && (location.state as any)?.isPostListOpen;
+  // ✅ [FIX] location.state 대신 window 플래그로 즉시 읽기
+  // PostListOverlay 열림 여부는 Index.tsx에서 window.__isPostListOpen 에 동기적으로 기록됨
+  const isPostListOpenForNav = typeof window !== 'undefined' && (window as any).__isPostListOpen === true;
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       console.log('[App] Back button pressed. Path:', location.pathname);
 
-      // 1순위: 여기보기(PostListOverlay)가 열려있는지 최우선 확인
-      const routeState = location.state as any;
-      if (location.pathname === '/' && routeState?.isPostListOpen) {
+      // 1순위: window 플래그로 PostListOverlay 열림 여부를 즉시 확인 (타이밍 이슈 없음)
+      if (location.pathname === '/' && (window as any).__isPostListOpen === true) {
         console.log('[App] Intercepting back button to close PostListOverlay');
         window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
-        return; // 앱 종료나 페이지 이동을 막음
+        return;
       }
 
       // 2순위: 메인 페이지(지도)인 경우 종료 팝업
@@ -94,7 +94,8 @@ const AnimatedRoutes = () => {
       }
     });
     return () => { backButtonListener.then(l => l.remove()); };
-  }, [location.pathname, navigate, location.state]);
+  // ✅ location.state 의존성 제거 — window 플래그는 클로저로 즉시 읽으므로 의존성 불필요
+  }, [location.pathname, navigate]);
 
   if (loading && location.pathname !== '/login') {
     return (
@@ -126,7 +127,6 @@ const AnimatedRoutes = () => {
             key={location.pathname}
             initial={{ 
               opacity: 0, 
-              // 메인 탭 전환 시에는 방향성 없이 스케일/페이드만, 그 외(채팅 등)는 슬라이드
               x: isMainTab ? 0 : (isBackAction ? -100 : 100),
               scale: isMainTab ? 0.98 : 1
             }}
@@ -165,8 +165,8 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {/* BottomNav를 AnimatePresence 바깥으로 이동하여 항상 고정 */}
-      {!isFullPage && session && !isPostListOpen && <BottomNav />}
+      {/* ✅ [FIX] BottomNav 숨김 조건도 window 플래그로 통일 */}
+      {!isFullPage && session && !isPostListOpenForNav && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
@@ -193,7 +193,6 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-
           <AuthProvider>
             <div className="min-h-[100dvh] w-full bg-white overflow-hidden">
               <AnimatePresence mode="wait">
