@@ -118,10 +118,13 @@ serve(async (req) => {
           sound: "message_chime", 
         },
         data: dataPayload,
+        priority: "high", // 1. 우선순위 높임 (앱이 닫혀있을 때 즉시 전송을 유도)
         android: {
+          priority: "high",
           notification: {
             channel_id: "messages_v2", 
             sound: "message_chime", 
+            click_action: "FCM_PLUGIN_ACTIVITY", // 2. 클릭 시 앱 열기 유도
           }
         },
         apns: {
@@ -134,7 +137,7 @@ serve(async (req) => {
         },
       };
 
-      console.log(`[push-notification] Attempting to send FCM to token: ${pushToken.substring(0, 10)}...`);
+      console.log(`[push-notification] Attempting to send HIGH PRIORITY FCM to token: ${pushToken.substring(0, 10)}...`);
       
       // 구글의 Legacy API (https://fcm.googleapis.com/fcm/send)는 2024년 6월부터 중단되기 시작했습니다.
       // 만약 404가 계속 발생한다면 HTTP v1 API로의 전환이 필요합니다.
