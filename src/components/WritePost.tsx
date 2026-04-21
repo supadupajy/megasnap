@@ -58,15 +58,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
 
   useEffect(() => {
     if (!isOpen) return;
-    if (initialLocation) {
-      setIsLoadingAddress(true);
-      const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
-      setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-      setIsLoadingAddress(false);
-    } else {
-      setAddress('위치 없음');
-    }
-  }, [isOpen, initialLocation]);
+    
+    // 항상 '위치 없음'을 기본값으로 설정 (사용자 요청)
+    setAddress('위치 없음');
+    setIsLoadingAddress(false);
+  }, [isOpen]);
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
