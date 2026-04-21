@@ -1,0 +1,1 @@
+SELECT * FROM public.push_logs WHERE record_id = '1908b7e2-b1ba-426b-87be-1b5029a66cbe';

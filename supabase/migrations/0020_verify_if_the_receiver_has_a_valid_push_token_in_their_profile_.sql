@@ -1,0 +1,1 @@
+SELECT nickname, push_token FROM public.profiles WHERE id = '3db7b4d6-59b7-4dfb-9ff3-00d55aeb5fc3';
