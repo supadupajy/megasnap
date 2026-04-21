@@ -73,6 +73,7 @@ const Index = () => {
   // [수정] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
   useEffect(() => {
     const handleCloseOverlay = () => {
+      console.log('[Index] Received close signal from native back button');
       if (isPostListOpen) {
         setIsPostListOpen(false);
       }
@@ -81,13 +82,17 @@ const Index = () => {
     return () => window.removeEventListener('close-post-list-overlay', handleCloseOverlay);
   }, [isPostListOpen]);
 
-  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용
+  // PostListOverlay 상태를 App.tsx에 전달하기 위해 location.state 활용 (기존 useEffect 수정)
   useEffect(() => {
-    navigate(location.pathname, { 
-      replace: true, 
-      state: { ...location.state, isPostListOpen } 
-    });
-  }, [isPostListOpen]);
+    // state가 바뀌었을 때만 navigate를 호출하여 무한 루프 방지
+    if ((location.state as any)?.isPostListOpen !== isPostListOpen) {
+      console.log('[Index] Syncing PostListOverlay state to history:', isPostListOpen);
+      navigate(location.pathname, { 
+        replace: true, 
+        state: { ...location.state, isPostListOpen } 
+      });
+    }
+  }, [isPostListOpen, location.pathname, navigate]);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -469,6 +474,7 @@ const Index = () => {
   
   const handleViewAllClick = () => { 
     if (displayedMarkers.length > 0 && currentZoom < 9) {
+      console.log('[Index] Opening PostListOverlay');
       setIsPostListOpen(true);
     } 
   };

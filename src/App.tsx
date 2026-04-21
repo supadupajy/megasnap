@@ -70,18 +70,26 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      // [중요] 여기보기(PostListOverlay)가 열려있는지 먼저 확인
-      if (location.pathname === '/' && (location.state as any)?.isPostListOpen) {
-        // 커스텀 이벤트를 발생시켜 Index.tsx에서 인지하게 함
+      console.log('[App] Back button pressed. Path:', location.pathname);
+
+      // 1순위: 여기보기(PostListOverlay)가 열려있는지 최우선 확인
+      const routeState = location.state as any;
+      if (location.pathname === '/' && routeState?.isPostListOpen) {
+        console.log('[App] Intercepting back button to close PostListOverlay');
         window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
-        return;
+        return; // 앱 종료나 페이지 이동을 막음
       }
 
+      // 2순위: 메인 페이지(지도)인 경우 종료 팝업
       if (location.pathname === '/') {
         setShowExitDialog(true);
-      } else if (canGoBack) {
+      } 
+      // 3순위: 그 외 페이지는 이전 페이지로
+      else if (canGoBack) {
         window.history.back();
-      } else {
+      } 
+      // 4순위: 히스토리가 없으면 메인으로
+      else {
         navigate('/');
       }
     });
