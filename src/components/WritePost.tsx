@@ -305,7 +305,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, i
               <div className="space-y-6 px-1">
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-  미디어 첨부 <span className="text-indigo-600">(선택)</span>
+  미디어 첨부 <span className="text-indigo-600">(필수)</span>
 </p>
                   <div className="w-full">
                     <button 
