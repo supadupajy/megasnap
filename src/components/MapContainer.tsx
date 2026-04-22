@@ -549,12 +549,14 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #3b82f6;"; 
       inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)";
     } else if (borderType === 'diamond') {
+      // [FIX] 다이아몬드: 빙글빙글 도는 색상 힌트를 위한 currentColor 설정
       inlineBorderStyle = "border: 4.5px solid #22d3ee;";
-      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)";
+      inlineShadow = "0 0 25px rgba(34, 211, 238, 0.8)";
       influencerClass = "influencer-glow";
     } else if (borderType === 'gold') {
+      // [FIX] 골드: 빙글빙글 도는 색상 힌트를 위한 currentColor 설정
       inlineBorderStyle = "border: 4.5px solid #fbbf24;";
-      inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)";
+      inlineShadow = "0 0 25px rgba(251, 191, 36, 0.7)";
       influencerClass = "influencer-glow";
     } 
 
@@ -562,7 +564,7 @@ const MapContainer = ({
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
-        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: ${borderType === 'diamond' ? '#22d3ee' : '#fbbf24'};">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="shine-overlay">
             <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" />
             <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
