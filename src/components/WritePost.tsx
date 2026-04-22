@@ -343,7 +343,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
           style={{ 
             bottom: 0,
-            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)',
+            transition: 'transform 0.1s linear',
             willChange: 'transform'
           }}
         >
@@ -660,10 +661,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       </Drawer>
       {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
       {isOpen && (
-  <div
-    className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-150"
-style={{ bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '110px' }}
-  >
+        <div
+          className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-100"
+          style={{ 
+            bottom: keyboardHeight > 0 ? '0px' : '110px',
+            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)'
+          }}
+        >
           {currentPage === 1 ? (
             <Button
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
