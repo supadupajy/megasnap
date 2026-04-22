@@ -6,7 +6,6 @@ import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils,
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +13,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { AnimatePresence, motion } from 'framer-motion';
+import Cropper from 'react-easy-crop';
 import {
   Carousel,
   CarouselContent,
@@ -36,6 +36,8 @@ interface MediaFile {
   url: string;
   type: 'image' | 'video';
   thumbnail?: string;
+  crop?: { x: number; y: number };
+  zoom?: number;
 }
 
 const CATEGORIES = [
@@ -69,7 +71,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       const currentDraft = postDraftStore.get();
       setDraft(currentDraft);
       
-      // 드래프트가 비워지면(clear) 미디어 파일들도 비워줌
       if (!currentDraft.image && !currentDraft.content) {
         setMediaFiles([]);
         setCurrentPage(1);
@@ -91,8 +92,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   useEffect(() => {
     if (!isOpen) return;
     
-    // 만약 사용자가 직접 선택한 위치(initialLocation)가 있다면 그 주소를 표시하고,
-    // 그렇지 않은 경우에만 '위치 없음'으로 초기화합니다.
     if (initialLocation) {
       setIsLoadingAddress(true);
       const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
@@ -117,11 +116,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         thumbnail = await captureVideoThumbnail(url);
       }
 
-      return { file, url, type, thumbnail } as MediaFile;
+      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1 } as MediaFile;
     }));
 
     setMediaFiles(prev => [...prev, ...newMediaItems]);
-    // 첫 이미지를 드래프트 썸네일로 설정 (호환성 유지)
     if (newMediaItems[0].type === 'image') {
       postDraftStore.set({ image: newMediaItems[0].url });
     } else if (newMediaItems[0].thumbnail) {
@@ -156,10 +154,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     });
   };
 
+  const onCropChange = (crop: { x: number; y: number }, index: number) => {
+    setMediaFiles(prev => prev.map((item, i) => i === index ? { ...item, crop } : item));
+  };
+
+  const onZoomChange = (zoom: number, index: number) => {
+    setMediaFiles(prev => prev.map((item, i) => i === index ? { ...item, zoom } : item));
+  };
+
   const handlePost = async () => {
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
     if (mediaFiles.length === 0) { showError('사진이나 동영상을 첨부해주세요.'); return; }
-    // 카테고리 필수 체크 해제 (이미 'none'이 기본값이거나 선택 가능하므로)
     if (!selectedCategory) { showError('카테고리를 선택해주세요.'); return; }
 
     setIsSubmitting(true);
@@ -169,12 +174,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const finalAddress = address || '위치 미지정';
 
     try {
-      // 첫 번째 미디어를 대표 미디어로 처리 (현재 posts 테이블 구조 유지용)
       const primaryMedia = mediaFiles[0];
       let finalVideoUrl = null;
-      let finalImageUrl = null; // 기본값을 null로 설정하여 DB 저장 용량 및 Egress 절약
+      let finalImageUrl = null;
 
-      // 실제 파일 업로드 로직 (대표 파일만 우선 업로드하는 간소화 버전)
       if (primaryMedia.file) {
         const timestamp = new Date().getTime();
         const folder = primaryMedia.type === 'video' ? 'post-videos' : 'post-images';
@@ -202,7 +205,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             finalImageUrl = tUrl;
           }
         } else {
-          // ✅ 이미지가 여러 장일 때도 첫 번째 이미지를 마커 썸네일(finalImageUrl)로 설정
           finalImageUrl = publicUrl;
         }
       }
@@ -212,7 +214,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
-        image_url: finalImageUrl, // 이미지가 없을 땐 null 저장
+        image_url: finalImageUrl,
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -236,8 +238,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
     const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-    
-    // ✅ 위치가 없는 포스팅은 지도 객체에서 제외하기 위해 null 처리
     const finalLat = initialLocation?.lat || null;
     const finalLng = initialLocation?.lng || null;
     const finalAddress = address || '위치 미지정';
@@ -259,7 +259,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       likes: 0,
       commentsCount: 0,
       comments: [],
-      image: dbPost.image_url, // DB에 저장된 실제 캡처 URL 사용
+      image: dbPost.image_url,
       videoUrl: finalVideoUrl,
       isLiked: false,
       createdAt: new Date(),
@@ -317,7 +317,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             willChange: 'transform'
           }}
         >
-          {/* Accessibility requirements for Radix Dialog/Drawer */}
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
             <DrawerDescription>장소를 선택하고 사진이나 동영상을 업로드하여 추억을 기록하세요.</DrawerDescription>
@@ -364,13 +363,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         <button 
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
-                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300 h-[80px]",
-                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
+                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]",
+                            mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
-                            <Video className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
+                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
                           </div>
                           <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-xs text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
@@ -390,7 +390,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    {mediaFiles.length > 0 ? (
+                    {mediaFiles.length > 0 && (
                       <div className="relative flex-1 min-h-0 mb-2">
                         <Carousel 
                           setApi={setApi}
@@ -398,7 +398,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           opts={{ 
                             align: "start", 
                             containScroll: "trimSnaps",
-                            watchDrag: true
+                            watchDrag: false
                           }}
                         >
                           <CarouselContent className="h-full ml-0">
@@ -406,11 +406,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                               <CarouselItem key={idx} className="h-full pl-0">
                                 <div className="relative h-full w-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <img 
-                                      src={media.url} 
-                                      alt={`Preview ${idx}`} 
-                                      className="w-full h-full object-cover"
-                                    />
+                                    <div className="relative w-full h-full">
+                                      <Cropper
+                                        image={media.url}
+                                        crop={media.crop || { x: 0, y: 0 }}
+                                        zoom={media.zoom || 1}
+                                        aspect={1}
+                                        onCropChange={(crop) => onCropChange(crop, idx)}
+                                        onZoomChange={(zoom) => onZoomChange(zoom, idx)}
+                                        showGrid={false}
+                                        classes={{
+                                          containerClassName: "h-full w-full",
+                                        }}
+                                      />
+                                    </div>
                                   ) : (
                                     <video 
                                       src={media.url} 
@@ -423,7 +432,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   )}
                                   <button
                                     onClick={() => removeMedia(idx)}
-                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
+                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-[60]"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -452,15 +461,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             </>
                           )}
                         </Carousel>
-                      </div>
-                    ) : (
-                      <div className="flex-1 min-h-0 mb-2 rounded-2xl bg-gray-50 border-2 border-gray-100 flex flex-col items-center justify-center gap-3">
-                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                          <ImageIcon className="w-8 h-8 text-gray-200" />
-                        </div>
-                        <p className="text-sm font-black text-gray-300 tracking-tighter">
-                          미리보기 영역
-                        </p>
                       </div>
                     )}
                   </motion.div>
