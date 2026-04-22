@@ -80,6 +80,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
+  const { user, content, isAd } = post;
+  const isMine = authUser?.id === user.id;
+
+  const handleAdClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
+  };
+
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
     if (autoPlayVideo) {
@@ -89,13 +97,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       return () => clearTimeout(timer);
     }
   }, [autoPlayVideo]);
-
-  const { user, content, isAd } = post;
-  
-  const handleAdClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
-  };
 
   // 프로필 정보 가져오기
   useEffect(() => {
