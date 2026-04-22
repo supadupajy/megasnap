@@ -249,7 +249,7 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 600); // 0.6초 대기 후 동기화
+    }, 300); // 0.3초 대기 후 동기화
   }, [isSelectingLocation, currentZoom]);
 
   // ✅ [데이터 다이어트] 이미 불러온 마커는 다시 그리지 않도록 로직 최적화
