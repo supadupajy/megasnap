@@ -143,23 +143,26 @@ const Index = () => {
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
 
-      // [FIX] 고장난 Unsplash URL 차단 및 자동 교체 블랙리스트 - 더 강력한 검사
+      // [FIX] 'Post content' 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단
       const BROKEN_URL_PART = "photo-1548199973-03cbf5292374";
       const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
 
       const sanitizeUrl = (url: any) => {
-        if (!url || typeof url !== 'string' || url.includes(BROKEN_URL_PART)) {
-          console.log('[Sanitize] Blocking broken URL:', url);
+        if (!url || typeof url !== 'string') return HIGH_RES_FALLBACK + "&sig=" + p.id;
+        
+        const clean = url.trim();
+        // "Post content"가 포함되어 있거나, http로 시작하지 않으면 무조건 가짜 데이터로 간주
+        if (/post\s*content/i.test(clean) || !clean.startsWith('http') || clean.includes(BROKEN_URL_PART)) {
+          console.log('[Sanitize] Blocking dummy/broken data:', clean);
           return HIGH_RES_FALLBACK + "&sig=" + p.id;
         }
-        // Unsplash인 경우 무조건 고해상도 파라미터 강제
-        if (url.includes('unsplash.com')) {
-          return url.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+
+        if (clean.includes('unsplash.com')) {
+          return clean.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
         }
-        return url;
+        return clean;
       };
 
-      // ✅ [중요] mapDbToPost 내의 모든 이미지 참조 포인트를 sanitizeUrl로 감싸기
       let finalImage = sanitizeUrl(p.image_url);
       
       const validImages = Array.isArray(p.images) && p.images.length > 0
