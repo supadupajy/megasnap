@@ -44,7 +44,7 @@
   }
 }
 
-/* [FIX] 지도 마커 줌 변경 시 해상도/선명도 저하 방지 */
+/* [FIX] 지도 마커 줌 변경 및 애니메이션 시 해상도/선명도 저하 방지 */
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
@@ -53,6 +53,8 @@
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   image-rendering: -webkit-optimize-contrast;
+  /* 애니메이션 중 래스터화 방지를 위해 하드웨어 가속 강제 및 렌더링 힌트 추가 */
+  will-change: transform, opacity;
 }
 
 .marker-container img {
@@ -63,7 +65,7 @@
   height: 100%;
   object-fit: cover;
   image-rendering: -webkit-optimize-contrast;
-  /* GPU 가속 유도로 줌 인/아웃 시 래스터화 방지 */
+  /* GPU 가속 유도로 줌 인/아웃 및 애니메이션 시 래스터화 방지 */
   transform: translateZ(0);
 }
 
@@ -162,11 +164,20 @@
   z-index: -1;
 }
 
+/* 광고 마커 숨쉬기 애니메이션 최적화 (해상도 유지) */
 @keyframes ad-breathing {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.4)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.7)); }
+  0% { transform: scale(1) translateZ(0); }
+  50% { transform: scale(1.08) translateZ(0); } /* 스케일을 약간 낮춰서 픽셀 깨짐 최소화 */
+  100% { transform: scale(1) translateZ(0); }
 }
-.animate-ad-breathing { animation: ad-breathing 3s ease-in-out infinite; }
+
+.animate-ad-breathing {
+  animation: ad-breathing 2s ease-in-out infinite;
+  transform-origin: bottom center;
+  /* 애니메이션 요소에 직접 하드웨어 가속 및 will-change 부여 */
+  will-change: transform;
+  transform: translateZ(0);
+}
 
 @keyframes marker-float {
   0%, 100% { transform: translateY(0); }
