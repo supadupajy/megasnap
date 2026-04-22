@@ -340,18 +340,29 @@ const Index = () => {
     if (displayedMarkers.length > 0 && currentZoom < 9) {
       setIsPostListOpen(true);
       const currentIds = displayedMarkers.map(p => p.id);
+      
       try {
         const { data, error } = await supabase.from('posts').select('*').in('id', currentIds);
+        
         if (!error && data) {
-          const mapped = await Promise.all(data.map(mapDbToPost));
+          const mapped = await Promise.all(data.map(p => mapDbToPost(p)));
           const validMapped = mapped.filter(p => p !== null);
+          
           setAllPosts(prev => {
-            const existingMap = new Map(prev.map(p => [p.id, p]));
-            validMapped.forEach(p => existingMap.set(p.id, p));
-            return Array.from(existingMap.values());
+            const postMap = new Map(prev.map(p => [p.id, p]));
+            
+            validMapped.forEach(p => {
+              postMap.set(p.id, p);
+            });
+            
+            const updatedList = Array.from(postMap.values());
+            mapCache.posts = updatedList;
+            return updatedList;
           });
         }
-      } catch (err) { console.error(err); }
+      } catch (err) { 
+        console.error('[Index] ViewAll Error:', err); 
+      }
     } 
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
@@ -432,7 +443,17 @@ const Index = () => {
       </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
-      <PostListOverlay isOpen={isPostListOpen} onClose={() => setIsPostListOpen(false)} initialPosts={allPosts.filter(p => displayedMarkers.some(m => m.id === p.id))} mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} currentBounds={mapData?.bounds} selectedCategories={selectedCategories} timeValueHours={timeValue} authUserId={authUser?.id} onDeletePost={handlePostDeleted} />
+      <PostListOverlay 
+        isOpen={isPostListOpen} 
+        onClose={() => setIsPostListOpen(false)} 
+        initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
+        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
+        currentBounds={mapData?.bounds} 
+        selectedCategories={selectedCategories} 
+        timeValueHours={timeValue} 
+        authUserId={authUser?.id} 
+        onDeletePost={handlePostDeleted} 
+      />
     </>
   );
 };
