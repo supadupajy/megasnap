@@ -365,14 +365,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         <button 
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
-                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]",
-                            mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300 h-[80px]",
+                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
-                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
+                            <ImageIcon className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <Video className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
                           </div>
                           <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-xs text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
@@ -392,8 +391,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    {mediaFiles.length > 0 && (
-                      <div className="relative flex-1 min-h-[300px] mb-2 overflow-hidden">
+                    <div className="flex-1 min-h-[300px] mb-2 relative bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
+                      {mediaFiles.length > 0 ? (
                         <Carousel 
                           setApi={setApi}
                           className="w-full h-full" 
@@ -406,22 +405,24 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           <CarouselContent className="h-full ml-0">
                             {mediaFiles.map((media, idx) => (
                               <CarouselItem key={idx} className="h-full pl-0">
-                                <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
+                                <div className="relative w-full h-full bg-white flex items-center justify-center overflow-hidden">
                                   {media.type === 'image' ? (
-                                    <div className="absolute inset-0 select-none">
+                                    <div className="w-full h-full relative">
                                       <img 
                                         src={media.url} 
                                         alt="Preview" 
                                         draggable={false}
-                                        className="w-full h-full object-cover transition-none pointer-events-none"
+                                        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
                                         style={{ 
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1.2})`,
                                         }}
                                       />
-                                      {/* 커스텀 드래그 핸들러 */}
+                                      {/* 드래그 핸들러 */}
                                       <div 
-                                        className="absolute inset-0 z-20 cursor-move touch-none"
+                                        className="absolute inset-0 z-20 cursor-move touch-none bg-transparent active:cursor-grabbing"
                                         onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
                                           setIsDragging(true);
                                           setDragStart({ x: e.clientX, y: e.clientY });
                                           (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -490,8 +491,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             </>
                           )}
                         </Carousel>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                            <ImageIcon className="w-8 h-8 text-gray-200" />
+                          </div>
+                          <p className="text-sm font-black text-gray-300 tracking-tighter">
+                            미리보기 영역
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div 
