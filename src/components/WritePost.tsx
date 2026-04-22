@@ -407,17 +407,21 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           <img 
                                             src={media.url} 
                                             alt={`Preview ${idx}`} 
-                                            className="absolute transition-none select-none pointer-events-none z-10 max-w-none max-h-none"
+                                            className="block max-w-none max-h-none select-none pointer-events-none z-10"
                                             style={{ 
-                                              width: 'auto',
-                                              height: 'auto',
-                                              // 가로/세로 중 작은 쪽을 100%로 맞추어 빈틈 방지
-                                              minWidth: '100%',
-                                              minHeight: '100%',
+                                              position: 'absolute',
                                               top: '50%',
                                               left: '50%',
-                                              // 중앙 정렬 상태에서 crop 값만 더함
+                                              width: 'auto',
+                                              height: 'auto',
+                                              minWidth: '100%',
+                                              minHeight: '100%',
                                               transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
+                                              objectFit: 'none' // object-fit 간섭 제거
+                                            }}
+                                            onLoad={(e) => {
+                                              const img = e.target as HTMLImageElement;
+                                              img.style.opacity = '1';
                                             }}
                                           />
                                           {/* 드래그 핸들러 */}
