@@ -539,21 +539,34 @@ const MapContainer = ({
     // 모든 마커에 일괄적으로 3px 화이트 테두리 적용
     let inlineBorderStyle = "border: 3px solid #ffffff;"; 
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
+    let borderType = post.borderType || 'none';
+    let influencerClass = "";
 
     if (isMine) {
-      inlineBorderStyle = "border: 4.5px solid #4f46e5;"; // Indigo 600
+      inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
     } else if (isAd) {
-      // 광고 마커의 테두리 색상을 상단 표기 색상(Blue 500)과 동일하게 맞춤
-      inlineBorderStyle = "border: 4px solid #3b82f6;"; 
+      inlineBorderStyle = "border: 4.5px solid #3b82f6;"; 
       inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)";
+    } else if (borderType === 'diamond') {
+      inlineBorderStyle = "border: 4.5px solid #22d3ee;";
+      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)";
+      influencerClass = "influencer-glow";
+    } else if (borderType === 'gold') {
+      inlineBorderStyle = "border: 4.5px solid #fbbf24;";
+      inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)";
+      influencerClass = "influencer-glow";
+    } else if (borderType === 'silver') {
+      inlineBorderStyle = "border: 4.5px solid #94a3b8;";
+      inlineShadow = "0 0 15px rgba(148, 163, 184, 0.5), inset 0 0 10px rgba(148, 163, 184, 0.3)";
+      influencerClass = "influencer-glow";
     }
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
-        <div style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="shine-overlay">
             <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" />
             <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">

@@ -145,6 +145,20 @@ const Index = () => {
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       
+      // [FIX] 확률 기반 인플루언서 티어 할당 로직
+      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      if (!isAd) {
+        // ID 해시를 사용하여 고정된 확률값 생성
+        let h = 0;
+        const idStr = p.id.toString();
+        for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+        const val = Math.abs(h % 1000) / 1000;
+        
+        if (val < 0.01) borderType = 'diamond';      // 1%
+        else if (val < 0.04) borderType = 'gold';    // 3% (0.01 + 0.03)
+        else if (val < 0.09) borderType = 'silver';  // 5% (0.04 + 0.05)
+      }
+      
       // 작성자 프로필 정보 별도 조회
       let userName = p.user_name || '탐험가';
       let userAvatar = p.user_avatar || '';
@@ -215,7 +229,7 @@ const Index = () => {
         id: p.id,
         isAd: isAd3, // 이제 [AD]로 시작하는 글은 true로 설정됨
         isGif: false,
-        isInfluencer: false,
+        isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
         user: { 
           id: p.user_id || '', 
           name: userName, 
@@ -235,7 +249,7 @@ const Index = () => {
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType: 'none' // 모든 포스트의 보더 타입을 none으로 통일
+        borderType: borderType // 할당된 티어 저장
       };
     } catch (err) { return null as any; }
   }, []);
