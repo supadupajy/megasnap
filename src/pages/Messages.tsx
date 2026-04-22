@@ -45,11 +45,29 @@ const Messages = () => {
     try {
       const { data: messages } = await supabase.from('messages').select('*').or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`).order('created_at', { ascending: false });
       const convMap = new Map<string, any>();
+      
+      // 현재 사용자가 보고 있는 채팅방 ID 확인 (URL 파라미터나 상태에서 가져오기 어려우므로 
+      // 렌더링 시점에 Messages 페이지가 활성화된 경우만 뱃지 표시)
+      // 실제로는 전역 상태(예: useChat)에 activeChatId를 저장하는 것이 가장 좋음.
+      
       if (messages) {
         for (const msg of messages) {
           const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
-          if (!convMap.has(otherId)) convMap.set(otherId, { other_id: otherId, last_message: msg.content, created_at: msg.created_at, unread_count: (!msg.is_read && msg.receiver_id === authUser.id) ? 1 : 0 });
-          else if (!msg.is_read && msg.receiver_id === authUser.id) convMap.get(otherId).unread_count += 1;
+          
+          // 로컬 스토리지 등에 저장된 '현재 열린 채팅방' 정보를 활용할 수도 있음
+          const activeChatId = localStorage.getItem('activeChatId');
+          const shouldShowBadge = !msg.is_read && msg.receiver_id === authUser.id && otherId !== activeChatId;
+
+          if (!convMap.has(otherId)) {
+            convMap.set(otherId, { 
+              other_id: otherId, 
+              last_message: msg.content, 
+              created_at: msg.created_at, 
+              unread_count: shouldShowBadge ? 1 : 0 
+            });
+          } else if (shouldShowBadge) {
+            convMap.get(otherId).unread_count += 1;
+          }
         }
       }
       const localRooms = chatStore.getRooms();
@@ -75,24 +93,38 @@ const Messages = () => {
     fetchConversations();
     if (!authUser) return;
     
-    // 메시지 실시간 업데이트 (INSERT, UPDATE, DELETE 모두 감시)
+    // 로컬 스토리지 변경 감지 (Chat 페이지에서 나가거나 들어올 때 뱃지 즉시 갱신)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'activeChatId') {
+        fetchConversations();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Custom 이벤트로도 동작하게 (같은 창에서는 storage 이벤트가 발생하지 않으므로)
+    const handleRefreshEvent = () => {
+      console.log('[Messages] Refreshing list from custom event');
+      fetchConversations();
+    };
+    window.addEventListener('refresh-messages-list', handleRefreshEvent);
+
+    // 메시지 실시간 업데이트
     const channel = supabase.channel('messages_list_updates')
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'messages' }, 
         (payload) => {
-          console.log('[Messages] Realtime message change detected:', payload.event);
+          // INSERT 시점에 현재 내가 해당 채팅방에 있는지 다시 확인하여 뱃지 카운트 결정
           fetchConversations();
         }
       )
       .subscribe();
 
     // Header에서 발생하는 'refresh-messages-list' 이벤트 리스너 추가 (내가 보낸 메시지 동기화 보강)
-    const handleRefreshEvent = () => {
+    const handleRefreshEvent2 = () => {
       console.log('[Messages] Refreshing list from custom event');
       fetchConversations();
     };
-    window.addEventListener('refresh-messages-list', handleRefreshEvent);
+    window.addEventListener('refresh-messages-list', handleRefreshEvent2);
 
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
@@ -108,6 +140,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(profileChannel);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('refresh-messages-list', handleRefreshEvent);
       unsubscribeChatStore();
     };

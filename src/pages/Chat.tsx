@@ -42,6 +42,20 @@ const Chat = () => {
   const { chatId } = useParams();
   const { user: authUser } = useAuth();
 
+  // 현재 열린 채팅방 ID를 localStorage에 저장하여 다른 컴포넌트(Messages 등)에서 뱃지 표시 여부를 결정할 수 있게 함
+  useEffect(() => {
+    if (chatId) {
+      localStorage.setItem('activeChatId', chatId);
+      // 같은 창의 Messages 컴포넌트 등에 알림
+      window.dispatchEvent(new Event('storage')); 
+      
+      return () => {
+        localStorage.removeItem('activeChatId');
+        window.dispatchEvent(new Event('storage'));
+      };
+    }
+  }, [chatId]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -57,6 +71,7 @@ const Chat = () => {
   // 뒤로가기 핸들러
   const handleBack = useCallback(() => {
     console.log('[Chat] Back button clicked');
+    localStorage.removeItem('activeChatId'); // 확실히 제거
     navigate('/messages', { 
       replace: true,
       state: { direction: 'back' }
