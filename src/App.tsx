@@ -183,8 +183,8 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {/* ✅ [FIX] isPostListVisible 상태를 사용하여 BottomNav 노출 여부 결정 */}
-      {!isFullPage && session && !isPostListVisible && <BottomNav />}
+      {/* ✅ [FORCE] 하단 바 강제 노출: 복잡한 조건문을 제거하고 기본 필수 조건만 남김 */}
+      {!isFullPage && session && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
