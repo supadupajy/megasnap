@@ -436,7 +436,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                         style={{
                                           width: media.orientation === 'portrait' ? '100%' : 'auto',
                                           height: media.orientation === 'landscape' ? '100%' : 'auto',
-                                          objectFit: 'none',
+                                          <img
+  src={media.url}
+  alt={`Preview ${idx + 1}`}
+  draggable={false}
+  className="select-none pointer-events-none block"
+  style={{
+    width: media.orientation === 'portrait' ? '100%' : 'auto',
+    height: media.orientation === 'landscape' ? '100%' : 'auto',
+    // objectFit 없음 — width/height auto로 비율 자연스럽게 유지
+    transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
+    transition: isDragging ? 'none' : 'transform 0.05s linear',
+  }}
+/>
                                           display: 'block',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
                                           transition: isDragging ? 'none' : 'transform 0.05s linear',
