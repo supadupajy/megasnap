@@ -122,22 +122,30 @@ const Index = () => {
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
-        // [FORCE FIX] 어떠한 경우에도 'Post content'가 포함된 텍스트는 이미지로 인정하지 않음
-        if (/post\s*content/i.test(clean) || !clean.startsWith('http')) return false;
+        // [FINAL ULTIMATE FILTER] 어떠한 형태의 'post content' 문자열도 허용하지 않음
+        if (/post\s*content/i.test(clean)) return false;
+        // http로 시작하지 않는 모든 문자열 차단
+        if (!clean.startsWith('http')) return false;
+        // 너무 짧은 문자열 (잘못된 URL) 차단
+        if (clean.length < 15) return false;
         return true;
       };
 
-      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
-      const sanitizedRaw = { ...rawPost };
-      sanitizedRaw.image_url = isValidUrl(sanitizedRaw.image_url) ? sanitizedRaw.image_url : SAFE_FALLBACK;
+      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 강제 교체
+      // 이 과정이 sanitizeYoutubeMedia 이전에 실행되어야 함
+      const preSanitizedRaw = { ...rawPost };
+      if (!isValidUrl(preSanitizedRaw.image_url)) {
+        preSanitizedRaw.image_url = SAFE_FALLBACK;
+      }
       
-      if (Array.isArray(sanitizedRaw.images) && sanitizedRaw.images.length > 0) {
-        sanitizedRaw.images = sanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
+      if (Array.isArray(preSanitizedRaw.images) && preSanitizedRaw.images.length > 0) {
+        preSanitizedRaw.images = preSanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
       } else {
-        sanitizedRaw.images = [sanitizedRaw.image_url];
+        preSanitizedRaw.images = [preSanitizedRaw.image_url];
       }
 
-      const p = await sanitizeYoutubeMedia(sanitizedRaw);
+      // 정제된 데이터를 기반으로 비동기 처리 진행
+      const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
       // ✅ [수정] 강제로 특정 테두리가 생기지 않도록 보정
@@ -152,11 +160,10 @@ const Index = () => {
         finalImage = getYoutubeThumbnail(p.youtube_url);
       }
       
-      // [FINAL CHECK] 마지막 렌더링 전 다시 한 번 검증
+      // [FINAL CHECK] 마지막 렌더링 직전 데이터 재검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
-      // images 배열 필터링 및 교체
-      const validImages = Array.isArray(p.images) && p.images.length > 0
+      const finalImages = Array.isArray(p.images) && p.images.length > 0
         ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
         : [finalImage];
 
@@ -174,7 +181,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: validImages,
+        images: finalImages,
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
