@@ -1,0 +1,1 @@
+SELECT COUNT(*) FROM public.posts WHERE content LIKE '[AD]%';

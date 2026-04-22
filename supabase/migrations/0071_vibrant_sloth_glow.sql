@@ -1,0 +1,1 @@
+SELECT id, content, user_name, latitude, longitude FROM public.posts WHERE content LIKE '[AD]%' LIMIT 10;

@@ -150,7 +150,10 @@ const Index = () => {
       }
 
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
-      const isAd = p.content?.trim().startsWith('[AD]');
+      
+      // [FIX] [AD] 태그를 감지하여 isAd 플래그를 정확히 설정
+      const contentText = p.content || '';
+      const isAd = contentText.trim().startsWith('[AD]');
       
       let finalImage = p.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
@@ -174,11 +177,11 @@ const Index = () => {
 
       return {
         id: p.id,
-        isAd,
+        isAd, // 이제 [AD]로 시작하는 글은 true로 설정됨
         isGif: false,
         isInfluencer: false,
         user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
-        content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+        content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
