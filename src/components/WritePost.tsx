@@ -421,13 +421,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                               <CarouselItem key={idx} className="pl-0 basis-full h-[300px]">
                                 <div className="relative w-full h-[300px] rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <div className="w-full h-full relative bg-gray-50 flex items-center justify-center">
+                                    <div className="w-full h-full relative bg-gray-50 flex items-center justify-center overflow-hidden">
                                       <img 
                                         src={media.url} 
                                         alt={`Preview ${idx}`} 
                                         className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
                                         style={{ 
-                                          width: '100%',
+                                          width: '100%', 
                                           height: 'auto',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
                                         }}
@@ -438,26 +438,51 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                       />
                                       {/* 드래그 핸들러 */}
                                       <div 
-                                        className="absolute inset-0 z-20 cursor-move touch-none"
+                                        className="absolute inset-0 z-20 cursor-move touch-none bg-transparent active:cursor-grabbing"
                                         onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
                                           setIsDragging(true);
                                           setDragStart({ x: e.clientX, y: e.clientY });
                                           (e.target as HTMLElement).setPointerCapture(e.pointerId);
                                         }}
                                         onPointerMove={(e) => {
                                           if (!isDragging) return;
+                                          
+                                          const target = e.currentTarget;
+                                          const containerWidth = target.clientWidth;
+                                          const containerHeight = target.clientHeight;
+                                          
+                                          // 현재 이미지의 실제 표시 높이 계산 (가로 100% 기준)
+                                          const imgElement = target.previousElementSibling as HTMLImageElement;
+                                          if (!imgElement) return;
+                                          
+                                          const displayedImgHeight = (imgElement.naturalHeight / imgElement.naturalWidth) * containerWidth;
+                                          
                                           const deltaX = e.clientX - dragStart.x;
                                           const deltaY = e.clientY - dragStart.y;
                                           
-                                          setMediaFiles(prev => prev.map((m, i) => 
-                                            i === idx ? { 
-                                              ...m, 
-                                              crop: { 
-                                                x: (m.crop?.x || 0) + deltaX, 
-                                                y: (m.crop?.y || 0) + deltaY 
-                                              } 
-                                            } : m
-                                          ));
+                                          setMediaFiles(prev => prev.map((m, i) => {
+                                            if (i !== idx) return m;
+                                            
+                                            // 새로운 위치 계산
+                                            let newX = (m.crop?.x || 0) + deltaX;
+                                            let newY = (m.crop?.y || 0) + deltaY;
+                                            
+                                            // 가로 고정 (width 100%이므로 좌우 이동 차단)
+                                            newX = 0; 
+                                            
+                                            // 세로 범위 제한 (이미지가 컨테이너보다 클 때만)
+                                            if (displayedImgHeight > containerHeight) {
+                                              const maxAbsY = (displayedImgHeight - containerHeight) / 2;
+                                              newY = Math.max(-maxAbsY, Math.min(maxAbsY, newY));
+                                            } else {
+                                              newY = 0; // 이미지가 컨테이너보다 작으면 이동 차단
+                                            }
+                                            
+                                            return { ...m, crop: { x: newX, y: newY } };
+                                          }));
+                                          
                                           setDragStart({ x: e.clientX, y: e.clientY });
                                         }}
                                         onPointerUp={(e) => {
