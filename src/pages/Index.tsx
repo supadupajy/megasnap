@@ -64,6 +64,12 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    if (authUser) {
+      console.log('[DEBUG] Current Auth User ID:', authUser.id);
+    }
+  }, [authUser]);
+
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
       navigate(-1);
