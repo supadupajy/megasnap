@@ -171,7 +171,8 @@ const Index = () => {
 
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       
-      if (likesCount >= 10000) {
+      const likesCountNum = Number(likesCount);
+      if (likesCountNum >= 10000) {
         borderType = 'popular';
       } else if (!isAd) {
         let h = 0;
@@ -185,6 +186,12 @@ const Index = () => {
       
       let userName = p.user_name || '탐험가';
       let userAvatar = p.user_avatar || '';
+
+      // [FIX] user7 등 클라이언트 고정 닉네임 유입 차단
+      if (userName.toLowerCase().startsWith('user') && !isNaN(Number(userName.substring(4)))) {
+        console.warn(`[Index] Blocking legacy/dummy username detected in post ${p.id}:`, userName);
+        userName = '탐험가';
+      }
 
       if (p.user_id) {
         const { data: profileData } = await supabase
