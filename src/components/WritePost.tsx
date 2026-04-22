@@ -484,10 +484,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   setDragStart({ x: e.clientX, y: e.clientY });
 }}
                                         onPointerUp={(e) => {
-                                          setIsDragging(false);
-                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-                                        }}
-                                        onPointerCancel={() => setIsDragging(false)}
+  if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  setIsDragging(false);
+  (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+}}
+onPointerCancel={() => {
+  if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  setIsDragging(false);
+}}
                                       />
                                     </>
                                   ) : (
