@@ -290,71 +290,30 @@ const MapContainer = ({
     
     // 1. 제거될 마커 처리 (Fade Out)
     overlaysRef.current.forEach((overlay, id) => {
-      const content = overlay.getContent();
-      const position = overlay.getPosition();
-      
-      // ✅ 현재 화면(bounds) 밖에 있거나, 게시물 목록에 없는 경우 제거
-      if (!currentPostIds.has(id) || !bounds.contain(position)) {
-        if (content instanceof HTMLElement) {
-          content.style.opacity = '0';
-          content.style.transition = 'opacity 0.3s ease-out';
-          setTimeout(() => {
-            // 체크 시점에 여전히 화면 밖이거나 삭제된 상태면 실제 제거
-            if (!currentPostIds.has(id) || !bounds.contain(position)) {
-              overlay.setMap(null);
-              overlaysRef.current.delete(id);
-            }
-          }, 300);
-        } else {
-          overlay.setMap(null);
-          overlaysRef.current.delete(id);
-        }
-      } else {
-        // 화면 안에 있으면 다시 지도에 부착 (필요 시)
-        if (overlay.getMap() === null) {
-          overlay.setMap(mapInstance.current);
-          if (content instanceof HTMLElement) {
-            content.style.opacity = '0';
-            requestAnimationFrame(() => {
-              content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
-              content.style.opacity = '1';
-            });
-          }
-        }
-        if (content instanceof HTMLElement) {
-          content.style.transformOrigin = 'bottom center';
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
-        }
+      // posts 목록에 없으면 즉시 제거 시도
+      if (!currentPostIds.has(id)) {
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
       }
     });
 
-    // 2. 마커 생성 및 업데이트 (화면 안에 있는 것만)
+    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       if (!post) return;
       
       const position = new (window as any).kakao.maps.LatLng(post.lat, post.lng);
-      
-      // ✅ 마커 생성 전, 현재 화면(bounds) 안에 있는지 엄격히 검사
-      if (!bounds.contain(position)) {
-        return;
-      }
-
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      
-      // ✅ [제안 반영] contentStateKey에 borderType과 isAd 추가하여 스타일 변경 즉시 감지
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        // 기존 팝업 애니메이션 대신 Fade In 효과 적용
-        content.style.opacity = '0';
-        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
+        content.style.opacity = '1'; // 즉시 표시
         content.style.transformOrigin = 'bottom center';
         content.style.setProperty('transform', `scale(${scale})`, 'important');
 
@@ -370,7 +329,7 @@ const MapContainer = ({
         };
 
         const overlay = new (window as any).kakao.maps.CustomOverlay({ 
-          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
+          position: position, 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
@@ -378,11 +337,6 @@ const MapContainer = ({
         
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
-
-        // 생성 직후 투명도를 1로 올려서 Fade In
-        requestAnimationFrame(() => {
-          content.style.opacity = '1';
-        });
       } else {
         const content = existingOverlay.getContent();
         existingOverlay.setZIndex(baseZIndex);
@@ -550,62 +504,25 @@ const MapContainer = ({
   }
 
   // ✅ 테두리 스타일을 인라인으로 직접 정의
-  let borderStyle = 'border: 2.5px solid #ffffff;';
-  let boxShadowStyle = '0 8px 16px -2px rgba(0,0,0,0.15), 0 4px 8px -2px rgba(0,0,0,0.1)';
-  let labelText = '';
-  let labelBg = '';
-  let labelColor = 'white';
-  let pinColor = '';
-  let animationClass = '';
+  let inlineBorderStyle = "border: 2.5px solid #ffffff;";
+  let inlineShadow = "0 8px 16px -2px rgba(0, 0, 0, 0.15)";
+  let finalBorderClass = borderClass || '';
 
-  if (isMine) {
-    pinColor = '#4f46e5';
-    labelText = 'MY';
-    labelBg = '#4f46e5';
-    // 내 글: 인디고 그라데이션 테두리
-    borderStyle = 'border: 3px solid #4f46e5;';
-    boxShadowStyle = '0 8px 20px -2px rgba(79,70,229,0.5), 0 0 0 4px rgba(79,70,229,0.15)';
-  } else if (isAd) {
-    pinColor = '#3b82f6';
-    labelText = 'AD';
-    labelBg = '#3b82f6';
-    borderStyle = 'border: 3px solid #3b82f6;';
-    boxShadowStyle = '0 8px 20px -2px rgba(59,130,246,0.4), 0 0 0 4px rgba(59,130,246,0.12)';
-    animationClass = 'animate-ad-breathing';
-  } else if (borderType === 'popular') {
-    pinColor = '#ef4444';
-    labelText = 'HOT';
-    labelBg = '#ef4444';
-    // HOT: 빨간 글로우 테두리
-    borderStyle = 'border: 3px solid #ef4444;';
-    boxShadowStyle = '0 8px 20px -2px rgba(239,68,68,0.5), 0 0 0 5px rgba(239,68,68,0.15), 0 0 15px rgba(239,68,68,0.3)';
-    animationClass = 'animate-marker-float';
-  } else if (borderType === 'diamond') {
-    pinColor = '#22d3ee';
-    labelText = '💎';
-    labelBg = 'linear-gradient(135deg, #22d3ee, #a78bfa)';
-    labelColor = 'white';
-    // DIAMOND: 시안+퍼플 그라데이션 테두리 (outline 2중으로 표현)
-    borderStyle = 'border: 3px solid #22d3ee; outline: 2px solid #a78bfa; outline-offset: 2px;';
-    boxShadowStyle = '0 8px 24px -2px rgba(34,211,238,0.6), 0 0 0 5px rgba(167,139,250,0.2), 0 0 20px rgba(34,211,238,0.4)';
-    animationClass = 'animate-marker-float';
+  if (borderType === 'diamond') {
+    inlineBorderStyle = "border: 4px solid #22d3ee;";
+    inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), 0 0 0 2px #a5f3fc";
   } else if (borderType === 'gold') {
-    pinColor = '#f59e0b';
-    labelText = '🥇';
-    labelBg = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
-    labelColor = 'black';
-    // GOLD: 황금 글로우 테두리
-    borderStyle = 'border: 3px solid #f59e0b;';
-    boxShadowStyle = '0 8px 24px -2px rgba(245,158,11,0.6), 0 0 0 5px rgba(251,191,36,0.2), 0 0 18px rgba(245,158,11,0.4)';
-    animationClass = 'animate-marker-float';
+    inlineBorderStyle = "border: 4px solid #fbbf24;";
+    inlineShadow = "0 0 15px rgba(251, 191, 36, 0.6)";
   } else if (borderType === 'silver') {
-    pinColor = '#94a3b8';
-    labelText = '🥈';
-    labelBg = 'linear-gradient(135deg, #cbd5e1, #94a3b8)';
-    // SILVER: 은빛 테두리
-    borderStyle = 'border: 3px solid #94a3b8;';
-    boxShadowStyle = '0 8px 20px -2px rgba(148,163,184,0.5), 0 0 0 4px rgba(203,213,225,0.2), 0 0 12px rgba(148,163,184,0.3)';
-    animationClass = 'animate-marker-float';
+    inlineBorderStyle = "border: 3.5px solid #94a3b8;";
+    inlineShadow = "0 0 10px rgba(148, 163, 184, 0.4)";
+  } else if (borderType === 'popular') {
+    inlineBorderStyle = "border: 3.5px solid #ef4444;";
+    inlineShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
+  } else if (isMine) {
+    inlineBorderStyle = "border: 3.5px solid #4f46e5;";
+    inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
   }
 
   const videoIconHtml = hasVideo
@@ -625,14 +542,14 @@ const MapContainer = ({
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass}">
         ${labelHtml}
-        <div style="width:56px;height:56px;border-radius:18px;position:relative;z-index:2;${borderStyle}box-shadow:${boxShadowStyle};background-color:white;overflow:visible;">
-          <div style="width:100%;height:100%;border-radius:14px;overflow:hidden;position:relative;" class="shine-overlay">
+        <div class="${finalBorderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay">
             <img 
               src="${displayImage}" 
               onerror="this.src='${FALLBACK_IMAGE}'" 
               style="width:100%;height:100%;object-fit:cover;${isViewed ? 'filter:grayscale(0.8) brightness(0.7);' : ''}" 
             />
-            <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);">
+            <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-blur:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);">
               ${post.likes >= 1000 ? (post.likes / 1000).toFixed(1) + 'k' : post.likes}
             </div>
             ${videoIconHtml}
@@ -642,7 +559,7 @@ const MapContainer = ({
       </div>
     </div>
   `;
-};
+  };
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
     const timeoutId = removalTimeoutsRef.current.get(id);
