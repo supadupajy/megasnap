@@ -471,16 +471,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <Send className="w-4 h-4" />
           </button>
         </form>
-        {lastComment && (
-          <div className="flex gap-2 items-start mt-1">
-            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-          </div>
-        )}
+
         <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
           <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
           {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
         </button>
+
         <AnimatePresence>
           {showComments && (
             <motion.div 
@@ -498,6 +494,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </motion.div>
           )}
         </AnimatePresence>
+
+        {lastComment && (
+          <div className="flex gap-2 items-start mt-1">
+            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+          </div>
+        )}
       </div>
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </div>

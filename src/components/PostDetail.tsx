@@ -549,19 +549,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <Send className="w-4 h-4" />
                           </button>
                         </form>
-                        {lastComment && (
-                          <div className="flex gap-2 items-start mt-1 mb-2">
-                            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-                            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-                          </div>
-                        )}
+
                         <button 
                           onClick={(e) => { 
                             e.preventDefault();
                             e.stopPropagation(); 
                             setShowComments(!showComments); 
                           }} 
-                          className="w-full py-1 flex items-center justify-between group cursor-pointer"
+                          className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
                         >
                           <span className="text-xs text-gray-400 font-medium pointer-events-none">
                             {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
@@ -571,7 +566,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
                           }
                         </button>
-                        
+
                         <div 
                           className={cn(
                             "overflow-hidden transition-all duration-300 ease-in-out",
@@ -579,7 +574,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           )}
                           style={{ maxHeight: showComments ? '1000px' : '0px' }}
                         >
-                          <div className="space-y-2 pb-4">
+                          <div className="space-y-2 pb-2">
                             {localComments.slice(0, -1).map((c, i) => (
                               <div key={i} className="flex gap-2 items-start">
                                 <span className="font-bold text-sm text-gray-900">{c.user}</span>
@@ -588,6 +583,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             ))}
                           </div>
                         </div>
+
+                        {lastComment && (
+                          <div className="flex gap-2 items-start mt-1">
+                            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+                            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
