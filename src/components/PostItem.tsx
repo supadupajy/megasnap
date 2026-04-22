@@ -337,10 +337,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               target="_blank" 
               rel="noopener noreferrer" 
               onClick={(e) => e.stopPropagation()} 
-              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[100px]"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
             >
-              <ShoppingBag className="w-4 h-4 fill-white" />
-              <span className="text-xs font-black">주문하기</span>
+              <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+              <span className="text-[10px] font-black">주문하기</span>
             </a>
           </div>
         )}
