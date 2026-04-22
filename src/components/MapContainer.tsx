@@ -19,6 +19,12 @@ interface MapContainerProps {
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
+// [FIX] 알려진 깨진 Unsplash ID 블랙리스트 관리
+const BROKEN_UNSPLASH_IDS = new Set([
+  "photo-1548199973-03cbf5292374",
+  // 추가 404 ID 발생 시 여기에 등록
+]);
+
 const MapContainer = ({ 
   posts, 
   viewedPostIds, 
@@ -553,9 +559,16 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
+    // [FIX] 블랙리스트 체크가 포함된 강화된 이미지 검증 로직
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
-      return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
+      if (url.includes('source.unsplash.com') || url.length < 50) return true;
+      
+      // 블랙리스트 ID 포함 여부 전수 조사
+      for (const id of BROKEN_UNSPLASH_IDS) {
+        if (url.includes(id)) return true;
+      }
+      return false;
     };
 
     let displayImage = post.image;

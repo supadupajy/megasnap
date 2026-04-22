@@ -143,17 +143,17 @@ const Index = () => {
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
 
-      // [FIX] 'Post content' 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단
-      const BROKEN_URL_PART = "photo-1548199973-03cbf5292374";
+      // [FIX] 깨진 ID 블랙리스트 배열로 확장 및 관리
+      const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
       const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
 
       const sanitizeUrl = (url: any) => {
         if (!url || typeof url !== 'string') return HIGH_RES_FALLBACK + "&sig=" + p.id;
         
         const clean = url.trim();
-        // "Post content"가 포함되어 있거나, http로 시작하지 않으면 무조건 가짜 데이터로 간주
-        if (/post\s*content/i.test(clean) || !clean.startsWith('http') || clean.includes(BROKEN_URL_PART)) {
-          console.log('[Sanitize] Blocking dummy/broken data:', clean);
+        // 배열(some) 기반 체크 및 기본 유효성 검사
+        if (BROKEN_IDS.some(id => clean.includes(id)) || !clean.startsWith('http') || /post\s*content/i.test(clean)) {
+          console.log('[Sanitize] Blocking broken or dummy URL:', clean);
           return HIGH_RES_FALLBACK + "&sig=" + p.id;
         }
 
