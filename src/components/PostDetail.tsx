@@ -166,7 +166,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // [CRITICAL FIX] 이미지 URL 유효성 검사 강화
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;
-    return url.length < 10 || /post\s*content/i.test(url) || !url.startsWith('http');
+    const clean = url.trim();
+    // 텍스트가 섞인 비정상 URL 또는 더미 텍스트 감지 로직 강화
+    return clean.length < 10 || 
+           clean.toLowerCase().includes('post') || 
+           clean.toLowerCase().includes('content') || 
+           !clean.startsWith('http');
   };
 
   const displayImage = (imgErrors[currentPost.id] || isDummyUrl(currentPost.image)) 
@@ -180,14 +185,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
     
-    let images = currentPost.images && currentPost.images.length > 0 
-      ? currentPost.images 
-      : [displayImage];
+    // images 배열의 각 요소에 대해서도 더미 체크 적용
+    let baseImages = currentPost.images && currentPost.images.length > 0 
+      ? currentPost.images.filter((img: string) => !isDummyUrl(img))
+      : [];
 
-    // 광고의 경우 두 번째 슬라이드에 이미지 추가 로직이 필요할 수 있으나,
-    // 현재는 타입 에러 해결을 위해 기본 배열을 보장함
+    if (baseImages.length === 0) {
+      baseImages = [displayImage];
+    }
+    
+    let images = baseImages;
+
     if (isAd && images.length === 1) {
-      images = [images[0], images[0]]; // 예시: 광고는 2개의 슬라이드를 가짐
+      images = [images[0], images[0]];
     }
     
     return images;
