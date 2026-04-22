@@ -565,18 +565,19 @@ const Index = () => {
 
   // 현재 지도 화면 안에 있는 포스트들만 필터링
   const visiblePosts = useMemo(() => {
-    // displayedMarkers가 현재 지도 범위 내에 있는 포스트들이므로 이를 활용
-    if (!displayedMarkers) return [];
-    if (!mapData) return displayedMarkers; 
+    // rawPosts가 아직 없으면 빈 배열 반환
+    if (!rawPosts) return [];
+    // mapData가 없으면 전체 rawPosts 반환 (비활성화 방지)
+    if (!mapData) return rawPosts; 
     
     const { sw, ne } = mapData.bounds;
-    return displayedMarkers.filter(post => 
-      post.lat >= sw.lat && 
-      post.lat <= ne.lat && 
-      post.lng >= sw.lng && 
-      post.lng <= ne.lng
+    return rawPosts.filter(post => 
+      post.latitude >= sw.lat && 
+      post.latitude <= ne.lat && 
+      post.longitude >= sw.lng && 
+      post.longitude <= ne.lng
     );
-  }, [mapData, displayedMarkers]);
+  }, [mapData, rawPosts]);
 
   const mapCenter = mapData?.center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
 
