@@ -340,7 +340,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
 
                   {/* 미디어 영역 */}
-                  <div className="px-4">
+<div className="px-4" onClick={(e) => e.stopPropagation()}>
                     <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                       {youtubeId ? (
                         <iframe
