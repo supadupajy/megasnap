@@ -343,11 +343,9 @@ style={{
             <DrawerDescription>장소를 선택하고 사진이나 동영상을 업로드하여 추억을 기록하세요.</DrawerDescription>
           </div>
 
-          {!isKeyboardOpen && (
-            <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
-          )}
+          <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
 
-          <div className={cn("px-5 flex flex-col flex-1 min-h-0", isKeyboardOpen && "pt-12")}>
+<div className="px-5 flex flex-col flex-1 min-h-0">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
