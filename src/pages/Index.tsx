@@ -129,27 +129,38 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      // [FIX] 상세 정보를 가져오기 위해 조인 쿼리 사용
-      const { data: fullPostData, error } = await supabase
+      // [FIX] 400 Bad Request 해결: 
+      // posts.user_id가 TEXT 타입이고 profiles.id가 UUID 타입인 경우 JOIN 시 타입 오류가 발생할 수 있습니다.
+      // 먼저 posts 데이터만 가져오고, 그 다음에 profiles 데이터를 별도로 가져와 클라이언트에서 합칩니다.
+      
+      const { data: postData, error: postError } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            nickname,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('id', rawPost.id)
         .single();
 
-      const p = fullPostData || rawPost;
+      if (postError || !postData) throw postError || new Error('Post not found');
+
+      const p = postData;
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       
-      const userProfile = p.profiles;
-      const userName = userProfile?.nickname || p.user_name || '탐험가';
-      const userAvatar = userProfile?.avatar_url || p.user_avatar || '';
+      // 작성자 프로필 정보 별도 조회
+      let userName = p.user_name || '탐험가';
+      let userAvatar = p.user_avatar || '';
+
+      if (p.user_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nickname, avatar_url')
+          .eq('id', p.user_id)
+          .maybeSingle();
+
+        if (profileData) {
+          userName = profileData.nickname || userName;
+          userAvatar = profileData.avatar_url || userAvatar;
+        }
+      }
 
       const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
       
