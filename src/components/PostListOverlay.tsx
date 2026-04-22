@@ -331,7 +331,7 @@ const PostListOverlay = ({
             </div>
             <button 
               onClick={onClose}
-              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-100 transition-all close-popup-btn"
+              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
             >
               <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
             </button>
