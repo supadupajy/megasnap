@@ -227,15 +227,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (!post.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+      if (!post || !post.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+      
+      // [FIX] 삭제 프로세스 안정화:
+      // 1. UI에서 즉시 제거될 수 있도록 핸들러 먼저 호출 (상위에서 setSelectedPostId(null) 수행)
+      if (onDelete) onDelete(post.id);
+      
+      // 2. 모달 즉시 닫기
+      onClose();
+
+      // 3. 실제 DB 삭제는 백그라운드에서 진행
       const { error } = await supabase.from('posts').delete().eq('id', post.id);
       if (error) throw error;
+      
       showSuccess('포스팅이 삭제되었습니다.');
-      setIsDeleteDialogOpen(false);
-      if (onDelete) onDelete(post.id);
-      onClose();
     } catch (err: any) {
-      showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`);
+      console.error('[PostDetail] Delete error:', err);
+      showError(`삭제 중 오류가 발생했습니다.`);
+    } finally {
       setIsDeleteDialogOpen(false);
     }
   };

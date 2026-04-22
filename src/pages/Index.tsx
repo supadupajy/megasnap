@@ -699,23 +699,26 @@ const Index = () => {
 
   const handlePostDeleted = useCallback((id: string) => {
     // [FIX] 무한 루프 또는 상태 불일치로 인한 페이지 크래시 방지
-    // 1. 먼저 마커 애니메이션 이벤트를 발생시킵니다.
-    window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
-    
-    // 2. 선택된 포스트가 삭제되는 경우 즉시 모달/오버레이를 닫아 데이터 참조 오류를 차단합니다.
+    // 1. 선택된 포스트가 삭제되는 경우 즉시 모달/오버레이 상태를 초기화하여 데이터 참조 오류를 차단합니다.
     setSelectedPostId(null);
 
+    // 2. 마커 애니메이션 이벤트를 발생시킵니다. (지도에서만 뿅 사라지게)
+    window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
+
     // 3. 지연 삭제 처리를 하되, 상태 업데이트가 안정적으로 이루어지도록 함수형 업데이트를 사용합니다.
+    // 400ms 애니메이션 시간 후에 실제 데이터 목록에서 제거합니다.
     setTimeout(() => {
       setAllPosts(prev => {
         const filtered = prev.filter(p => p.id !== id);
-        // 캐시 업데이트도 상태 업데이트 내부에서 안전하게 수행
         mapCache.posts = filtered;
         return filtered;
       });
       
-      setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
-    }, 450); // 애니메이션 시간보다 약간 넉넉하게 설정
+      setDisplayedMarkers(prev => {
+        if (!prev) return [];
+        return prev.filter(p => p.id !== id);
+      });
+    }, 400);
   }, []);
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
