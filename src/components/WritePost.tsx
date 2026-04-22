@@ -449,7 +449,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   e.preventDefault();
   e.stopPropagation();
   setIsDragging(true);
-  setDragStart({ x: e.clientX, y: e.clientY });
+  dragStartRef.current = { x: e.clientX, y: e.clientY };
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
 }}
                                         onPointerMove={(e) => {
