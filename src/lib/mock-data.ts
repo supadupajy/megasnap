@@ -154,6 +154,42 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
   "photo-1533105079780-92b9be482077", "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7"
 ];
 
+const WEB_SEARCHED_IMAGES = {
+  scenery: [
+    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg", // Seoul Night
+    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg", // Korean Temple
+    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg", // N Seoul Tower
+    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg", // Hanok Village
+    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg", // Forest Scenery
+    "https://images.pexels.com/photos/3363363/pexels-photo-3363363.jpeg", // Jeju Sea
+    "https://cdn.pixabay.com/photo/2014/11/30/14/11/seoul-551502_1280.jpg",
+    "https://cdn.pixabay.com/photo/2017/12/10/17/40/seoul-3010309_1280.jpg",
+    "https://cdn.pixabay.com/photo/2016/11/29/03/40/architecture-1867114_1280.jpg",
+  ],
+  food: [
+    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg", // Salad/Food
+    "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg", // Gourmet Plate
+    "https://images.pexels.com/photos/1273765/pexels-photo-1273765.jpeg", // Asian Dish
+    "https://images.pexels.com/photos/1234535/pexels-photo-1234535.jpeg", // Korean BBQ style
+    "https://images.pexels.com/photos/2641886/pexels-photo-2641886.jpeg", // Hot Pot
+    "https://cdn.pixabay.com/photo/2017/06/02/18/24/fruit-2367029_1280.jpg",
+    "https://cdn.pixabay.com/photo/2015/04/08/13/13/food-712665_1280.jpg",
+    "https://cdn.pixabay.com/photo/2017/01/26/02/06/platter-2009590_1280.jpg",
+  ],
+  animal: [
+    "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg", // Dogs
+    "https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg", // Cat
+    "https://images.pexels.com/photos/617278/pexels-photo-617278.jpeg", // Cute Cat
+  ]
+};
+
+const getStableWebImage = (seed: string, type: 'scenery' | 'food' | 'animal' = 'scenery') => {
+  const pool = WEB_SEARCHED_IMAGES[type];
+  let h = 0;
+  for(let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  return pool[Math.abs(h) % pool.length];
+};
+
 export const cityThemes: Record<string, string[]> = {
   seoul: ["photo-1503899036084-c55cdd92da26", "photo-1540959733332-eab4deabeeaf", "photo-1538332576228-eb5b4c4de6f5", "photo-1535223289827-42f1e9919769"],
   busan: ["photo-1546271876-af3ef285b470", "photo-1516450360452-9312f5e86fc7", "photo-1514933651103-005eec06c04b", "photo-1441974231531-c6227db76b6e"],
@@ -187,8 +223,8 @@ export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).
 export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 
 export const getUnsplashUrl = (id: string) => {
-  const finalId = BLACKLIST_IDS.includes(id) ? "photo-1506744038136-46273834b3fb" : id;
-  return `https://images.unsplash.com/${finalId}?auto=format&fit=crop&w=800&q=80`;
+  // [FORCE] Unsplash URL 생성을 완전히 중단하고 웹 검색 이미지로 대체
+  return getStableWebImage(id, 'scenery');
 };
 
 export const isUnsplashImageUrl = (url?: string | null) =>
@@ -233,7 +269,16 @@ export const getDiverseUnsplashUrl = (
   seed: string | number,
   variant: 'general' | 'food' | 'accident' | 'place' | 'animal' = 'general',
   salt = 0,
-) => getUnsplashUrl(getDiverseUnsplashId(seed, variant, salt));
+) => {
+  const typeMap: Record<string, 'scenery' | 'food' | 'animal'> = {
+    general: 'scenery',
+    place: 'scenery',
+    accident: 'scenery',
+    food: 'food',
+    animal: 'animal'
+  };
+  return getStableWebImage(`${seed}:${salt}`, typeMap[variant] || 'scenery');
+};
 
 export const remapUnsplashDisplayUrl = (
   url: string | null | undefined,
