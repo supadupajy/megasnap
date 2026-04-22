@@ -650,7 +650,8 @@ style={{
             </div>
 
             {/* 하단 버튼 */}
-            <div className="py-4 pb-6 bg-white shrink-0">
+            <div className="py-4 pb-[120px] bg-white shrink-0">
+
 
               {currentPage === 1 ? (
                 <Button
