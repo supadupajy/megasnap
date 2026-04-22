@@ -194,52 +194,85 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             </div>
           )}
 
-          {posts.map((post) => (
-            <div 
-              key={post.id}
-              onClick={() => onPostClick(post)}
-              className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
-            >
-              <div className="w-6 text-center shrink-0">
-                <span className={cn(
-                  "text-sm font-black italic",
-                  post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
-                )}>
-                  {post.rank}
-                </span>
-              </div>
-              
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
-                <img 
-                  src={post.image} 
-                  alt="" 
-                  className="w-full h-full object-cover"
-                  onError={handleImageError}
-                />
-              </div>
+          {posts.map((post) => {
+            // [FIX] 인기/인플루언서 포스팅에 따라 테두리 색상 결정
+            const borderType = post.borderType || 'none';
+            let borderColor = 'border-gray-100';
+            let borderThickness = 'border';
+            
+            if (borderType === 'popular') {
+              borderColor = 'border-rose-500';
+              borderThickness = 'border-2';
+            } else if (borderType === 'diamond') {
+              borderColor = 'border-cyan-400';
+              borderThickness = 'border-2';
+            } else if (borderType === 'gold') {
+              borderColor = 'border-amber-400';
+              borderThickness = 'border-2';
+            }
 
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
-                  {post.content}
-                </p>
-                <div className="flex items-center gap-2">
-                  <p className="text-[11px] font-medium text-gray-400 truncate">
-                    {post.location || '위치 정보 없음'}
+            return (
+              <div 
+                key={post.id}
+                onClick={() => onPostClick(post)}
+                className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
+              >
+                <div className="w-6 text-center shrink-0">
+                  <span className={cn(
+                    "text-sm font-black italic",
+                    post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
+                  )}>
+                    {post.rank}
+                  </span>
+                </div>
+                
+                <div className={cn(
+                  "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50",
+                  borderThickness,
+                  borderColor
+                )}>
+                  <img 
+                    src={post.image} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                  {/* [FIX] 특수 티어인 경우 반짝임 아이콘 추가 */}
+                  {borderType !== 'none' && (
+                    <div className="absolute top-0.5 right-0.5 z-10">
+                      <Sparkles className={cn(
+                        "w-2.5 h-2.5",
+                        borderType === 'popular' ? "text-rose-500 fill-rose-500" :
+                        borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
+                        "text-amber-400 fill-amber-400"
+                      )} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
+                    {post.content}
                   </p>
-                  <div className="flex items-center gap-0.5 text-rose-500">
-                    <Heart className="w-3 h-3 fill-rose-500" />
-                    <span className="text-[10px] font-black">{post.likes}</span>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-medium text-gray-400 truncate">
+                      {post.location || '위치 정보 없음'}
+                    </p>
+                    <div className="flex items-center gap-0.5 text-rose-500">
+                      <Heart className="w-3 h-3 fill-rose-500" />
+                      <span className="text-[10px] font-black">{post.likes}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {(post.rank === 1 || post.rank === 4) && (
-                <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-                  <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
-                </div>
-              )}
-            </div>
-          ))}
+                {(post.rank === 1 || post.rank === 4) && (
+                  <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* 하단 스크롤 안내 화살표 - 아래로 스크롤 가능할 때만 나타남 */}
