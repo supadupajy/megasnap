@@ -154,42 +154,32 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
   "photo-1533105079780-92b9be482077", "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7"
 ];
 
-const WEB_SEARCHED_IMAGES = {
-  scenery: [
-    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg", // N Seoul Tower
-    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg", // Seoul Night
-    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg", // Temple
-    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg", // Hanok
-    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg", // Forest
-    "https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg", // Lake
-    "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg",   // Resort
-    "https://images.pexels.com/photos/460621/pexels-photo-460621.jpeg"    // Park
-  ],
-  food: [
-    "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg",
-    "https://images.pexels.com/photos/1273765/pexels-photo-1273765.jpeg",
-    "https://images.pexels.com/photos/2641886/pexels-photo-2641886.jpeg",
-    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg",
-    "https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg"
-  ],
-  animal: [
-    "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
-    "https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg",
-    "https://images.pexels.com/photos/617278/pexels-photo-617278.jpeg"
-  ]
-};
+const BLACKLISTED_IMAGES = [
+  'photo-1501785888041-af3ef285b470', // 노란 꽃 호수 (Unsplash)
+  'https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg' // 깨진 고양이 이미지 (Pexels)
+];
 
-const getStableWebImage = (seed: string, type: 'scenery' | 'food' | 'animal' = 'scenery') => {
-  const pool = WEB_SEARCHED_IMAGES[type] || WEB_SEARCHED_IMAGES.scenery;
-  
-  // [CRITICAL FIX] 
-  // 1. Math.random()을 사용하여 매번 다른 이미지가 선택되도록 함 (Seed 기반 고정 탈피)
-  // 2. 만약 특정 이미지가 계속 나온다면 해당 URL이 pool에 포함되어 있는지 확인 후 제거
-  const randomIndex = Math.floor(Math.random() * pool.length);
-  const selectedImage = pool[randomIndex];
-  
-  console.log(`[ImagePool] New Random Selection - Type: ${type}, Index: ${randomIndex}, URL: ${selectedImage}`);
-  return selectedImage;
+const WEB_SEARCHED_IMAGES = [
+  'https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg',
+  'https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg',
+  'https://images.pexels.com/photos/147411/italy-mountains-dawn-daybreak-147411.jpeg',
+  'https://images.pexels.com/photos/462162/pexels-photo-462162.jpeg',
+  'https://images.pexels.com/photos/1266810/pexels-photo-1266810.jpeg'
+];
+
+const getStableWebImage = (id: string) => {
+  // 블랙리스트 체크
+  const isBlacklisted = BLACKLISTED_IMAGES.some(url => 
+    (typeof url === 'string' && url.includes(id)) || 
+    (id.includes('45201') && url.includes('45201'))
+  );
+
+  if (isBlacklisted) {
+    return WEB_SEARCHED_IMAGES[0];
+  }
+
+  const index = Math.abs(id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % WEB_SEARCHED_IMAGES.length;
+  return WEB_SEARCHED_IMAGES[index];
 };
 
 export const cityThemes: Record<string, string[]> = {
