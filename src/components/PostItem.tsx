@@ -218,9 +218,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const renderCategoryBadge = () => {
     const category = post.category || 'none';
     const badges: Record<string, JSX.Element> = {
-      food: <div className="bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm"><ShoppingBag className="w-3 h-3" /> 맛집</div>,
-      place: <div className="bg-blue-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm"><MapPin className="w-3 h-3" /> 장소</div>,
-      animal: <div className="bg-green-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">🐾 반려동물</div>,
+      food: <div className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6"><ShoppingBag className="w-3 h-3" /> 맛집</div>,
+      place: <div className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6"><MapPin className="w-3 h-3" /> 장소</div>,
+      animal: <div className="bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6">🐾 반려동물</div>,
       none: <></>
     };
     return badges[category] || badges.none;
