@@ -306,6 +306,7 @@ const Index = () => {
       return;
     }
     
+    // ✅ 9단계 이상일 때는 모든 마커를 숨김
     if (currentZoom >= 9) { 
       if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
       return; 
@@ -313,8 +314,10 @@ const Index = () => {
 
     const { sw, ne } = mapData.bounds;
     
-    const latPadding = Math.abs(ne.lat - sw.lat) * 0.2;
-    const lngPadding = Math.abs(ne.lng - sw.lng) * 0.2;
+    // ✅ [확장] 화면 밖 마커 유지 범위를 20%에서 50%로 대폭 확대
+    // 이렇게 하면 화면 가장자리에 도달하기 훨씬 전부터 마커가 미리 렌더링됩니다.
+    const latPadding = Math.abs(ne.lat - sw.lat) * 0.5;
+    const lngPadding = Math.abs(ne.lng - sw.lng) * 0.5;
     
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
