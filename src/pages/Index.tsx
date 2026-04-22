@@ -373,15 +373,17 @@ const Index = () => {
     if (!mapData?.bounds) return;
     if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     const { sw, ne } = mapData.bounds;
-    const latPadding = Math.abs(ne.lat - sw.lat) * 0.6;
-    const lngPadding = Math.abs(ne.lng - sw.lng) * 1.2;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
     const inBoundsCandidates = allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null) return false;
       if (blockedIds.has(post.user.id)) return false;
-      const isInExtendedBounds = post.lat >= (Math.min(sw.lat, ne.lat) - latPadding) && post.lat <= (Math.max(sw.lat, ne.lat) + latPadding) && post.lng >= (Math.min(sw.lng, ne.lng) - lngPadding) && post.lng <= (Math.max(sw.lng, ne.lng) + lngPadding);
-      if (!isInExtendedBounds) return false;
+      const isInBounds = 
+        post.lat >= Math.min(sw.lat, ne.lat) && 
+        post.lat <= Math.max(sw.lat, ne.lat) && 
+        post.lng >= Math.min(sw.lng, ne.lng) && 
+        post.lng <= Math.max(sw.lng, ne.lng);
+      if (!isInBounds) return false;
       if (post.isAd) return true;
       if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       let matches = false;
