@@ -554,7 +554,6 @@ const MapContainer = ({
             ${videoIconHtml}
           </div>
         </div>
-        <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>
       </div>
     </div>`;
   };
