@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
+import { getFallbackImage } from '@/lib/utils';
 
 interface MapContainerProps {
   posts: any[];
@@ -22,7 +23,7 @@ const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-23
 // [FIX] 알려진 깨진 Unsplash ID 블랙리스트 관리
 const BROKEN_UNSPLASH_IDS = new Set([
   "photo-1548199973-03cbf5292374",
-  // 추가 404 ID 발생 시 여기에 등록
+  "photo-1501785888041-af3ef285b470", // [CRITICAL] 노란 꽃 호수 ID 추가
 ]);
 
 const MapContainer = ({ 
@@ -573,23 +574,14 @@ const MapContainer = ({
 
     let displayImage = post.image;
 
-    // [DEBUG/FIX] Unsplash 링크가 발견되면 즉시 Pexels 대체 이미지로 전환 (로그 확인용)
-    if (displayImage && displayImage.includes('unsplash.com')) {
-      console.log(`[MapContainer] Unsplash detected on map! ID: ${post.id}, URL: ${displayImage}`);
-      const pexelsPool = [
-        "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
-        "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
-        "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
-        "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg"
-      ];
-      let h = 0;
-      const idStr = String(post.id);
-      for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-      displayImage = pexelsPool[Math.abs(h) % pexelsPool.length];
+    // [DEBUG/FIX] Unsplash 링크가 발견되면 즉시 Pexels 대체 이미지로 전환
+    if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
+      console.log(`[MapContainer] Unsplash detected! ID: ${post.id}`);
+      displayImage = getFallbackImage(String(post.id));
     }
 
     if (isBrokenUrl(displayImage)) {
-      displayImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+      displayImage = getFallbackImage(String(post.id));
     }
 
     let borderType = post.borderType || 'none'; // Move this declaration UP

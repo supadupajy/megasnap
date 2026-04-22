@@ -15,29 +15,31 @@ export function getYoutubeId(url: string) {
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
-export function getYoutubeThumbnail(url: string) {
+export const getYoutubeThumbnail = (url: string | null | undefined): string | null => {
+  if (!url) return null;
   const id = getYoutubeId(url);
   if (!id) return null;
-  // hqdefault도 깨지는 경우가 있을 수 있으므로 mqdefault(중간 해상도, 항상 존재)를 fallback으로 고려
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-}
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+};
 
-// Unsplash Placeholder 리맵핑 유틸리티
-export function getUnsplashPlaceholder(id: string, category: string = 'general') {
-  const seed = id.split('-').pop() || '1';
-  const width = 800;
-  const height = 800;
-  
-  const keywords: Record<string, string> = {
-    food: 'food,restaurant',
-    place: 'landscape,nature,travel',
-    accident: 'road,traffic',
-    animal: 'animal,pet',
-    general: 'landscape,city'
-  };
-  
-  const keyword = keywords[category] || keywords.general;
-  return `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=${width}&q=80&sig=${seed}`;
-}
+/**
+ * [CRITICAL FIX] Unsplash 관련 모든 기본 이미지를 Pexels 고화질 이미지로 강제 교체
+ * 문제의 '노란 꽃 호수' 이미지(photo-1501785888041-af3ef285b470)를 완전히 박멸합니다.
+ */
+export const getFallbackImage = (seed: string = "default") => {
+  const pexelsFallbacks = [
+    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
+    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
+    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
+    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg"
+  ];
+  let h = 0;
+  for(let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  return pexelsFallbacks[Math.abs(h) % pexelsFallbacks.length];
+};
+
+export const getPlaceholderImage = (width: number = 800, height: number = 600, seed: string = "seed") => {
+  return getFallbackImage(seed);
+};
 
 export const isMobilePlatform = () => Capacitor.isNativePlatform();

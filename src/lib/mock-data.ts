@@ -1,7 +1,7 @@
 "use client";
 
 import { Post, User } from '@/types';
-import { getYoutubeThumbnail } from './utils';
+import { getYoutubeThumbnail, getFallbackImage } from './utils';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 
 const buildUniquePool = (items: readonly string[]) => Array.from(new Set(items));
@@ -196,7 +196,7 @@ export const cityThemes: Record<string, string[]> = {
   seoul: ["photo-1503899036084-c55cdd92da26", "photo-1540959733332-eab4deabeeaf", "photo-1538332576228-eb5b4c4de6f5", "photo-1535223289827-42f1e9919769"],
   busan: ["photo-1546271876-af3ef285b470", "photo-1516450360452-9312f5e86fc7", "photo-1514933651103-005eec06c04b", "photo-1441974231531-c6227db76b6e"],
   food: ["photo-1504674900247-0877df9cc836", "photo-1546069901-ba9599a7e63c", "photo-1567620905732-2d1ec7bb7445", "photo-1467003909585-2f8a72700288"],
-  general: ["photo-1501785888041-af3ef285b470", "photo-1470071459604-3b5ec3a7fe05", "photo-1506744038136-46273834b3fb", "photo-1511497584788-915e57d2c9c5"]
+  general: ["photo-1470071459604-3b5ec3a7fe05", "photo-1441974231531-c6227db76b6e", "photo-1506744038136-46273834b3fb", "photo-1511497584788-915e57d2c9c5"]
 };
 
 export const placeImages = [
@@ -208,6 +208,7 @@ export const placeImages = [
 
 export const BLACKLIST_IDS = [
   "photo-1506057585508-85603cee9e17",
+  "photo-1501785888041-af3ef285b470", // [CRITICAL] 문제의 노란 꽃 호수 ID 블랙리스트 추가
 ];
 
 export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
@@ -225,8 +226,10 @@ export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).
 export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 
 export const getUnsplashUrl = (id: string) => {
-  // [FORCE] Unsplash URL 생성을 완전히 중단하고 웹 검색 이미지로 대체
-  return getStableWebImage(id, 'scenery');
+  const finalId = BLACKLIST_IDS.includes(id) ? "photo-1506744038136-46273834b3fb" : id;
+  // [FIX] 여기서도 Unsplash ID가 아닌 고화질 풍경 URL을 반환하도록 강제할 수 있음
+  if (BLACKLIST_IDS.includes(id)) return getFallbackImage(id);
+  return `https://images.unsplash.com/${finalId}?auto=format&fit=crop&w=800&q=80`;
 };
 
 export const isUnsplashImageUrl = (url?: string | null) =>
