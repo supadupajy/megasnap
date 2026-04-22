@@ -250,12 +250,39 @@ const MapContainer = ({
     if (lvl <= 5) return 1;     // 5단계 이하: 100%
     if (lvl === 6) return 0.75;  // 6단계: 75%
     if (lvl === 7) return 0.5;   // 7단계: 50%
-    return 0;                    // 8단계 이상: 숨김 (너무 작아서 제거)
+    return 0;                    // 8단계 이상: 숨김
   };
 
   const updateMarkers = useCallback(() => {
-    if (!isMapReady || !mapInstance.current || !overlaysRef.current.size) return;
+    if (!mapInstance.current || !posts) return;
+
+    const currentScale = getMarkerScale(currentLevelRef.current);
+
+    // ✅ 스케일이 0이면 모든 마커를 지도에서 제거하고 종료
+    if (currentScale <= 0) {
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+      return;
+    }
+
+    const bounds = mapInstance.current.getBounds();
+    const currentCenter = mapInstance.current.getCenter();
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const mapLevel = mapInstance.current.getLevel();
     
+    setCurrentLevel(mapLevel);
+    currentLevelRef.current = mapLevel;
+
+    onMapChangeRef.current({
+      bounds: { 
+        sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+        ne: { lat: ne.getLat(), lng: ne.getLng() } 
+      },
+      center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+      level: mapLevel
+    });
+
     // 1. 제거될 마커 애니메이션 적용
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
