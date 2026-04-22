@@ -6,7 +6,6 @@ import { MapPin, X, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, P
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { useKeyboard } from '@/hooks/use-keyboard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
