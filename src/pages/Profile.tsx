@@ -131,30 +131,23 @@ const Profile = () => {
   };
 
   const loadProfileData = useCallback(async (uid: string) => {
-    // Reset fetch ref to allow re-fetching when needed
     setIsDataLoading(true);
     try {
-      // 1. Fetch My Posts
-      // [FIX] statement timeout 해결을 위해 쿼리 구조를 가장 단순하게 변경
-      let myData: any[] = [];
-      const { data, error: myPostsError } = await supabase
+      // 1. Fetch My Posts with forced refresh (no limit to ensure all are seen)
+      const { data: myData, error: myPostsError } = await supabase
         .from('posts')
         .select('*')
         .eq('user_id', uid)
-        .limit(50); // 정렬 제외하고 데이터만 먼저 가져옴
+        .order('created_at', { ascending: false });
 
       if (myPostsError) {
         console.error('[Profile] My Posts fetch error:', myPostsError);
-      } else {
-        myData = data || [];
-        // 클라이언트 사이드 정렬로 서버 부하 분산
-        myData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      } else if (myData) {
+        const formattedMyPosts = await Promise.all(myData.map(mapDbToPost));
+        setMyPosts(formattedMyPosts);
       }
-      
-      const formattedMyPosts = await Promise.all(myData.map(mapDbToPost));
-      setMyPosts(formattedMyPosts);
 
-      // 2. Fetch Saved Posts
+      // 2. Fetch Saved Posts with full join
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select(`
@@ -303,11 +296,19 @@ const Profile = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
-                    {savedPosts.map((post) => (
+                    {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                       <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}>
-                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} />
+                        <img 
+                          src={post.image_url || post.image} 
+                          alt="" 
+                          className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
+                          onError={() => handleImageError(post.id)} 
+                        />
                       </div>
                     ))}
+                    {myPosts.length === 0 && !isDataLoading && (
+                      <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
+                    )}
                   </div>
                 )}
               </>
