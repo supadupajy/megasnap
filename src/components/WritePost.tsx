@@ -359,14 +359,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         <button 
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
-                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]",
-                            mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300 h-[80px]",
+                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
-                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
+                            <ImageIcon className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <Video className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
                           </div>
                           <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-xs text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
