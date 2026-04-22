@@ -26,6 +26,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import confetti from 'canvas-confetti';
+import { 
+  seedGlobalPosts, 
+  randomizeExistingLikes, 
+  enrichExistingPostLocations, 
+  cleanupInvalidYoutubePosts,
+  seedGangnamSpecialPosts 
+} from '@/utils/db-seeder';
 
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 

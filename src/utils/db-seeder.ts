@@ -304,3 +304,79 @@ export const cleanupInvalidYoutubePosts = async () => {
     throw err;
   }
 };
+
+/**
+ * [SPECIAL] 강남 지역(강남역, 신사, 압구정 등)에 골고루 20개의 포스팅을 생성합니다.
+ */
+export const seedGangnamSpecialPosts = async (currentUserId: string) => {
+  console.log("📍 [Seeder] 강남 지역 특별 데이터 생성을 시작합니다...");
+
+  try {
+    await initializeYoutubePool();
+    const { data: profiles } = await supabase.from('profiles').select('id').limit(10);
+    const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId }];
+
+    // 강남 주요 거점 좌표
+    const gangnamSpots = [
+      { name: "강남역", lat: 37.4979, lng: 127.0276 },
+      { name: "신논현역", lat: 37.5045, lng: 127.0255 },
+      { name: "논현역", lat: 37.5111, lng: 127.0214 },
+      { name: "신사역", lat: 37.5163, lng: 127.0201 },
+      { name: "압구정역", lat: 37.5271, lng: 127.0285 },
+      { name: "학동역", lat: 37.5143, lng: 127.0317 },
+      { name: "언주역", lat: 37.5073, lng: 127.0339 },
+      { name: "역삼역", lat: 37.5006, lng: 127.0365 },
+      { name: "선릉역", lat: 37.5045, lng: 127.0482 },
+      { name: "삼성역", lat: 37.5088, lng: 127.0631 },
+      { name: "청담역", lat: 37.5191, lng: 127.0519 },
+      { name: "강남구청역", lat: 37.5172, lng: 127.0413 },
+      { name: "선정릉역", lat: 37.5110, lng: 127.0436 },
+      { name: "한티역", lat: 37.4962, lng: 127.0529 },
+      { name: "도곡역", lat: 37.4909, lng: 127.0555 },
+      { name: "대치역", lat: 37.4945, lng: 127.0588 },
+      { name: "매봉역", lat: 37.4868, lng: 127.0436 },
+      { name: "양재역", lat: 37.4841, lng: 127.0346 },
+      { name: "교대역", lat: 37.4934, lng: 127.0141 },
+      { name: "서초역", lat: 37.4918, lng: 127.0076 }
+    ];
+
+    const insertData = gangnamSpots.map((spot, i) => {
+      const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
+      const isYoutube = i % 2 === 0;
+      const category = CATEGORIES[i % CATEGORIES.length];
+      
+      let finalYoutubeUrl = null;
+      let finalImage = "";
+
+      if (isYoutube) {
+        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(i);
+        finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getDiverseUnsplashUrl(`gangnam:${i}`, category);
+      } else {
+        finalImage = getDiverseUnsplashUrl(`gangnam:${i}`, category);
+      }
+
+      return {
+        content: REALISTIC_COMMENTS[i % REALISTIC_COMMENTS.length],
+        location_name: `서울시 강남구 ${spot.name} 인근`,
+        latitude: spot.lat + (Math.random() - 0.5) * 0.002, // 미세한 랜덤 오차
+        longitude: spot.lng + (Math.random() - 0.5) * 0.002,
+        image_url: finalImage,
+        youtube_url: finalYoutubeUrl,
+        user_id: randomUser.id,
+        user_name: "탐험가",
+        likes: Math.floor(Math.random() * 8000) + 500,
+        category: category,
+        created_at: new Date().toISOString()
+      };
+    });
+
+    const { error } = await supabase.from('posts').insert(insertData);
+    if (error) throw error;
+
+    console.log("✨ [Seeder] 강남 특별 포스팅 20개가 성공적으로 생성되었습니다.");
+    return insertData.length;
+  } catch (err) {
+    console.error("❌ [Seeder] 강남 데이터 생성 실패:", err);
+    throw err;
+  }
+};
