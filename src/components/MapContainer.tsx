@@ -194,6 +194,14 @@ const MapContainer = ({
         const newLevel = map.getLevel();
         setCurrentLevel(newLevel);
         currentLevelRef.current = newLevel;
+        
+        // ✅ [긴급 수정] 8단계 이상이면 즉시 모든 오버레이를 지도에서 제거
+        if (newLevel >= 8) {
+          overlaysRef.current.forEach((overlay) => {
+            overlay.setMap(null);
+          });
+          // Note: overlaysRef는 useEffect 내의 동기화를 위해 clear() 하지 않고 유지
+        }
       });
 
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -419,14 +427,12 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ 9단계 이상일 때는 모든 마커를 안전하게 비움
-    if (currentLevel >= 9) {
-      if (overlaysRef.current.size > 0) {
-        overlaysRef.current.forEach((overlay) => {
-          overlay.setMap(null);
-        });
-        overlaysRef.current.clear();
-      }
+    // ✅ [강력한 제어] 8단계 이상일 때는 무조건 루프를 돌며 모든 마커를 setMap(null) 처리
+    if (currentLevel >= 8) {
+      overlaysRef.current.forEach((overlay) => {
+        overlay.setMap(null);
+      });
+      // overlaysRef.current.clear(); // 제거하면 다음 렌더링 시 posts 비교가 안되므로 지우지 않음
       return;
     }
 
