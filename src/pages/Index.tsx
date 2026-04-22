@@ -10,7 +10,7 @@ import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2 } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2, Database, RefreshCcw } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
@@ -21,11 +21,12 @@ import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast, toast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import confetti from 'canvas-confetti';
+import { seedGlobalPosts, randomizeExistingLikes, refreshAllPostImages } from "@/utils/db-seeder";
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80';
 
@@ -54,6 +55,7 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(48); 
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -715,8 +717,84 @@ const Index = () => {
   const cancelLocationSelection = () => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => setIsWriteOpen(true), 100); };
   const startLocationSelection = () => { setIsWriteOpen(false); setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); };
 
+  const handleSeed = async () => {
+    setIsSeeding(true);
+    try {
+      const count = await seedGlobalPosts();
+      toast.success(`${count}개의 포스트가 생성되었습니다.`);
+      // 데이터 갱신을 위해 포스트 다시 불러오기
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (err) {
+      toast.error("데이터 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleRandomizeLikes = async () => {
+    setIsSeeding(true);
+    try {
+      const count = await randomizeExistingLikes();
+      toast.success(`${count}개의 포스트에 좋아요가 재배치되었습니다.`);
+      // 데이터 갱신을 위해 포스트 다시 불러오기
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (err) {
+      toast.error("좋아요 재배치 중 오류가 발생했습니다.");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleRefreshImages = async () => {
+    setIsSeeding(true);
+    try {
+      const count = await refreshAllPostImages();
+      toast.success(`${count}개의 이미지가 최신 풀로 갱신되었습니다.`);
+      // 데이터 갱신을 위해 포스트 다시 불러오기
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (err) {
+      toast.error("이미지 갱신 중 오류가 발생했습니다.");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
-    <>
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          onClick={handleSeed} 
+          disabled={isSeeding}
+          className="bg-gradient-to-r from-blue-600 to-indigo-600"
+        >
+          {isSeeding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Database className="w-4 h-4 mr-2" />}
+          전역 데이터 생성
+        </Button>
+        
+        <Button 
+          onClick={handleRefreshImages} 
+          disabled={isSeeding}
+          variant="outline"
+          className="border-indigo-200 hover:bg-indigo-50"
+        >
+          {isSeeding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
+          이미지 풀 동기화 (100개+)
+        </Button>
+
+        <Button 
+          onClick={handleRandomizeLikes} 
+          disabled={isSeeding}
+          variant="secondary"
+        >
+          좋아요 재배치
+        </Button>
+      </div>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
           <MapContainer
@@ -795,7 +873,7 @@ const Index = () => {
         authUserId={authUser?.id}
         onDeletePost={handlePostDeleted}
       />
-    </>
+    </div>
   );
 };
 

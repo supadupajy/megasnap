@@ -20,7 +20,7 @@ const REALISTIC_COMMENTS = [
   '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
   '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
   '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
-  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
+  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%! ',
   '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
   '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
   '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
@@ -46,24 +46,26 @@ const getRandomLikesFlat = () => {
   return Math.floor(Math.random() * 10001);
 };
 
+/**
+ * 전역 포스팅 데이터를 생성하여 DB에 주입합니다.
+ */
 export const seedGlobalPosts = async (currentUserId: string, currentNickname: string, currentAvatar: string) => {
   console.log("🚀 [Seeder] 전역 데이터 생성 프로세스를 시작합니다...");
 
   try {
     await initializeYoutubePool();
 
-    console.log("👥 [Seeder] 사용자 프로필 목록을 가져오는 중...");
+    // 실제 사용자 풀 확보
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     const userPool = (profiles && profiles.length > 0)
       ? profiles
       : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
-    console.log(`✅ [Seeder] ${userPool.length}명의 사용자 풀이 준비되었습니다.`);
 
     const allInsertData: any[] = [];
     let globalIndex = 0;
 
+    // 정의된 도시/지역별로 순회하며 데이터 생성
     for (const city of OFFLINE_REGION_CITIES.filter((region) => region.density)) {
-      console.log(`📍 [Seeder] ${city.shortName} 지역 데이터 생성 중... (목표: ${city.density}개)`);
       const mockPosts = createMockPosts(city.lat, city.lng, city.density, undefined, city.bounds);
 
       for (let i = 0; i < mockPosts.length; i++) {
@@ -72,19 +74,23 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const detailedLocation = resolveOfflineLocationName(p.lat, p.lng);
         const finalLikes = getRandomLikesFlat();
         const isAd = p.isAd;
-        const category = CATEGORIES[globalIndex % CATEGORIES.length]; // 카테고리 할당
+        
+        // 카테고리 순환 (중복 최소화를 위해 globalIndex 활용)
+        const category = CATEGORIES[globalIndex % CATEGORIES.length];
 
         let finalYoutubeUrl = null;
         let finalImage = "";
 
+        // 미디어(광고, 영상, 이미지) 할당 로직
+        // Salt를 globalIndex로 주어 동일 지역/유저라도 다른 이미지가 나오도록 함
         if (isAd) {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, 'food', i);
-        } else if (globalIndex % 2 === 0) {
+          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${globalIndex}`, 'food', globalIndex);
+        } else if (globalIndex % 3 === 0) { // 33% 확률로 유튜브 (기존 50%에서 조정하여 이미지 노출 증대)
           const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
           finalYoutubeUrl = candidateUrl;
-          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${globalIndex}`, category, globalIndex);
         } else {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${globalIndex}`, category, globalIndex);
         }
 
         const finalContent = isAd
@@ -140,6 +146,55 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
   }
 };
 
+/**
+ * 기존 DB 데이터의 이미지 URL을 새로운 풀 기반으로 카테고리에 맞춰 일괄 업데이트합니다.
+ */
+export const refreshAllPostImages = async () => {
+  console.log("🔄 [Seeder] 기존 이미지 URL을 새로운 풀로 갱신 중...");
+  try {
+    const { data: posts, error: fetchError } = await supabase
+      .from('posts')
+      .select('id, category, youtube_url, content');
+
+    if (fetchError || !posts) return 0;
+
+    let updatedCount = 0;
+    const chunkSize = 50;
+
+    for (let i = 0; i < posts.length; i += chunkSize) {
+      const chunk = posts.slice(i, i + chunkSize);
+      
+      const updatePromises = chunk.map(async (post) => {
+        const isAd = post.content?.startsWith('[AD]');
+        const category = (post.category as any) || CATEGORIES[updatedCount % CATEGORIES.length];
+        
+        let newImageUrl: string;
+        if (isAd) {
+          newImageUrl = getDiverseUnsplashUrl(post.id, 'food', updatedCount);
+        } else if (post.youtube_url) {
+          newImageUrl = getYoutubeThumbnail(post.youtube_url) || getDiverseUnsplashUrl(post.id, category, updatedCount);
+        } else {
+          newImageUrl = getDiverseUnsplashUrl(post.id, category, updatedCount);
+        }
+
+        return supabase.from('posts').update({ image_url: newImageUrl }).eq('id', post.id);
+      });
+
+      await Promise.all(updatePromises);
+      updatedCount += chunk.length;
+    }
+
+    console.log(`✅ [Seeder] 총 ${updatedCount}개의 이미지가 성공적으로 갱신되었습니다.`);
+    return updatedCount;
+  } catch (err) {
+    console.error("❌ [Seeder] 이미지 갱신 중 오류:", err);
+    throw err;
+  }
+};
+
+/**
+ * 기존 포스팅들의 좋아요 수치를 새 로직에 맞춰 재랜덤화합니다.
+ */
 export const randomizeExistingLikes = async () => {
   console.log("🎲 [Seeder] 전체 좋아요 수치 랜덤화 작업을 시작합니다...");
   try {
