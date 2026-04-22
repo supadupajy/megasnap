@@ -61,6 +61,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const { isKeyboardOpen } = useKeyboard();
   
@@ -391,40 +393,60 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     </div>
 
                     {mediaFiles.length > 0 && (
-                      <div className="relative flex-1 min-h-0 mb-2">
+                      <div className="relative flex-1 min-h-[300px] mb-2 overflow-hidden">
                         <Carousel 
                           setApi={setApi}
                           className="w-full h-full" 
                           opts={{ 
                             align: "start", 
                             containScroll: "trimSnaps",
-                            watchDrag: false
+                            watchDrag: !isDragging
                           }}
                         >
                           <CarouselContent className="h-full ml-0">
                             {mediaFiles.map((media, idx) => (
                               <CarouselItem key={idx} className="h-full pl-0">
-                                <div className="relative h-full w-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
+                                <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <div className="absolute inset-0 w-full h-full z-10">
-                                      <Cropper
-                                        image={media.url}
-                                        crop={media.crop || { x: 0, y: 0 }}
-                                        zoom={media.zoom || 1}
-                                        aspect={1}
-                                        onCropChange={(crop) => onCropChange(crop, idx)}
-                                        onZoomChange={(zoom) => onZoomChange(zoom, idx)}
-                                        showGrid={false}
-                                        classes={{
-                                          containerClassName: "w-full h-full relative z-10",
-                                          mediaClassName: "max-w-none" // 크로퍼 이미지 잘림 방지
+                                    <div className="absolute inset-0 select-none">
+                                      <img 
+                                        src={media.url} 
+                                        alt="Preview" 
+                                        draggable={false}
+                                        className="w-full h-full object-cover transition-none pointer-events-none"
+                                        style={{ 
+                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1.2})`,
                                         }}
-                                        style={{
-                                          containerStyle: {
-                                            width: '100%',
-                                            height: '100%'
-                                          }
+                                      />
+                                      {/* 커스텀 드래그 핸들러 */}
+                                      <div 
+                                        className="absolute inset-0 z-20 cursor-move touch-none"
+                                        onPointerDown={(e) => {
+                                          setIsDragging(true);
+                                          setDragStart({ x: e.clientX, y: e.clientY });
+                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
                                         }}
+                                        onPointerMove={(e) => {
+                                          if (!isDragging) return;
+                                          const deltaX = e.clientX - dragStart.x;
+                                          const deltaY = e.clientY - dragStart.y;
+                                          
+                                          setMediaFiles(prev => prev.map((m, i) => 
+                                            i === idx ? { 
+                                              ...m, 
+                                              crop: { 
+                                                x: (m.crop?.x || 0) + deltaX, 
+                                                y: (m.crop?.y || 0) + deltaY 
+                                              } 
+                                            } : m
+                                          ));
+                                          setDragStart({ x: e.clientX, y: e.clientY });
+                                        }}
+                                        onPointerUp={(e) => {
+                                          setIsDragging(false);
+                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                                        }}
+                                        onPointerCancel={() => setIsDragging(false)}
                                       />
                                     </div>
                                   ) : (
@@ -439,7 +461,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   )}
                                   <button
                                     onClick={() => removeMedia(idx)}
-                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-[60]"
+                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
