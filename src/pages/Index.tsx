@@ -314,10 +314,11 @@ const Index = () => {
 
     const { sw, ne } = mapData.bounds;
     
-    // ✅ [확장] 화면 밖 마커 유지 범위를 20%에서 50%로 대폭 확대
-    // 이렇게 하면 화면 가장자리에 도달하기 훨씬 전부터 마커가 미리 렌더링됩니다.
-    const latPadding = Math.abs(ne.lat - sw.lat) * 0.5;
-    const lngPadding = Math.abs(ne.lng - sw.lng) * 0.5;
+    // ✅ [확장] 상하좌우 렌더링 범위를 비대칭으로 조정
+    // 좌우(lng) 범위를 상하(lat)보다 더 넓게(100% 확장) 설정하여 
+    // 스마트폰 가로 슬라이드 시 마커가 잘리는 현상을 완벽히 해결합니다.
+    const latPadding = Math.abs(ne.lat - sw.lat) * 0.6; // 상하 60%
+    const lngPadding = Math.abs(ne.lng - sw.lng) * 1.2; // 좌우 120% (충분히 넓게)
     
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
