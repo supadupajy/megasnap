@@ -199,6 +199,8 @@ const MapContainer = ({
         if (newLevel >= 8) {
           markersRef.current.forEach(m => m.setMap(null));
           markersRef.current = [];
+          // postToMarkerMap도 초기화하여 참조 오류 방지
+          postToMarkerMap.current.clear();
         } else {
           updateMarkers();
         }
@@ -256,167 +258,64 @@ const MapContainer = ({
     return 0;                    // 8단계 이상: 숨김
   };
 
+  // 마커 업데이트 로직
   const updateMarkers = useCallback(() => {
     if (!mapInstance.current || !posts) return;
 
-    // 현재 레벨을 직접 가져와서 판단 (Ref 대신 실시간 값 사용)
+    // 현재 레벨을 직접 가져와서 판단
     const level = mapInstance.current.getLevel();
     const currentScale = getMarkerScale(level);
 
-    // ✅ 8단계 이상이면 무조건 싹 지우기
+    // 8단계 이상이면 무조건 싹 지우기
     if (level >= 8 || currentScale <= 0) {
       markersRef.current.forEach(m => m.setMap(null));
       markersRef.current = [];
+      postToMarkerMap.current.clear();
       return;
     }
 
     const bounds = mapInstance.current.getBounds();
-    const currentCenter = mapInstance.current.getCenter();
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    const mapLevel = mapInstance.current.getLevel();
+    const currentPostIds = new Set(posts.map(p => p.id));
     
-    setCurrentLevel(mapLevel);
-    currentLevelRef.current = mapLevel;
-
-    onMapChangeRef.current({
-      bounds: { 
-        sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-        ne: { lat: ne.getLat(), lng: ne.getLng() } 
-      },
-      center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-      level: mapLevel
-    });
-
-    // 1. 제거될 마커 애니메이션 적용
-    overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) {
-        console.log('[MapContainer] Post not in current props, checking if needs animation removal:', id);
-        
-        // 이미 제거 대기 중인 경우 무시
-        if (removalTimeoutsRef.current.has(id)) return;
-
-        const content = overlay.getContent();
-        if (content instanceof HTMLElement) {
-          console.log('[MapContainer] Triggering disappear animation for:', id);
-          // 기존 부유/호흡 애니메이션 제거 후 사라짐 애니메이션 추가
-          content.classList.remove('animate-marker-appear', 'animate-marker-float', 'animate-ad-breathing');
-          content.classList.add('animate-marker-disappear');
-          
-          // 애니메이션 시간(300ms) 후에 실제로 지도에서 제거
-          const timeoutId = window.setTimeout(() => {
-            console.log('[MapContainer] Animation finished, removing from map:', id);
-            overlay.setMap(null);
-            overlaysRef.current.delete(id);
-            removalTimeoutsRef.current.delete(id);
-          }, 300);
-          
-          removalTimeoutsRef.current.set(id, timeoutId);
-        } else {
-          overlay.setMap(null);
-          overlaysRef.current.delete(id);
-        }
-      }
-    });
-
-    // 2. 마커 생성 및 업데이트
-    posts.forEach(post => {
-      if (!post) return;
-      const isViewed = viewedPostIds.has(post.id);
-      const isHighlighted = highlightedPostId === post.id;
-      const existingOverlay = overlaysRef.current.get(post.id);
+    // 기존 마커 중 화면 밖으로 나간 것들 정리
+    const nextMarkers: any[] = [];
+    
+    // postToMarkerMap에 있는 마커들 중, 현재 posts에 없거나 화면 밖에 있는 것 제거
+    postToMarkerMap.current.forEach((marker, postId) => {
+      const post = posts.find(p => p.id === postId);
+      const pos = marker.getPosition();
       
-      // ✅ 9단계 이상인 경우 렌더링하지 않도록 보장
-      if (currentLevel >= 9) return;
-
-      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      
-      // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
-      // 1~5단계: 1.0 (100%)
-      // 6단계: 0.75 (75%)
-      // 7단계: 0.5 (50%)
-      // 8단계: 0.25 (25%)
-      // 9단계 이상: 0 (안 보임)
-      let scale = 1.0;
-      if (currentLevel === 6) scale = 0.75;
-      else if (currentLevel === 7) scale = 0.5;
-      else if (currentLevel === 8) scale = 0.25;
-      else if (currentLevel > 8) scale = 0;
-      
-      // 최소 스케일 제한
-      scale = Math.max(scale, 0);
-
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
-
-      if (!existingOverlay) {
-        const content = document.createElement('div');
-        content.className = 'marker-container kakao-overlay';
-        
-        // 실시간 새 포스팅인 경우 특수 애니메이션 및 폭죽 효과 적용
-        if (post.isNewRealtime) {
-          console.log('[MapContainer] Applying REALTIME animation and spark to marker:', post.id);
-          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
-        } else {
-          content.classList.add('animate-marker-appear');
-        }
-
-        if (isHighlighted) content.classList.add('highlighted');
-        content.style.setProperty('--marker-scale', scale.toString());
-        // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
-        content.style.transform = `scale(${scale})`;
-        content.style.transformOrigin = 'bottom center';
-        
-        content.setAttribute('data-content-state', contentStateKey);
-        content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        
-        content.onclick = (e) => { 
-          e.stopPropagation(); 
-          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
-          if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
-        };
-
-        const overlay = new kakao.maps.CustomOverlay({ 
-          position: new kakao.maps.LatLng(post.lat, post.lng), 
-          content: content, 
-          yAnchor: 1, 
-          zIndex: baseZIndex 
-        });
-        
-        overlay.setMap(mapInstance.current);
-        overlaysRef.current.set(post.id, overlay);
+      if (!currentPostIds.has(postId) || !bounds.contain(pos)) {
+        marker.setMap(null);
+        postToMarkerMap.current.delete(postId);
       } else {
-        const content = existingOverlay.getContent();
-        existingOverlay.setZIndex(baseZIndex);
-        if (content instanceof HTMLElement) {
-          cancelPendingRemoval(post.id, content);
-          
-          // 이미 있는 마커가 isNewRealtime으로 다시 들어온 경우 애니메이션 재적용 가능
-          if (post.isNewRealtime && !content.classList.contains('animate-realtime-marker-appear')) {
-            content.classList.remove('animate-marker-appear');
-            content.classList.add('animate-realtime-marker-appear');
-          }
+        // 크기 업데이트
+        const icon = marker.getImage();
+        if (icon) {
+          const size = new (window as any).kakao.maps.Size(40 * currentScale, 40 * currentScale);
+          icon.size = size;
+          marker.setImage(icon);
+        }
+        nextMarkers.push(marker);
+      }
+    });
 
-          content.style.setProperty('--marker-scale', scale.toString());
-          // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
-          content.style.transform = `scale(${scale})`;
-          content.style.transformOrigin = 'bottom center';
-          
-          content.style.opacity = "1";
-          content.style.visibility = "visible";
-          
-          if (isHighlighted) content.classList.add('highlighted'); 
-          else content.classList.remove('highlighted');
-
-          if (content.getAttribute('data-content-state') !== contentStateKey) {
-            requestAnimationFrame(() => { 
-              content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-              content.setAttribute('data-content-state', contentStateKey); 
-            });
-          }
+    // 화면 안에 새로 들어온 마커 추가
+    posts.forEach(post => {
+      if (!postToMarkerMap.current.has(post.id)) {
+        const position = new (window as any).kakao.maps.LatLng(post.latitude, post.longitude);
+        
+        if (bounds.contain(position)) {
+          const marker = createMarker(post, currentScale);
+          marker.setMap(mapInstance.current);
+          postToMarkerMap.current.set(post.id, marker);
+          nextMarkers.push(marker);
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
+
+    markersRef.current = nextMarkers;
+  }, [posts, createMarker]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
