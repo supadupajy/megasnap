@@ -198,16 +198,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return [post.image];
     if (youtubeId) return [post.image]; 
     
-    // ✅ 사용자가 등록한 모든 이미지(images 배열)를 우선적으로 보여줌
-    if (post.images && post.images.length > 0) {
-      // images 배열이 있고, 그 안에 광고 이미지나 플레이스홀더가 아닌 실제 데이터가 있다면 그대로 사용
-      return post.images;
-    }
+    // 사용자가 등록한 이미지들 가져오기
+    const userImages = post.images && post.images.length > 0 ? post.images : [post.image];
     
-    // ✅ 레거시 포스트(images 배열이 없는 경우) 대응
-    const img1 = post.image;
-    const img3 = THIRD_PLACEHOLDER;
-    return [img1, AD_IMAGE, img3];
+    // 두 번째 자리에 코카콜라 광고 삽입 로직
+    // 코카콜라 광고 이미지 URL (스크린샷 기반 AD_IMAGE 유지 또는 교체 가능)
+    const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+    
+    const combined = [...userImages];
+    // 이미지가 최소 1개 이상일 때, 인덱스 1(두 번째) 자리에 광고 삽입
+    combined.splice(1, 0, COCA_COLA_AD);
+    
+    return combined;
   }, [isAd, post.images, post.image, youtubeId]);
 
   const adIndex = 1;
