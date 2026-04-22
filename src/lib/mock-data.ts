@@ -156,21 +156,21 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
 
 const WEB_SEARCHED_IMAGES = {
   scenery: [
-    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
-    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
-    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
-    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg",
-    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg",
-    "https://images.pexels.com/photos/3363363/pexels-photo-3363363.jpeg",
-    "https://images.pexels.com/photos/210012/pexels-photo-210012.jpeg",
-    "https://images.pexels.com/photos/599439/pexels-photo-599439.jpeg"
+    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg", // N Seoul Tower
+    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg", // Seoul Night
+    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg", // Temple
+    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg", // Hanok
+    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg", // Forest
+    "https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg", // Lake
+    "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg",   // Resort
+    "https://images.pexels.com/photos/460621/pexels-photo-460621.jpeg"    // Park
   ],
   food: [
     "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg",
     "https://images.pexels.com/photos/1273765/pexels-photo-1273765.jpeg",
-    "https://images.pexels.com/photos/1234535/pexels-photo-1234535.jpeg",
     "https://images.pexels.com/photos/2641886/pexels-photo-2641886.jpeg",
-    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg"
+    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg",
+    "https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg"
   ],
   animal: [
     "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
@@ -180,20 +180,16 @@ const WEB_SEARCHED_IMAGES = {
 };
 
 const getStableWebImage = (seed: string, type: 'scenery' | 'food' | 'animal' = 'scenery') => {
-  const pool = WEB_SEARCHED_IMAGES[type];
-  if (!pool || pool.length === 0) return "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+  const pool = WEB_SEARCHED_IMAGES[type] || WEB_SEARCHED_IMAGES.scenery;
   
-  // [FIX] 해시 알고리즘 개선: 단순히 문자열 길이나 마지막 글자가 아닌 전체 문자열을 골고루 활용
-  let hash = 0;
-  const str = String(seed);
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
-  }
+  // [CRITICAL FIX] 
+  // 1. Math.random()을 사용하여 매번 다른 이미지가 선택되도록 함 (Seed 기반 고정 탈피)
+  // 2. 만약 특정 이미지가 계속 나온다면 해당 URL이 pool에 포함되어 있는지 확인 후 제거
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  const selectedImage = pool[randomIndex];
   
-  const index = Math.abs(hash) % pool.length;
-  console.log(`[ImagePool] Type: ${type}, Seed: ${seed}, Hash: ${hash}, Index: ${index}`);
-  return pool[index];
+  console.log(`[ImagePool] New Random Selection - Type: ${type}, Index: ${randomIndex}, URL: ${selectedImage}`);
+  return selectedImage;
 };
 
 export const cityThemes: Record<string, string[]> = {
