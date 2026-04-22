@@ -55,20 +55,28 @@ const Profile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
-    // [FIX] sanitizeYoutubeMedia 내부에서 이미 잘못된 데이터를 걸러내도록 수정함
-    const sanitized = await sanitizeYoutubeMedia(p);
-    const isAd = sanitized.content?.trim().startsWith('[AD]');
-    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
-    
+    // [FIX] sanitizeYoutubeMedia와 별개로 mapDbToPost에서 즉시 잘못된 데이터를 걸러냄
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
     const isValidUrl = (url: any) => {
-      if (typeof url !== 'string') return false;
+      if (!url || typeof url !== 'string') return false;
       const clean = url.trim();
-      return clean.startsWith('http') && !clean.includes('Post content');
+      // 'Post content'가 포함되어 있으면 무조건 false
+      if (clean.includes('Post content')) return false;
+      return clean.startsWith('http');
     };
 
-    let finalImage = sanitized.image_url;
+    let finalImage = p.image_url;
+    if (!isValidUrl(finalImage)) {
+      finalImage = SAFE_FALLBACK;
+    }
+
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: finalImage });
+    const isAd = sanitized.content?.trim().startsWith('[AD]');
+    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
+    
+    // 최종 이미지 한 번 더 검증
+    finalImage = sanitized.image_url;
     if (!isValidUrl(finalImage)) {
       finalImage = SAFE_FALLBACK;
     }
