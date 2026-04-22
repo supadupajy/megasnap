@@ -535,7 +535,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                         </div>
                       </div>
-                      <div className="border-t border-gray-100 pt-4">
+                      <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
                         <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                           <Input
                             ref={commentInputRef}
@@ -555,10 +555,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
                           </div>
                         )}
-                        <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group">
-                          <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-                          {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+                        <button 
+                          onClick={(e) => { 
+                            e.preventDefault();
+                            e.stopPropagation(); 
+                            setShowComments(!showComments); 
+                          }} 
+                          className="w-full py-1 flex items-center justify-between group cursor-pointer"
+                        >
+                          <span className="text-xs text-gray-400 font-medium pointer-events-none">
+                            {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+                          </span>
+                          {showComments ? 
+                            <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> : 
+                            <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+                          }
                         </button>
+                        
+                        <div 
+                          className={cn(
+                            "overflow-hidden transition-all duration-300 ease-in-out",
+                            showComments ? "max-height-[500px] opacity-100 mt-2" : "max-height-0 opacity-0"
+                          )}
+                          style={{ maxHeight: showComments ? '1000px' : '0px' }}
+                        >
+                          <div className="space-y-2 pb-4">
+                            {localComments.slice(0, -1).map((c, i) => (
+                              <div key={i} className="flex gap-2 items-start">
+                                <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                                <span className="text-sm text-gray-500">{c.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
