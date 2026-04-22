@@ -210,7 +210,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       userImages = [post.image];
     }
     
+    // ✅ 실시간 인기 포스팅에서 나이키 광고 구분을 위해 이미지 URL 체크 로직 활용 가능
+    // 현재 코드 구조상 두 번째 슬라이드에 삽입되는 광고 이미지를 정의
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+    
     const result = [];
     if (userImages.length > 0) {
       result.push(userImages[0]);
@@ -223,6 +226,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
     return result;
   }, [isAd, post.images, post.image, youtubeId]);
+
+  // ✅ 나이키 광고 여부 확인 (특정 이미지 URL 또는 데이터 속성 활용)
+  const isNikeAd = useMemo(() => {
+    return post.image?.includes('nike') || post.content?.includes('나이키');
+  }, [post]);
+
+  const adLink = isNikeAd ? "https://www.nike.com/kr/" : "https://www.coca-cola.co.kr/";
+  const adLabel = "AD";
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
@@ -419,7 +430,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           />
                         </div>
                       ) : (
-                        <Carousel className="w-full h-full">
+                        <Carousel className="w-full h-full" setApi={setCurrentImageIndex}>
                           <CarouselContent>
                             {displayImages.map((img, index) => (
                               <CarouselItem key={index}>
@@ -432,14 +443,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                   />
                                   {index === 1 && (
                                     <a 
-                                      href="https://www.coca-cola.co.kr/"
+                                      href={adLink}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
                                       className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 active:scale-95 transition-all z-20 cursor-pointer"
                                     >
                                       <ExternalLink className="w-3.5 h-3.5" />
-                                      <span className="font-bold">AD</span>
+                                      <span className="font-bold">{adLabel}</span>
                                     </a>
                                   )}
                                 </div>
