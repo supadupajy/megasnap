@@ -563,6 +563,22 @@ const Index = () => {
   const cancelLocationSelection = () => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => setIsWriteOpen(true), 100); };
   const startLocationSelection = () => { setIsWriteOpen(false); setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); };
 
+  // 현재 지도 화면 안에 있는 포스트들만 필터링
+  const visiblePosts = useMemo(() => {
+    if (!mapData || !allPosts) return [];
+    const { sw, ne } = mapData.bounds;
+    return allPosts.filter(post => 
+      post.latitude >= sw.lat && 
+      post.latitude <= ne.lat && 
+      post.longitude >= sw.lng && 
+      post.longitude <= ne.lng
+    );
+  }, [mapData, allPosts]);
+
+  // ✅ [FIX] mapCenter가 정의되지 않은 위치를 찾아서 mapData.center 등으로 교체하거나
+  // 관련 누락된 변수 정의를 확인하여 수정
+  const mapCenter = mapData?.center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
+
   return (
     <>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
@@ -597,15 +613,15 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 9 && (
+                  {visiblePosts.length > 0 && currentZoom < 9 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
-                  <button onClick={handleViewAllClick} disabled={displayedMarkers.length === 0 || currentZoom >= 9} className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative", (displayedMarkers.length === 0 || currentZoom >= 9) && "opacity-50 grayscale cursor-not-allowed bg-slate-800/40 border-white/10 shadow-none")}>
-                    <LayoutGrid className={cn("w-7 h-7 stroke-[3px] relative z-10", (displayedMarkers.length === 0 || currentZoom >= 9) && "text-white/40")} />
-                    <span className={cn("text-[10px] font-black mt-1 relative z-10", (displayedMarkers.length === 0 || currentZoom >= 9) && "text-white/40")}>여기 보기</span>
+                  <button onClick={handleViewAllClick} disabled={visiblePosts.length === 0 || currentZoom >= 9} className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative", (visiblePosts.length === 0 || currentZoom >= 9) && "opacity-50 grayscale cursor-not-allowed bg-slate-800/40 border-white/10 shadow-none")}>
+                    <LayoutGrid className={cn("w-7 h-7 stroke-[3px] relative z-10", (visiblePosts.length === 0 || currentZoom >= 9) && "text-white/40")} />
+                    <span className={cn("text-[10px] font-black mt-1 relative z-10", (visiblePosts.length === 0 || currentZoom >= 9) && "text-white/40")}>여기 보기</span>
                   </button>
-                  {displayedMarkers.length > 0 && currentZoom < 9 && (
-                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>
+                  {visiblePosts.length > 0 && currentZoom < 9 && (
+                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{visiblePosts.length}</div>
                   )}
                 </div>
               </div>
