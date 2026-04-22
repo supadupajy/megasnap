@@ -306,7 +306,75 @@ export const cleanupInvalidYoutubePosts = async () => {
 };
 
 /**
+ * [SPECIAL] 현재 보고 있는 지도 화면 내에 15개의 포스팅을 생성합니다.
+ */
+export const seedInBoundsPosts = async (
+  currentUserId: string, 
+  bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }
+) => {
+  console.log("📍 [Seeder] 화면 내 데이터 생성을 시작합니다...", bounds);
+
+  try {
+    await initializeYoutubePool();
+    const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').limit(10);
+    const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, avatar_url: null }];
+
+    const count = 15;
+    const insertData = [];
+
+    for (let i = 0; i < count; i++) {
+      const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
+      
+      // Random lat/lng within bounds
+      const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
+      const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
+      
+      const isYoutube = Math.random() > 0.5;
+      const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+      
+      let finalYoutubeUrl = null;
+      let finalImage = "";
+
+      if (isYoutube) {
+        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(Math.floor(Math.random() * 50));
+        const ytThumbnail = getYoutubeThumbnail(finalYoutubeUrl);
+        finalImage = ytThumbnail || "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+      } else {
+        finalImage = getDiverseUnsplashUrl(`inbounds_${i}_${Date.now()}`, category);
+      }
+
+      const detailedLocation = resolveOfflineLocationName(lat, lng);
+
+      insertData.push({
+        content: REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)],
+        location_name: detailedLocation,
+        latitude: lat,
+        longitude: lng,
+        image_url: finalImage,
+        youtube_url: finalYoutubeUrl,
+        user_id: randomUser.id,
+        user_name: "탐험가",
+        user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
+        likes: Math.floor(Math.random() * 8000) + 500,
+        category: category,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    const { error } = await supabase.from('posts').insert(insertData);
+    if (error) throw error;
+
+    console.log(`✨ [Seeder] 화면 내 특별 포스팅 ${insertData.length}개가 성공적으로 생성되었습니다.`);
+    return insertData.length;
+  } catch (err) {
+    console.error("❌ [Seeder] 화면 내 데이터 생성 실패:", err);
+    throw err;
+  }
+};
+
+/**
  * [SPECIAL] 강남 지역 및 그 주변(서초, 잠실 등)에 골고루 20개의 포스팅을 생성합니다.
+ * @deprecated Use seedInBoundsPosts instead
  */
 export const seedGangnamSpecialPosts = async (currentUserId: string) => {
   console.log("📍 [Seeder] 강남 및 주변 지역 특별 데이터 생성을 시작합니다...");

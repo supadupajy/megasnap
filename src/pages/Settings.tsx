@@ -23,7 +23,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { seedGlobalPosts, randomizeExistingLikes, cleanupInvalidYoutubePosts, enrichExistingPostLocations } from '@/utils/db-seeder';
+import { seedGlobalPosts, randomizeExistingLikes, cleanupInvalidYoutubePosts, enrichExistingPostLocations, seedInBoundsPosts } from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,6 +141,31 @@ const Settings = () => {
     }
   };
 
+  const handleGenerateInView = async () => {
+    if (!user) return;
+    
+    // Get bounds from local storage where Map component saves them
+    const storedBounds = localStorage.getItem('map_bounds');
+    if (!storedBounds) {
+      showError('지도를 한 번 이상 확인해야 화면 범위를 알 수 있습니다. 지도로 돌아가 화면을 움직여보세요!');
+      return;
+    }
+
+    setIsProcessing(true);
+    const toastId = showLoading('현재 화면 내에 포스팅을 생성 중입니다...');
+    try {
+      const bounds = JSON.parse(storedBounds);
+      const count = await seedInBoundsPosts(user.id, bounds);
+      dismissToast(toastId);
+      showSuccess(`현재 화면 범위 내에 ${count}개의 포스팅이 생성되었습니다! 📍`);
+    } catch (err: any) {
+      dismissToast(toastId);
+      showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar">
       <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
@@ -176,17 +201,34 @@ const Settings = () => {
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <button 
-              onClick={handleSeedData}
+              onClick={handleGenerateInView}
               disabled={isProcessing}
               className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-sm font-bold text-indigo-600">현재 화면 내 포스팅 생성</span>
+                  <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 15개의 새로운 포스팅을 즉시 생성합니다.</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+
+            <button 
+              onClick={handleSeedData}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
                   <Database className="w-5 h-5" />
                 </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-bold text-indigo-600">전체 지역 데이터 생성</span>
-                  <span className="text-[10px] text-gray-400 font-medium">대한민국 전역에 포스팅을 골고루 배치합니다.</span>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-sm font-bold text-gray-700">전국 데이터 대량 생성</span>
+                  <span className="text-[10px] text-gray-400 font-medium leading-tight">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />

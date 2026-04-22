@@ -191,11 +191,16 @@ const MapContainer = ({
           setCurrentLevel(mapLevel);
           currentLevelRef.current = mapLevel;
 
+          const boundsData = { 
+            sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+            ne: { lat: ne.getLat(), lng: ne.getLng() } 
+          };
+
+          // [FIX] Save bounds to localStorage for Settings page to use
+          localStorage.setItem('map_bounds', JSON.stringify(boundsData));
+
           onMapChangeRef.current({
-            bounds: { 
-              sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-              ne: { lat: ne.getLat(), lng: ne.getLng() } 
-            },
+            bounds: boundsData,
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
             level: mapLevel,
           });
