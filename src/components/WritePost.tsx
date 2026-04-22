@@ -330,7 +330,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   return (
     <>
-      <DrawerContent
+      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
+        <DrawerContent
   className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
   style={{ 
     position: 'fixed',
