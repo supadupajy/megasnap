@@ -162,6 +162,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const displayImage = imgErrors[currentPost.id] ? getFallbackImage(currentPost.id) : (currentPost.image || getFallbackImage(currentPost.id));
 
+  // [FIX] isAd 변수 선언을 useMemo(displayImages) 보다 위로 이동
+  const isAd = currentPost?.isAd || false;
+
   // [FIX] displayImages 변수 선언 (기존 코드에서 누락된 부분 복구)
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
@@ -189,7 +192,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // ✅ 조건부 return은 모든 훅 선언 이후에
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
-  const isAd = currentPost.isAd;
   const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
   const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
