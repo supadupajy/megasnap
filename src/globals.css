@@ -56,6 +56,18 @@
   transform-origin: bottom center;
 }
 
+/* [FIX] 마커가 삭제될 때 작아지며 사라지는 애니메이션 */
+@keyframes marker-pop-out {
+  0% { transform: scale(1) translateZ(0); opacity: 1; }
+  100% { transform: scale(0) translateZ(0); opacity: 0; }
+}
+
+.marker-disappear-animation {
+  animation: marker-pop-out 0.4s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  transform-origin: bottom center;
+  pointer-events: none;
+}
+
 /* [FIX] 지도 마커 줌 변경 및 애니메이션 시 해상도/선명도 저하 방지 */
 .marker-container {
   pointer-events: auto;

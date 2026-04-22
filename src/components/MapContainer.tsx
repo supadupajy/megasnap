@@ -66,6 +66,24 @@ const MapContainer = ({
   }, [currentLevel]);
 
   useEffect(() => {
+    const handleAnimateDelete = (e: any) => {
+      const postId = e.detail?.id;
+      if (!postId) return;
+      
+      const overlay = overlaysRef.current.get(postId);
+      if (overlay) {
+        const content = overlay.getContent();
+        if (content instanceof HTMLElement) {
+          content.classList.remove('marker-appear-animation');
+          content.classList.add('marker-disappear-animation');
+        }
+      }
+    };
+    window.addEventListener('animate-marker-delete', handleAnimateDelete);
+    return () => window.removeEventListener('animate-marker-delete', handleAnimateDelete);
+  }, []);
+
+  useEffect(() => {
     const originalGetRangeAt = Selection.prototype.getRangeAt;
     Selection.prototype.getRangeAt = function(index: number) {
       if (this.rangeCount <= index || index < 0) return document.createRange();

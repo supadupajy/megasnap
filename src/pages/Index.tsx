@@ -698,10 +698,16 @@ const Index = () => {
   };
 
   const handlePostDeleted = useCallback((id: string) => {
-    setAllPosts(prev => prev.filter(p => p.id !== id));
-    setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
-    mapCache.posts = mapCache.posts.filter(p => p.id !== id);
-    setSelectedPostId(null);
+    // [FIX] 즉시 삭제하는 대신, 마커에 애니메이션을 먼저 실행하기 위해 이벤트를 발송하거나 상태를 일시 유지
+    window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
+    
+    // 애니메이션 시간(400ms) 후에 실제 상태에서 제거
+    setTimeout(() => {
+      setAllPosts(prev => prev.filter(p => p.id !== id));
+      setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
+      mapCache.posts = mapCache.posts.filter(p => p.id !== id);
+      setSelectedPostId(null);
+    }, 400);
   }, []);
 
   const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
