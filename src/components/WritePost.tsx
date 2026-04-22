@@ -355,14 +355,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         <DrawerContent
           className="flex flex-col outline-none bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
           style={{ 
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            // [FIX] transform 보정을 완전히 제거하여 브라우저의 기본 키보드 대응(스크롤 상쇄)을 허용
-            transform: 'none',
-            transition: 'none'
-          }}
+  position: 'fixed',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none',
+  transition: keyboardHeight > 0 ? 'transform 0.25s ease-out' : 'none'
+}}
         >
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
