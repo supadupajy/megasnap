@@ -101,24 +101,22 @@ const Index = () => {
   }, []);
 
   const getTierFromId = (id: string, likes: number = 0) => {
-    // [FINAL RE-VERIFIED TIER LOGIC]
-    // 1순위: 절대적인 좋아요 수 기준
-    if (likes >= 10000) return 'diamond';
-    if (likes >= 5000) return 'gold';
-    if (likes >= 1000) return 'silver';  // 기준을 현실적으로 조정 (1k+)
-    if (likes >= 200) return 'popular';  // 기준을 현실적으로 조정 (200+)
+    // [FIX] 실버 및 상위 티어 할당 로직 완화 (좋아요 기준 하향 및 확률 상향)
+    if (likes >= 5000) return 'diamond';
+    if (likes >= 2000) return 'gold';
+    if (likes >= 500) return 'silver'; // 기존 2000 -> 500으로 대폭 하향
+    if (likes >= 100) return 'popular'; // 기존 500 -> 100으로 하향
     
-    // 2순위: 데이터 다양성을 위한 해시 기반 강제 할당 (테스트 및 풍성한 시각효과 목적)
-    if (!id) return 'none';
+    // 데이터가 적을 때를 대비한 해시 기반 할당 확률 대폭 상향
+    if (!id || id.length < 5) return 'none';
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
     
-    // 확률 분포 조정: 총 약 50% 정도가 특수 테두리를 가질 수 있도록 설정
-    if (val < 0.05) return 'diamond'; // 5%
-    if (val < 0.15) return 'gold';    // 10%
-    if (val < 0.35) return 'silver';  // 20%
-    if (val < 0.55) return 'popular'; // 20%
+    if (val < 0.05) return 'diamond'; // 1% -> 5%
+    if (val < 0.15) return 'gold';    // 3% -> 15%
+    if (val < 0.35) return 'silver';  // 7% -> 35%
+    if (val < 0.60) return 'popular'; // 15% -> 60%
     return 'none';
   };
 
@@ -149,13 +147,7 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
-      // [FIX] 좋아요 수와 ID를 기반으로 티어 결정 (Index.tsx의 핵심 로직)
-      const finalLikes = Number(p.likes || 0);
-      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
-      
-      // DB에 명시된 값이 있다면 우선순위 (수동 설정 대응)
-      if (p.border_type && p.border_type !== 'none') borderType = p.border_type;
-
+      // [FIX] 고해상도 처리를 위해 URL 파라미터 최적화
       let finalImage = p.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
         // 기존 저화질/리사이징 파라미터 제거 후 고화질로 변경
@@ -178,6 +170,12 @@ const Index = () => {
           })
         : [finalImage];
 
+      // [FIX] DB 데이터와 클라이언트 좋아요 수를 합산하여 테두리 타입 결정
+      const finalLikes = Number(p.likes || 0);
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
+      
+      if (p.border_type) borderType = p.border_type;
+
       return {
         id: p.id,
         isAd,
@@ -198,7 +196,7 @@ const Index = () => {
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType // 이 프로퍼티가 MapContainer로 정확히 전달되어야 함
+        borderType // 이제 여기서 결정된 티어가 Post 객체에 담김
       };
     } catch (err) { return null as any; }
   }, []);
@@ -423,8 +421,6 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-    
-    // [FIX] allPosts를 순회하며 렌더링할 마커를 결정할 때 borderType과 isMine 상태를 정확히 반영
     const inBoundsCandidates = allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null) return false;
       if (blockedIds.has(post.user.id)) return false;
@@ -434,33 +430,20 @@ const Index = () => {
         post.lng >= Math.min(sw.lng, ne.lng) && 
         post.lng <= Math.max(sw.lng, ne.lng);
       if (!isInBounds) return false;
-      
       if (post.isAd) return true;
       if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
-
-      // 카테고리 필터링 로직
       let matches = false;
-      const isMine = authUser && (post.user.id === authUser.id);
-
-      if (selectedCategories.includes('all')) {
-        matches = true;
-      } else if (selectedCategories.includes('mine')) {
-        matches = isMine;
-      } else {
-        // 개별 카테고리 체크
-        const isCategoryMatch = selectedCategories.includes(post.category || 'none');
-        const isHotMatch = selectedCategories.includes('hot') && post.borderType === 'popular';
-        const isInfluencerMatch = selectedCategories.includes('influencer') && ['silver', 'gold', 'diamond'].includes(post.borderType);
-        matches = isCategoryMatch || isHotMatch || isInfluencerMatch;
-      }
+      if (selectedCategories.includes('mine')) matches = authUser && post.user.id === authUser.id;
+      else if (selectedCategories.includes('all')) matches = true;
+      else matches = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
       return matches;
     });
-
     const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());
-    
-    // [중요] displayedMarkers를 업데이트할 때 Post 객체의 모든 속성(특히 borderType)이 유지되도록 보장
-    setDisplayedMarkers(uniquePosts);
-  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+    setDisplayedMarkers(prev => {
+      if (prev.length === uniquePosts.length && prev.every((p, i) => p.id === uniquePosts[i].id)) return prev;
+      return uniquePosts;
+    });
+  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom, displayedMarkers.length]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {

@@ -538,36 +538,29 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
     
-    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
+    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
 
-    // [FINAL STYLE OVERHAUL]
-    // 인플루언서 및 내 포스팅의 마커가 지연 없이 즉시 반영되도록 스타일을 더 명확하게 구분
     let inlineBorderStyle = "border: 2.5px solid #ffffff;";
     let inlineShadow = "0 8px 16px -2px rgba(0, 0, 0, 0.15)";
-    let backgroundEffect = "";
 
     if (borderType === 'diamond') {
-      inlineBorderStyle = "border: 3.5px solid #22d3ee;";
-      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.6), 0 0 0 2px #a5f3fc";
-      backgroundEffect = "background: linear-gradient(135deg, #22d3ee, #a5f3fc);";
+      inlineBorderStyle = "border: 4px solid #22d3ee;";
+      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), 0 0 0 2px #a5f3fc";
     } else if (borderType === 'gold') {
-      inlineBorderStyle = "border: 3.5px solid #fbbf24;";
-      inlineShadow = "0 0 15px rgba(251, 191, 36, 0.5)";
-      backgroundEffect = "background: linear-gradient(135deg, #fbbf24, #fef3c7);";
+      inlineBorderStyle = "border: 4px solid #fbbf24;";
+      inlineShadow = "0 0 15px rgba(251, 191, 36, 0.6)";
     } else if (borderType === 'silver') {
       inlineBorderStyle = "border: 3.5px solid #94a3b8;";
-      inlineShadow = "0 0 12px rgba(148, 163, 184, 0.4)";
-      backgroundEffect = "background: linear-gradient(135deg, #94a3b8, #f1f5f9);";
+      inlineShadow = "0 0 10px rgba(148, 163, 184, 0.4)";
     } else if (borderType === 'popular') {
       inlineBorderStyle = "border: 3.5px solid #ef4444;";
-      inlineShadow = "0 0 15px rgba(239, 68, 68, 0.4)";
+      inlineShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
     } else if (isMine) {
       inlineBorderStyle = "border: 3.5px solid #4f46e5;";
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
-      backgroundEffect = "background: #4f46e5;";
     }
 
-    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; ${backgroundEffect} box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
+    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
   };
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
