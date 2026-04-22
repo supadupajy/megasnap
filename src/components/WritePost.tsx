@@ -108,15 +108,27 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    
     const handleResize = () => {
+      // [CRITICAL FIX] 모바일 브라우저에서 키보드가 올라올 때 
+      // visualViewport의 높이가 줄어드는 것을 이용해 실제 키보드 높이 계산
       const keyboardH = window.innerHeight - vv.height;
-      setKeyboardHeight(keyboardH > 100 ? keyboardH : 0);
+      
+      // 모바일 사파리/크롬 등에서 툴바 등으로 인해 발생하는 미세한 오차 제외
+      if (keyboardH > 60) {
+        setKeyboardHeight(keyboardH);
+        // [FIX] 키보드 활성 시 body에 클래스 추가하여 외부 스크롤 방지
+        document.body.classList.add('keyboard-open');
+      } else {
+        setKeyboardHeight(0);
+        document.body.classList.remove('keyboard-open');
+      }
     };
+
     vv.addEventListener('resize', handleResize);
-    vv.addEventListener('scroll', handleResize);
     return () => {
       vv.removeEventListener('resize', handleResize);
-      vv.removeEventListener('scroll', handleResize);
+      document.body.classList.remove('keyboard-open');
     };
   }, []);
 
@@ -342,8 +354,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
           style={{ 
             bottom: 0,
-            // [FIX] 키보드가 올라올 때 DrawerContent 자체가 밀리지 않도록 고정하고 내부 스크롤을 유도
-            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            // [FIX] 스마트폰에서 브라우저 자체가 밀어올리는 현상을 상쇄하기 위해 
+            // 키보드가 올라온 만큼 Drawer를 아래로 내림 (브라우저가 올리고 우리가 내리면 상쇄됨)
+            transform: keyboardHeight > 0 ? `translateY(${keyboardHeight}px)` : 'translateY(0)',
+            transition: 'transform 0.1s ease-out',
             willChange: 'transform'
           }}
         >
@@ -667,11 +681,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
       {isOpen && (
         <div
-          className="fixed left-0 right-0 px-5 pt-3 pb-6 bg-white z-[1002] transition-all duration-300 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]"
+          className="fixed left-0 right-0 px-5 pt-3 pb-6 bg-white z-[1002] shadow-[0_-10px_20px_rgba(0,0,0,0.05)]"
           style={{ 
-            bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
-            // [FIX] 키보드가 있을 때는 하단 네비게이션바 뒤로 숨지 않도록 padding-bottom 제거
-            paddingBottom: keyboardHeight > 0 ? '16px' : '110px'
+            // [FIX] 브라우저가 화면을 밀어올리는 지점에 버튼을 배치
+            // bottom: 0이면 브라우저가 밀어올린 만큼 키보드 바로 위에 위치하게 됨
+            bottom: keyboardHeight > 0 ? '0px' : '0px',
+            paddingBottom: keyboardHeight > 0 ? '16px' : '110px',
+            transition: 'padding-bottom 0.2s ease-out'
           }}
         >
           {currentPage === 1 ? (
