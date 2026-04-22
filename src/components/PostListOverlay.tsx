@@ -89,9 +89,8 @@ const PostListOverlay = ({
   onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState<'all' | 'popular' | 'influencer'>('all');
   
-  // ✅ [FIX] window 객체에 상태 기록하여 BottomNav 등에서 감지하게 함
+  // [FIX] window 객체에 상태 기록
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).__isPostListOpen = isOpen;
@@ -100,76 +99,68 @@ const PostListOverlay = ({
 
   const filteredPosts = useMemo(() => {
     return initialPosts.filter(post => {
-      if (activeFilter === 'popular') return post.likes >= 1000 || post.borderType === 'popular' || post.borderType === 'diamond';
-      if (activeFilter === 'influencer') return post.isInfluencer;
       return true;
     });
-  }, [initialPosts, activeFilter]);
-
-  if (!isOpen) return null;
+  }, [initialPosts]);
 
   return (
-    <AnimatePresence mode="wait">
-      {isOpen && (
-        <motion.div 
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ 
-            type: 'tween', 
-            duration: 0.3, 
-            ease: [0.32, 0.72, 0, 1] 
-          }}
-          style={{ willChange: 'transform' }}
-          className="fixed inset-0 top-[88px] bottom-0 z-[110] bg-white flex flex-col shadow-none overflow-hidden"
+    <motion.div 
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ 
+        type: 'tween', 
+        duration: 0.3, 
+        ease: [0.32, 0.72, 0, 1] 
+      }}
+      style={{ willChange: 'transform' }}
+      className="fixed inset-x-0 bottom-0 top-[88px] z-[110] bg-white flex flex-col shadow-none overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
+        <div className="flex flex-col">
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {filteredPosts.length} Posts</p>
+        </div>
+        <button 
+          onClick={onClose}
+          className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
-            <div className="flex flex-col">
-              <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {filteredPosts.length} Posts</p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-            >
-              <ChevronDown className="w-6 h-6" />
-            </button>
-          </div>
+          <ChevronDown className="w-6 h-6" />
+        </button>
+      </div>
 
-          {/* List Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 pb-20 custom-scrollbar">
-            {filteredPosts.length > 0 ? (
-              <div className="flex flex-col">
-                {filteredPosts.map((post) => (
-                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                    <PostItem 
-                      post={post}
-                      onLikeToggle={() => {}}
-                      onLocationClick={(e, lat, lng) => {
-                        onClose();
-                        // Index.tsx의 focusPostOnMap이 동작하도록 이벤트 발생
-                        window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
-                      }}
-                      onDelete={(id) => onDeletePost?.(id)}
-                      autoPlayVideo={true} // 리스트에서 자동 재생 활성화
-                    />
-                  </div>
-                ))}
+      {/* List Content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 pb-20 custom-scrollbar">
+        {filteredPosts.length > 0 ? (
+          <div className="flex flex-col">
+            {filteredPosts.map((post) => (
+              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
+                <PostItem 
+                  post={post}
+                  onLikeToggle={() => {}}
+                  onLocationClick={(e, lat, lng) => {
+                    onClose();
+                    // Index.tsx의 focusPostOnMap이 동작하도록 이벤트 발생
+                    window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
+                  }}
+                  onDelete={(id) => onDeletePost?.(id)}
+                  autoPlayVideo={true} // 리스트에서 자동 재생 활성화
+                />
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <LayoutGrid className="w-8 h-8 text-gray-300" />
-                </div>
-                <p className="text-gray-900 font-bold mb-1">표시할 포스팅이 없습니다</p>
-                <p className="text-gray-400 text-xs">필터를 변경하거나 지도를 이동해보세요</p>
-              </div>
-            )}
+            ))}
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <LayoutGrid className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-gray-900 font-bold mb-1">표시할 포스팅이 없습니다</p>
+            <p className="text-gray-400 text-xs">필터를 변경하거나 지도를 이동해보세요</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 
