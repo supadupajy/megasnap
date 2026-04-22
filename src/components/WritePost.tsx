@@ -373,7 +373,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                 <X className="w-5 h-5 text-gray-400" />
               </Button>
             </div>
-
+            {/* 디버그 — 확인 후 삭제 */}
+<div className="text-xs text-red-500 px-2">
+  keyboard: {keyboardHeight} / innerHeight: {typeof window !== 'undefined' ? window.innerHeight : 0} / vvHeight: {typeof window !== 'undefined' && window.visualViewport ? Math.round(window.visualViewport.height) : 0}
+</div>
             {/* 페이지 콘텐츠 — 하단 버튼(fixed) 높이만큼 pb 확보 */}
             <div className="flex-1 min-h-0 overflow-y-auto pb-24">
               <AnimatePresence mode="wait">
