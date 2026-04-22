@@ -90,10 +90,10 @@ export const fetchPostsInBounds = async (
 
   try {
     // ✅ [데이터 다이어트 핵심] select('*') 대신 마커 생성에 꼭 필요한 필드만 선택
-    // content, user_name, image_url 등 무거운 텍스트 전송 차단
+    // [FIX] 광고 판별을 위해 content 필드를 반드시 포함해야 함! (기존 누락으로 인해 마커 렌더링 시 isAd 판별 불가)
     const { data, error } = await supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url')
+      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
