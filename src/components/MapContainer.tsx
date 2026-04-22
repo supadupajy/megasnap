@@ -509,7 +509,6 @@ const MapContainer = ({
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-    const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
     const isBrokenUrl = (url: string) => {
@@ -518,7 +517,6 @@ const MapContainer = ({
     };
 
     let displayImage = post.image;
-    // [FIX] 마커 이미지도 고화질로 처리
     if (displayImage && displayImage.includes('unsplash.com')) {
       displayImage = displayImage.split('?')[0] + "?auto=format&fit=crop&w=200&q=80";
     }
@@ -527,39 +525,21 @@ const MapContainer = ({
       displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80&sig=${post.id}`;
     }
 
-    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white';
-    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; }
-    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; }
-    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; }
-    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = ''; labelBg = '#22d3ee'; labelColor = 'black'; }
-    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = ''; labelBg = '#fbbf24'; labelColor = 'black'; }
-    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = ''; labelBg = '#94a3b8'; }
-
+    // [FIX] 모든 마커 디자인을 일반 포스팅 스타일로 통일
+    // 광고(AD)만 구분할 수 있도록 라벨 유지
+    let pinColor = '#ffffff'; 
+    let labelText = isAd ? 'AD' : ''; 
+    let labelBg = '#3b82f6'; 
+    let labelColor = 'white';
+    
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
     
-    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
+    const animationClass = isAd ? 'animate-ad-breathing' : '';
 
-    // [FINAL FIX] 모든 마커에 동일한 60px 크기와 테두리 구조 강제 적용
+    // 모든 마커에 일괄적으로 3px 화이트 테두리 적용
     let inlineBorderStyle = "border: 3px solid #ffffff;"; 
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
-
-    if (borderType === 'diamond') {
-      inlineBorderStyle = "border: 4px solid #22d3ee;";
-      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8)";
-    } else if (borderType === 'gold') {
-      inlineBorderStyle = "border: 4px solid #fbbf24;";
-      inlineShadow = "0 0 15px rgba(251, 191, 36, 0.6)";
-    } else if (borderType === 'silver') {
-      inlineBorderStyle = "border: 3.5px solid #94a3b8;";
-      inlineShadow = "0 0 10px rgba(148, 163, 184, 0.4)";
-    } else if (borderType === 'popular') {
-      inlineBorderStyle = "border: 3.5px solid #ef4444;";
-      inlineShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
-    } else if (isMine) {
-      inlineBorderStyle = "border: 3.5px solid #4f46e5;";
-      inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
-    }
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
@@ -574,7 +554,7 @@ const MapContainer = ({
             ${videoIconHtml}
           </div>
         </div>
-        ${pinColor ? `<div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
+        <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>
       </div>
     </div>`;
   };

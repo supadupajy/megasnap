@@ -123,7 +123,6 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      // [FIX] 고해상도 고퀄리티 이미지로 폴백 변경
       const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
       
       const isValidUrl = (url: any) => {
@@ -147,10 +146,8 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
-      // [FIX] 고해상도 처리를 위해 URL 파라미터 최적화
       let finalImage = p.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
-        // 기존 저화질/리사이징 파라미터 제거 후 고화질로 변경
         finalImage = finalImage.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
       }
 
@@ -158,7 +155,6 @@ const Index = () => {
         finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
       }
       
-      // 최종 검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
       const validImages = Array.isArray(p.images) && p.images.length > 0
@@ -170,23 +166,17 @@ const Index = () => {
           })
         : [finalImage];
 
-      // [FIX] DB 데이터와 클라이언트 좋아요 수를 합산하여 테두리 타입 결정
-      const finalLikes = Number(p.likes || 0);
-      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
-      
-      if (p.border_type) borderType = p.border_type;
-
       return {
         id: p.id,
         isAd,
         isGif: false,
-        isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+        isInfluencer: false,
         user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
         content: p.content?.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
-        likes: finalLikes,
+        likes: Number(p.likes || 0),
         commentsCount: 0,
         comments: [],
         image: finalImage,
@@ -196,7 +186,7 @@ const Index = () => {
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType // 이제 여기서 결정된 티어가 Post 객체에 담김
+        borderType: 'none' // 모든 포스트의 보더 타입을 none으로 통일
       };
     } catch (err) { return null as any; }
   }, []);

@@ -308,12 +308,7 @@ const PostItem = ({
   };
 
   const getMediaBorderContainerClass = () => {
-    if (isMine) return 'my-post-border-container';
     if (isAd) return 'ad-border-container';
-    if (borderType === 'popular') return 'popular-border-container';
-    if (borderType === 'diamond') return 'diamond-border-container';
-    if (borderType === 'gold') return 'gold-border-container';
-    if (borderType === 'silver') return 'silver-border-container';
     return '';
   };
 
@@ -326,8 +321,7 @@ const PostItem = ({
       ref={containerRef}
       onClick={onClick}
       className={cn(
-        "relative bg-white mb-2 last:mb-20 cursor-pointer rounded-[28px] overflow-hidden border border-gray-100 shadow-sm",
-        (borderType !== 'none' && !disablePulse) && "animate-influencer-float"
+        "relative bg-white mb-2 last:mb-20 cursor-pointer rounded-[28px] overflow-hidden border border-gray-100 shadow-sm"
       )}
     >
       <div className="flex items-center justify-between px-4 py-3">
