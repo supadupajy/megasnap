@@ -462,6 +462,7 @@ const MapContainer = ({
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
+      // ✅ 줌 레벨에 따른 스케일 계산 (강제 재계산 및 적용)
       let scale = 1.0;
       if (currentLevel === 6) scale = 0.75;
       else if (currentLevel === 7) scale = 0.5;
@@ -469,6 +470,7 @@ const MapContainer = ({
       
       scale = Math.max(scale, 0);
 
+      // ✅ [중요] contentStateKey에 currentLevel을 포함하여 줌 변경 시 반드시 리렌더링 유도
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
@@ -513,7 +515,7 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // ✅ 8->7단계 등 다시 나타날 때 부드러운 효과를 위해 transition 추가
+          // ✅ 기존 오버레이가 있을 때도 현재 스케일을 강제로 다시 적용
           content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
           content.style.opacity = "1";
@@ -522,6 +524,7 @@ const MapContainer = ({
           if (isHighlighted) content.classList.add('highlighted'); 
           else content.classList.remove('highlighted');
 
+          // ✅ 줌 레벨이 바뀌면 contentStateKey가 변하므로 내부 HTML도 갱신될 수 있음
           if (content.getAttribute('data-content-state') !== contentStateKey) {
             requestAnimationFrame(() => { 
               content.innerHTML = getMarkerInnerHtml(post, isViewed); 
