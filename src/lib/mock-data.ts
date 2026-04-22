@@ -272,7 +272,7 @@ export const getDiverseUnsplashUrl = (
     food: 'food',
     animal: 'animal'
   };
-  return getStableWebImage(`${seed}:${salt}`, typeMap[variant] || 'scenery');
+  return getStableWebImage(`${seed}:${salt}`);
 };
 
 export const remapUnsplashDisplayUrl = (
