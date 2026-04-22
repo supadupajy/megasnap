@@ -306,14 +306,21 @@ const MapContainer = ({
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        // [수정] 튕김 방지를 위해 등장 애니메이션 클래스를 제거하거나 transform 충돌을 막음
-        // content.classList.add('animate-marker-appear'); // 주석 처리하여 튕김 방지
+        // ✅ 등장 애니메이션 다시 활성화 (부드러운 생성)
+        if (post.isNewRealtime) {
+          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
+        } else {
+          content.classList.add('animate-marker-appear');
+        }
 
         if (isHighlighted) content.classList.add('highlighted');
         
         content.style.transformOrigin = 'bottom center';
+        // ✅ scale 스타일을 content 자체가 아닌 transform 속성으로 관리 (카카오맵 기본 구조 유지)
         content.style.transform = `scale(${scale})`;
-        content.style.transition = 'none'; // 초기 생성 시에는 즉시 크기 고정
+        
+        // transition을 0.2s 정도로 적당히 주어 튕김을 억제하면서 부드럽게 유지
+        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -490,7 +497,6 @@ const MapContainer = ({
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
-    // 최적화: image_url이 없으면 Unsplash 기본 이미지를 사용 (Egress 절약)
     const displayImage = post.image || FALLBACK_IMAGE;
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
@@ -504,10 +510,10 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
     
-    // [수정] 개별 마커 내부의 floating 애니메이션 등을 제거하거나 scale 간섭 최소화
-    const animationClass = isAd ? 'animate-ad-breathing' : '';
+    // ✅ 내부 floating 애니메이션 복구
+    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
 
-    return `<div class="marker-content-wrapper" style="transform-origin: bottom center;"><div class="marker-highlight-ping"></div><div class="${animationClass}" style="transform-origin: bottom center;">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2px solid #ffffff;`} overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
+    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2px solid #ffffff;`} overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
   };
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
