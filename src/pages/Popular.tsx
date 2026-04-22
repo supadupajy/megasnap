@@ -6,10 +6,10 @@ import { Loader2 } from 'lucide-react';
 import WritePost from '@/components/WritePost';
 import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
+import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/components/AuthProvider';
-import { getYoutubeThumbnail } from '@/lib/utils';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import PostItem from '@/components/PostItem';
 
@@ -68,8 +68,8 @@ const Popular = () => {
           user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
           content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
           likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-          isLiked: false, createdAt: new Date(p.created_at), borderType,
-          category: p.category || 'none', // category 필드 포함
+          isLiked: false, isSaved: false, createdAt: new Date(p.created_at), borderType,
+          category: p.category || 'none',
         };
       }) as Post[];
       return mappedPosts;
@@ -136,12 +136,30 @@ const Popular = () => {
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[88px]">
         <div className="flex flex-col">
-          {filteredPosts.map((post) => (
-            <PostItem key={post.id} id={post.id} user={post.user} content={post.content} location={post.location} likes={post.likes} commentsCount={post.commentsCount} comments={post.comments} image={post.image} images={post.images} lat={post.lat} lng={post.lng} isLiked={post.isLiked} isAd={post.isAd} isGif={post.isGif} isInfluencer={post.isInfluencer} borderType={post.borderType} youtubeUrl={post.youtubeUrl} videoUrl={post.videoUrl} category={post.category} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id)} onLocationClick={handleLocationClick} onDelete={handlePostDelete} />
-          ))}
-        </div>
-        <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-          {isLoadingMore ? (<><Loader2 className="w-6 h-6 text-indigo-600 animate-spin" /><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p></>) : (hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>)}
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pt-4 pb-32 px-4">
+            {filteredPosts.map((post) => (
+              <PostItem 
+                key={post.id} 
+                post={post}
+                disablePulse={true} 
+                onLikeToggle={() => handleLikeToggle(post.id)} 
+                onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng)} 
+                onDelete={handlePostDelete} 
+              />
+            ))}
+            
+            {filteredPosts.length === 0 && !isLoadingMore && (
+              <div className="flex-1 flex flex-col items-center justify-center py-12">
+                <p className="text-gray-400 text-center">인기 포스팅이 없습니다.</p>
+              </div>
+            )}
+            
+            {filteredPosts.length > 0 && (
+              <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
+                {isLoadingMore ? (<><Loader2 className="w-6 h-6 text-indigo-600 animate-spin" /><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">다음 인기 포스팅을 불러오는 중...</p></>) : (hasMore ? <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" /> : <p className="text-[10px] font-black text-gray-300 uppercase">모든 인기 포스팅을 확인했습니다</p>)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} onStartLocationSelection={() => { setIsWriteOpen(false); navigate('/', { state: { startSelection: true } }); }} />

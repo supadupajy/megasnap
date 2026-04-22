@@ -24,36 +24,141 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostItemProps {
   post: Post;
-  onLikeToggle?: (e: React.MouseEvent) => void;
+  isViewed?: boolean;
+  disablePulse?: boolean;
+  onLikeToggle?: (postId: string) => void;
+  onSaveToggle?: (postId: string, isSaved: boolean) => void;
   onDelete?: (postId: string) => void;
   onCommentClick?: (e: React.MouseEvent, comment: Comment) => void;
   onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onShare?: (e: React.MouseEvent) => void;
   onSave?: (e: React.MouseEvent) => void;
+  onImageError?: (postId: string) => void;
 }
 
-const PostItem = ({ post, onLikeToggle, onDelete, onCommentClick, onLocationClick, onShare, onSave }: PostItemProps) => {
+const PostItem = ({ 
+  post, 
+  onLikeToggle, 
+  onSaveToggle,
+  onDelete, 
+  onCommentClick, 
+  onLocationClick, 
+  onShare, 
+  onSave,
+  onImageError,
+  isViewed = false,
+  disablePulse = false
+}: PostItemProps) => {
   const [imgError, setImgError] = useState(false);
-  const { user: authUser } = useAuth();
+  const [showComments, setShowComments] = useState(false);
+  const [isSaved, setIsSaved] = useState(post.isSaved || false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [commentInput, setCommentInput] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>(post.comments || []);
   
+  const { user: authUser, profile } = useAuth();
+  const { blockUser } = useBlockedUsers();
+  const navigate = useNavigate();
+
+  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+  const isAd = post.isAd;
   const displayImage = imgError ? getFallbackImage(post.id) : post.image;
+  const isLiked = post.isLiked;
+  const likesCount = post.likes;
+  const content = post.content;
+  const user = post.user;
+  const lat = post.lat;
+  const lng = post.lng;
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+
+  const handleLikeToggleLocal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onLikeToggle?.(post.id);
+  };
+
+  const handleSaveToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextSaved = !isSaved;
+    setIsSaved(nextSaved);
+    onSaveToggle?.(post.id, !isSaved);
+  };
+
+  const handleUserClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isMine) navigate('/profile');
+    else navigate(`/profile/${user.id}`);
+  };
+
+  const handleLocationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lat !== undefined && lng !== undefined) {
+      onLocationClick?.(e, lat, lng);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (onDelete) onDelete(post.id);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleAddComment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!commentInput.trim() || !authUser) return;
+    setIsSubmittingComment(true);
+    const newCommentText = commentInput.trim();
+    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    try {
+      const savedComment = await insertComment({
+        postId: post.id,
+        userId: authUser.id,
+        userName: displayName,
+        userAvatar: profile?.avatar_url,
+        content: newCommentText,
+      });
+      setLocalComments((prev) => [...prev, savedComment]);
+      setCommentInput('');
+      showSuccess('댓글이 등록되었습니다.');
+    } catch (err: any) {
+      showError(err.message || '댓글 등록에 실패했습니다.');
+    } finally { setIsSubmittingComment(false); }
+  };
+
+  const renderCategoryBadge = () => {
+    const category = post.category || 'none';
+    if (category === 'none') return null;
+    let Icon = null; let bgColor = ""; let label = "";
+    switch (category) {
+      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
+      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
+      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
+      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
+    }
+    if (!Icon) return null;
+    return (
+      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-black">{label}</span>
+      </div>
+    );
+  };
 
   return (
-    <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4">
+    <div className={cn("bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4", !disablePulse && isViewed && "opacity-80")}>
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
             <img 
-              src={post.user.avatar} 
-              alt={post.user.name} 
+              src={user.avatar} 
+              alt={user.name} 
               className="w-full h-full rounded-full object-cover border-2 border-white" 
-              onError={(e) => (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80"} 
+              onError={(e) => (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg"} 
             />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
-                {post.user.name}
+                {user.name}
               </p>
             </div>
             <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
@@ -65,11 +170,12 @@ const PostItem = ({ post, onLikeToggle, onDelete, onCommentClick, onLocationClic
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         <img 
           src={displayImage} 
-          alt={post.content}
+          alt={content}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           onError={() => {
             console.log(`[PostItem] Image failed to load, replacing with fallback: ${post.id}`);
             setImgError(true);
+            onImageError?.(post.id);
           }}
         />
       </div>
@@ -79,15 +185,12 @@ const PostItem = ({ post, onLikeToggle, onDelete, onCommentClick, onLocationClic
           <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700" /></button></div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-3">
-              {/* 저장 버튼 (북마크) */}
               <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
                 <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
               </button>
               
-              {/* 카테고리 뱃지 */}
               {renderCategoryBadge()}
               
-              {/* 위치보기 버튼 */}
               {lat !== undefined && lng !== undefined && (
                 <button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
                   <Navigation className="w-3.5 h-3.5 fill-indigo-600" />

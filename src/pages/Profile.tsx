@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
-import { Post } from '@/types';
-import { cn, getYoutubeThumbnail, getUnsplashPlaceholder } from '@/lib/utils';
+import { Post, Comment as PostComment } from '@/types';
+import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
@@ -109,7 +109,8 @@ const Profile = () => {
       image: finalImage, 
       images: finalImages.length > 0 ? finalImages : [finalImage], 
       youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType
+      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType,
+      category: sanitized.category || 'none'
     };
   };
 
@@ -142,7 +143,7 @@ const Profile = () => {
         .from('saved_posts')
         .select(`
           post_id,
-          posts:posts (*)
+          posts (*)
         `)
         .eq('user_id', uid)
         .limit(30);
@@ -154,8 +155,8 @@ const Profile = () => {
       if (savedData) {
         // Extract the nested post objects and format them
         const validPosts = savedData
-          .filter(item => item.posts)
-          .map(item => item.posts);
+          .filter((item: any) => item.posts)
+          .map((item: any) => item.posts);
           
         const formattedSavedPosts = await Promise.all(validPosts.map(mapDbToPost));
         setSavedPosts(formattedSavedPosts);
@@ -249,7 +250,7 @@ const Profile = () => {
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                     <PostItem 
-                      {...post}
+                      post={post}
                       disablePulse={true} 
                       onLikeToggle={() => handleLikeToggle(post.id, true)}
                       onSaveToggle={() => handleSaveToggle(post.id, true)}
@@ -263,7 +264,19 @@ const Profile = () => {
                 )}
               </div>
             ) : (
-              <><div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>{(viewMode === 'list' || viewMode === 'gif-list') ? (<div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]"><PostItem {...post} disablePulse={true} onLikeToggle={() => handleLikeToggle(post.id, false)} onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)} onDelete={handlePostDelete} onImageError={() => handleImageError(post.id)} /></div>))}</div>) : (<div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>)}</>
+              <><div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>{(viewMode === 'list' || viewMode === 'gif-list') ? (<div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
+                      <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                        <PostItem 
+                          post={post}
+                          disablePulse={true} 
+                          onLikeToggle={() => handleLikeToggle(post.id, false)} 
+                          onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} 
+                          onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)} 
+                          onDelete={handlePostDelete} 
+                          onImageError={() => handleImageError(post.id)} 
+                        />
+                      </div>
+                    ))}</div>) : (<div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>)}</>
             )}
           </div>
         </div>

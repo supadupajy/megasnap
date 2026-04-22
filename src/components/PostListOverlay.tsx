@@ -55,9 +55,9 @@ const ObservedPostItem = ({
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
       <PostItem 
-        {...post}
+        post={post}
         isViewed={isViewed} 
-        onLikeToggle={() => onLikeToggle(post.id)}
+        onLikeToggle={onLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
       />
@@ -341,17 +341,20 @@ const PostListOverlay = ({
           <div className="flex flex-col pt-4 pb-4">
             {filteredPosts.length > 0 ? (
               <>
-                {filteredPosts.map((post) => (
-                  <ObservedPostItem
-                    key={post.id}
-                    post={post}
-                    onVisible={markAsViewed}
-                    isViewed={viewedIds.has(post.id)}
-                    onLikeToggle={handleLikeToggle}
-                    onLocationClick={handleLocationClick}
-                    onDelete={handleLocalDelete}
-                  />
-                ))}
+                {filteredPosts.map((post) => {
+                  const isViewed = viewedIds.has(post.id);
+                  return (
+                    <ObservedPostItem 
+                      key={post.id}
+                      post={post}
+                      onVisible={markAsViewed}
+                      isViewed={isViewed}
+                      onLikeToggle={handleLikeToggle}
+                      onLocationClick={handleLocationClick}
+                      onDelete={handleLocalDelete}
+                    />
+                  );
+                })}
                 
                 {(isLoadingMore || hasMore) && (
                   <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">

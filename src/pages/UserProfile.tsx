@@ -1,48 +1,33 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Grid, Bookmark, ChevronLeft, UserPlus, Check, MessageCircle, MoreVertical, Play, AlertCircle, Ban, Map, Loader2 } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Grid, Bookmark, User as UserIcon, Play, Loader2, UserPlus, UserCheck, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate, useParams } from 'react-router-dom';
-import WritePost from '@/components/WritePost';
-import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { showSuccess, showError } from '@/utils/toast';
-import { chatStore } from '@/utils/chat-store';
+import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
-import { useAuth } from '@/components/AuthProvider';
+import PostItem from '@/components/PostItem';
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
 
 const UserProfile = () => {
+  const { id: userId } = useParams();
   const navigate = useNavigate();
-  const { userId } = useParams();
   const { user: authUser } = useAuth();
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
-  const [posts, setPosts] = useState<Post[]>([]);
+  
+  const [userData, setUserData] = useState<any>(null);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [targetUser, setTargetUser] = useState<any>(null); // 실제 DB에서 가져온 유저 정보
-
-  // 전역 글쓰기 이벤트 리스너
-  useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
+  const [isDataLoading, setIsDataLoading] = useState(false);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -56,188 +41,115 @@ const UserProfile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
-    const sanitized = await sanitizeYoutubeMedia(p);
+    const SAFE_FALLBACK = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+
+    const isValidUrl = (url: any) => {
+      if (!url || typeof url !== 'string') return false;
+      const clean = url.trim();
+      if (/post\s*content/i.test(clean)) return false;
+      if (!clean.startsWith('http')) return false;
+      return true;
+    };
+
+    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+    let rawImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.filter(isValidUrl) : [];
+    if (rawImages.length === 0) rawImages = [rawImage];
+
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    const finalImage = sanitized.youtube_url 
-      ? (getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url)
-      : remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
+    if (finalImage.includes('unsplash.com')) {
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
+    }
+    
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 ? sanitized.images.filter(isValidUrl) : [finalImage];
+
+    let isLiked = false;
+    let isSaved = false;
+    
+    if (authUser?.id) {
+      const [{ data: likeData }, { data: saveData }] = await Promise.all([
+        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
+      ]);
+      isLiked = !!likeData;
+      isSaved = !!saveData;
+    }
 
     return {
-      id: sanitized.id,
-      isAd,
-      isGif: false,
-      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-      user: {
-        id: sanitized.user_id,
-        name: sanitized.user_name || '탐험가',
-        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
-      },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: sanitized.location_name || '알 수 없는 장소',
-      lat: sanitized.latitude,
-      lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0),
-      commentsCount: 0,
-      comments: [],
-      image: finalImage,
-      youtubeUrl: sanitized.youtube_url,
-      videoUrl: sanitized.video_url,
-      isLiked: false,
-      createdAt: new Date(sanitized.created_at),
-      borderType
+      id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
+      image: finalImage, 
+      images: finalImages.length > 0 ? finalImages : [finalImage], 
+      youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
+      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType,
+      category: sanitized.category || 'none'
     };
   };
 
-  const fetchUserData = useCallback(async () => {
-    if (!userId) return;
-    setIsLoading(true);
+  const fetchUserData = useCallback(async (uid: string) => {
+    setIsDataLoading(true);
     try {
-      // 1. 타겟 유저 프로필 정보 가져오기
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, nickname, avatar_url, bio')
-        .eq('id', userId)
-        .single();
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', uid).single();
+      setUserData(profileData);
 
-      if (profileError || !profileData) throw new Error('User not found');
-      setTargetUser(profileData);
+      const { data: postsData } = await supabase.from('posts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      const formattedPosts = await Promise.all((postsData || []).map(mapDbToPost));
+      setUserPosts(formattedPosts);
 
-      // 2. 유저 게시물 가져오기
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data: savedData } = await supabase.from('saved_posts').select('posts (*)').eq('user_id', uid);
+      const validSaved = (savedData || []).filter((item: any) => item.posts).map((item: any) => item.posts);
+      const formattedSaved = await Promise.all(validSaved.map(mapDbToPost));
+      setSavedPosts(formattedSaved);
 
-      if (error) throw error;
-      const formatted = await Promise.all((data || []).map(mapDbToPost));
-      setPosts(formatted);
-
-      // 3. 팔로워/팔로잉 카운트 가져오기
-      const [followersRes, followingRes] = await Promise.all([
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
-      ]);
-
-      setFollowerCount(followersRes.count || 0);
-      setFollowingCount(followingRes.count || 0);
-
-      // 4. 팔로우 상태 확인
       if (authUser) {
-        const { data: followData } = await supabase
-          .from('follows')
-          .select('id')
-          .eq('follower_id', authUser.id)
-          .eq('following_id', userId)
-          .maybeSingle();
-        
+        const { data: followData } = await supabase.from('follows').select('id').eq('follower_id', authUser.id).eq('following_id', uid).maybeSingle();
         setIsFollowing(!!followData);
       }
 
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)
+      ]);
+      setFollowerCount(followersRes.count || 0);
+      setFollowingCount(followingRes.count || 0);
     } catch (err) {
-      console.error('Error fetching user data:', err);
-      setTargetUser(null);
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setIsDataLoading(false);
     }
-  }, [userId, authUser]);
+  }, [authUser]);
 
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+  useEffect(() => { 
+    if (userId) fetchUserData(userId); 
+  }, [userId, fetchUserData]);
 
-  const handleFollowToggle = async () => {
-    if (!authUser || !userId) {
-      showError('로그인이 필요합니다.');
-      return;
-    }
+  const handleLikeToggle = (postId: string) => {
+    setUserPosts(prev => prev.map(p => p.id === postId ? { ...p, isLiked: !p.isLiked, likes: !p.isLiked ? p.likes + 1 : p.likes - 1 } : p));
+  };
 
+  const toggleFollow = async () => {
+    if (!authUser || !userId) return;
+    const prevFollowing = isFollowing;
+    setIsFollowing(!prevFollowing);
+    setFollowerCount(prev => prevFollowing ? prev - 1 : prev + 1);
     try {
-      if (isFollowing) {
-        const { error } = await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', authUser.id)
-          .eq('following_id', userId);
-        if (error) throw error;
-        setIsFollowing(false);
-        setFollowerCount(prev => prev - 1);
-        showSuccess('팔로우를 취소했습니다.');
+      if (prevFollowing) {
+        await supabase.from('follows').delete().eq('follower_id', authUser.id).eq('following_id', userId);
       } else {
-        const { error } = await supabase
-          .from('follows')
-          .insert({
-            follower_id: authUser.id,
-            following_id: userId
-          });
-        if (error) throw error;
-        setIsFollowing(true);
-        setFollowerCount(prev => prev + 1);
-        showSuccess('팔로우를 시작했습니다! ✨');
+        await supabase.from('follows').insert({ follower_id: authUser.id, following_id: userId });
       }
     } catch (err) {
-      console.error('Follow toggle error:', err);
-      showError('처리에 실패했습니다.');
+      setIsFollowing(prevFollowing);
+      setFollowerCount(prev => prevFollowing ? prev + 1 : prev - 1);
     }
   };
 
-  const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
-    const setter = isFromSaved ? setSavedPosts : setPosts;
-    setter(prev => prev.map(post => {
-      if (post.id === postId) {
-        const isLiked = !post.isLiked;
-        return {
-          ...post,
-          isLiked,
-          likes: isLiked ? post.likes + 1 : post.likes - 1
-        };
-      }
-      return post;
-    }));
-  }, []);
-
-  const handleGridItemClick = (postId: string) => {
-    if (viewMode === 'gifs') {
-      setViewMode('gif-list');
-    } else {
-      setViewMode('list');
-    }
-    
-    setTimeout(() => {
-      const element = document.getElementById(`post-${postId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = FALLBACK_IMAGE;
-  };
-
-  const handleMessageClick = () => {
-    if (!targetUser) return;
-    chatStore.getOrCreateRoom(targetUser.id, targetUser.nickname || targetUser.name, targetUser.avatar_url);
-    navigate(`/chat/${targetUser.id}`);
-  };
-
-  const handleReport = () => {
-    showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
-  };
-
-  const handleBlock = () => {
-    if (!targetUser) return;
-    showError(`${targetUser.nickname} 님을 차단했습니다.`);
-  };
-
-  const handlePostDelete = useCallback((postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
-  }, []);
-
-  if (isLoading) {
+  if (isDataLoading && !userData) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -245,13 +157,12 @@ const UserProfile = () => {
     );
   }
 
-  if (!targetUser) {
+  if (!userData && !isDataLoading) {
     return (
-      <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-        <div className="pt-[88px] p-6 text-center">
-          <h2 className="text-xl font-black text-gray-900 mb-4">사용자를 찾을 수 없습니다.</h2>
-          <Button onClick={() => navigate(-1)}>뒤로가기</Button>
-        </div>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <UserIcon className="w-16 h-16 text-gray-200 mb-4" />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">사용자를 찾을 수 없습니다</h2>
+        <Button onClick={() => navigate(-1)} variant="outline">뒤로 가기</Button>
       </div>
     );
   }
@@ -259,79 +170,32 @@ const UserProfile = () => {
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[88px]">
-        <div className="px-4 py-6 bg-gray-50/50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-600" />
-              </button>
-              <div>
-                <h2 className="text-xl font-black text-gray-900">유저 프로필</h2>
-                <p className="text-xs text-gray-400 font-medium">@{targetUser.nickname} 님의 활동</p>
-              </div>
-            </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors outline-none">
-                  <MoreVertical className="w-6 h-6 text-gray-400" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
-                <DropdownMenuItem 
-                  onClick={handleReport}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
-                >
-                  <AlertCircle className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-bold text-gray-700">신고</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleBlock}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                >
-                  <Ban className="w-4 h-4 text-red-600" />
-                  <span className="text-sm font-bold text-red-600">차단</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className="px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </button>
+          <h2 className="text-lg font-black text-gray-900">{userData?.nickname || '탐험가'}</h2>
         </div>
-
+        
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-indigo-600">
-                <img 
-                  src={targetUser.avatar_url || `https://i.pravatar.cc/150?u=${targetUser.id}`} 
-                  alt="profile" 
-                  className="w-full h-full rounded-full object-cover border-4 border-white"
-                  onError={handleImageError}
-                />
-              </div>
+            <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+              <img src={userData?.avatar_url || FALLBACK_IMAGE} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{targetUser.nickname}</h2>
-              <p className="text-sm text-gray-500 mb-4">{targetUser.bio || 'Chora 탐험가'}</p>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{userData?.nickname || '탐험가'}</h2>
+              <p className="text-sm text-gray-500 mb-4">{userData?.bio || "지도를 여행하는 탐험가 📍"}</p>
               <div className="flex gap-4">
                 <div className="text-center">
-                  <p className="font-bold text-gray-900">{posts.length}</p>
+                  <p className="font-bold text-gray-900">{userPosts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                <div 
-                  className="text-center cursor-pointer active:scale-95 transition-transform"
-                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}
-                >
-                  <p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{followerCount}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                <div 
-                  className="text-center cursor-pointer active:scale-95 transition-transform"
-                  onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}
-                >
-                  <p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{followingCount}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
               </div>
@@ -339,158 +203,47 @@ const UserProfile = () => {
           </div>
 
           <div className="flex gap-2 mb-8">
-            <Button 
-              onClick={handleFollowToggle}
-              className={`flex-1 font-bold rounded-xl gap-2 h-12 transition-all ${
-                isFollowing 
-                  ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
-              }`}
-            >
-              {isFollowing ? (
-                <>
-                  <Check className="w-4 h-4" /> 팔로잉
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" /> 팔로우
-                </>
-              )}
+            <Button onClick={toggleFollow} className={cn("flex-1 rounded-xl font-bold h-11", isFollowing ? "bg-gray-100 hover:bg-gray-200 text-gray-900" : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100")}>
+              {isFollowing ? <><UserCheck className="w-4 h-4 mr-2" /> 팔로잉</> : <><UserPlus className="w-4 h-4 mr-2" /> 팔로우</>}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleMessageClick}
-              className="flex-1 border-gray-200 text-gray-900 font-bold rounded-xl gap-2 h-12"
-            >
-              <MessageCircle className="w-4 h-4" /> 메시지
+            <Button variant="outline" onClick={() => navigate(`/chat/${userId}`)} className="flex-1 rounded-xl font-bold h-11 border-gray-200">
+              <MessageCircle className="w-4 h-4 mr-2" /> 메시지
             </Button>
           </div>
 
           <div className="flex border-b border-gray-100 mb-4">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} />
-            </button>
-            <button 
-              onClick={() => setViewMode('gifs')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Play className={cn("w-6 h-6", (viewMode === 'gifs' || viewMode === 'gif-list') ? "text-indigo-600" : "")} />
-            </button>
-            <button 
-              onClick={() => setViewMode('saved')}
-              className={cn(
-                "flex-1 py-3 flex justify-center transition-all",
-                viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300"
-              )}
-            >
-              <Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} />
-            </button>
+            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Grid className="w-6 h-6" /></button>
+            <button onClick={() => setViewMode('gifs')} className={cn("flex-1 py-3 flex justify-center", (viewMode === 'gifs' || viewMode === 'gif-list') ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Play className="w-6 h-6" /></button>
+            <button onClick={() => setViewMode('saved')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'saved' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Bookmark className="w-6 h-6" /></button>
           </div>
 
           <div className="flex flex-col -mx-6">
             {viewMode === 'saved' ? (
-              <>
-                <div className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4">
-                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                    <Bookmark className="w-4 h-4 fill-indigo-600" />
-                    저장된 포스팅
-                  </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{targetUser.nickname} 님의 저장된 기록</p>
-                </div>
+              <div className="px-6 flex flex-col gap-6">
                 {savedPosts.map((post) => (
-                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                    <PostItem
-                      id={post.id}
-                      user={post.user}
-                      content={post.content}
-                      location={post.location}
-                      likes={post.likes}
-                      commentsCount={post.commentsCount}
-                      comments={post.comments}
-                      image={post.image}
-                      images={post.images}
-                      isLiked={post.isLiked}
-                      isAd={post.isAd}
-                      isGif={post.isGif}
-                      isInfluencer={post.isInfluencer}
-                      borderType={post.borderType}
-                      disablePulse={true}
-                      onLikeToggle={() => handleLikeToggle(post.id, true)}
-                    />
-                  </div>
+                  <PostItem key={post.id} post={post} />
                 ))}
-                {savedPosts.length === 0 && !isLoading && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
-                )}
-              </>
+              </div>
             ) : (
-              <>
-                <div 
-                  onClick={() => navigate('/', { state: { filterUserId: userId } })}
-                  className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"
-                >
-                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                    <Map className="w-4 h-4 fill-indigo-600" />
-                    지도에서 보기
-                  </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">{targetUser.nickname} 님의 추억들을 지도에서 확인하세요</p>
+              (viewMode === 'list' || viewMode === 'gif-list') ? (
+                <div className="px-6 flex flex-col gap-6">
+                  {userPosts.map((post) => (
+                    <PostItem key={post.id} post={post} onLikeToggle={() => handleLikeToggle(post.id)} />
+                  ))}
                 </div>
-
-                {(viewMode === 'list' || viewMode === 'gif-list') ? (
-                  <div className="flex flex-col">
-                    {(viewMode === 'gif-list' ? posts.filter(p => p.isGif) : posts).map((post) => (
-                      <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                        <PostItem
-                          id={post.id}
-                          user={post.user}
-                          content={post.content}
-                          location={post.location}
-                          likes={post.likes}
-                          commentsCount={post.commentsCount}
-                          comments={post.comments}
-                          image={post.image}
-                          images={post.images}
-                          isLiked={post.isLiked}
-                          isAd={post.isAd}
-                          isGif={post.isGif}
-                          isInfluencer={post.isInfluencer}
-                          borderType={post.borderType}
-                          disablePulse={true}
-                          onLikeToggle={() => handleLikeToggle(post.id, false)}
-                          onDelete={handlePostDelete}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1 px-6">
-                    {(viewMode === 'gifs' ? posts.filter(p => p.isGif) : posts).map((post) => (
-                      <div 
-                        key={post.id} 
-                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group"
-                        onClick={() => handleGridItemClick(post.id)}
-                      >
-                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={handleImageError} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+              ) : (
+                <div className="grid grid-cols-3 gap-1 px-6">
+                  {userPosts.map((post) => (
+                    <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden" onClick={() => setViewMode('list')}>
+                      <img src={post.image} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
       </div>
-
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );
 };
