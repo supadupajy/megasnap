@@ -120,11 +120,11 @@ const Header = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('[Header] New notification');
+          console.log('[Header] New notification detected');
           setHasNewNotifications(true);
         }
       )
-      // 2. 메시지 실시간 감지 (INSERT만 감시, 필요한 컬럼만 추출하는 로직은 클라이언트에서 처리)
+      // 2. 메시지 실시간 감지 (INSERT만 감시)
       .on(
         'postgres_changes',
         {
@@ -134,7 +134,8 @@ const Header = () => {
           filter: `receiver_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('[Header] New message');
+          console.log('[Header] New message detected');
+          // 메시지 수신 시 즉시 카운트 증가
           setUnreadMsgCount(prev => prev + 1);
           
           if (!window.location.pathname.startsWith('/chat/')) {
@@ -161,11 +162,14 @@ const Header = () => {
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`
         },
-        () => checkMessages()
+        () => {
+          console.log('[Header] Message update (read) detected');
+          checkMessages();
+        }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[Header] Optimized realtime subscribed');
+          console.log('[Header] Optimized realtime subscribed for user:', user.id);
         }
       });
 
