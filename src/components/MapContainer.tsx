@@ -449,12 +449,12 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // 클래스명 설정 최적화
         content.className = 'marker-container kakao-overlay';
         
+        // 실시간 새 포스팅인 경우 특수 애니메이션 및 폭죽 효과 적용
         if (post.isNewRealtime) {
-          console.log('[MapContainer] Applying REALTIME animation to marker:', post.id);
-          content.classList.add('animate-realtime-marker-appear');
+          console.log('[MapContainer] Applying REALTIME animation and spark to marker:', post.id);
+          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         } else {
           content.classList.add('animate-marker-appear');
         }

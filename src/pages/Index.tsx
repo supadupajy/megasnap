@@ -200,7 +200,7 @@ const Index = () => {
           console.log(`[Realtime] Bounds check result: ${isInBounds} for lat: ${newPostRaw.latitude}, lng: ${newPostRaw.longitude}`);
 
           if (isInBounds && newPostRaw.user_id !== authUser.id) {
-            console.log('[Realtime] MATCH! Adding to map and firing confetti');
+            console.log('[Realtime] MATCH! Adding to map and firing local fireworks');
             
             const newPost: Post = {
               id: newPostRaw.id,
@@ -230,13 +230,28 @@ const Index = () => {
               return [newPost, ...prev];
             });
 
-            confetti({
-              particleCount: 60,
-              spread: 100,
-              origin: { y: 0.8 },
-              colors: ['#4F46E5', '#F59E0B', '#10B981', '#FF0000'],
-              zIndex: 15000
-            });
+            // 폭죽 효과를 전체 화면이 아닌 마커 위치 부근에서 터지도록 좌표 계산
+            // 카카오맵 좌표를 화면 좌표로 변환하기는 복잡하므로, 
+            // 캔버스 컨페티의 origin을 지도상의 대략적인 위치로 계산 (내 지도 중심 기준)
+            const mapCenter = mapData?.center;
+            if (mapCenter) {
+              const relX = 0.5 + (newPostRaw.longitude - mapCenter.lng) * 5; // 화면 비율 보정
+              const relY = 0.5 - (newPostRaw.latitude - mapCenter.lat) * 5;
+              
+              confetti({
+                particleCount: 15, // 수량 대폭 축소
+                spread: 40,
+                origin: { 
+                  x: Math.max(0.1, Math.min(0.9, relX)), 
+                  y: Math.max(0.1, Math.min(0.9, relY)) 
+                },
+                colors: ['#4F46E5', '#F59E0B'],
+                ticks: 100,
+                gravity: 1.5,
+                scalar: 0.7, // 크기 축소
+                zIndex: 15000
+              });
+            }
           }
         }
       )
