@@ -665,7 +665,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       {isOpen && (
   <div
     className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-150"
-style={{ bottom: `${keyboardHeight + 100}px` }}
+style={{ bottom: `${keyboardHeight + 110}px` }}
   >
           {currentPage === 1 ? (
             <Button
