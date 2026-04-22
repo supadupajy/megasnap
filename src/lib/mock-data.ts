@@ -183,7 +183,7 @@ export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_CLEAN).filt
 
 export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
-export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+// REMOVED: Duplicate PLACE_UNSPLASH_IDS
 export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 
 export const getUnsplashUrl = (id: string) => {
