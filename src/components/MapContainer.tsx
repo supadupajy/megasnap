@@ -525,15 +525,14 @@ const MapContainer = ({
       displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80&sig=${post.id}`;
     }
 
-    // [FIX] 모든 마커 디자인을 일반 포스팅 스타일로 통일
-    // 광고(AD)만 구분할 수 있도록 라벨 유지
+    // [FIX] AD 라벨의 너비를 마커 본체와 완벽하게 일치시키고 위치를 정밀 조정
     let pinColor = '#ffffff'; 
     let labelText = isAd ? 'AD' : ''; 
     let labelBg = '#3b82f6'; 
     let labelColor = 'white';
     
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
-    const labelHtml = labelText ? `<div style="width: 60px; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
+    const labelHtml = labelText ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 10px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -10px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
     
     const animationClass = isAd ? 'animate-ad-breathing' : '';
 
@@ -548,7 +547,7 @@ const MapContainer = ({
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass}">
+      <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
         <div style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;">
