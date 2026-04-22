@@ -1,19 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Bookmark, 
-  MapPin, 
-  ChevronLeft, 
-  ChevronRight, 
-  MoreHorizontal,
-  X,
-  MessageSquare,
-  ShoppingBag
-} from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId } from '@/lib/utils';
@@ -497,14 +485,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       <div className="flex items-center justify-between mb-3">
                         {/* 왼쪽: 순수 아이콘 그룹 (상세 페이지에서도 북마크 포함) */}
                         <div className="flex items-center gap-4">
-                          <button onClick={() => onLikeToggle?.(currentPost.id)} className="active:scale-90 transition-transform">
-                            <Heart className={cn("w-7 h-7", currentPost.isLiked ? "fill-red-500 text-red-500" : "text-gray-900")} />
+                          <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
+                            <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                           </button>
-                          <button className="active:scale-90 transition-transform">
-                            <MessageSquare className="w-7 h-7 text-gray-900" />
+                          <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                            <MessageCircle className="w-6 h-6 text-gray-700" />
                           </button>
-                          <button className="active:scale-90 transition-transform">
-                            <Share2 className="w-7 h-7 text-gray-900" />
+                          <button className="text-gray-700" onClick={(e) => e.stopPropagation()}>
+                            <Share2 className="w-6 h-6" />
+                          </button>
+                          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                           </button>
                         </div>
 
@@ -512,62 +503,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         <div className="flex items-center gap-2">
                           {renderCategoryBadge()}
                           {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-                            <button onClick={() => onLocationClick?.(currentPost.lat, currentPost.lng)} className="active:scale-90 transition-transform">
-                              <MapPin className="w-3.5 h-3.5" />
+                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
+                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                              <span className="text-[10px] font-black">위치보기</span>
                             </button>
                           )}
                           {isAd && (
-                            <button 
-                              onClick={() => window.open('https://www.coca-cola.co.kr', '_blank')}
-                              className="active:scale-90 transition-transform"
-                            >
-                              <ShoppingBag className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Interaction Bar */}
-                      <div className="px-4 py-3 flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <button onClick={() => onLikeToggle?.(currentPost.id)} className="active:scale-90 transition-transform">
-                              <Heart className={cn("w-7 h-7", currentPost.isLiked ? "fill-red-500 text-red-500" : "text-gray-900")} />
-                            </button>
-                            <button className="active:scale-90 transition-transform">
-                              <MessageSquare className="w-7 h-7 text-gray-900" />
-                            </button>
-                            <button className="active:scale-90 transition-transform">
-                              <Share2 className="w-7 h-7 text-gray-900" />
-                            </button>
-                          </div>
-                          <button className="active:scale-90 transition-transform">
-                            <Bookmark className="w-7 h-7 text-gray-900" />
-                          </button>
-                        </div>
-
-                        {/* Action Buttons Row (맛집/위치보기/주문하기) */}
-                        <div className="flex flex-wrap gap-2">
-                          {currentPost.category === 'food' && (
-                            <div className="h-10 px-4 bg-orange-500 rounded-full flex items-center gap-2 shadow-lg shadow-orange-100">
-                              <span className="text-white text-xs font-black">맛집</span>
-                            </div>
-                          )}
-                          <button 
-                            onClick={() => onLocationClick?.(currentPost.lat, currentPost.lng)}
-                            className="h-10 px-4 bg-indigo-50 text-indigo-600 rounded-full flex items-center gap-2 font-bold text-xs active:scale-95 transition-all"
-                          >
-                            <MapPin className="w-3.5 h-3.5" />
-                            위치보기
-                          </button>
-                          {currentPost.isAd && (
-                            <button 
-                              onClick={() => window.open('https://www.coca-cola.co.kr', '_blank')}
-                              className="h-10 px-4 bg-teal-500 text-white rounded-full flex items-center gap-2 font-black text-xs shadow-lg shadow-teal-100 active:scale-95 transition-all"
-                            >
-                              <ShoppingBag className="w-3.5 h-3.5" />
-                              주문하기
-                            </button>
+                            <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
+                              <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                              <span className="text-[10px] font-black">주문하기</span>
+                            </a>
                           )}
                         </div>
                       </div>
