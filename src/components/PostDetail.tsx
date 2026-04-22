@@ -396,40 +396,64 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
                   <div className="px-4">
                     <div className="relative overflow-hidden bg-black aspect-square rounded-3xl group">
-                      <Carousel className="w-full h-full">
-                        <CarouselContent>
-                          {displayImages.map((img, index) => (
-                            <CarouselItem key={index}>
-                              <div className="relative aspect-square w-full">
-                                <img
-                                  src={img}
-                                  alt={`Post content ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                  draggable={false}
-                                />
-                                {index === 1 && (
-                                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <ExternalLink className="w-3 h-3" />
-                                    AD
-                                  </div>
-                                )}
-                              </div>
-                            </CarouselItem>
-                          ))}
-                        </CarouselContent>
-                        {displayImages.length > 1 && (
-                          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10">
-                            {displayImages.map((_, i) => (
-                              <div
-                                key={i}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${
-                                  currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-                                }`}
-                              />
+                      {youtubeId ? (
+                        <div className="w-full h-full relative">
+                          <iframe
+                            className="w-full h-full object-cover"
+                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      ) : post.videoUrl ? (
+                        <div className="w-full h-full relative">
+                          <video
+                            src={post.videoUrl}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                          />
+                        </div>
+                      ) : (
+                        <Carousel className="w-full h-full">
+                          <CarouselContent>
+                            {displayImages.map((img, index) => (
+                              <CarouselItem key={index}>
+                                <div className="relative aspect-square w-full">
+                                  <img
+                                    src={img}
+                                    alt={`Post content ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    draggable={false}
+                                  />
+                                  {index === 1 && (
+                                    <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <ExternalLink className="w-3 h-3" />
+                                      AD
+                                    </div>
+                                  )}
+                                </div>
+                              </CarouselItem>
                             ))}
-                          </div>
-                        )}
-                      </Carousel>
+                          </CarouselContent>
+                          {displayImages.length > 1 && (
+                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10">
+                              {displayImages.map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                                    currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </Carousel>
+                      )}
                     </div>
                   </div>
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
