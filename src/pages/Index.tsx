@@ -101,18 +101,16 @@ const Index = () => {
   }, []);
 
   const getTierFromId = (id: string) => {
+    // 실시간으로 생성된 ID(isNewRealtime)인 경우 기본적으로 'none' 반환하여 의도치 않은 테두리 방지
     if (!id || id.length < 5) return 'none';
     
-    // UUID 기반의 해시 생성
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
-    
-    // 테두리 결정 로직 (인플루언서 및 인기 게시글)
-    if (val < 0.05) return 'diamond';   // 5% 확률
-    if (val < 0.15) return 'gold';      // 10% 확률
-    if (val < 0.30) return 'silver';    // 15% 확률
-    if (val < 0.50) return 'popular';   // 20% 확률
+    if (val < 0.01) return 'diamond';
+    if (val < 0.03) return 'gold';
+    if (val < 0.07) return 'silver';
+    if (val < 0.15) return 'popular';
     return 'none';
   };
 
@@ -124,50 +122,54 @@ const Index = () => {
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
-        if (/post\s*content/i.test(clean) || !clean.startsWith('http') || clean.length < 20) return false;
+        // [FINAL ULTIMATE FILTER] 어떠한 형태의 'post content' 문자열도 허용하지 않음
+        if (/post\s*content/i.test(clean)) return false;
+        // http로 시작하지 않는 모든 문자열 차단
+        if (!clean.startsWith('http')) return false;
+        // 특정 깨진 문자열 패턴 차단
+        if (clean.length < 20) return false;
         return true;
       };
 
-      const sanitizedRaw = { ...rawPost };
-      sanitizedRaw.image_url = isValidUrl(sanitizedRaw.image_url) ? sanitizedRaw.image_url : SAFE_FALLBACK;
+      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
+      const preSanitizedRaw = { ...rawPost };
+      preSanitizedRaw.image_url = isValidUrl(preSanitizedRaw.image_url) ? preSanitizedRaw.image_url : SAFE_FALLBACK;
       
-      if (Array.isArray(sanitizedRaw.images) && sanitizedRaw.images.length > 0) {
-        sanitizedRaw.images = sanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
+      if (Array.isArray(preSanitizedRaw.images) && preSanitizedRaw.images.length > 0) {
+        preSanitizedRaw.images = preSanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
       } else {
-        sanitizedRaw.images = [sanitizedRaw.image_url];
+        preSanitizedRaw.images = [preSanitizedRaw.image_url];
       }
 
-      const p = await sanitizeYoutubeMedia(sanitizedRaw);
-      const isAd = p.content?.trim().startsWith('[AD]');
-      const isMine = authUser && p.user_id === authUser.id;
+      // 정제된 데이터를 기반으로 비동기 처리 진행
+      const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       
-      // [FIX] 테두리 타입 결정 우선순위 로직 강화
-      let borderType: any = 'none';
-      if (isMine) borderType = 'none'; // 내 포스팅은 전용 테두리(my-post)를 클래스로 처리하므로 none
-      else if (isAd) borderType = 'none'; // 광고도 전용 클래스 처리
-      else borderType = getTierFromId(p.id);
-
-      let finalImage = p.image_url;
+      // ✅ [중요] sanitizeYoutubeMedia 이후에도 텍스트가 다시 유입될 수 있으므로 한 번 더 검증
+      let finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
       if (p.youtube_url) {
         finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
       }
       
+      // 최종 검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
       const finalImages = Array.isArray(p.images) && p.images.length > 0
         ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
         : [finalImage];
 
+      const isAd = p.content?.trim().startsWith('[AD]');
+      const borderType = isAd ? 'none' : getTierFromId(p.id);
+      
+      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
+      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
+      if (p.border_type) borderType = p.border_type;
+
       return {
         id: p.id,
         isAd,
         isGif: false,
         isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-        user: { 
-          id: p.user_id || '', 
-          name: p.user_name || '탐험가', 
-          avatar: p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}` 
-        },
+        user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
         content: p.content?.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
@@ -185,7 +187,7 @@ const Index = () => {
         borderType
       };
     } catch (err) { return null as any; }
-  }, [authUser]);
+  }, []);
 
   const fetchGlobalTrending = useCallback(async () => {
     try {

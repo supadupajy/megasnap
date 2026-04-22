@@ -357,113 +357,97 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                   {/* 미디어 영역 */}
                   <div className="px-4">
-                    <div className={cn(
-                      "relative aspect-square w-full rounded-[30px] overflow-hidden",
-                      isMine && "my-post-border-container",
-                      isAd && "ad-border-container",
-                      post.borderType === 'popular' && "popular-border-container",
-                      post.borderType === 'diamond' && "diamond-border-container",
-                      post.borderType === 'gold' && "gold-border-container",
-                      post.borderType === 'silver' && "silver-border-container",
-                      (!isMine && !isAd && post.borderType === 'none') && "border border-gray-100"
-                    )}>
-                      <div className={cn(
-                        "relative bg-black",
-                        (isMine || isAd || post.borderType !== 'none') 
-                          ? "m-0.5 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[28px] top-[2px] left-[2px]" 
-                          : "w-full h-full rounded-[30px]"
-                      )}>
-                        {youtubeId ? (
-                          <iframe
-                            className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        ) : post.videoUrl ? (
-                          <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
-                        ) : (
-                          <div className="relative w-full h-full">
-                            {/* 네이티브 스크롤 슬라이더 */}
-                            <div
-                              ref={imageScrollRef}
-                              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                              onScroll={handleImageScroll}
-                            >
-                              {displayImages.map((img, index) => {
-                                const isAdSlide = index === 1;
-                                if (isAdSlide) {
-                                  return (
-                                    // ✅ 광고 슬라이드: touchstart/touchend로 탭 vs 스와이프 직접 판별
-                                    // onClick 300ms 딜레이 없이 즉시 반응
-                                    <div
-                                      key={index}
-                                      className="w-full h-full shrink-0 snap-center relative"
-                                      style={{ scrollSnapStop: 'always' }}
-                                      onTouchStart={(e) => {
-                                        touchStartRef.current = {
-                                          x: e.touches[0].clientX,
-                                          y: e.touches[0].clientY,
-                                        };
-                                      }}
-                                      onTouchEnd={(e) => {
-                                        if (!touchStartRef.current) return;
-                                        const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
-                                        const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
-                                        touchStartRef.current = null;
-                                        // 10px 미만 이동 = 탭으로 판정 → 링크 열기
-                                        if (dx < 10 && dy < 10) {
-                                          e.stopPropagation();
-                                          window.open(adLink, '_blank', 'noopener,noreferrer');
-                                        }
-                                      }}
-                                    >
-                                      <img
-                                        src={img}
-                                        alt="Advertisement"
-                                        className="w-full h-full object-cover"
-                                        draggable={false}
-                                      />
-                                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                        <span className="font-bold">AD</span>
-                                      </div>
-                                    </div>
-                                  );
-                                }
+                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+                      {youtubeId ? (
+                        <iframe
+                          className="w-full h-full"
+                          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : post.videoUrl ? (
+                        <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+                      ) : (
+                        <div className="relative w-full h-full">
+                          {/* 네이티브 스크롤 슬라이더 */}
+                          <div
+                            ref={imageScrollRef}
+                            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                            onScroll={handleImageScroll}
+                          >
+                            {displayImages.map((img, index) => {
+                              const isAdSlide = index === 1;
+                              if (isAdSlide) {
                                 return (
+                                  // ✅ 광고 슬라이드: touchstart/touchend로 탭 vs 스와이프 직접 판별
+                                  // onClick 300ms 딜레이 없이 즉시 반응
                                   <div
                                     key={index}
                                     className="w-full h-full shrink-0 snap-center relative"
                                     style={{ scrollSnapStop: 'always' }}
+                                    onTouchStart={(e) => {
+                                      touchStartRef.current = {
+                                        x: e.touches[0].clientX,
+                                        y: e.touches[0].clientY,
+                                      };
+                                    }}
+                                    onTouchEnd={(e) => {
+                                      if (!touchStartRef.current) return;
+                                      const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
+                                      const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
+                                      touchStartRef.current = null;
+                                      // 10px 미만 이동 = 탭으로 판정 → 링크 열기
+                                      if (dx < 10 && dy < 10) {
+                                        e.stopPropagation();
+                                        window.open(adLink, '_blank', 'noopener,noreferrer');
+                                      }
+                                    }}
                                   >
                                     <img
                                       src={img}
-                                      alt={`Post content ${index + 1}`}
+                                      alt="Advertisement"
                                       className="w-full h-full object-cover"
                                       draggable={false}
                                     />
+                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      <span className="font-bold">AD</span>
+                                    </div>
                                   </div>
                                 );
-                              })}
-                            </div>
-
-                            {/* 인디케이터 */}
-                            {displayImages.length > 1 && (
-                              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-                                {displayImages.map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
+                              }
+                              return (
+                                <div
+                                  key={index}
+                                  className="w-full h-full shrink-0 snap-center relative"
+                                  style={{ scrollSnapStop: 'always' }}
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`Post content ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    draggable={false}
                                   />
-                                ))}
-                              </div>
-                            )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
+
+                          {/* 인디케이터 */}
+                          {displayImages.length > 1 && (
+                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+                              {displayImages.map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -69,53 +69,53 @@
 
 .my-post-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #4f46e5, #818cf8, #4f46e5, #818cf8, #4f46e5) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #4f46e5, #818cf8, #4f46e5, #818cf8, #4f46e5);
   animation: rotate-border 2s linear infinite;
   box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
 }
 
 .popular-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #ff0000, #ff8000, #ff0000, #ff8000, #ff0000);
   animation: rotate-border 1.5s linear infinite;
 }
 
 .silver-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #94a3b8, #f1f5f9, #94a3b8, #f1f5f9, #94a3b8) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #94a3b8, #f1f5f9, #94a3b8, #f1f5f9, #94a3b8);
   animation: rotate-border 3s linear infinite;
   box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
 }
 
 .gold-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #fbbf24, #fef3c7, #fbbf24, #fef3c7, #fbbf24);
   animation: rotate-border 2s linear infinite;
   box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
 }
 
 .diamond-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #22d3ee, #ffffff, #22d3ee, #ffffff, #22d3ee) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #22d3ee, #ffffff, #22d3ee, #ffffff, #22d3ee);
   animation: rotate-border 1s linear infinite;
   box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
 }
 
 .ad-border-container {
   position: relative;
+  padding: 4px;
   border-radius: 1.25rem;
-  background: conic-gradient(from var(--angle), #3b82f6, #60a5fa, #3b82f6, #60a5fa, #3b82f6) border-box;
-  border: 4px solid transparent;
+  background-image: conic-gradient(from var(--angle), #3b82f6, #60a5fa, #3b82f6, #60a5fa, #3b82f6);
   animation: rotate-border 2s linear infinite;
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
@@ -243,42 +243,24 @@
 }
 
 .marker-container {
-  /* scale을 제거하고 width/height를 CSS 변수로 제어 */
-  transform-origin: bottom center;
-  transition: opacity 0.3s ease-out;
-  cursor: pointer;
-  will-change: width, height, transform;
-  pointer-events: auto !important;
-  /* 
-     기존에 transform: scale()로 크기를 줄이면 브라우저가 저해상도 이미지를 
-     캐싱하고 확대 시 그대로 보여주는 문제가 발생함. 
-     변수를 통해 실제 렌더링 크기를 조절하여 매번 깨끗하게 그리도록 유도.
-  */
+  position: relative;
+  width: 56px;
+  height: 72px;
+  pointer-events: auto;
+  --marker-scale: 1;
 }
 
 .marker-content-wrapper {
+  transform: scale(var(--marker-scale));
+  transform-origin: bottom center;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 100%;
+  height: 100%;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  /* width/height는 MapContainer에서 --marker-size로 제어됨 */
-  transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
-}
-
-.marker-container.highlighted {
-  z-index: 10000 !important;
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  /* 하이라이트 시에도 scale 대신 변수 가중치 적용 가능하지만 현재는 animation으로 처리 */
-  animation: marker-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-@keyframes marker-pulse {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0); }
+  --marker-scale: 1.5 !important;
 }
 
 .search-result-marker-container {

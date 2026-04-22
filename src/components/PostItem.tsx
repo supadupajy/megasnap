@@ -346,14 +346,8 @@ const PostItem = ({
       </div>
 
       <div className="px-4">
-        <div className={cn(
-          "relative aspect-square w-full rounded-2xl overflow-hidden",
-          hasMediaBorder ? mediaBorderContainerClass : "border border-gray-100"
-        )}>
-          <div className={cn(
-            "w-full h-full overflow-hidden bg-white relative z-10",
-            hasMediaBorder ? "m-0.5 rounded-[14px] w-[calc(100%-4px)] h-[calc(100%-4px)]" : "rounded-2xl"
-          )} style={hasMediaBorder ? { top: '2px', left: '2px' } : {}}>
+        <div className={cn("relative aspect-square w-full rounded-2xl", mediaBorderContainerClass)}>
+          <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
             {isPlayingVideo ? (
               youtubeId ? (
                 <div className="relative w-full h-full">
