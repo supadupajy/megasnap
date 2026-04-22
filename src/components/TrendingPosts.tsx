@@ -78,9 +78,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
         onClick={onToggle}
       >
-        <span className="text-indigo-600 font-black text-sm w-4 italic shrink-0">
-          {isExpanded ? "HOT" : currentPost?.rank}
-        </span>
+        <span className={cn(
+  "text-indigo-600 font-black text-sm italic shrink-0",
+  currentPost?.rank >= 10 ? "w-6" : "w-4"
+)}>
+  {isExpanded ? "HOT" : currentPost?.rank}
+</span>
         
         {!isExpanded ? (
           <div className="flex flex-1 items-center gap-2 overflow-hidden">
