@@ -353,15 +353,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none bg-white z-[1001] shadow-2xl h-[95vh] rounded-t-[40px] border-none"
+          className="flex flex-col outline-none bg-white z-[1200] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
           style={{ 
-  position: 'fixed',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none',
-  transition: keyboardHeight > 0 ? 'transform 0.25s ease-out' : 'none'
-}}
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            transform: 'none',
+            transition: 'none'
+          }}
         >
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
@@ -392,11 +392,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             
             {/* 페이지 콘텐츠 */}
             <div 
-  className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
-  style={{
-  paddingBottom: '16px'
-}}
->
+              className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
+              style={{
+                paddingBottom: '16px'
+              }}
+            >
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
