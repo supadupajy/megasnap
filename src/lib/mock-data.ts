@@ -156,22 +156,29 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
 
 const BLACKLISTED_IMAGES = [
   'photo-1501785888041-af3ef285b470', // 노란 꽃 호수 (Unsplash)
-  'https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg' // 깨진 고양이 이미지 (Pexels)
+  'https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg', // 깨진 고양이 이미지 (Pexels)
+  'https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg' // 추가 확인된 깨진 이미지
 ];
 
 const WEB_SEARCHED_IMAGES = [
   'https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg',
   'https://images.pexels.com/photos/2014422/pexels-photo-2014422.jpeg',
+  'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg',
   'https://images.pexels.com/photos/147411/italy-mountains-dawn-daybreak-147411.jpeg',
   'https://images.pexels.com/photos/462162/pexels-photo-462162.jpeg',
-  'https://images.pexels.com/photos/1266810/pexels-photo-1266810.jpeg'
+  'https://images.pexels.com/photos/1266810/pexels-photo-1266810.jpeg',
+  'https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg',
+  'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg',
+  'https://images.pexels.com/photos/206359/pexels-photo-206359.jpeg',
+  'https://images.pexels.com/photos/15286/pexels-photo.jpg'
 ];
 
 const getStableWebImage = (id: string) => {
-  // 블랙리스트 체크
+  // 블랙리스트 체크 (ID 포함 여부 또는 전체 URL 일치)
   const isBlacklisted = BLACKLISTED_IMAGES.some(url => 
-    (typeof url === 'string' && url.includes(id)) || 
-    (id.includes('45201') && url.includes('45201'))
+    id.includes('45201') || 
+    id.includes('1486337') ||
+    (typeof url === 'string' && url.includes(id))
   );
 
   if (isBlacklisted) {
