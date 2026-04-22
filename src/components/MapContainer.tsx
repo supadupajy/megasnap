@@ -34,7 +34,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState<number>(level || mapCache.lastZoom || 6);
+  const [currentLevel, setCurrentLevel] = useState<number>(5);
   const [isMapMoving, setIsMapMoving] = useState(false);
   
   const overlaysRef = useRef<Map<string, any>>(new Map());
@@ -44,12 +44,12 @@ const MapContainer = ({
   const isDragging = useRef(false);
   const isProgrammaticMove = useRef(false);
   const lastDragEnd = useRef(0);
-  const currentLevelRef = useRef<number>(level || mapCache.lastZoom || 6);
+  const currentLevelRef = useRef<number>(5);
 
   // ✅ [핵심 FIX] center/level을 ref로 관리
   // initMap의 deps를 비워서 "props 변경 → initMap 재생성 → setInterval 재실행 → 지도 재초기화" 루프를 차단
   const centerRef = useRef(center);
-  const levelRef = useRef(level || 5);
+  const levelRef = useRef(5);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -130,8 +130,9 @@ const MapContainer = ({
       // ✅ [핵심 FIX] 이미 초기화된 경우 즉시 true 반환 — 재초기화 완전 방지
       if (mapInstance.current) return true;
 
+      // ✅ 캐시된 lastZoom 무시하고 무조건 5단계로 시작하도록 우선순위 조정
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = levelRef.current || mapCache.lastZoom || 5;
+      const initialLevel = 5; 
 
       const options = {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
@@ -214,6 +215,44 @@ const MapContainer = ({
       return false;
     }
   }, []); // ✅ 의존성 없음 — 생애 동안 1회만 생성
+
+  // 초기 지도 로딩 및 레벨 감시
+  useEffect(() => {
+    const checkMap = setInterval(() => {
+      if ((window as any).kakao?.maps) {
+        const isInit = initMap();
+        if (isInit) {
+          clearInterval(checkMap);
+          // ✅ 지도 생성 직후 다시 한번 강제로 5단계 설정
+          if (mapInstance.current) {
+            mapInstance.current.setLevel(5, { animate: false });
+            setCurrentLevel(5);
+            currentLevelRef.current = 5;
+          }
+        }
+      }
+    }, 100);
+    return () => clearInterval(checkMap);
+  }, [initMap]);
+
+  // 외부 level prop 변경 감시
+  useEffect(() => {
+    if (mapInstance.current && level !== undefined) {
+      // ✅ 외부 level prop이 들어올 때만 변경하되, 초기 마운트 시에는 5를 유지하도록
+      mapInstance.current.setLevel(level);
+      setCurrentLevel(level);
+      currentLevelRef.current = level;
+    }
+  }, [level]);
+
+  // 마커 크기 계산 (level에 따른 scale)
+  const getMarkerScale = (lvl: number) => {
+    if (lvl <= 5) return 1;    // 5단계 이하: 100%
+    if (lvl === 6) return 0.75; // 6단계: 75%
+    if (lvl === 7) return 0.5;  // 7단계: 50%
+    if (lvl === 8) return 0.25; // 8단계: 25%
+    return 0;                   // 9단계 이상: 숨김
+  };
 
   useEffect(() => {
     const timer = setInterval(() => { 
