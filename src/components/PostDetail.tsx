@@ -13,7 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
@@ -298,6 +299,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogOverlay className="bg-black/60 backdrop-blur-sm z-[1000]" />
       <DialogContent className="border-none bg-transparent shadow-none p-0 max-w-none w-full h-full flex items-center justify-center z-[1050] outline-none focus:ring-0">
+        <VisuallyHidden.Root>
+          <DialogTitle>포스팅 상세 보기</DialogTitle>
+        </VisuallyHidden.Root>
         
         <div
           className="absolute top-8 right-6 z-[1100] transition-all duration-500"
