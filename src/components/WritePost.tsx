@@ -394,18 +394,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    <div className="flex-1 min-h-[300px] mb-2 relative bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
+                    <div className="flex-1 min-h-[300px] mb-2 relative bg-white rounded-2xl overflow-hidden border border-gray-200">
                       {mediaFiles.length > 0 ? (
                         <div className="w-full h-full relative">
-                          {/* Carousel이 렌더링되지 않을 경우를 대비해 0번 이미지를 배경으로 먼저 띄움 */}
-                          <div className="absolute inset-0 z-0 bg-white">
-                            <img 
-                              src={mediaFiles[currentSlide]?.url || mediaFiles[0].url} 
-                              className="w-full h-full object-cover opacity-50 blur-sm"
-                              alt=""
-                            />
-                          </div>
-                          
                           <Carousel 
                             setApi={setApi}
                             className="w-full h-full relative z-10" 
@@ -418,9 +409,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             <CarouselContent className="h-full ml-0">
                               {mediaFiles.map((media, idx) => (
                                 <CarouselItem key={`${media.url}-${idx}`} className="h-full pl-0">
-                                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                                     {media.type === 'image' ? (
-                                      <div className="w-full h-full relative bg-white">
+                                      <div className="w-full h-full relative">
                                         <img 
                                           src={media.url} 
                                           alt={`Preview ${idx}`} 
@@ -428,7 +419,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none z-[100]"
                                           style={{ 
                                             transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1.2})`,
-                                            display: 'block'
+                                            display: 'block',
+                                            filter: 'none', // 필터 초기화
+                                            opacity: 1 // 투명도 확실히
                                           }}
                                         />
                                         {/* 드래그 핸들러 - z-index를 이미지보다 더 높게 */}
