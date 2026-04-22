@@ -8,7 +8,7 @@ import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
+import { cn, getYoutubeThumbnail, getUnsplashPlaceholder } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
@@ -59,24 +59,38 @@ const Profile = () => {
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // [FIX] 동영상/유튜브 썸네일 처리 강화 및 빈 이미지 방어 로직
+    // [FIX] 특정 이미지가 깨지는 문제 해결 (Unsplash 특정 시그니처나 잘못된 URL 대응)
     let finalImage = sanitized.image_url;
     
-    if (!finalImage || finalImage.trim() === '' || finalImage === 'null') {
+    const isBrokenUnsplash = (url: string) => {
+      if (!url) return true;
+      if (url === 'null' || url === 'undefined') return true;
+      // 특정 Unsplash ID가 문제를 일으키는 경우를 대비해 placeholder로 교체
+      return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
+    };
+
+    if (isBrokenUnsplash(finalImage)) {
       if (sanitized.youtube_url) {
-        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || FALLBACK_IMAGE;
+        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || getUnsplashPlaceholder(sanitized.id, sanitized.category);
       } else {
-        // ID 기반으로 일관된 Unsplash 이미지 할당
-        finalImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${sanitized.id}`;
+        finalImage = getUnsplashPlaceholder(sanitized.id, sanitized.category);
       }
     } else if (finalImage.includes('unsplash.com')) {
-      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : 'general') || finalImage;
+      // Unsplash 이미지인 경우 리맵핑 유틸을 통해 안정적인 URL로 변환
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
     }
     
-    // images 배열이 비어있거나 깨진 경우를 대비
-    const finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.filter((img: any) => img && img !== 'null')
-      : [finalImage];
+    // images 배열 처리
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
+      ? sanitized.images.filter((img: any) => img && img !== 'null' && img !== 'undefined' && img.trim() !== '')
+      : [];
+      
+    if (finalImages.length === 0) {
+      finalImages = [finalImage];
+    } else {
+      // 배열 내의 깨진 Unsplash 이미지들도 교체
+      finalImages = finalImages.map((img: string) => isBrokenUnsplash(img) ? finalImage : img);
+    }
 
     let isLiked = false;
     let isSaved = false;
