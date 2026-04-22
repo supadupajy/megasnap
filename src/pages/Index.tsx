@@ -100,10 +100,15 @@ const Index = () => {
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
-  const getTierFromId = (id: string) => {
-    // 실시간으로 생성된 ID(isNewRealtime)인 경우 기본적으로 'none' 반환하여 의도치 않은 테두리 방지
-    if (!id || id.length < 5) return 'none';
+  const getTierFromId = (id: string, likes: number = 0) => {
+    // [FIX] ID뿐만 아니라 좋아요 숫자를 기반으로 실시간 티어 할당
+    if (likes >= 10000) return 'diamond';
+    if (likes >= 5000) return 'gold';
+    if (likes >= 2000) return 'silver';
+    if (likes >= 500) return 'popular';
     
+    // 기본 해시 로직 (데이터가 적을 때를 대비)
+    if (!id || id.length < 5) return 'none';
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
@@ -122,16 +127,12 @@ const Index = () => {
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
-        // [FINAL ULTIMATE FILTER] 어떠한 형태의 'post content' 문자열도 허용하지 않음
         if (/post\s*content/i.test(clean)) return false;
-        // http로 시작하지 않는 모든 문자열 차단
         if (!clean.startsWith('http')) return false;
-        // 특정 깨진 문자열 패턴 차단
         if (clean.length < 20) return false;
         return true;
       };
 
-      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
       const preSanitizedRaw = { ...rawPost };
       preSanitizedRaw.image_url = isValidUrl(preSanitizedRaw.image_url) ? preSanitizedRaw.image_url : SAFE_FALLBACK;
       
@@ -141,11 +142,16 @@ const Index = () => {
         preSanitizedRaw.images = [preSanitizedRaw.image_url];
       }
 
-      // 정제된 데이터를 기반으로 비동기 처리 진행
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
+      const isAd = p.content?.trim().startsWith('[AD]');
       
-      // ✅ [중요] sanitizeYoutubeMedia 이후에도 텍스트가 다시 유입될 수 있으므로 한 번 더 검증
-      let finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+      // [FIX] DB 데이터와 클라이언트 좋아요 수를 합산하여 테두리 타입 결정
+      const finalLikes = Number(p.likes || 0);
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
+      
+      if (p.border_type) borderType = p.border_type;
+
+      let finalImage = p.image_url;
       if (p.youtube_url) {
         finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
       }
@@ -153,16 +159,9 @@ const Index = () => {
       // 최종 검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
-      const finalImages = Array.isArray(p.images) && p.images.length > 0
+      const validImages = Array.isArray(p.images) && p.images.length > 0
         ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
         : [finalImage];
-
-      const isAd = p.content?.trim().startsWith('[AD]');
-      const borderType = isAd ? 'none' : getTierFromId(p.id);
-      
-      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
-      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
-      if (p.border_type) borderType = p.border_type;
 
       return {
         id: p.id,
@@ -174,17 +173,17 @@ const Index = () => {
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
-        likes: Number(p.likes || 0),
+        likes: finalLikes,
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: finalImages,
+        images: validImages,
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType
+        borderType // 이제 여기서 결정된 티어가 Post 객체에 담김
       };
     } catch (err) { return null as any; }
   }, []);
