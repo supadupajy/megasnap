@@ -112,16 +112,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const newMediaItems = await Promise.all(files.map(async (file) => {
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
+      console.log('[WritePost] Generated object URL:', url); // 디버깅 로그 추가
       let thumbnail = undefined;
 
       if (type === 'video') {
         thumbnail = await captureVideoThumbnail(url);
       }
 
-      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1 } as MediaFile;
+      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1.2 } as MediaFile;
     }));
 
     setMediaFiles(prev => [...prev, ...newMediaItems]);
+    
+    // 드래프트 썸네일 설정
     if (newMediaItems[0].type === 'image') {
       postDraftStore.set({ image: newMediaItems[0].url });
     } else if (newMediaItems[0].thumbnail) {
@@ -393,104 +396,116 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
                     <div className="flex-1 min-h-[300px] mb-2 relative bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
                       {mediaFiles.length > 0 ? (
-                        <Carousel 
-                          setApi={setApi}
-                          className="w-full h-full" 
-                          opts={{ 
-                            align: "start", 
-                            containScroll: "trimSnaps",
-                            watchDrag: !isDragging
-                          }}
-                        >
-                          <CarouselContent className="h-full ml-0">
-                            {mediaFiles.map((media, idx) => (
-                              <CarouselItem key={idx} className="h-full pl-0">
-                                <div className="relative w-full h-full bg-white flex items-center justify-center overflow-hidden">
-                                  {media.type === 'image' ? (
-                                    <div className="w-full h-full relative">
-                                      <img 
-                                        src={media.url} 
-                                        alt="Preview" 
-                                        draggable={false}
-                                        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-                                        style={{ 
-                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1.2})`,
-                                        }}
-                                      />
-                                      {/* 드래그 핸들러 */}
-                                      <div 
-                                        className="absolute inset-0 z-20 cursor-move touch-none bg-transparent active:cursor-grabbing"
-                                        onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setIsDragging(true);
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                                        }}
-                                        onPointerMove={(e) => {
-                                          if (!isDragging) return;
-                                          const deltaX = e.clientX - dragStart.x;
-                                          const deltaY = e.clientY - dragStart.y;
-                                          
-                                          setMediaFiles(prev => prev.map((m, i) => 
-                                            i === idx ? { 
-                                              ...m, 
-                                              crop: { 
-                                                x: (m.crop?.x || 0) + deltaX, 
-                                                y: (m.crop?.y || 0) + deltaY 
-                                              } 
-                                            } : m
-                                          ));
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                        }}
-                                        onPointerUp={(e) => {
-                                          setIsDragging(false);
-                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-                                        }}
-                                        onPointerCancel={() => setIsDragging(false)}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <video 
-                                      src={media.url} 
-                                      className="w-full h-full object-cover"
-                                      controls={false}
-                                      autoPlay
-                                      muted
-                                      loop
-                                    />
-                                  )}
-                                  <button
-                                    onClick={() => removeMedia(idx)}
-                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                  
-                                  {mediaFiles.length > 1 && (
-                                    <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
-                                      {mediaFiles.map((_, i) => (
-                                        <div 
-                                          key={i} 
-                                          className={cn(
-                                            "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-md",
-                                            currentSlide === i ? "bg-white w-4" : "bg-white/40"
-                                          )} 
+                        <div className="w-full h-full relative">
+                          {/* Carousel이 렌더링되지 않을 경우를 대비해 0번 이미지를 배경으로 먼저 띄움 */}
+                          <div className="absolute inset-0 z-0 bg-white">
+                            <img 
+                              src={mediaFiles[currentSlide]?.url || mediaFiles[0].url} 
+                              className="w-full h-full object-cover opacity-50 blur-sm"
+                              alt=""
+                            />
+                          </div>
+                          
+                          <Carousel 
+                            setApi={setApi}
+                            className="w-full h-full relative z-10" 
+                            opts={{ 
+                              align: "start", 
+                              containScroll: "trimSnaps",
+                              watchDrag: !isDragging
+                            }}
+                          >
+                            <CarouselContent className="h-full ml-0">
+                              {mediaFiles.map((media, idx) => (
+                                <CarouselItem key={`${media.url}-${idx}`} className="h-full pl-0">
+                                  <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                                    {media.type === 'image' ? (
+                                      <div className="w-full h-full relative bg-white">
+                                        <img 
+                                          src={media.url} 
+                                          alt={`Preview ${idx}`} 
+                                          draggable={false}
+                                          className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none z-[100]"
+                                          style={{ 
+                                            transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1.2})`,
+                                            display: 'block'
+                                          }}
                                         />
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </CarouselItem>
-                            ))}
-                          </CarouselContent>
-                          {mediaFiles.length > 1 && (
-                            <>
-                              <CarouselPrevious className="left-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
-                              <CarouselNext className="right-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
-                            </>
-                          )}
-                        </Carousel>
+                                        {/* 드래그 핸들러 - z-index를 이미지보다 더 높게 */}
+                                        <div 
+                                          className="absolute inset-0 z-[200] cursor-move touch-none bg-transparent"
+                                          onPointerDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setIsDragging(true);
+                                            setDragStart({ x: e.clientX, y: e.clientY });
+                                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                                          }}
+                                          onPointerMove={(e) => {
+                                            if (!isDragging) return;
+                                            const deltaX = e.clientX - dragStart.x;
+                                            const deltaY = e.clientY - dragStart.y;
+                                            
+                                            setMediaFiles(prev => prev.map((m, i) => 
+                                              i === idx ? { 
+                                                ...m, 
+                                                crop: { 
+                                                  x: (m.crop?.x || 0) + deltaX, 
+                                                  y: (m.crop?.y || 0) + deltaY 
+                                                } 
+                                              } : m
+                                            ));
+                                            setDragStart({ x: e.clientX, y: e.clientY });
+                                          }}
+                                          onPointerUp={(e) => {
+                                            setIsDragging(false);
+                                            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                                          }}
+                                          onPointerCancel={() => setIsDragging(false)}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <video 
+                                        src={media.url} 
+                                        className="w-full h-full object-cover"
+                                        controls={false}
+                                        autoPlay
+                                        muted
+                                        loop
+                                      />
+                                    )}
+                                    <button
+                                      onClick={() => removeMedia(idx)}
+                                      className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                    
+                                    {mediaFiles.length > 1 && (
+                                      <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
+                                        {mediaFiles.map((_, i) => (
+                                          <div 
+                                            key={i} 
+                                            className={cn(
+                                              "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-md",
+                                              currentSlide === i ? "bg-white w-4" : "bg-white/40"
+                                            )} 
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </CarouselItem>
+                              ))}
+                            </CarouselContent>
+                            {mediaFiles.length > 1 && (
+                              <>
+                                <CarouselPrevious className="left-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
+                                <CarouselNext className="right-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
+                              </>
+                            )}
+                          </Carousel>
+                        </div>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
                           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
