@@ -126,17 +126,14 @@ const Index = () => {
         if (/post\s*content/i.test(clean)) return false;
         // http로 시작하지 않는 모든 문자열 차단
         if (!clean.startsWith('http')) return false;
-        // 너무 짧은 문자열 (잘못된 URL) 차단
-        if (clean.length < 15) return false;
+        // 특정 깨진 문자열 패턴 차단
+        if (clean.length < 20) return false;
         return true;
       };
 
-      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 강제 교체
-      // 이 과정이 sanitizeYoutubeMedia 이전에 실행되어야 함
+      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
       const preSanitizedRaw = { ...rawPost };
-      if (!isValidUrl(preSanitizedRaw.image_url)) {
-        preSanitizedRaw.image_url = SAFE_FALLBACK;
-      }
+      preSanitizedRaw.image_url = isValidUrl(preSanitizedRaw.image_url) ? preSanitizedRaw.image_url : SAFE_FALLBACK;
       
       if (Array.isArray(preSanitizedRaw.images) && preSanitizedRaw.images.length > 0) {
         preSanitizedRaw.images = preSanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
@@ -146,26 +143,26 @@ const Index = () => {
 
       // 정제된 데이터를 기반으로 비동기 처리 진행
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
-      const isAd = p.content?.trim().startsWith('[AD]');
       
-      // ✅ [수정] 강제로 특정 테두리가 생기지 않도록 보정
-      let borderType: any = isAd ? 'none' : getTierFromId(p.id);
-      
-      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
-      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
-      if (p.border_type) borderType = p.border_type;
-
-      let finalImage = p.image_url;
+      // ✅ [중요] sanitizeYoutubeMedia 이후에도 텍스트가 다시 유입될 수 있으므로 한 번 더 검증
+      let finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
       if (p.youtube_url) {
-        finalImage = getYoutubeThumbnail(p.youtube_url);
+        finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
       }
       
-      // [FINAL CHECK] 마지막 렌더링 직전 데이터 재검증
+      // 최종 검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
       const finalImages = Array.isArray(p.images) && p.images.length > 0
         ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
         : [finalImage];
+
+      const isAd = p.content?.trim().startsWith('[AD]');
+      const borderType = isAd ? 'none' : getTierFromId(p.id);
+      
+      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
+      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
+      if (p.border_type) borderType = p.border_type;
 
       return {
         id: p.id,
