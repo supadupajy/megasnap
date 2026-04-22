@@ -109,7 +109,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const vv = window.visualViewport;
   if (!vv) return;
   const handleResize = () => {
-    setKeyboardHeight(vv.offsetTop > 0 ? vv.offsetTop : 0);
+    const keyboardH = window.innerHeight - vv.height;
+    setKeyboardHeight(keyboardH > 100 ? keyboardH : 0);
   };
   vv.addEventListener('resize', handleResize);
   vv.addEventListener('scroll', handleResize);
