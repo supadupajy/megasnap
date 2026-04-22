@@ -384,21 +384,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                       </div>
                                       {/* 광고 클릭 오버레이 */}
                                       <div
-                                        className="absolute inset-0 z-20 cursor-pointer"
-                                        onPointerDown={(e) => {
-                                          e.currentTarget.dataset.startX = String(e.clientX);
-                                          e.currentTarget.dataset.startY = String(e.clientY);
-                                        }}
-                                        onPointerUp={(e) => {
-                                          const dist = Math.sqrt(
-                                            Math.pow(e.clientX - Number(e.currentTarget.dataset.startX), 2) +
-                                            Math.pow(e.clientY - Number(e.currentTarget.dataset.startY), 2)
-                                          );
-                                          if (dist < 10) {
-                                            e.stopPropagation();
-                                            window.open(adLink, '_blank', 'noopener,noreferrer');
-                                          }
-                                        }}
+  className="absolute inset-0 z-20 cursor-pointer"
+  onPointerDown={(e) => {
+    e.currentTarget.dataset.startX = String(e.clientX);
+    e.currentTarget.dataset.startY = String(e.clientY);
+  }}
+  onPointerUp={(e) => {
+    const dist = Math.sqrt(
+      Math.pow(e.clientX - Number(e.currentTarget.dataset.startX), 2) +
+      Math.pow(e.clientY - Number(e.currentTarget.dataset.startY), 2)
+    );
+    if (dist < 10) {
+      e.stopPropagation();
+      window.open(adLink, '_blank', 'noopener,noreferrer');
+    }
+  }}
+  onClick={(e) => e.stopPropagation()}  // ← 이 줄 추가
+/>
                                       />
                                     </>
                                   )}
