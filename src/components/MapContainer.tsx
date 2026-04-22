@@ -439,10 +439,17 @@ const MapContainer = ({
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
+      // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
+      // 1~6단계: 1.0 (100%)
+      // 7단계: 0.5 (50%)
+      // 8단계: 0.25 (25%)
+      // 9단계 이상: 0 (안 보임)
       let scale = 1.0;
       if (currentLevel > 6) {
         scale = Math.pow(0.5, currentLevel - 6);
       }
+      
+      // 최소 스케일 제한 (너무 작아지지 않게)
       scale = Math.max(scale, 0.05);
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
@@ -461,6 +468,10 @@ const MapContainer = ({
 
         if (isHighlighted) content.classList.add('highlighted');
         content.style.setProperty('--marker-scale', scale.toString());
+        // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
+        content.style.transform = `scale(${scale})`;
+        content.style.transformOrigin = 'bottom center';
+        
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         
@@ -492,6 +503,10 @@ const MapContainer = ({
           }
 
           content.style.setProperty('--marker-scale', scale.toString());
+          // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
+          content.style.transform = `scale(${scale})`;
+          content.style.transformOrigin = 'bottom center';
+          
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
