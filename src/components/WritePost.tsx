@@ -677,7 +677,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             
             {/* [FIX] 하단 버튼을 fixed가 아닌 DrawerContent 내부의 absolute로 배치 */}
             <div
-  className="shrink-0 px-5 pt-3 pb-8 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
+  className="shrink-0 pt-3 pb-6 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
 >
               {currentPage === 1 ? (
                 <Button
