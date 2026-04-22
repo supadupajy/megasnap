@@ -215,26 +215,27 @@ const PostListOverlay = ({
           const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
             const isAd = p.content?.trim().startsWith('[AD]');
             return {
-              id: p.id,
-              isAd,
-              isGif: false,
-              isInfluencer: false,
-              user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
-              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-              location: p.location_name || '알 수 없는 장소',
-              lat: p.latitude,
-              lng: p.longitude,
-              likes: Number(p.likes || 0),
-              commentsCount: 0,
-              comments: [],
-              image: p.image_url,
-              videoUrl: p.video_url,
-              youtubeUrl: p.youtube_url,
-              category: p.category || 'none',
-              isLiked: false,
-              createdAt: new Date(p.created_at),
-              borderType: 'none',
-            } as Post;
+  id: p.id,
+  isAd,
+  isGif: false,
+  isInfluencer: false,
+  user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+  content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+  location: p.location_name || '알 수 없는 장소',
+  lat: p.latitude,
+  lng: p.longitude,
+  likes: Number(p.likes || 0),
+  commentsCount: 0,
+  comments: [],
+  image: p.image_url,
+  images: Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : []), // ✅ 추가
+  videoUrl: p.video_url,
+  youtubeUrl: p.youtube_url,
+  category: p.category || 'none',
+  isLiked: false,
+  createdAt: new Date(p.created_at),
+  borderType: 'none',
+} as Post;
           }));
 
           mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
