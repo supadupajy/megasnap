@@ -336,9 +336,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const hasMediaBorder = mediaBorderContainerClass !== '';
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col bg-white animate-in slide-in-from-bottom duration-300 overflow-y-auto">
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-white animate-in slide-in-from-bottom duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-50">
+      <div className="flex items-center justify-between p-4 border-b">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-6 h-6" />
         </Button>
@@ -352,32 +352,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
       </div>
 
-      <div className="flex-1">
-        {/* User Info Section (Original Layout) */}
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3" onClick={handleUserClick}>
-            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-              <img src={post.user.avatar || FALLBACK_IMAGE} alt={post.user.name} className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <p className="font-bold text-sm">{post.user.name}</p>
-              <p className="text-xs text-gray-500">지금 여기</p>
-            </div>
-          </div>
-          {isMine && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon"><MoreHorizontal className="w-5 h-5 text-gray-400" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setIsDeleteDialogOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" /> 삭제하기
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-
+      <div className="flex-1 overflow-y-auto pb-20">
         {/* Media Carousel - Forced 1:1 Aspect Ratio */}
         <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
           <div 
@@ -395,9 +370,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     muted
                     loop
                   />
-                ) : post.youtubeId && idx === 0 ? (
+                ) : post.youtubeUrl && idx === 0 ? (
                   <iframe
-                    src={`https://www.youtube.com/embed/${post.youtubeId}?autoplay=1&mute=1&loop=1`}
+                    src={`https://www.youtube.com/embed/${post.youtubeUrl}?autoplay=1&mute=1&loop=1`}
                     className="w-full h-full"
                     allow="autoplay; encrypted-media"
                     allowFullScreen
@@ -407,10 +382,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     src={img} 
                     alt={`Post image ${idx + 1}`}
                     className="w-full h-full object-cover"
+                    style={{ 
+                      // 1:1 비율 내에서 원본 포스팅 시 설정한 위치를 보여주기 위해 object-fit: cover 사용
+                      aspectRatio: '1/1' 
+                    }}
                   />
                 )}
                 
-                {idx === adIndex && !isAd && (
+                {/* Ad Overlay for injected Coca-Cola ad */}
+                {idx === 1 && post.id !== 'coca-cola-ad' && (
                   <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm z-10">
                     AD
                   </div>
@@ -418,69 +398,63 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
               </div>
             ))}
           </div>
-          
-          {/* Carousel Dots */}
-          {displayImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-              {displayImages.map((_, i) => (
-                <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", i === currentImageIndex ? "bg-white w-3" : "bg-white/50")} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons & Content */}
-        <div className="p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-4">
-              <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
-                <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-                <MessageCircle className="w-6 h-6 text-gray-700" />
-              </button>
-              <button className="text-gray-700"><Share2 className="w-6 h-6" /></button>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-3">
-                <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-                  <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-                </button>
-                {renderCategoryBadge()}
-                {post.lat !== undefined && post.lng !== undefined && (
-                  <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                    <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                    <span className="text-[10px] font-black">위치보기</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="space-y-1 mb-4">
-            <p className="text-sm font-bold text-gray-900">좋아요 {post.likes.toLocaleString()}개</p>
-            <div className="flex gap-2 items-start">
-              <span className="text-sm font-bold text-gray-900">{post.user.name}</span>
-              <p className="text-gray-800 text-sm leading-snug">{post.content}</p>
-            </div>
-            <p className="text-[10px] text-gray-400 pt-1">2시간 전</p>
-          </div>
-
-          <div className="border-t border-gray-100 pt-4">
-            <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
-              <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
-            </form>
-            {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
-            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group">
-              <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-              {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-            </button>
-          </div>
         </div>
       </div>
 
-      <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
+      <div className="p-4 border-t">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              {/* 저장 버튼 (북마크) */}
+              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+              </button>
+              
+              {/* 카테고리 뱃지 */}
+              {renderCategoryBadge()}
+              
+              {/* 위치보기 버튼 */}
+              {post.lat !== undefined && post.lng !== undefined && (
+                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                  <span className="text-[10px] font-black">위치보기</span>
+                </button>
+              )}
+            </div>
+            {isAd && (
+              <a 
+                href="https://s.baemin.com/t3000fBqlbHGL" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                <span className="text-[10px] font-black">주문하기</span>
+              </a>
+            )}
+          </div>
+        </div>
+        <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}><p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p><div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div></div>
+        <div className="border-t border-gray-100 pt-4">
+          <form 
+            onSubmit={handleAddComment} 
+            className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+          >
+            <Input 
+              ref={commentInputRef}
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
+              value={commentInput} 
+              onChange={(e) => setCommentInput(e.target.value)} 
+              disabled={isSubmittingComment} 
+            />
+            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
+          </form>
+          {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
+        </div>
+      </div>
     </div>
   );
 };
