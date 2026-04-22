@@ -330,18 +330,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   return (
     <>
-      <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
-        <DrawerContent
-          className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
-          style={{ 
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            transform: 'none',
-            transition: 'none'
-          }}
-        >
+      <DrawerContent
+  className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
+  style={{ 
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none',
+    transition: keyboardHeight > 0 ? 'transform 0.25s ease-out' : 'none'
+  }}
+>
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
             <DrawerDescription>장소를 선택하고 사진이나 동영상을 업로드하여 추억을 기록하세요.</DrawerDescription>
