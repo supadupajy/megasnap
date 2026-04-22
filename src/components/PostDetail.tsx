@@ -404,26 +404,41 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   <div className="px-4">
-                    <div ref={videoContainerRef} className={cn("relative aspect-[4/3] w-full rounded-2xl", mediaBorderContainerClass)}>
-                      <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
-
-                        {isPlayingVideo ? (
-                          youtubeId ? (
-                            <div className="relative w-full h-full">
-                              <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
-                              <button onClick={(e) => { e.stopPropagation(); window.open(post.youtubeUrl, '_blank'); }} className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-white/20 active:scale-95 transition-all z-20"><ExternalLink className="w-3 h-3" /> 유튜브에서 보기</button>
-                            </div>
-                          ) : (
-                            <video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />
-                          )
-                        ) : (
-                          <div className="relative w-full h-full">
-                            <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
-                            {(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
-                            {displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
+                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl group">
+                      <Carousel className="w-full h-full">
+                        <CarouselContent>
+                          {allImages.map((img, index) => (
+                            <CarouselItem key={index}>
+                              <div className="relative aspect-square w-full">
+                                <img
+                                  src={img}
+                                  alt={`Post content ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                  draggable={false}
+                                />
+                                {index === 1 && (
+                                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ExternalLink className="w-3 h-3" />
+                                    AD
+                                  </div>
+                                )}
+                              </div>
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        {allImages.length > 1 && (
+                          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10">
+                            {allImages.map((_, i) => (
+                              <div
+                                key={i}
+                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                  currentSlide === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+                                }`}
+                              />
+                            ))}
                           </div>
                         )}
-                      </div>
+                      </Carousel>
                     </div>
                   </div>
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
