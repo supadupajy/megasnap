@@ -677,7 +677,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           </div>
         </DrawerContent>
         {isOpen && (
-          <div className="fixed bottom-30 left-0 right-0 pt-3 pb-6 px-5 bg-white z-[9999] border-t border-gray-100">
+          <div className="fixed bottom-10 left-0 right-0 pt-3 pb-6 px-5 bg-white z-[9999] border-t border-gray-100">
             {currentPage === 1 ? (
               <Button
                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
