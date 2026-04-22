@@ -267,6 +267,7 @@ const MapContainer = ({
     else if (level === 7) scale = 0.5;
     else if (level >= 8) scale = 0;
     
+    // 8단계 이상이면 무조건 모든 오버레이 제거
     if (level >= 8) {
       overlaysRef.current.forEach((overlay) => {
         const content = overlay.getContent();
@@ -281,17 +282,22 @@ const MapContainer = ({
       return;
     }
 
+    const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
     // 1. 제거될 마커 처리 (Fade Out)
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
-      if (!currentPostIds.has(id)) {
+      const position = overlay.getPosition();
+      
+      // ✅ 현재 화면(bounds) 밖에 있거나, 게시물 목록에 없는 경우 제거
+      if (!currentPostIds.has(id) || !bounds.contain(position)) {
         if (content instanceof HTMLElement) {
           content.style.opacity = '0';
           content.style.transition = 'opacity 0.3s ease-out';
           setTimeout(() => {
-            if (!currentPostIds.has(id)) {
+            // 체크 시점에 여전히 화면 밖이거나 삭제된 상태면 실제 제거
+            if (!currentPostIds.has(id) || !bounds.contain(position)) {
               overlay.setMap(null);
               overlaysRef.current.delete(id);
             }
@@ -301,6 +307,7 @@ const MapContainer = ({
           overlaysRef.current.delete(id);
         }
       } else {
+        // 화면 안에 있으면 다시 지도에 부착 (필요 시)
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
           if (content instanceof HTMLElement) {
@@ -318,9 +325,17 @@ const MapContainer = ({
       }
     });
 
-    // 2. 마커 생성 및 업데이트 (Fade In)
+    // 2. 마커 생성 및 업데이트 (화면 안에 있는 것만)
     posts.forEach(post => {
       if (!post) return;
+      
+      const position = new (window as any).kakao.maps.LatLng(post.lat, post.lng);
+      
+      // ✅ 마커 생성 전, 현재 화면(bounds) 안에 있는지 엄격히 검사
+      if (!bounds.contain(position)) {
+        return;
+      }
+
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
