@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint } from 'lucide-react';
+import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -331,7 +331,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               <div className="flex items-center gap-2">
                 {currentPage === 2 && (
                   <Button variant="ghost" size="icon" onClick={handleBackPage} className="rounded-full -ml-2">
-                    <X className="w-5 h-5 rotate-90" style={{ transform: 'rotate(-90deg)' }} />
+                    <ChevronLeft className="w-6 h-6 text-gray-800" />
                     <span className="sr-only">이전</span>
                   </Button>
                 )}
@@ -345,7 +345,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+            <div className="flex-1 min-h-0 overflow-hidden">
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div 
@@ -353,9 +353,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6 px-1"
+                    className="flex flex-col h-full space-y-4 px-1"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-3 shrink-0">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
                         미디어 첨부 <span className="text-indigo-600">(필수)</span>
                       </p>
@@ -364,7 +364,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
                             "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]", // 사진이 있을 때 더 줄여서 공간 확보
+                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]",
                             mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
@@ -391,20 +391,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     </div>
 
                     {mediaFiles.length > 0 && (
-                      <div className="relative group">
+                      <div className="relative flex-1 min-h-0">
                         <Carousel 
                           setApi={setApi}
-                          className="w-full" 
+                          className="w-full h-full" 
                           opts={{ 
                             align: "start", 
                             containScroll: "trimSnaps",
                             watchDrag: true
                           }}
                         >
-                          <CarouselContent>
+                          <CarouselContent className="h-full">
                             {mediaFiles.map((media, idx) => (
-                              <CarouselItem key={idx}>
-                                <div className="relative aspect-square rounded-xl overflow-hidden bg-black/5">
+                              <CarouselItem key={idx} className="h-full">
+                                <div className="relative h-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
                                   {media.type === 'image' ? (
                                     <img 
                                       src={media.url} 
@@ -423,20 +423,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   )}
                                   <button
                                     onClick={() => removeMedia(idx)}
-                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
+                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
                                   
-                                  {/* 스크롤 인디케이터 (이미지 안쪽 하단 배치) */}
                                   {mediaFiles.length > 1 && (
-                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
+                                    <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
                                       {mediaFiles.map((_, i) => (
                                         <div 
                                           key={i} 
                                           className={cn(
-                                            "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-sm",
-                                            currentSlide === i ? "bg-white w-3" : "bg-white/50"
+                                            "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-md",
+                                            currentSlide === i ? "bg-white w-4" : "bg-white/40"
                                           )} 
                                         />
                                       ))}
@@ -448,8 +447,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           </CarouselContent>
                           {mediaFiles.length > 1 && (
                             <>
-                              <CarouselPrevious className="left-2 bg-white/40 border-none hover:bg-white/60 z-20 h-8 w-8" />
-                              <CarouselNext className="right-2 bg-white/40 border-none hover:bg-white/60 z-20 h-8 w-8" />
+                              <CarouselPrevious className="left-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg" />
+                              <CarouselNext className="right-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg" />
                             </>
                           )}
                         </Carousel>
@@ -462,7 +461,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6 px-1"
+                    className="space-y-6 px-1 h-full overflow-y-auto no-scrollbar"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between px-1">
