@@ -427,44 +427,25 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // ✅ [강력한 제어] 8단계 이상일 때는 무조건 루프를 돌며 모든 마커를 setMap(null) 처리
+    // ✅ 8단계 이상일 때는 지도에서만 제거하고, overlaysRef는 유지 (상태 관리용)
     if (currentLevel >= 8) {
       overlaysRef.current.forEach((overlay) => {
         overlay.setMap(null);
       });
-      // overlaysRef.current.clear(); // 제거하면 다음 렌더링 시 posts 비교가 안되므로 지우지 않음
       return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // 1. 제거될 마커 애니메이션 적용
+    // 1. 제거될 마커 처리 (현재 포스트에 없거나 레벨이 바뀐 경우 등)
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id)) {
-        console.log('[MapContainer] Post not in current props, checking if needs animation removal:', id);
-        
-        // 이미 제거 대기 중인 경우 무시
-        if (removalTimeoutsRef.current.has(id)) return;
-
-        const content = overlay.getContent();
-        if (content instanceof HTMLElement) {
-          console.log('[MapContainer] Triggering disappear animation for:', id);
-          // 기존 부유/호흡 애니메이션 제거 후 사라짐 애니메이션 추가
-          content.classList.remove('animate-marker-appear', 'animate-marker-float', 'animate-ad-breathing');
-          content.classList.add('animate-marker-disappear');
-          
-          // 애니메이션 시간(300ms) 후에 실제로 지도에서 제거
-          const timeoutId = window.setTimeout(() => {
-            console.log('[MapContainer] Animation finished, removing from map:', id);
-            overlay.setMap(null);
-            overlaysRef.current.delete(id);
-            removalTimeoutsRef.current.delete(id);
-          }, 300);
-          
-          removalTimeoutsRef.current.set(id, timeoutId);
-        } else {
-          overlay.setMap(null);
-          overlaysRef.current.delete(id);
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
+      } else {
+        // ✅ 7단계 이하로 돌아왔을 때, 지도에 다시 붙여줌
+        if (overlay.getMap() === null) {
+          overlay.setMap(mapInstance.current);
         }
       }
     });
