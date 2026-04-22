@@ -388,11 +388,9 @@ const Chat = () => {
     if (!inputValue.trim() || !authUser || !chatId) return;
 
     const content = inputValue.trim();
-    // 1. 입력창 즉시 초기화
     setInputValue('');
 
     if (isValidUUID(chatId)) {
-      // 보낼 메시지 데이터 미리 생성
       const messageToInsert = { 
         sender_id: authUser.id, 
         receiver_id: chatId, 
@@ -401,7 +399,6 @@ const Chat = () => {
 
       try {
         console.log('[Chat] Sending message to DB:', messageToInsert);
-        // 1. DB 저장
         const { data, error } = await supabase
           .from('messages')
           .insert([messageToInsert])
@@ -415,20 +412,19 @@ const Chat = () => {
 
         console.log('[Chat] DB insert success, data:', data);
 
-        // 2. 서버 데이터 즉시 반영
         if (data) {
           setMessages((prev) => {
-            // 중복 체크 (실시간 채널 대응)
             const exists = prev.some(m => m.id === data.id);
             if (exists) return prev;
-            
-            // 데이터 추가 및 시간순 정렬
             return [...prev, data].sort(
               (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
           });
-          // 즉시 스크롤 이동
-          setTimeout(scrollToBottom, 0);
+          
+          // ✅ [수정] 발신 직후 메시지 목록 동기화를 위한 전역 이벤트 발생
+          window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+          
+          setTimeout(scrollToBottom, 50);
         }
       } catch (error) {
         console.error('[Chat] Send error:', error);
@@ -510,7 +506,7 @@ const Chat = () => {
         className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
           paddingTop: '64px',
-          paddingBottom: '160px',
+          paddingBottom: '180px',
         }}
       >
         <div className="flex flex-col gap-4 py-4">
