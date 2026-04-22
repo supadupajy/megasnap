@@ -411,10 +411,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                             style={{ 
                                               width: 'auto',
                                               height: 'auto',
+                                              // 가로/세로 중 작은 쪽을 100%로 맞추어 빈틈 방지
                                               minWidth: '100%',
                                               minHeight: '100%',
                                               top: '50%',
                                               left: '50%',
+                                              // 중앙 정렬 상태에서 crop 값만 더함
                                               transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
                                             }}
                                           />
