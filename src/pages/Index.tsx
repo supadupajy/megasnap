@@ -142,13 +142,15 @@ const Index = () => {
       const isAd = p.content?.trim().startsWith('[AD]');
       const borderType = isAd ? 'none' : getTierFromId(p.id);
 
-      const rawImage = p.youtube_url 
-        ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) 
-        : p.image_url;
+      // 이미지 URL 최적화 로직
+      let finalImage = null;
       
-      const finalImage = (rawImage && (rawImage.startsWith('http') || rawImage.startsWith('data:'))) 
-        ? rawImage 
-        : null;
+      if (p.youtube_url) {
+        finalImage = getYoutubeThumbnail(p.youtube_url);
+      } else if (p.image_url && (p.image_url.startsWith('http') || p.image_url.startsWith('data:'))) {
+        // 이미 유효한 URL(Unsplash 등)이 있는 경우 그대로 사용
+        finalImage = p.image_url;
+      }
 
       return {
         id: p.id,
