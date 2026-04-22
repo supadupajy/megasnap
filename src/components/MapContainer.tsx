@@ -261,44 +261,64 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // 줌 레벨에 따른 스케일 계산 (강제 재계산)
     const level = mapInstance.current.getLevel();
     let scale = 1.0;
     if (level === 6) scale = 0.75;
     else if (level === 7) scale = 0.5;
     else if (level >= 8) scale = 0;
     
-    console.log('[MapContainer] Current Level:', level, 'Applying Scale:', scale);
-
     if (level >= 8) {
-      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      overlaysRef.current.forEach((overlay) => {
+        const content = overlay.getContent();
+        if (content instanceof HTMLElement) {
+          content.style.opacity = '0';
+          content.style.transition = 'opacity 0.3s ease-out';
+          setTimeout(() => overlay.setMap(null), 300);
+        } else {
+          overlay.setMap(null);
+        }
+      });
       return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // 1. 제거될 마커 처리 및 기존 마커 스타일 강제 업데이트
+    // 1. 제거될 마커 처리 (Fade Out)
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
       if (!currentPostIds.has(id)) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
+        if (content instanceof HTMLElement) {
+          content.style.opacity = '0';
+          content.style.transition = 'opacity 0.3s ease-out';
+          setTimeout(() => {
+            if (!currentPostIds.has(id)) {
+              overlay.setMap(null);
+              overlaysRef.current.delete(id);
+            }
+          }, 300);
+        } else {
+          overlay.setMap(null);
+          overlaysRef.current.delete(id);
+        }
       } else {
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
+          if (content instanceof HTMLElement) {
+            content.style.opacity = '0';
+            requestAnimationFrame(() => {
+              content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
+              content.style.opacity = '1';
+            });
+          }
         }
-        // ✅ [강력 조치] 기존 마커 엘리먼트의 transform을 직접 즉시 수정
         if (content instanceof HTMLElement) {
           content.style.transformOrigin = 'bottom center';
-          content.style.transition = 'transform 0.2s ease-out';
-          content.style.transform = `scale(${scale})`;
-          // important 속성으로 다른 애니메이션의 scale 간섭 차단
           content.style.setProperty('transform', `scale(${scale})`, 'important');
         }
       }
     });
 
-    // 2. 마커 생성 및 업데이트
+    // 2. 마커 생성 및 업데이트 (Fade In)
     posts.forEach(post => {
       if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
@@ -306,25 +326,19 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      // ✅ level을 키에 포함하여 줌 변경 시 렌더링 유도
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        if (post.isNewRealtime) {
-          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
-        } else {
-          content.classList.add('animate-marker-appear');
-        }
-
-        if (isHighlighted) content.classList.add('highlighted');
-        
-        // 초기 생성 시 스케일 적용
+        // 기존 팝업 애니메이션 대신 Fade In 효과 적용
+        content.style.opacity = '0';
+        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
         content.style.transformOrigin = 'bottom center';
         content.style.setProperty('transform', `scale(${scale})`, 'important');
-        content.style.transition = 'transform 0.2s ease-out';
+
+        if (isHighlighted) content.classList.add('highlighted');
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -344,13 +358,17 @@ const MapContainer = ({
         
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
+
+        // 생성 직후 투명도를 1로 올려서 Fade In
+        requestAnimationFrame(() => {
+          content.style.opacity = '1';
+        });
       } else {
         const content = existingOverlay.getContent();
         existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // ✅ 갱신 시에도 스케일 강제 적용
           content.style.transformOrigin = 'bottom center';
           content.style.setProperty('transform', `scale(${scale})`, 'important');
           content.style.opacity = "1";
