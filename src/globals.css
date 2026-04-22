@@ -44,6 +44,38 @@
   }
 }
 
+/* [FIX] 지도 마커 줌 변경 시 해상도/선명도 저하 방지 */
+.marker-container {
+  pointer-events: auto;
+  cursor: pointer;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.marker-container img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: -webkit-optimize-contrast;
+  /* GPU 가속 유도로 줌 인/아웃 시 래스터화 방지 */
+  transform: translateZ(0);
+}
+
+.marker-content-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  transform: translateZ(0);
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

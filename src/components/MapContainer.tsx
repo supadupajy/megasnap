@@ -263,6 +263,9 @@ const MapContainer = ({
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
+    // [FIX] 줌 레벨에 따른 스케일링 로직 최적화 (해상도 저하 방지)
+    // 브라우저의 래스터화 문제를 해결하기 위해 scale 대신 가능한 경우 크기 조정을 검토하거나
+    // scale 사용 시 will-change: transform을 통해 GPU 가속을 유도합니다.
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
       const position = overlay.getPosition();
@@ -294,6 +297,8 @@ const MapContainer = ({
         }
         if (content instanceof HTMLElement) {
           content.style.transformOrigin = 'bottom center';
+          // will-change 추가로 줌 변경 시 렌더링 품질 유지
+          content.style.willChange = 'transform, opacity';
           content.style.setProperty('transform', `scale(${scale})`, 'important');
         }
       }
@@ -323,6 +328,7 @@ const MapContainer = ({
         content.style.opacity = '0';
         content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
         content.style.transformOrigin = 'bottom center';
+        content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
         content.style.setProperty('transform', `scale(${scale})`, 'important');
 
         if (isHighlighted) content.classList.add('highlighted');
@@ -356,6 +362,7 @@ const MapContainer = ({
           cancelPendingRemoval(post.id, content);
           
           content.style.transformOrigin = 'bottom center';
+          content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
           content.style.setProperty('transform', `scale(${scale})`, 'important');
           content.style.opacity = "1";
           content.style.visibility = "visible";
