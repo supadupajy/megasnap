@@ -209,7 +209,7 @@ const MapContainer = ({
       console.error('Kakao Map Init Error:', e);
       return false;
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
     const checkMap = setInterval(() => {
@@ -558,6 +558,10 @@ const MapContainer = ({
     } else if (isMine) {
       inlineBorderStyle = "border: 3.5px solid #4f46e5;";
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
+    } else {
+      // [FIX] 일반 포스팅에 하얀색 테두리 일괄 적용
+      inlineBorderStyle = "border: 3px solid #ffffff;";
+      inlineShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
     }
 
     return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
