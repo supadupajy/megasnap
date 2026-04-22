@@ -3,6 +3,7 @@
 import { Post, User } from '@/types';
 import { getYoutubeThumbnail, getFallbackImage } from './utils';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
+import { supabase } from "@/integrations/supabase/client";
 
 const buildUniquePool = (items: readonly string[]) => Array.from(new Set(items));
 
@@ -157,7 +158,8 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
 const BLACKLISTED_IMAGES = [
   'photo-1501785888041-af3ef285b470', // 노란 꽃 호수 (Unsplash)
   'https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg', // 깨진 고양이 이미지 (Pexels)
-  'https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg' // 추가 확인된 깨진 이미지
+  'https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg', // 추가 확인된 깨진 이미지
+  'https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg' // 추가 확인된 깨진 이미지 (2349141)
 ];
 
 const WEB_SEARCHED_IMAGES = [
@@ -174,10 +176,13 @@ const WEB_SEARCHED_IMAGES = [
 ];
 
 const getStableWebImage = (id: string) => {
+  if (!id) return WEB_SEARCHED_IMAGES[0];
+
   // 블랙리스트 체크 (ID 포함 여부 또는 전체 URL 일치)
   const isBlacklisted = BLACKLISTED_IMAGES.some(url => 
     id.includes('45201') || 
     id.includes('1486337') ||
+    id.includes('2349141') ||
     (typeof url === 'string' && url.includes(id))
   );
 
@@ -185,8 +190,35 @@ const getStableWebImage = (id: string) => {
     return WEB_SEARCHED_IMAGES[0];
   }
 
-  const index = Math.abs(id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % WEB_SEARCHED_IMAGES.length;
+  // ID 기반으로 안정적인 이미지 인덱스 생성
+  const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const index = Math.abs(hash) % WEB_SEARCHED_IMAGES.length;
+  
   return WEB_SEARCHED_IMAGES[index];
+};
+
+/**
+ * 런타임에 깨진 이미지를 발견하면 DB와 로컬 상태에서 즉시 교체하는 함수
+ */
+export const handleBrokenImage = async (postId: string, brokenUrl: string) => {
+  const replacementUrl = WEB_SEARCHED_IMAGES[Math.floor(Math.random() * WEB_SEARCHED_IMAGES.length)];
+  
+  console.log(`[ImageRobustness] Replacing broken image for post ${postId}: ${brokenUrl} -> ${replacementUrl}`);
+
+  try {
+    // 1. DB 업데이트 시도 (조용히 처리)
+    const { error } = await supabase
+      .from('posts')
+      .update({ image_url: replacementUrl })
+      .eq('id', postId);
+      
+    if (error) throw error;
+    
+    return replacementUrl;
+  } catch (err) {
+    console.error('[ImageRobustness] Failed to update broken image in DB:', err);
+    return replacementUrl; // DB 업데이트 실패해도 교체 URL은 반환
+  }
 };
 
 export const cityThemes: Record<string, string[]> = {

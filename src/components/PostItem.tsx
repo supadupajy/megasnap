@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
+import { handleBrokenImage } from '@/lib/mock-data';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Navigation, Utensils, Car, TreePine, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
 import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -39,17 +40,34 @@ interface PostItemProps {
 const PostItem = ({ 
   post, 
   onLikeToggle, 
-  onSaveToggle,
-  onDelete, 
-  onCommentClick, 
   onLocationClick, 
-  onShare, 
-  onSave,
-  onImageError,
-  isViewed = false,
-  disablePulse = false
+  onDelete, 
+  onSaveToggle, 
+  isViewed, 
+  disablePulse 
 }: PostItemProps) => {
   const [imgError, setImgError] = useState(false);
+  const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
+
+  // 이미지 에러 핸들러 강화
+  const handleImageError = async () => {
+    if (imgError) return; // 무한 루프 방지
+    
+    setImgError(true);
+    const fallback = getFallbackImage();
+    setCurrentImage(fallback);
+    
+    // 백엔드에도 깨진 이미지임을 알리고 수정 시도
+    if (post.id) {
+      await handleBrokenImage(post.id, currentImage);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentImage(post.image_url || post.image || getFallbackImage());
+    setImgError(false);
+  }, [post.image_url, post.image]);
+
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -68,8 +86,8 @@ const PostItem = ({
   const likesCount = post.likes;
   const content = post.content;
   const user = post.user;
-  const lat = post.lat;
-  const lng = post.lng;
+  const lat = post.latitude || (post as any).lat;
+  const lng = post.longitude || (post as any).lng;
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
@@ -144,7 +162,10 @@ const PostItem = ({
   };
 
   return (
-    <div className={cn("bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4", !disablePulse && isViewed && "opacity-80")}>
+    <motion.div 
+      layout
+      className={cn("bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4", !disablePulse && isViewed && "opacity-80")}
+    >
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
@@ -169,14 +190,10 @@ const PostItem = ({
 
       <div className="relative aspect-square overflow-hidden bg-gray-50">
         <img 
-          src={displayImage} 
+          src={currentImage} 
           alt={content}
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-          onError={() => {
-            console.log(`[PostItem] Image failed to load, replacing with fallback: ${post.id}`);
-            setImgError(true);
-            onImageError?.(post.id);
-          }}
+          onError={handleImageError}
         />
       </div>
 
@@ -192,7 +209,7 @@ const PostItem = ({
               {renderCategoryBadge()}
               
               {lat !== undefined && lng !== undefined && (
-                <button onClick={handleLocationClick} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
+                <button onClick={(e) => onLocationClick(e, lat, lng)} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
                   <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
                   <span className="text-[10px] font-black">위치보기</span>
                 </button>
@@ -215,7 +232,7 @@ const PostItem = ({
         <div className="space-y-1"><p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p><div className="flex gap-2 items-start"><div className="flex items-center gap-1.5 shrink-0"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div><p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p></div><form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"><Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} /><button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button></form>{lastComment && (<div className="flex gap-2 items-start mt-1"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>)}<button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button><AnimatePresence>{showComments && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2 mt-2">{localComments.slice(0, -1).map((c, i) => (<div key={i} className="flex gap-2 items-start"><span className="font-bold text-sm text-gray-900">{c.user}</span><span className="text-sm text-gray-500 line-clamp-1">{c.text}</span></div>))}</motion.div>)}</AnimatePresence></div>
       </div>
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
-    </div>
+    </motion.div>
   );
 };
 

@@ -17,28 +17,25 @@ export interface Comment {
 
 export interface Post {
   id: string;
-  rank?: number;
-  isAd?: boolean;
-  isInfluencer?: boolean;
-  isGif?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
   user: User;
   content: string;
   location: string;
-  lat: number;
-  lng: number;
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
   likes: number;
   commentsCount: number;
   comments: Comment[];
-  image: string; // 메인 이미지 (Unsplash 고정)
-  thumbnailUrl?: string; // 지도 마커용 이미지 (유튜브 썸네일 등)
-  images?: string[];
-  adImageIndex?: number;
+  image: string;
+  image_url?: string;
+  images: string[];
   isLiked: boolean;
-  isSaved?: boolean;
-  createdAt: Date;
-  borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
-  videoUrl?: string;
+  isAd: boolean;
+  isGif: boolean;
+  isInfluencer?: boolean;
+  borderType?: 'gold' | 'silver' | 'none';
   youtubeUrl?: string;
-  isNewRealtime?: boolean;
+  videoUrl?: string;
+  category?: string;
+  isSaved?: boolean;
 }
