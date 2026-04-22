@@ -350,59 +350,59 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         >
           <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
             <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
               <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-                <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
-                  <div className="flex flex-col">
-                    {/* 헤더 */}
-                    <div className="flex items-center justify-between px-4 py-4 shrink-0">
-                      <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                        <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                          <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
-                            {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-                          </div>
-                          <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
-                            <MapPin className="w-3 h-3" />
-                            <span className="text-[10px] font-medium">{currentPost.location}</span>
-                          </div>
-                        </div>
+                {/* 헤더 고정 영역 */}
+                <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
+                  <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+                    <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                      <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
+                        {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
                       </div>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
-                              <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                            {isMine ? (
-                              <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                                <span className="text-sm font-bold text-red-600">삭제하기</span>
-                              </DropdownMenuItem>
-                            ) : (
-                              <>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                                  <AlertCircle className="w-4 h-4 text-gray-600" />
-                                  <span className="text-sm font-bold text-gray-700">신고</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                  <Ban className="w-4 h-4 text-red-600" />
-                                  <span className="text-sm font-bold text-red-600">차단</span>
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                        <MapPin className="w-3 h-3" />
+                        <span className="text-[10px] font-medium">{currentPost.location}</span>
                       </div>
                     </div>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
+                        {isMine ? (
+                          <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                            <span className="text-sm font-bold text-red-600">삭제하기</span>
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+                              <AlertCircle className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm font-bold text-gray-700">신고</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                              <Ban className="w-4 h-4 text-red-600" />
+                              <span className="text-sm font-bold text-red-600">차단</span>
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
 
+                <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
+                  <div className="flex flex-col">
                     {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
-                    <div className="px-4">
+                    <div className="px-4 mt-2">
                       <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                         {youtubeId ? (
                           <iframe
