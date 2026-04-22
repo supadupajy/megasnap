@@ -342,26 +342,26 @@ export const seedGangnamSpecialPosts = async (currentUserId: string) => {
 
     const insertData = gangnamSpots.map((spot, i) => {
       const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
-      const isYoutube = i % 2 === 0;
-      const category = CATEGORIES[i % CATEGORIES.length];
-      
-      const imageSeed = `gangnam_special_${i}_${Date.now()}`; // [FIX] Seed를 더 고유하게 변경
+      // [FIX] 50% 확률로 유튜브 포스팅 생성
+      const isYoutube = Math.random() > 0.5;
+      const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       
       let finalYoutubeUrl = null;
       let finalImage = "";
 
       if (isYoutube) {
-        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(i);
-        finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getDiverseUnsplashUrl(imageSeed, category);
+        // [FIX] 검증된 유튜브 풀에서 랜덤하게 선택
+        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(Math.floor(Math.random() * 50));
+        // [CRITICAL FIX] 유튜브 포스팅의 image_url을 확실하게 썸네일로 고정
+        const ytThumbnail = getYoutubeThumbnail(finalYoutubeUrl);
+        finalImage = ytThumbnail || "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
       } else {
-        finalImage = getDiverseUnsplashUrl(imageSeed, category);
+        // 일반 포스팅은 Pexels 랜덤 이미지 사용
+        finalImage = getDiverseUnsplashUrl(`gangnam_v3_${i}_${Date.now()}`, category);
       }
 
-      // [DEBUG] 생성되는 이미지 URL 확인
-      console.log(`[Seeder] Gangnam Special Image: ${finalImage}`);
-
       return {
-        content: REALISTIC_COMMENTS[i % REALISTIC_COMMENTS.length],
+        content: REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)],
         location_name: `서울시 강남구 ${spot.name} 인근`,
         latitude: spot.lat + (Math.random() - 0.5) * 0.002,
         longitude: spot.lng + (Math.random() - 0.5) * 0.002,
