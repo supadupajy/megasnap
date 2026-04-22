@@ -430,7 +430,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           />
                         </div>
                       ) : (
-                        <Carousel className="w-full h-full">
+                        <Carousel 
+                          className="w-full h-full" 
+                          opts={{ dragFree: false, loop: true }}
+                          onSelect={(api) => setCurrentImageIndex(api.selectedScrollSnap())}
+                        >
                           <CarouselContent>
                             {displayImages.map((img, index) => {
                               const isThisAdSlide = index === 1;
@@ -443,7 +447,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                     draggable={false}
                                   />
                                   {isThisAdSlide && (
-                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-20">
+                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-50">
                                       <ExternalLink className="w-3.5 h-3.5" />
                                       <span className="font-bold">{adLabel}</span>
                                     </div>
@@ -452,17 +456,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               );
 
                               return (
-                                <CarouselItem key={index}>
+                                <CarouselItem key={index} className="relative">
                                   {isThisAdSlide ? (
-                                    <a 
-                                      href={adLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="block w-full h-full cursor-pointer active:opacity-90 transition-opacity"
+                                    <div 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        window.open(adLink, '_blank', 'noopener,noreferrer');
+                                      }}
+                                      className="block w-full h-full cursor-pointer active:opacity-80 transition-opacity relative z-30"
                                     >
                                       {content}
-                                    </a>
+                                    </div>
                                   ) : (
                                     content
                                   )}
