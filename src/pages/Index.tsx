@@ -908,7 +908,7 @@ const Index = () => {
         {isPostListOpen && (
           <PostListOverlay
             key="post-list-overlay"
-            isOpen={true}
+            isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
             initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
