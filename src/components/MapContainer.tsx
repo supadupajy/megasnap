@@ -226,7 +226,7 @@ const MapContainer = ({
         const isInit = initMap();
         if (isInit) {
           clearInterval(checkMap);
-          // ✅ 지도 생성 직후 다시 한번 강제로 5단계 설정
+          // ✅ 초기 시작 시 무조건 5단계로 세팅 (다른 캐시 무시)
           if (mapInstance.current) {
             mapInstance.current.setLevel(5, { animate: false });
             setCurrentLevel(5);
@@ -267,6 +267,7 @@ const MapContainer = ({
     else if (currentLevel === 7) scale = 0.5;
     else if (currentLevel >= 8) scale = 0;
     
+    // 8단계 이상이면 무조건 모든 오버레이 제거
     if (currentLevel >= 8) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       return;
@@ -281,13 +282,17 @@ const MapContainer = ({
         overlay.setMap(null);
         overlaysRef.current.delete(id);
       } else {
+        // 7단계 이하일 때는 다시 지도에 부착
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
         }
-        // ✅ [강력 조치] 기존 마커의 스케일을 인라인 스타일로 즉시 강제 적용
+        // ✅ [강력 조치] 인라인 스타일로 직접 scale 주입
         if (content instanceof HTMLElement) {
+          content.style.transformOrigin = 'bottom center';
+          content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
+          // CSS 변수도 업데이트 (필요 시 CSS 파일에서 활용 가능)
+          content.style.setProperty('--marker-scale', scale.toString());
         }
       }
     });
@@ -300,13 +305,14 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+      
+      // ✅ currentLevel에 따라 변하는 고유 키 생성
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        // 애니메이션 클래스 설정
         if (post.isNewRealtime) {
           content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         } else {
@@ -315,10 +321,10 @@ const MapContainer = ({
 
         if (isHighlighted) content.classList.add('highlighted');
         
-        // ✅ [강력 조치] 초기 생성 시 스케일 강제 적용 및 important 부여
+        // 초기 생성 시 스케일 적용
         content.style.transformOrigin = 'bottom center';
-        content.style.setProperty('transform', `scale(${scale})`, 'important');
         content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+        content.style.transform = `scale(${scale})`;
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -344,8 +350,8 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // ✅ [강력 조치] 갱신 시에도 스케일 강제 적용 및 important 부여
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
+          // 기존 마커 스케일 갱신
+          content.style.transform = `scale(${scale})`;
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
@@ -526,34 +532,6 @@ const MapContainer = ({
       content.style.visibility = "visible";
     }
   };
-
-  // ✅ [수정] 줌 레벨에 따라 마커의 크기를 강제로 조절하는 별도의 효과 추가
-  useEffect(() => {
-    if (!isMapReady) return;
-    
-    // 줌 레벨에 따른 스케일 계산
-    let scale = 1.0;
-    if (currentLevel === 6) scale = 0.75;
-    else if (currentLevel === 7) scale = 0.5;
-    else if (currentLevel >= 8) scale = 0;
-    
-    // 현재 지도에 있는 모든 커스텀 오버레이 엘리먼트를 직접 찾아서 스타일 적용
-    overlaysRef.current.forEach((overlay) => {
-      const content = overlay.getContent();
-      if (content instanceof HTMLElement) {
-        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-        content.style.transform = `scale(${scale})`;
-        content.style.transformOrigin = 'bottom center';
-        
-        // 8단계 이상이면 숨김 처리 보강
-        if (currentLevel >= 8) {
-          overlay.setMap(null);
-        } else if (overlay.getMap() === null) {
-          overlay.setMap(mapInstance.current);
-        }
-      }
-    });
-  }, [currentLevel, isMapReady]);
 
   return (
     <div 
