@@ -646,10 +646,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                         onFocus={(e) => {
-                          e.stopPropagation();
-                          // 브라우저 자동 스크롤을 nearest로 제한해서 튀는 현상 방지
-                          e.target.scrollIntoView({ block: 'nearest' });
-                        }}
+  e.stopPropagation();
+}}
                       />
                     </div>
                   </motion.div>
