@@ -428,20 +428,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                         - portrait(세로형): width=100% → 가로에 맞춤, 세로는 auto
                                         crop 없이 원본 전체가 보임
                                       */}
-                                      <img
-                                        src={media.url}
-                                        alt={`Preview ${idx + 1}`}
-                                        draggable={false}
-                                        className="select-none pointer-events-none"
-                                        style={{
-                                          width: media.orientation === 'portrait' ? '100%' : 'auto',
-                                          height: media.orientation === 'landscape' ? '100%' : 'auto',
-                                          objectFit: 'none',
-                                          display: 'block',
-                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                          transition: isDragging ? 'none' : 'transform 0.05s linear',
-                                        }}
-                                      />
+<img
+  src={media.url}
+  alt={`Preview ${idx + 1}`}
+  draggable={false}
+  className="select-none pointer-events-none block"
+  style={{
+    width: media.orientation === 'portrait' ? '100%' : 'auto',
+    height: media.orientation === 'landscape' ? '100%' : 'auto',
+    // objectFit 없음 — width/height auto로 비율 자연스럽게 유지
+    transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
+    transition: isDragging ? 'none' : 'transform 0.05s linear',
+  }}
+/>
                                       {/* 드래그 오버레이 */}
                                       <div
                                         className="absolute inset-0 z-10 cursor-move touch-none"
