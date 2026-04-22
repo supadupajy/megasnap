@@ -4,10 +4,18 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = "https://xzabikiuauxdbvncudsm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6YWJpa2l1YXV4ZGJ2bmN1ZHNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODMyNzIsImV4cCI6MjA5MTk1OTI3Mn0.UnOD-oZ9mV_RIeLAG40vfsDOisos5EFqK-8rZ1wDnRc";
 
+// Import the supabase client like this:
+// import { supabase } from "@/integrations/supabase/client";
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: true,
     autoRefreshToken: true,
+    persistSession: true,
     detectSessionInUrl: true,
+    // [FIX] 브라우저 탭 간의 락 충돌(Lock contention) 방지
+    // React Strict Mode나 빠른 페이지 전환 시 발생하는 "auth-token lock" 에러를 해결합니다.
+    storageKey: 'sb-auth-token',
+    storage: window.localStorage,
+    lockType: 'custom', // navigator 락 대신 커스텀/없음 설정 시도
   }
 });
