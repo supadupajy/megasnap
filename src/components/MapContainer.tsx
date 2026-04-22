@@ -536,6 +536,10 @@ const MapContainer = ({
     
     const animationClass = isAd ? 'animate-ad-breathing' : '';
 
+    // [FIX] 일반 포스팅을 제외한 특수 포스팅(내 글, 광고, 인기글, 인플루언서)에만 shine-overlay 클래스 적용
+    const isSpecialPost = isMine || isAd || borderType !== 'none';
+    const shineClass = isSpecialPost ? 'shine-overlay' : '';
+
     // 모든 마커에 일괄적으로 3px 화이트 테두리 적용
     let inlineBorderStyle = "border: 3px solid #ffffff;"; 
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
@@ -567,7 +571,7 @@ const MapContainer = ({
       <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
-          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="shine-overlay">
+          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="${shineClass}">
             <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" />
             <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
