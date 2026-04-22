@@ -319,12 +319,13 @@ const PostItem = ({
       )}
     >
       <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-            <img
-              src={isMine && profile?.avatar_url ? profile.avatar_url : user.avatar}
-              alt={isMine && profile?.nickname ? profile.nickname : user.name}
-              className="w-full h-full rounded-full object-cover border-2 border-white"
-              onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE}
+            <img 
+              src={isMine && profile?.avatar_url ? profile.avatar_url : user.avatar} 
+              alt={isMine && profile?.nickname ? profile.nickname : user.name} 
+              className="w-full h-full rounded-full object-cover border-2 border-white" 
+              onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} 
             />
           </div>
           <div>
