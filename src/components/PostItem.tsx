@@ -309,6 +309,7 @@ const PostItem = ({
 
   const getMediaBorderContainerClass = () => {
     if (isAd) return 'ad-border-container';
+    if (isMine) return 'my-post-border-container';
     return '';
   };
 

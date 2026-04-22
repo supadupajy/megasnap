@@ -537,9 +537,14 @@ const MapContainer = ({
     
     const animationClass = isAd ? 'animate-ad-breathing' : '';
 
-    // 모든 마커에 일괄적으로 3px 화이트 테두리 적용
+    // [FIX] 내 포스팅에 인디고 색상 테두리 적용
     let inlineBorderStyle = "border: 3px solid #ffffff;"; 
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
+
+    if (isMine) {
+      inlineBorderStyle = "border: 4.5px solid #4f46e5;"; // Indigo 600
+      inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
+    }
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
