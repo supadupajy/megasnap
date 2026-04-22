@@ -160,8 +160,12 @@ const Index = () => {
 
     console.log('[Realtime] Initializing posts subscription...');
     
+    // 이전에 생성된 채널이 있다면 제거 (중복 구독 방지)
+    const oldChannel = supabase.getChannels().find(c => c.name === 'global-posts-updates');
+    if (oldChannel) supabase.removeChannel(oldChannel);
+
     const channel = supabase
-      .channel('public:posts') // 채널 이름을 명확하게 지정
+      .channel('global-posts-updates') 
       .on(
         'postgres_changes',
         { 
@@ -171,15 +175,18 @@ const Index = () => {
         },
         async (payload) => {
           const newPostRaw = payload.new;
-          console.log('[Realtime] New post detected in DB:', newPostRaw.id);
+          console.log('[Realtime] Message received! New post ID:', newPostRaw.id);
 
-          if (!newPostRaw || newPostRaw.latitude === null || newPostRaw.longitude === null) return;
+          if (!newPostRaw || newPostRaw.latitude === null || newPostRaw.longitude === null) {
+            console.log('[Realtime] Invalid post data received (null coordinates)');
+            return;
+          }
 
-          // 1. 현재 내 지도 범위(Bounds) 안에 있는지 확인 (최신 상태를 가져오기 위해 ref 대신 현재 값 사용 고려)
-          // useEffect의 의존성에 mapData?.bounds가 있으므로 최신 범위를 알고 있음
+          // 최신 Bounds를 확인하기 위해 ref가 아닌 mapData에서 직접 가져오기
+          // 이 useEffect는 mapData.bounds가 변경될 때마다 재실행되므로 항상 최신 범위를 참조함
           const bounds = mapData?.bounds;
           if (!bounds) {
-            console.log('[Realtime] No map bounds available, skipping check');
+            console.log('[Realtime] Map bounds not ready yet');
             return;
           }
 
@@ -190,10 +197,10 @@ const Index = () => {
             newPostRaw.longitude >= Math.min(sw.lng, ne.lng) &&
             newPostRaw.longitude <= Math.max(sw.lng, ne.lng);
 
-          console.log(`[Realtime] Position check: ${newPostRaw.latitude}, ${newPostRaw.longitude} | InBounds: ${isInBounds}`);
+          console.log(`[Realtime] Bounds check result: ${isInBounds} for lat: ${newPostRaw.latitude}, lng: ${newPostRaw.longitude}`);
 
           if (isInBounds && newPostRaw.user_id !== authUser.id) {
-            console.log('[Realtime] !!! SUCCESS !!! New post is in bounds. Animating...');
+            console.log('[Realtime] MATCH! Adding to map and firing confetti');
             
             const newPost: Post = {
               id: newPostRaw.id,
@@ -218,32 +225,31 @@ const Index = () => {
               isNewRealtime: true 
             };
 
-            // 상태 업데이트 - 지도를 움직이지 않아도 즉시 렌더링되도록 함
             setAllPosts(prev => {
               if (prev.some(p => p.id === newPost.id)) return prev;
               return [newPost, ...prev];
             });
 
-            // 폭죽 효과
             confetti({
-              particleCount: 50,
-              spread: 80,
-              origin: { y: 0.7 },
-              colors: ['#4F46E5', '#F59E0B', '#10B981'],
-              zIndex: 9999
+              particleCount: 60,
+              spread: 100,
+              origin: { y: 0.8 },
+              colors: ['#4F46E5', '#F59E0B', '#10B981', '#FF0000'],
+              zIndex: 15000
             });
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log(`[Realtime] Subscription status: ${status}`);
+        if (err) console.error('[Realtime] Subscription error:', err);
       });
 
     return () => {
-      console.log('[Realtime] Unsubscribing from posts...');
+      console.log('[Realtime] Component cleanup: Unsubscribing');
       supabase.removeChannel(channel);
     };
-  }, [authUser?.id, mapData?.bounds]); // authUser.id로 의존성 구체화
+  }, [authUser?.id, mapData?.bounds]); // Bounds가 바뀔 때마다 구독을 최신 범위 기준으로 유지
 
   useEffect(() => { fetchGlobalTrending(); }, [fetchGlobalTrending]);
 
