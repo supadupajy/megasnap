@@ -342,7 +342,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
             className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-[1px]"
             onClick={onClose}
           />
@@ -351,14 +350,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
+          className="flex flex-col outline-none bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
           style={{ 
+            position: 'fixed',
             bottom: 0,
-            // [FIX] 스마트폰에서 브라우저 자체가 밀어올리는 현상을 상쇄하기 위해 
-            // 키보드가 올라온 만큼 Drawer를 아래로 내림 (브라우저가 올리고 우리가 내리면 상쇄됨)
-            transform: keyboardHeight > 0 ? `translateY(${keyboardHeight}px)` : 'translateY(0)',
-            transition: 'transform 0.1s ease-out',
-            willChange: 'transform'
+            left: 0,
+            right: 0,
+            // [FIX] transform 보정을 완전히 제거하여 브라우저의 기본 키보드 대응(스크롤 상쇄)을 허용
+            transform: 'none',
+            transition: 'none'
           }}
         >
           <div className="sr-only">
@@ -368,7 +368,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
 
-          <div className="px-5 flex flex-col flex-1 min-h-0">
+          <div className="px-5 flex flex-col flex-1 min-h-0 relative">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
@@ -388,13 +388,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </Button>
             </div>
             
-            {/* 페이지 콘텐츠 — 하단 버튼(fixed) 높이만큼 pb 확보 */}
+            {/* 페이지 콘텐츠 */}
             <div 
-              className="flex-1 min-h-0 overflow-y-auto pb-32 no-scrollbar"
-              style={{ 
-                // [FIX] 키보드가 올라올 때 하단 버튼에 가려지는 부분을 위해 여백을 키보드 높이만큼 동적으로 추가
-                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 80}px` : '120px' 
-              }}
+              className="flex-1 min-h-0 overflow-y-auto pb-40 no-scrollbar"
             >
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
@@ -657,58 +653,52 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     </div>
 
                     {/* 내용 입력 */}
-                    <div className="space-y-2 flex-1 flex flex-col min-h-0 mb-2">
+                    <div className="space-y-2 flex-1 flex flex-col min-h-0 mb-4">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 shrink-0">
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
                       <Textarea
                         placeholder="이 장소에서의 추억을 기록해보세요..."
-                        className="flex-1 min-h-[80px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                        className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                        onFocus={(e) => e.stopPropagation()}
+                        // [FIX] 인풋 포커스 시 브라우저가 자동으로 해당 요소를 키보드 위로 올리도록 유도
                       />
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+            
+            {/* [FIX] 하단 버튼을 fixed가 아닌 DrawerContent 내부의 absolute로 배치 */}
+            <div
+              className="absolute bottom-0 left-0 right-0 px-5 pt-3 pb-8 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
+              style={{ 
+                // 하단 탭바 높이만큼 띄움 (키보드가 없을 때)
+                paddingBottom: '110px'
+              }}
+            >
+              {currentPage === 1 ? (
+                <Button
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+                  onClick={handleNextPage}
+                  disabled={mediaFiles.length === 0}
+                >
+                  다음
+                </Button>
+              ) : (
+                <Button
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+                  onClick={handlePost}
+                  disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
+                >
+                  {isSubmitting ? '저장 중...' : '등록하기'}
+                </Button>
+              )}
+            </div>
           </div>
         </DrawerContent>
       </Drawer>
-      {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
-      {isOpen && (
-        <div
-          className="fixed left-0 right-0 px-5 pt-3 pb-6 bg-white z-[1002] shadow-[0_-10px_20px_rgba(0,0,0,0.05)]"
-          style={{ 
-            // [FIX] 브라우저가 화면을 밀어올리는 지점에 버튼을 배치
-            // bottom: 0이면 브라우저가 밀어올린 만큼 키보드 바로 위에 위치하게 됨
-            bottom: keyboardHeight > 0 ? '0px' : '0px',
-            paddingBottom: keyboardHeight > 0 ? '16px' : '110px',
-            transition: 'padding-bottom 0.2s ease-out'
-          }}
-        >
-          {currentPage === 1 ? (
-            <Button
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
-              onClick={handleNextPage}
-              disabled={mediaFiles.length === 0}
-            >
-              다음
-            </Button>
-          ) : (
-            <Button
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
-              onClick={handlePost}
-              disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
-            >
-              {isSubmitting ? '저장 중...' : '등록하기'}
-            </Button>
-          )}
-        </div>
-      )}
     </>
   );
 };
