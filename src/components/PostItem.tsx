@@ -116,37 +116,28 @@ const PostItem = ({
     if (isAd) return [image];
     if (youtubeId) return [image]; 
     
-    // [FIX] 'Post content 1' 같은 텍스트가 이미지로 들어오는 경우를 포함하여 더 강력한 필터링
+    // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 들어오는 경우를 포함하여 더 강력한 필터링
     const isValidUrl = (url: string) => {
       if (!url || typeof url !== 'string') return false;
       const cleanUrl = url.trim();
-      // 명확하게 이미지 URL 형식(http로 시작)이고 가짜 텍스트가 아닌지 확인
-      return cleanUrl.startsWith('http') && 
-             !cleanUrl.includes('Post content') && 
-             cleanUrl !== 'null' && 
-             cleanUrl !== 'undefined';
+      // 'Post content'가 포함되어 있으면 무조건 false
+      if (/post\s*content/i.test(cleanUrl)) return false;
+      return cleanUrl.startsWith('http');
     };
 
-    const validImages = (images && Array.isArray(images)) 
+    const validImages = (images && images.length > 0) 
       ? images.filter(isValidUrl)
       : [];
     
-    // [핵심] image prop 자체가 깨진 경우(텍스트 등)를 대비해 완전히 다른 링크로 강제 할당
-    const getSafeImage = (url: any) => {
-      if (isValidUrl(url)) return url;
-      // 깨진 경우 무조건 작동하는 고정 고화질 풍경 이미지로 대체
-      return "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
-    };
-
-    const baseImage = getSafeImage(image);
+    // 유효한 이미지가 하나도 없다면 image prop 검사, 그것도 없으면 FALLBACK
+    const baseImage = isValidUrl(image) ? image : FALLBACK_IMAGE;
     const finalBaseImages = validImages.length > 0 ? validImages : [baseImage];
     
-    const img1 = finalBaseImages[0];
-    const img3 = (finalBaseImages.length > 1) ? finalBaseImages[1] : THIRD_PLACEHOLDER;
-    return [img1, AD_IMAGE, img3];
+    // [FIX] 강제로 광고 이미지를 삽입하는 로직이 2번째 슬라이드에 깨진 이미지를 유발할 수 있으므로 제거하거나 검증
+    // 기존에 고정적으로 index 1에 AD_IMAGE를 넣던 로직을 제거하고 실제 데이터만 보여줍니다.
+    return finalBaseImages;
   }, [isAd, images, image, youtubeId, id]);
 
-  const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
 
   useEffect(() => {

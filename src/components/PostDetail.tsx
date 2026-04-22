@@ -170,17 +170,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       userImages = [singleImg];
     }
 
-    const result = [];
-    if (userImages.length > 0) {
-      result.push(userImages[0]);
-      result.push(COCA_COLA_AD);
-      if (userImages.length > 1) {
-        result.push(...userImages.slice(1).map(getVerifiedImage));
-      }
-    } else {
-      result.push(SAFE_FALLBACK, COCA_COLA_AD);
-    }
-    return result;
+    // [FIX] 강제로 index 1에 광고 이미지를 끼워넣던 로직을 제거하여 
+    // 데이터베이스의 실제 이미지만 정확하게 노출되도록 수정합니다.
+    return userImages.length > 0 ? userImages : [SAFE_FALLBACK];
   }, [post]);
 
   const adLink = useMemo(() => {
