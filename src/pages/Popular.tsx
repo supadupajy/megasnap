@@ -39,7 +39,7 @@ const Popular = () => {
   
   const hasLoaded = useRef(false);
 
-  // loading 변수가 정의되지 않아 에러가 발생하던 부분을 isLoading으로 통합 관리
+  // ✅ [FIX] isLoading 변수를 명시적으로 선언하고 초기 렌더링 시 crash 방지
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
   useEffect(() => {
@@ -49,7 +49,8 @@ const Popular = () => {
   }, []);
 
   const filteredPosts = useMemo(() => {
-    return posts.filter(p => !blockedIds.has(p.user.id));
+    if (!posts) return [];
+    return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
   const fetchPopularPosts = useCallback(async (pageNum: number) => {
@@ -127,6 +128,9 @@ const Popular = () => {
 
   const handlePostDelete = useCallback((postId: string) => { setPosts(prev => prev.filter(p => p.id !== postId)); }, []);
 
+  // ✅ [DEBUG] 렌더링 직전 상태 로그 (필요시 사용)
+  // console.log('Popular Render Status:', { isLoading, postsCount: posts.length });
+
   return (
     <div className="min-h-screen bg-white pb-32">
       {/* 고정 상단 헤더 */}
@@ -156,12 +160,12 @@ const Popular = () => {
                 />
               </div>
             ))}
-            {filteredPosts.length === 0 && (
+            {!isLoading && filteredPosts.length === 0 && (
               <div className="text-center py-20 text-gray-400 font-medium px-10">
                 표시할 인기 포스팅이 없습니다.
               </div>
             )}
-            {hasMore && (
+            {hasMore && posts.length > 0 && (
               <div ref={loadMoreRef} className="py-10 flex justify-center">
                 {isLoadingMore && <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />}
               </div>
