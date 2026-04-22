@@ -353,16 +353,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         <button 
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
-                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all",
-                            mediaFiles.length > 0 ? "h-48 border-indigo-600 bg-indigo-50" : "h-64 border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
+                            mediaFiles.length > 0 
+                              ? "h-20 border-indigo-600/50 bg-indigo-50/50" // 사진 있을 때 대폭 축소
+                              : "h-64 border-gray-200 bg-gray-50 hover:bg-gray-100" // 사진 없을 때 크게 유지
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn("w-8 h-8", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
-                            <Video className={cn("w-8 h-8", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-8 h-8 text-gray-400")} />
+                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-8 h-8 text-gray-400")} />
                           </div>
-                          <span className={cn("text-sm font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
-                            {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨` : '사진/동영상 선택 (다중 선택 가능)'}
+                          <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-sm text-gray-500")}>
+                            {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
                           </span>
                         </button>
                         <input
