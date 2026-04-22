@@ -674,33 +674,29 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                 )}
               </AnimatePresence>
             </div>
-            
-            {/* [FIX] 하단 버튼을 fixed가 아닌 DrawerContent 내부의 absolute로 배치 */}
-            <div
-  className="fixed bottom-0 left-0 right-0 pt-3 pb-6 px-5 bg-red-500 z-[9999] border-t border-gray-100"
-
-
->
-              {currentPage === 1 ? (
-                <Button
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
-                  onClick={handleNextPage}
-                  disabled={mediaFiles.length === 0}
-                >
-                  다음
-                </Button>
-              ) : (
-                <Button
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
-                  onClick={handlePost}
-                  disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
-                >
-                  {isSubmitting ? '저장 중...' : '등록하기'}
-                </Button>
-              )}
-            </div>
           </div>
         </DrawerContent>
+        {isOpen && (
+          <div className="fixed bottom-0 left-0 right-0 pt-3 pb-6 px-5 bg-white z-[9999] border-t border-gray-100">
+            {currentPage === 1 ? (
+              <Button
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+                onClick={handleNextPage}
+                disabled={mediaFiles.length === 0}
+              >
+                다음
+              </Button>
+            ) : (
+              <Button
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+                onClick={handlePost}
+                disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
+              >
+                {isSubmitting ? '저장 중...' : '등록하기'}
+              </Button>
+            )}
+          </div>
+        )}
       </Drawer>
     </>
   );
