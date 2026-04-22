@@ -216,7 +216,6 @@ const Index = () => {
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
 
     if (zoomChanged) {
-      // 줌이 바뀌면 즉시 업데이트 (사용자 체감 중요)
       if (throttleTimer.current) {
         clearTimeout(throttleTimer.current);
         throttleTimer.current = null;
@@ -233,12 +232,11 @@ const Index = () => {
       
       setTimeout(() => {
         syncPostsWithSupabase(data.bounds, data.level);
-      }, 100);
+      }, 50); // 줌 변경 시 즉시 로드
       return;
     }
     
-    // [데이터 다이어트] 단순 이동 시 쓰로틀링 강화 (100ms -> 600ms)
-    // 지도를 슥 움직이는 동안 불필요한 연속 호출 방지
+    // 이동 시에는 실시간성을 높이기 위해 0.1초로 단축하여 마커가 바로바로 나타나게 함
     if (throttleTimer.current) return;
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
@@ -249,10 +247,10 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 300); // 0.3초 대기 후 동기화
+    }, 100); 
   }, [isSelectingLocation, currentZoom]);
 
-  // ✅ [데이터 다이어트] 이미 불러온 마커는 다시 그리지 않도록 로직 최적화
+  // ✅ [데이터 다이어트 최적화] 화면 영역 안의 마커는 무조건 최우선 로드
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds) return;
@@ -265,30 +263,30 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
 
     try {
-      // 가벼운 마커 전용 데이터를 가져옴
+      // 1. 현재 화면 영역(Bounding Box)에 대한 쿼리 실행
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       
       const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
       const validMappedPosts = mappedPosts.filter(p => p !== null);
 
       setAllPosts(prev => {
-        // 기존에 이미 메모리에 있는 포스트 ID들
         const existingIds = new Set(prev.map(p => p.id));
-        // 정말로 새로 가져온 포스트만 선별
-        const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
+        // 현재 화면에서 새로 발견된 포스트들
+        const newInView = validMappedPosts.filter(p => !existingIds.has(p.id));
         
-        if (newUnique.length === 0) return prev; // 새로운 게 없으면 상태 업데이트 안 함
+        if (newInView.length === 0 && !forceBounds) return prev;
 
+        // 화면 중앙에서 가까운 순으로 정렬하여 사용자에게 중요한 데이터를 먼저 보여줌
         if (center) {
-          newUnique.sort((a, b) => {
+          validMappedPosts.sort((a, b) => {
             const distA = Math.hypot(a.lat - center.lat, a.lng - center.lng);
             const distB = Math.hypot(b.lat - center.lat, b.lng - center.lng);
             return distA - distB;
           });
         }
 
-        // 최대 보유 마커 수를 줄여 메모리 관리
-        const combined = [...newUnique, ...prev].slice(0, 2000);
+        // 전체 마커 리스트 업데이트 (새로 발견된 것 + 기존 것)
+        const combined = [...validMappedPosts, ...prev].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i).slice(0, 3000);
         mapCache.posts = combined;
         return combined;
       });
@@ -297,7 +295,7 @@ const Index = () => {
     } finally { 
       isSyncing.current = false; 
     }
-  }, [mapData, currentZoom, mapDbToPost]);
+  }, [mapData, currentZoom]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
