@@ -176,16 +176,13 @@ const PostListOverlay = ({
       let foundPostsCount = 0;
       let newPostsBatch: Post[] = [];
 
-      // 한 번의 로딩 시도당 약 20개 내외를 목표로 검색
-      // 데이터를 충분히(약 20개) 모으거나, 최대 10단계까지 확장할 때까지 반복
       for (let i = 0; i < 10; i++) {
         const nextStep = currentStep + 1;
-        if (nextStep > 50) { // 총 탐색 한계치 증가
+        if (nextStep > 50) {
           setHasMore(false);
           break;
         }
 
-        // 확장 반경을 더 세밀하게 조정 (0.1씩 증가)
         const multiplier = 1 + (0.2 * nextStep);
         const expandLat = baseLatSpan * multiplier;
         const expandLng = baseLngSpan * multiplier;
@@ -195,17 +192,21 @@ const PostListOverlay = ({
           ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
         };
 
-        console.log(`[PostList] Searching... Step: ${nextStep}, Multiplier: ${multiplier.toFixed(1)}x`);
-        
-        const newRawPosts = await fetchPostsInBounds(
-          expandedBounds.sw,
-          expandedBounds.ne,
-          1,
-          mapCenter
-        );
+        // ✅ [수정] 여기보기 리스트를 위해 모든 정보를 포함한 데이터를 가져옵니다.
+        // 마커는 가벼운 데이터를 쓰지만, 리스트는 전체 정보가 필요합니다.
+        const { data: newRawPosts, error } = await supabase
+          .from('posts')
+          .select('*')
+          .gte('latitude', Math.min(expandedBounds.sw.lat, expandedBounds.ne.lat))
+          .lte('latitude', Math.max(expandedBounds.sw.lat, expandedBounds.ne.lat))
+          .gte('longitude', Math.min(expandedBounds.sw.lng, expandedBounds.ne.lng))
+          .lte('longitude', Math.max(expandedBounds.sw.lng, expandedBounds.ne.lng))
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-        // 아직 로딩되지 않은 새로운 데이터만 추출
-        const uniqueNewRawPosts = newRawPosts.filter(p => !loadedPostIds.current.has(p.id));
+        if (error) throw error;
+
+        const uniqueNewRawPosts = (newRawPosts || []).filter(p => !loadedPostIds.current.has(p.id));
         
         if (uniqueNewRawPosts.length > 0) {
           const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
@@ -233,10 +234,8 @@ const PostListOverlay = ({
             } as Post;
           }));
 
-          // 새로 찾은 포스트들을 ID 세트에 등록
           mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
           
-          // 현재 위치에서 가까운 순으로 정렬하여 배치에 추가
           const sortedNew = mappedPosts.sort((a, b) => {
             const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
             const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
@@ -247,14 +246,7 @@ const PostListOverlay = ({
           foundPostsCount += sortedNew.length;
           currentStep = nextStep;
 
-          // 목표치(20개 내외)를 채웠다면 중단
-          if (foundPostsCount >= 15) {
-            // 너무 많이 가져오지 않도록 최대 25개로 제한
-            if (newPostsBatch.length > 25) {
-              newPostsBatch = newPostsBatch.slice(0, 25);
-            }
-            break;
-          }
+          if (foundPostsCount >= 10) break;
         } else {
           currentStep = nextStep;
         }
