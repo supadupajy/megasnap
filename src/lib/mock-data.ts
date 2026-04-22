@@ -170,14 +170,17 @@ export const placeImages = [
 
 export const BLACKLIST_IDS = [
   "photo-1506057585508-85603cee9e17",
-  "photo-1498050108023-c5249f4df085", // Broken ID sample
-  "photo-1493612276216-ee3925520721", // Broken ID sample
-  "photo-1515378791036-0648a3ef77b2", // Broken ID sample
-  "photo-1485827404703-89b55fcc595e", // Broken ID sample
-  "photo-1526374965328-7f61d4dc18c5", // Broken ID sample
 ];
 
 export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+
+const PLACE_UNSPLASH_IDS_CLEAN = [
+  "photo-1506744038136-46273834b3fb", "photo-1511497584788-915e57d2c9c5", "photo-1470071459604-3b5ec3a7fe05",
+  "photo-1441974231531-c6227db76b6e", "photo-1501854140801-50d01698950b", "photo-1464822759023-fed622ff2c3b"
+];
+
+export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_CLEAN).filter(id => !BLACKLIST_IDS.includes(id));
+
 export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
@@ -290,7 +293,7 @@ export const createMockPosts = (
       category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
-        name: isAd ? 'Partner' : `Explorer_${id.substring(0, 4)}`,
+        name: isAd ? 'Partner' : '탐험가',
         avatar: `https://i.pravatar.cc/150?u=${isAd ? 'ad' : id}`,
       },
       content: isAd ? '특별한 혜택을 만나보세요! ✨' : '오늘의 멋진 순간을 기록합니다. 📍',
@@ -311,8 +314,8 @@ export const createMockPosts = (
 
 export const getUserById = (id: string): User => ({
   id,
-  name: id,
-  nickname: `Explorer_${id}`,
+  name: '탐험가',
+  nickname: '탐험가',
   avatar: `https://i.pravatar.cc/150?u=${id}`,
   bio: '탐험가입니다. 📍',
 });

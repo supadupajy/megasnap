@@ -187,9 +187,8 @@ const Index = () => {
       let userName = p.user_name || '탐험가';
       let userAvatar = p.user_avatar || '';
 
-      // [FIX] user7 등 클라이언트 고정 닉네임 유입 차단
-      if (userName.toLowerCase().startsWith('user') && !isNaN(Number(userName.substring(4)))) {
-        console.warn(`[Index] Blocking legacy/dummy username detected in post ${p.id}:`, userName);
+      // [FIX] user7 등 더미 닉네임 유입 차단 (Explorer_ 패턴도 포함)
+      if (userName.toLowerCase().startsWith('user') || userName.toLowerCase().startsWith('explorer_')) {
         userName = '탐험가';
       }
 
