@@ -458,36 +458,41 @@ const Index = () => {
 
       // [FIX] 상대방이 삭제한 포스트 감지 및 애니메이션 처리
       setAllPosts(prev => {
-        // 현재 화면 범위 내에 있는데 서버 응답(dbPosts)에 없는 포스트 식별
-        const deletedPostsInView = prev.filter(p => {
+        // 1. 현재 화면 범위 내에 있는 이전 포스트들 중, 서버 응답(dbPosts)에 없는 것들을 '삭제됨'으로 판단
+        const postsToDelete: Post[] = [];
+        const survivingPosts = prev.filter(p => {
           const isInCurrentBounds = 
             p.lat >= Math.min(sw.lat, ne.lat) && 
             p.lat <= Math.max(sw.lat, ne.lat) && 
             p.lng >= Math.min(sw.lng, ne.lng) && 
             p.lng <= Math.max(sw.lng, ne.lng);
 
-          return isInCurrentBounds && !validDbIds.has(p.id) && !p.isNewRealtime;
+          // 범위 안에 있는데 서버 데이터에 없으면 삭제된 것 (내가 방금 생성한 글 제외)
+          if (isInCurrentBounds && !validDbIds.has(p.id) && !p.isNewRealtime) {
+            postsToDelete.push(p);
+            return true; // 일단 애니메이션을 위해 유지
+          }
+          return true;
         });
 
-        // 삭제된 포스트들에 대해 애니메이션 이벤트 발송
-        deletedPostsInView.forEach(p => {
-          window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } }));
-        });
+        // 2. 삭제 대상 마커들에 애니메이션 실행
+        if (postsToDelete.length > 0) {
+          postsToDelete.forEach(p => {
+            window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } }));
+          });
 
-        // 애니메이션을 위해 즉시 제거하지 않고, 애니메이션이 끝날 즈음 필터링된 목록을 반환하기 위해
-        // 일단은 유지하되, 별도의 타임아웃으로 실제 상태에서 제거 유도
-        if (deletedPostsInView.length > 0) {
+          // 3. 애니메이션 시간(400ms) 후 실제 상태에서 제거
           setTimeout(() => {
-            setAllPosts(current => current.filter(p => !deletedPostsInView.some(d => d.id === p.id)));
-            setDisplayedMarkers(current => current.filter(p => !deletedPostsInView.some(d => d.id === p.id)));
-          }, 400);
-          return prev; // 이번 렌더링에서는 유지
+            const deletedIds = new Set(postsToDelete.map(p => p.id));
+            setAllPosts(current => current.filter(p => !deletedIds.has(p.id)));
+            setDisplayedMarkers(current => current.filter(p => !deletedIds.has(p.id)));
+          }, 450);
         }
 
         const existingIds = new Set(prev.map(p => p.id));
         const newUnique = mappedPosts.filter(p => !existingIds.has(p.id));
 
-        if (newUnique.length === 0 && !forceBounds) return prev;
+        if (newUnique.length === 0 && postsToDelete.length === 0 && !forceBounds) return prev;
 
         const combined = [...newUnique, ...prev].slice(0, 3000);
         mapCache.posts = combined;
