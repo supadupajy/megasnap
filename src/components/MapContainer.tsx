@@ -321,10 +321,10 @@ const MapContainer = ({
 
         if (isHighlighted) content.classList.add('highlighted');
         
-        // 초기 생성 시 스케일 적용
+        // ✅ [수정] 초기 생성 시 스케일과 transition 설정
         content.style.transformOrigin = 'bottom center';
-        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-        content.style.transform = `scale(${scale})`;
+        content.style.transform = `scale(${scale})`; // 즉시 적용하여 튕김 방지
+        content.style.transition = 'transform 0.1s ease-out, opacity 0.2s ease-out';
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -350,8 +350,12 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // 기존 마커 스케일 갱신
+          // ✅ [수정] 기존 마커 갱신 시
+          // 1. transform-origin 고정
+          content.style.transformOrigin = 'bottom center';
+          // 2. transform 즉시 갱신 (중복 적용 방지)
           content.style.transform = `scale(${scale})`;
+          
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
