@@ -78,7 +78,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         setCurrentPage(1);
       }
     });
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, [mediaFiles.length]);
 
   // 캐러셀 API
