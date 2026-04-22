@@ -570,11 +570,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                   </motion.div>
                 ) : (
                   <motion.div
-  key="page2"
-  initial={{ opacity: 0, x: 20 }}
-  animate={{ opacity: 1, x: 0 }}
-  exit={{ opacity: 0 }}   // ← x 이동 없이 fade만
-  className="flex flex-col gap-6 pb-2"
+                    key="page2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="flex flex-col gap-6 pb-2"
+                  >
                     {/* 위치 */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
