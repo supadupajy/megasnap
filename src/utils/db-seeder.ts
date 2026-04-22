@@ -20,7 +20,7 @@ const REALISTIC_COMMENTS = [
   '생각보다 사람이 많지 않아서 여유롭게 즐기다 왔어요.',
   '야경이 정말 예술이네요. 밤에 꼭 가보시길 바랍니다!',
   '가족들이랑 오기에도 참 좋은 곳 같아요. 👨‍👩‍👧‍👦',
-  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%!',
+  '분위기도 좋고 인테리어도 취향저격... 재방문 의사 200%! ',
   '지나가다 우연히 들렀는데 너무 만족스러워서 기록 남겨요.',
   '친구들이랑 수다 떨기 딱 좋은 장소네요. 시간 가는 줄 몰랐어요.',
   '오랜만에 힐링하고 갑니다. 공기가 너무 맑고 좋네요.',
@@ -54,9 +54,19 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
 
     console.log("👥 [Seeder] 사용자 프로필 목록을 가져오는 중...");
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
-    const userPool = (profiles && profiles.length > 0)
-      ? profiles
-      : [{ id: currentUserId, nickname: currentNickname, avatar_url: currentAvatar }];
+    
+    // [FIX] userPool에서 dummy nickname 필터링 및 '탐험가' 강제 할당
+    const filteredProfiles = profiles?.map(p => ({
+      ...p,
+      nickname: (p.nickname?.toLowerCase().startsWith('user') || p.nickname?.toLowerCase().startsWith('explorer_')) 
+        ? '탐험가' 
+        : p.nickname || '탐험가'
+    })) || [];
+
+    const userPool = (filteredProfiles.length > 0)
+      ? filteredProfiles
+      : [{ id: currentUserId, nickname: '탐험가', avatar_url: currentAvatar }];
+    
     console.log(`✅ [Seeder] ${userPool.length}명의 사용자 풀이 준비되었습니다.`);
 
     const allInsertData: any[] = [];
@@ -99,7 +109,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           image_url: finalImage,
           youtube_url: finalYoutubeUrl,
           user_id: randomUser.id,
-          user_name: randomUser.nickname || "탐험가",
+          user_name: '탐험가', // [FIX] 생성 시 모든 user_name을 '탐험가'로 고정
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: finalLikes,
           category: category, // 카테고리 추가
