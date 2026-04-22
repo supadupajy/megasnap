@@ -61,6 +61,25 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeValue, setTimeValue] = useState(48); 
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { session } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  // 프로필 정보 가져오기
+  useEffect(() => {
+    if (session?.user) {
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        if (data) setProfile(data);
+      };
+      fetchProfile();
+    }
+  }, [session]);
 
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -112,6 +131,90 @@ const Index = () => {
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
+
+  const handlePostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostContent.trim() || isSubmitting) return;
+    
+    const toastId = showLoading('포스팅을 생성 중...');
+    setIsSubmitting(true);
+    
+    try {
+      const location = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+      const { latitude, longitude } = location.coords;
+      
+      const { data: newPostRaw, error: postError } = await supabase
+        .from('posts')
+        .insert({
+          content: newPostContent,
+          latitude: latitude,
+          longitude: longitude,
+          user_id: session?.user?.id,
+          user_name: profile?.first_name || '익명 사용자',
+          user_avatar: profile?.avatar_url,
+          image_url: `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000)}/pexels-photo.jpeg`
+        })
+        .select()
+        .single();
+
+      if (postError) throw postError;
+
+      if (newPostRaw) {
+        const newPost: Post = {
+          id: newPostRaw.id,
+          isAd: false,
+          isGif: false,
+          isInfluencer: false,
+          user: {
+            id: session?.user?.id || 'anonymous',
+            name: profile?.first_name || '익명 사용자',
+            avatar: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+          },
+          content: newPostContent,
+          location: '실시간 위치',
+          lat: latitude,
+          lng: longitude,
+          latitude: latitude,
+          longitude: longitude,
+          likes: 0,
+          commentsCount: 0,
+          comments: [],
+          image: newPostRaw.image_url || '',
+          image_url: newPostRaw.image_url || '',
+          images: [newPostRaw.image_url || ''],
+          isLiked: false,
+          borderType: 'none',
+          createdAt: new Date(),
+          isNewRealtime: true
+        };
+
+        setAllPosts(prev => [newPost, ...prev]);
+        setDisplayedMarkers(prev => [newPost, ...prev]);
+        
+        if (latitude && longitude) {
+          setMapCenter({ lat: latitude, lng: longitude });
+          setCurrentZoom(5);
+
+          // [FIX] 내가 쓴 글 등록 시에도 폭죽 효과 발사
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444'],
+            zIndex: 15000
+          });
+        }
+        setIsWriteOpen(false);
+        dismissToast(toastId);
+        showSuccess('포스팅이 성공적으로 생성되었습니다!');
+      }
+    } catch (err) {
+      showError('포스팅 생성에 실패했습니다.');
+      dismissToast(toastId);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getTierFromId = (id: string, likes: number = 0) => {
     // [FIX] 실버 및 상위 티어 할당 로직 완화 (좋아요 기준 하향 및 확률 상향)
@@ -326,7 +429,7 @@ const Index = () => {
 
           console.log(`[Realtime] Bounds check result: ${isInBounds} for lat: ${newPostRaw.latitude}, lng: ${newPostRaw.longitude}`);
 
-          if (isInBounds && newPostRaw.user_id !== authUser.id) {
+          if (isInBounds && newPostRaw.user_id !== authUser?.id) {
             console.log('[Realtime] MATCH! Adding to map and firing local fireworks');
 
             const newPost: Post = {
@@ -335,11 +438,11 @@ const Index = () => {
               isGif: false,
               isInfluencer: false,
               user: {
-                id: session?.user?.id || 'anonymous',
-                name: profile?.first_name || '익명 사용자',
-                avatar: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+                id: newPostRaw.user_id || 'anonymous',
+                name: newPostRaw.user_name || '익명 사용자',
+                avatar: newPostRaw.user_avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
               },
-              content: content,
+              content: newPostRaw.content || '',
               location: '실시간 위치',
               lat: newPostRaw.latitude,
               lng: newPostRaw.longitude,
@@ -348,9 +451,9 @@ const Index = () => {
               likes: 0,
               commentsCount: 0,
               comments: [],
-              image: newPostRaw.image_url,
-              image_url: newPostRaw.image_url,
-              images: [newPostRaw.image_url],
+              image: newPostRaw.image_url || '',
+              image_url: newPostRaw.image_url || '',
+              images: [newPostRaw.image_url || ''],
               isLiked: false,
               borderType: 'none',
               createdAt: new Date(),
