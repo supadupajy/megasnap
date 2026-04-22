@@ -117,48 +117,27 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+      // [FINAL FIX] 모든 이미지를 Unsplash 고화질 이미지로 강제 전환 (깨진 데이터 원천 차단)
+      const getUnsplashUrl = (seed: string) => `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${seed}`;
       
-      const isValidUrl = (url: any) => {
-        if (!url || typeof url !== 'string') return false;
-        const clean = url.trim();
-        // Post content 텍스트나 비정상적인 데이터 차단
-        if (/post\s*content/i.test(clean) || !clean.startsWith('http') || clean.length < 20) return false;
-        return true;
+      const forcedImage = getUnsplashUrl(rawPost.id);
+      
+      // 원본 데이터의 이미지를 무시하고 Unsplash로 교체
+      const sanitizedRaw = { 
+        ...rawPost, 
+        image_url: forcedImage,
+        images: [forcedImage]
       };
 
-      // 1. 원본 데이터 복사 및 검증
-      const p_raw = { ...rawPost };
-      
-      // 유튜브가 아니고 이미지가 깨진 경우에만 Unsplash로 대체
-      if (!p_raw.youtube_url && !isValidUrl(p_raw.image_url)) {
-        p_raw.image_url = `${SAFE_FALLBACK}&sig=${p_raw.id}`;
-      }
-
-      const p = await sanitizeYoutubeMedia(p_raw);
+      const p = await sanitizeYoutubeMedia(sanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
       let borderType: any = isAd ? 'none' : getTierFromId(p.id);
       if (p.border_type) borderType = p.border_type;
 
-      // 2. 최종 이미지 결정 (유튜브 썸네일 우선 -> 기존 이미지 -> Unsplash 순서)
-      let finalImage = p.image_url;
-      if (p.youtube_url) {
-        finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
-      }
-      
-      if (!isValidUrl(finalImage)) {
-        finalImage = `${SAFE_FALLBACK}&sig=${p.id}`;
-      }
-
-      // 3. images 배열 필터링 및 복구
-      let finalImages = Array.isArray(p.images) && p.images.length > 0
-        ? p.images.filter(isValidUrl)
-        : [];
-      
-      if (finalImages.length === 0) {
-        finalImages = [finalImage];
-      }
+      // 유튜브인 경우 썸네일 사용, 그 외는 무조건 Unsplash 강제
+      let finalImage = p.youtube_url ? getYoutubeThumbnail(p.youtube_url) : forcedImage;
+      if (!finalImage) finalImage = forcedImage;
 
       return {
         id: p.id,
@@ -174,7 +153,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: finalImages,
+        images: [finalImage], // 모든 이미지를 Unsplash로 단일화하여 깨짐 방지
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',

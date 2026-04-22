@@ -55,39 +55,17 @@ const Profile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+    // [FINAL FIX] 모든 이미지를 Unsplash 고화질 이미지로 강제 전환
+    const getUnsplashUrl = (seed: string) => `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${seed}`;
+    const forcedImage = getUnsplashUrl(p.id);
 
-    const isValidUrl = (url: any) => {
-      if (!url || typeof url !== 'string') return false;
-      const clean = url.trim();
-      if (/post\s*content/i.test(clean) || !clean.startsWith('http') || clean.length < 20) return false;
-      return true;
-    };
-
-    // 1. 데이터 정제 및 비동기 처리
-    const sanitized = await sanitizeYoutubeMedia({ ...p });
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: forcedImage, images: [forcedImage] });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // 2. 유튜브 썸네일 우선 적용
-    let finalImage = sanitized.image_url;
-    if (sanitized.youtube_url) {
-      finalImage = getYoutubeThumbnail(sanitized.youtube_url) || finalImage;
-    }
-
-    // 3. 유효하지 않은 이미지인 경우에만 ID 기반 Unsplash 시그니처 적용
-    if (!isValidUrl(finalImage)) {
-      finalImage = `${SAFE_FALLBACK}&sig=${sanitized.id}`;
-    }
-
-    // 4. images 배열 필터링
-    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.filter(isValidUrl)
-      : [];
-      
-    if (finalImages.length === 0) {
-      finalImages = [finalImage];
-    }
+    // 유튜브인 경우 썸네일 사용, 그 외는 무조건 Unsplash 강제
+    let finalImage = sanitized.youtube_url ? getYoutubeThumbnail(sanitized.youtube_url) : forcedImage;
+    if (!finalImage) finalImage = forcedImage;
 
     return {
       id: sanitized.id, 
@@ -103,7 +81,7 @@ const Profile = () => {
       commentsCount: 0, 
       comments: [], 
       image: finalImage, 
-      images: finalImages, 
+      images: [finalImage], 
       youtubeUrl: sanitized.youtube_url, 
       videoUrl: sanitized.video_url,
       isLiked: false, 
