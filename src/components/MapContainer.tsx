@@ -548,6 +548,10 @@ const MapContainer = ({
     } else if (isAd) {
       inlineBorderStyle = "border: 4.5px solid #3b82f6;"; 
       inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)";
+    } else if (borderType === 'popular') {
+      // [FIX] 유튜브/이미지 구분 없이 좋아요 1만개 이상인 모든 포스팅에 빨간색 테두리 적용
+      inlineBorderStyle = "border: 4.5px solid #ef4444;"; 
+      inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)";
     } else if (borderType === 'diamond') {
       inlineBorderStyle = "border: 4.5px solid #22d3ee;";
       inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)";
@@ -556,10 +560,6 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #fbbf24;";
       inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)";
       influencerClass = "influencer-glow";
-    } else if (borderType === 'popular') {
-      // [FIX] 인기 포스팅: 좋아요 1만개 이상, 빨간색 4.5px 테두리
-      inlineBorderStyle = "border: 4.5px solid #ef4444;"; 
-      inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)";
     } 
 
     return `<div class="marker-content-wrapper">
