@@ -415,7 +415,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                         draggable={false}
                                         className="w-full h-full select-none pointer-events-none"
                                         style={{
-                                          objectFit: 'cover',
+                                          objectFit: 'contain',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
                                           transition: isDragging ? 'none' : 'transform 0.05s linear',
                                           display: 'block',
