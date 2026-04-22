@@ -596,21 +596,26 @@ const MapContainer = ({
     // floating 애니메이션
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
-    // [FIX] 테두리 유무에 상관없이 이미지 영역을 100%로 유지하기 위해 마커 크기 및 내부 구조 조정
-    // 테두리는 마커 외부로 확장되는 느낌으로 표현
+    // [ULTIMATE FIX] 마커 사이즈 불균형 및 해상도 저하 해결
+    // 1. 모든 마커의 기본 컨테이너 크기를 64px로 상향 (기존 56px)
+    // 2. 테두리가 있는 경우에도 이미지가 작아지지 않도록 꽉 채우는 구조
+    // 3. YouTube/Unsplash 썸네일 해상도 보존을 위해 object-fit 및 렌더링 최적화
     return `
       <div class="marker-content-wrapper">
         <div class="marker-highlight-ping"></div>
-        <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; margin-top: 14px;">
-          ${labelHtml}
-          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); background-clip: border-box;">
-            <div style="position: absolute; inset: -2px; border-radius: 18px; overflow: hidden; background: white; z-index: 3; border: 2px solid white;">
-              <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
-              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
-              ${videoIconHtml}
+        <div class="${animationClass}" style="position: relative; width: 64px; height: 64px; margin-top: 14px;">
+          ${labelHtml ? `<div style="position: absolute; top: -14px; left: 0; width: 64px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0; border-radius: 8px 8px 0 0; text-align: center; z-index: 1;">${labelText}</div>` : ''}
+          <div class="${borderClass}" style="width: 64px; height: 64px; border-radius: 20px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);">
+            <div style="position: absolute; inset: 0; border-radius: 18px; overflow: hidden; background: white; z-index: 3; border: 2px solid white;">
+              <img src="${displayImage}" 
+                   onerror="this.src='${FALLBACK_IMAGE}'" 
+                   style="width: 100%; height: 100%; object-fit: cover; image-rendering: -webkit-optimize-contrast; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" 
+              />
+              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 10px; font-weight: 900; padding: 1px 5px; border-radius: 5px; z-index: 5; letter-spacing: -0.02em;">${post.likes}</div>
+              ${videoIconHtml ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; shadow: 0 4px 12px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
             </div>
           </div>
-          ${pinColor ? `<div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
+          ${pinColor ? `<div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1;"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
         </div>
       </div>`;
   };
