@@ -370,7 +370,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
 
-          <div className="px-5 flex flex-col flex-1 min-h-0 relative">
+          <div className="px-5 flex flex-col flex-1 min-h-0">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
