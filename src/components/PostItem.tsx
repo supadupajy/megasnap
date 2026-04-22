@@ -25,32 +25,31 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostItemProps {
   post: Post;
+  onLikeToggle: (id: string) => void;
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete?: (id: string) => void;
+  onSaveToggle?: (id: string, isSaved: boolean) => void;
   isViewed?: boolean;
   disablePulse?: boolean;
-  onLikeToggle?: (postId: string) => void;
-  onSaveToggle?: (postId: string, isSaved: boolean) => void;
-  onDelete?: (postId: string) => void;
-  onCommentClick?: (e: React.MouseEvent, comment: Comment) => void;
-  onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
-  onShare?: (e: React.MouseEvent) => void;
-  onSave?: (e: React.MouseEvent) => void;
-  onImageError?: (postId: string) => void;
+  autoPlayVideo?: boolean;
 }
 
-const PostItem = ({ 
-  post, 
-  onLikeToggle, 
-  onLocationClick, 
-  onDelete, 
-  onSaveToggle, 
-  isViewed, 
-  disablePulse 
-}: PostItemProps) => {
+const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
   const [imgError, setImgError] = useState(false);
   const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
+
+  // 유튜브 비디오 ID 추출
+  const getYouTubeId = (url?: string) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const videoId = getYouTubeId(post.youtubeUrl);
 
   // 이미지 에러 핸들러 강화
   const handleImageError = async () => {
@@ -165,7 +164,12 @@ const PostItem = ({
   return (
     <motion.div 
       layout
-      className={cn("bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4", !disablePulse && isViewed && "opacity-80")}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "bg-white p-4 transition-all",
+        !disablePulse && isViewed && "opacity-80"
+      )}
     >
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
@@ -189,13 +193,38 @@ const PostItem = ({
         <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
       </div>
 
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
-        <img 
-          src={currentImage} 
-          alt={content}
-          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-          onError={handleImageError}
-        />
+      {/* Media Section */}
+      <div 
+        className="relative aspect-square mb-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+        onClick={() => !videoId && onLocationClick?.({} as any, lat!, lng!)}
+      >
+        {videoId ? (
+          <div className="w-full h-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=${autoPlayVideo ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0&showinfo=0`}
+              className="w-full h-full object-cover"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              onLoad={() => setVideoLoaded(true)}
+            />
+            {!videoLoaded && (
+              <img 
+                src={currentImage} 
+                alt="" 
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+          </div>
+        ) : (
+          <img
+            src={currentImage}
+            alt=""
+            className="w-full h-full object-cover transition-transform duration-500 will-change-transform"
+            onError={handleImageError}
+          />
+        )}
+        
+        {/* ... badges and buttons ... */}
       </div>
 
       <div className="px-4 pt-3 pb-4">

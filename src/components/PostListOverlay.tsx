@@ -2,11 +2,11 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import PostItem from '@/components/PostItem';
+import PostItem from './PostItem';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
@@ -77,16 +77,16 @@ interface PostListOverlayProps {
   onDeletePost?: (id: string) => void;
 }
 
-const PostListOverlay = ({
-  isOpen,
-  onClose,
-  initialPosts,
-  mapCenter,
-  currentBounds,
-  selectedCategories,
+const PostListOverlay = ({ 
+  isOpen, 
+  onClose, 
+  initialPosts, 
+  mapCenter, 
+  currentBounds, 
+  selectedCategories, 
   timeValueHours,
   authUserId,
-  onDeletePost,
+  onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -315,17 +315,15 @@ const PostListOverlay = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: "100%" }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: "100%" }}
-          transition={{
-            duration: 0.4,
-            ease: [0.32, 0.72, 0, 1]
-          }}
-          className="fixed top-[88px] bottom-[80px] left-0 right-0 z-[1001] bg-white overflow-y-auto shadow-2xl no-scrollbar origin-bottom"
+        <motion.div 
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="fixed inset-0 z-[100] bg-white flex flex-col"
         >
-          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white z-30">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div>
               <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
@@ -338,46 +336,33 @@ const PostListOverlay = ({
             </button>
           </div>
 
-          <div className="flex flex-col pt-4 pb-4">
+          {/* List Content */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 pb-20 custom-scrollbar">
             {filteredPosts.length > 0 ? (
-              <>
-                {filteredPosts.map((post) => {
-                  const isViewed = viewedIds.has(post.id);
-                  return (
-                    <ObservedPostItem 
-                      key={post.id}
+              <div className="flex flex-col">
+                {filteredPosts.map((post) => (
+                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
+                    <PostItem 
                       post={post}
-                      onVisible={markAsViewed}
-                      isViewed={isViewed}
-                      onLikeToggle={handleLikeToggle}
-                      onLocationClick={handleLocationClick}
-                      onDelete={handleLocalDelete}
+                      onLikeToggle={() => {}}
+                      onLocationClick={(e, lat, lng) => {
+                        onClose();
+                        // Index.tsx의 focusPostOnMap이 동작하도록 이벤트 발생
+                        window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
+                      }}
+                      onDelete={(id) => onDeletePost?.(id)}
+                      autoPlayVideo={true} // 리스트에서 자동 재생 활성화
                     />
-                  );
-                })}
-                
-                {(isLoadingMore || hasMore) && (
-                  <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-3">
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">주변 실제 포스트를 불러오는 중...</p>
-                      </>
-                    ) : (
-                      <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                    )}
                   </div>
-                )}
-
-                {!hasMore && (
-                  <div className="py-10 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    더 이상 주변 실제 포스트가 없습니다.
-                  </div>
-                )}
-              </>
+                ))}
+              </div>
             ) : (
-              <div className="py-20 text-center text-gray-400 font-medium">
-                표시할 포스트가 없습니다.
+              <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <LayoutGrid className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="text-gray-900 font-bold mb-1">표시할 포스팅이 없습니다</p>
+                <p className="text-gray-400 text-xs">필터를 변경하거나 지도를 이동해보세요</p>
               </div>
             )}
           </div>
