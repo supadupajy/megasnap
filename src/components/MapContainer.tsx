@@ -315,15 +315,17 @@ const MapContainer = ({
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
+      const isNewRealtime = post.isNewRealtime === true; // ✅ 플래그 확인
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}`;
+      // ✅ 렌더링 상태 키에 isNewRealtime 포함하여 상태 변화 감지
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}-${isNewRealtime}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // [FIX] marker-appear-animation 클래스 추가로 뿅 나타나는 효과 적용
+        // ✅ [FIX] 모든 새로운 마커 또는 isNewRealtime인 마커에 애니메이션 클래스 강제 적용
         content.className = 'marker-container kakao-overlay marker-appear-animation';
         
         content.style.opacity = '0';
@@ -364,12 +366,16 @@ const MapContainer = ({
           
           content.style.transformOrigin = 'bottom center';
           content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
           if (isHighlighted) content.classList.add('highlighted'); 
           else content.classList.remove('highlighted');
+
+          // ✅ [FIX] 이미 존재하는 오버레이여도 isNewRealtime이 true로 바뀌면 애니메이션 다시 실행
+          if (isNewRealtime && !content.classList.contains('marker-appear-animation')) {
+            content.classList.add('marker-appear-animation');
+          }
 
           if (content.getAttribute('data-content-state') !== contentStateKey) {
             requestAnimationFrame(() => { 
