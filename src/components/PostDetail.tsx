@@ -490,9 +490,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
                     </div>
 
-                    {/* 액션 버튼 및 내용 - 간격 밀착 및 좌우 패딩 px-4로 통일 */}
+                    {/* 액션 버튼 및 내용 - px-1 제거하여 미디어 컨테이너의 시작점과 아이콘의 시작점을 완벽하게 일치시킴 */}
                     <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-start justify-between mb-2 px-1">
+                      <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-4 pt-1">
                           <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
                             <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
@@ -525,14 +525,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           )}
                         </div>
                       </div>
-                      <div className="space-y-1.5 mb-4 px-1 cursor-pointer" onClick={onClose}>
+                      <div className="space-y-1.5 mb-4 cursor-pointer" onClick={onClose}>
                         <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                         <div className="flex gap-2 items-start">
                           <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{currentPost.user.name}</span>
                           <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                         </div>
                       </div>
-                      <div className="border-t border-gray-100 pt-4 px-1">
+                      <div className="border-t border-gray-100 pt-4">
                         <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                           <Input
                             ref={commentInputRef}
