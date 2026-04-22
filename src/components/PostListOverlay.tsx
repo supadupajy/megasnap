@@ -117,7 +117,7 @@ const PostListOverlay = ({
           exit={{ y: "100%" }}
           transition={{ 
             type: 'tween', 
-            duration: 0.25, 
+            duration: 0.3, 
             ease: [0.32, 0.72, 0, 1] 
           }}
           style={{ willChange: 'transform' }}

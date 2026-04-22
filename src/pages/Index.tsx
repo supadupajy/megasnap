@@ -903,6 +903,24 @@ const Index = () => {
         </div>
       </motion.div>
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
+      
+      <AnimatePresence>
+        {isPostListOpen && (
+          <PostListOverlay
+            key="post-list-overlay"
+            isOpen={true}
+            onClose={() => setIsPostListOpen(false)}
+            initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
+            mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
+            currentBounds={mapData?.bounds}
+            selectedCategories={selectedCategories}
+            timeValueHours={timeValue}
+            authUserId={authUser?.id}
+            onDeletePost={handlePostDeleted}
+          />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {selectedPostId && (
           <PostDetail
@@ -989,17 +1007,6 @@ const Index = () => {
       </AnimatePresence>
 
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
-      <PostListOverlay
-        isOpen={isPostListOpen}
-        onClose={() => setIsPostListOpen(false)}
-        initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
-        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
-        currentBounds={mapData?.bounds}
-        selectedCategories={selectedCategories}
-        timeValueHours={timeValue}
-        authUserId={authUser?.id}
-        onDeletePost={handlePostDeleted}
-      />
     </>
   );
 };
