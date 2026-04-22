@@ -198,8 +198,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return [post.image];
     if (youtubeId) return [post.image]; 
     
-    const img1 = post.images?.length ? post.images[0] : post.image;
-    const img3 = (post.images?.length > 1 && post.images[1] !== AD_IMAGE) ? post.images[1] : THIRD_PLACEHOLDER;
+    // ✅ 사용자가 등록한 모든 이미지(images 배열)를 우선적으로 보여줌
+    if (post.images && post.images.length > 0) {
+      // images 배열이 있고, 그 안에 광고 이미지나 플레이스홀더가 아닌 실제 데이터가 있다면 그대로 사용
+      return post.images;
+    }
+    
+    // ✅ 레거시 포스트(images 배열이 없는 경우) 대응
+    const img1 = post.image;
+    const img3 = THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
   }, [isAd, post.images, post.image, youtubeId]);
 

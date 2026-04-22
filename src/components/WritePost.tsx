@@ -187,67 +187,48 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const finalLng = initialLocation?.lng || null;
     const finalAddress = address || '위치 미지정';
 
-    try {
-      const primaryMedia = mediaFiles[0];
-      let finalVideoUrl = null;
-      let finalImageUrl = null;
+    // ✅ 모든 이미지/비디오 업로드 및 URL 수집
+    const uploadedUrls = await Promise.all(mediaFiles.map(async (media) => {
+      const timestamp = new Date().getTime();
+      const folder = media.type === 'video' ? 'post-videos' : 'post-images';
+      const fileExt = media.file.name.split('.').pop();
+      const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${authUser.id}/${fileName}`;
 
-      if (primaryMedia.file) {
-        const timestamp = new Date().getTime();
-        const folder = primaryMedia.type === 'video' ? 'post-videos' : 'post-images';
-        const fileExt = primaryMedia.file.name.split('.').pop();
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${authUser.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(folder)
+        .upload(filePath, media.file);
 
-        const { error: uploadError } = await supabase.storage
-          .from(folder)
-          .upload(filePath, primaryMedia.file);
+      if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
+      return publicUrl;
+    }));
 
-        const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
-        
-        if (primaryMedia.type === 'video') {
-          finalVideoUrl = publicUrl;
-          if (primaryMedia.thumbnail) {
-            const thumbName = `thumb-${timestamp}.jpg`;
-            const thumbPath = `${authUser.id}/${thumbName}`;
-            const response = await fetch(primaryMedia.thumbnail);
-            const blob = await response.blob();
-            await supabase.storage.from('post-images').upload(thumbPath, blob, { contentType: 'image/jpeg' });
-            const { data: { publicUrl: tUrl } } = supabase.storage.from('post-images').getPublicUrl(thumbPath);
-            finalImageUrl = tUrl;
-          }
-        } else {
-          finalImageUrl = publicUrl;
-        }
-      }
+    const primaryMedia = mediaFiles[0];
+    const finalImageUrl = uploadedUrls[0]; // 첫 번째 이미지를 대표 썸네일로
+    let finalVideoUrl = primaryMedia.type === 'video' ? uploadedUrls[0] : null;
 
-      const postData = {
-        content: draft.content,
-        location_name: finalAddress,
-        latitude: finalLat,
-        longitude: finalLng,
-        image_url: finalImageUrl,
-        user_id: authUser.id,
-        user_name: displayName,
-        user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
-        likes: 0,
-        category: selectedCategory,
-        video_url: finalVideoUrl,
-        created_at: new Date().toISOString()
-      };
+    const postData = {
+      content: draft.content,
+      location_name: finalAddress,
+      latitude: finalLat,
+      longitude: finalLng,
+      image_url: finalImageUrl,
+      images: uploadedUrls, // ✅ 모든 이미지 URL 배열 저장
+      user_id: authUser.id,
+      user_name: displayName,
+      user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
+      likes: 0,
+      category: selectedCategory,
+      video_url: finalVideoUrl,
+      created_at: new Date().toISOString()
+    };
 
-      const { data: insertData, error: insertError } = await supabase.from('posts').insert([postData]).select();
-      if (insertError) throw insertError;
+    const { data: insertData, error: insertError } = await supabase.from('posts').insert([postData]).select();
+    if (insertError) throw insertError;
 
-      processNewPost(insertData[0], finalVideoUrl);
-    } catch (err: any) {
-      console.error('[WritePost] Error:', err);
-      showError(err.message || '저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    processNewPost(insertData[0], finalVideoUrl);
   };
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
@@ -274,6 +255,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       commentsCount: 0,
       comments: [],
       image: dbPost.image_url,
+      images: dbPost.images || [dbPost.image_url], // ✅ 로컬 상태에도 반영
       videoUrl: finalVideoUrl,
       isLiked: false,
       createdAt: new Date(),
