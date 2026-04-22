@@ -131,7 +131,7 @@ const Profile = () => {
       // 2. Fetch Saved Posts
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
-        .select(``
+        .select(`
           post_id,
           posts:posts (*)
         `)
