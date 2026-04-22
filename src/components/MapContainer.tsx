@@ -256,8 +256,112 @@ const MapContainer = ({
     return 0;                    // 8단계 이상: 숨김
   };
 
-  // 마커 업데이트 로직 제거 (CustomOverlay 로직과 중복됨)
-  // REMOVED: updateMarkers() function and related code
+  // 마커 업데이트 로직
+  useEffect(() => {
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
+    
+    // 줌 레벨에 따른 스케일 계산
+    let scale = 1.0;
+    if (currentLevel === 6) scale = 0.75;
+    else if (currentLevel === 7) scale = 0.5;
+    else if (currentLevel >= 8) scale = 0;
+    
+    if (currentLevel >= 8) {
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      return;
+    }
+
+    const currentPostIds = new Set(posts.map(p => p.id));
+    
+    // 1. 제거될 마커 처리 및 기존 마커 재부착/스케일 조정
+    overlaysRef.current.forEach((overlay, id) => {
+      const content = overlay.getContent();
+      if (!currentPostIds.has(id)) {
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
+      } else {
+        if (overlay.getMap() === null) {
+          overlay.setMap(mapInstance.current);
+        }
+        // ✅ [강력 조치] 기존 마커의 스케일을 인라인 스타일로 즉시 강제 적용
+        if (content instanceof HTMLElement) {
+          content.style.transform = `scale(${scale})`;
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
+        }
+      }
+    });
+
+    // 2. 마커 생성 및 업데이트
+    posts.forEach(post => {
+      if (!post) return;
+      const isViewed = viewedPostIds.has(post.id);
+      const isHighlighted = highlightedPostId === post.id;
+      const existingOverlay = overlaysRef.current.get(post.id);
+      
+      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+
+      if (!existingOverlay) {
+        const content = document.createElement('div');
+        content.className = 'marker-container kakao-overlay';
+        
+        // 애니메이션 클래스 설정
+        if (post.isNewRealtime) {
+          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
+        } else {
+          content.classList.add('animate-marker-appear');
+        }
+
+        if (isHighlighted) content.classList.add('highlighted');
+        
+        // ✅ [강력 조치] 초기 생성 시 스케일 강제 적용 및 important 부여
+        content.style.transformOrigin = 'bottom center';
+        content.style.setProperty('transform', `scale(${scale})`, 'important');
+        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+        
+        content.setAttribute('data-content-state', contentStateKey);
+        content.innerHTML = getMarkerInnerHtml(post, isViewed);
+        
+        content.onclick = (e) => { 
+          e.stopPropagation(); 
+          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
+          if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
+        };
+
+        const overlay = new (window as any).kakao.maps.CustomOverlay({ 
+          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
+          content: content, 
+          yAnchor: 1, 
+          zIndex: baseZIndex 
+        });
+        
+        overlay.setMap(mapInstance.current);
+        overlaysRef.current.set(post.id, overlay);
+      } else {
+        const content = existingOverlay.getContent();
+        existingOverlay.setZIndex(baseZIndex);
+        if (content instanceof HTMLElement) {
+          cancelPendingRemoval(post.id, content);
+          
+          // ✅ [강력 조치] 갱신 시에도 스케일 강제 적용 및 important 부여
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
+          content.style.opacity = "1";
+          content.style.visibility = "visible";
+          
+          if (isHighlighted) content.classList.add('highlighted'); 
+          else content.classList.remove('highlighted');
+
+          if (content.getAttribute('data-content-state') !== contentStateKey) {
+            requestAnimationFrame(() => { 
+              content.innerHTML = getMarkerInnerHtml(post, isViewed); 
+              content.setAttribute('data-content-state', contentStateKey); 
+            });
+          }
+        }
+      }
+    });
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
@@ -450,119 +554,6 @@ const MapContainer = ({
       }
     });
   }, [currentLevel, isMapReady]);
-
-  useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    
-    // ✅ 8단계 이상일 때는 지도에서만 제거하고, overlaysRef는 유지 (상태 관리용)
-    if (currentLevel >= 8) {
-      overlaysRef.current.forEach((overlay) => {
-        overlay.setMap(null);
-      });
-      return;
-    }
-
-    const currentPostIds = new Set(posts.map(p => p.id));
-    
-    // 1. 제거될 마커 처리 (현재 포스트에 없거나 레벨이 바뀐 경우 등)
-    overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id)) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
-      } else {
-        // ✅ 7단계 이하로 돌아왔을 때, 지도에 다시 붙여줌
-        if (overlay.getMap() === null) {
-          overlay.setMap(mapInstance.current);
-        }
-      }
-    });
-
-    // 2. 마커 생성 및 업데이트
-    posts.forEach(post => {
-      if (!post) return;
-      const isViewed = viewedPostIds.has(post.id);
-      const isHighlighted = highlightedPostId === post.id;
-      const existingOverlay = overlaysRef.current.get(post.id);
-      
-      // ✅ 8단계 이상인 경우 렌더링하지 않도록 보장
-      if (currentLevel >= 8) return;
-
-      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      
-      // ✅ 줌 레벨에 따른 스케일 계산 (강제 재계산 및 적용)
-      let scale = 1.0;
-      if (currentLevel === 6) scale = 0.75;
-      else if (currentLevel === 7) scale = 0.5;
-      else if (currentLevel >= 8) scale = 0;
-      
-      scale = Math.max(scale, 0);
-
-      // ✅ [중요] contentStateKey에 currentLevel을 포함하여 줌 변경 시 반드시 리렌더링 유도
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
-
-      if (!existingOverlay) {
-        const content = document.createElement('div');
-        content.className = 'marker-container kakao-overlay';
-        
-        // 초기 생성 시 애니메이션 클래스 추가
-        if (post.isNewRealtime) {
-          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
-        } else {
-          content.classList.add('animate-marker-appear');
-        }
-
-        if (isHighlighted) content.classList.add('highlighted');
-        
-        // CSS Transition을 위한 초기 스타일 설정
-        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-        content.style.transform = `scale(${scale})`;
-        content.style.transformOrigin = 'bottom center';
-        
-        content.setAttribute('data-content-state', contentStateKey);
-        content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        
-        content.onclick = (e) => { 
-          e.stopPropagation(); 
-          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
-          if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
-        };
-
-        const overlay = new (window as any).kakao.maps.CustomOverlay({ 
-          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
-          content: content, 
-          yAnchor: 1, 
-          zIndex: baseZIndex 
-        });
-        
-        overlay.setMap(mapInstance.current);
-        overlaysRef.current.set(post.id, overlay);
-      } else {
-        const content = existingOverlay.getContent();
-        existingOverlay.setZIndex(baseZIndex);
-        if (content instanceof HTMLElement) {
-          cancelPendingRemoval(post.id, content);
-          
-          // ✅ 기존 오버레이가 있을 때도 현재 스케일을 강제로 다시 적용
-          content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-          content.style.transform = `scale(${scale})`;
-          content.style.opacity = "1";
-          content.style.visibility = "visible";
-          
-          if (isHighlighted) content.classList.add('highlighted'); 
-          else content.classList.remove('highlighted');
-
-          // ✅ 줌 레벨이 바뀌면 contentStateKey가 변하므로 내부 HTML도 갱신될 수 있음
-          if (content.getAttribute('data-content-state') !== contentStateKey) {
-            requestAnimationFrame(() => { 
-              content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-              content.setAttribute('data-content-state', contentStateKey); 
-            });
-          }
-        }
-      }
-    });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
   return (
     <div 
