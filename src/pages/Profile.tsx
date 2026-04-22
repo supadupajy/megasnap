@@ -93,7 +93,16 @@ const Profile = () => {
     // 정제된 데이터를 바탕으로 sanitize 진행
     const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
-    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
+    
+    let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+    const likesCountNum = Number(sanitized.likes || 0);
+    
+    // [FIX] 인기 포스팅 기준을 좋아요 8,000개 이상으로 설정
+    if (likesCountNum >= 8000) {
+      borderType = 'popular';
+    } else if (!isAd) {
+      borderType = getTierFromId(sanitized.id);
+    }
     
     let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
     
