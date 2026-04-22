@@ -16,6 +16,5 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     // React Strict Mode나 빠른 페이지 전환 시 발생하는 "auth-token lock" 에러를 해결합니다.
     storageKey: 'sb-auth-token',
     storage: window.localStorage,
-    lockType: 'custom', // navigator 락 대신 커스텀/없음 설정 시도
   }
 });
