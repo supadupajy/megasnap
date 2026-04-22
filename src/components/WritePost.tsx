@@ -376,11 +376,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
-                    key="page1"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex flex-col gap-4 pb-2"
+  key="page1"
+  initial={{ opacity: 0, x: 20 }}
+  animate={{ opacity: 1, x: 0 }}
+  exit={{ opacity: 0 }}   // ← x 이동 없이 fade만
+  className="flex flex-col gap-6 pb-2"
                   >
                     {/* 미디어 첨부 버튼 */}
                     <div className="space-y-2">
