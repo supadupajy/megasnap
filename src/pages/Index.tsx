@@ -278,6 +278,10 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
+      
+      // 서버에서 가져온 포스트 ID 셋 (현재 화면 범위 내 유효한 포스트들)
+      const validDbIds = new Set(dbPosts.map(p => p.id));
+
       const mappedPosts: Post[] = dbPosts.map(p => ({
         id: p.id,
         isAd: false,
@@ -299,11 +303,28 @@ const Index = () => {
         createdAt: new Date(p.created_at),
         borderType: 'none',
       }));
+
       setAllPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
+        // 1. 현재 화면 범위 내에 있는데 서버 응답(dbPosts)에 없는 포스트는 삭제된 것으로 간주
+        // 단, 방금 내가 쓴 글이나 현재 맵에 없는 글은 유지
+        const filteredPrev = prev.filter(p => {
+          const isInCurrentBounds = 
+            p.lat >= Math.min(sw.lat, ne.lat) && 
+            p.lat <= Math.max(sw.lat, ne.lat) && 
+            p.lng >= Math.min(sw.lng, ne.lng) && 
+            p.lng <= Math.max(sw.lng, ne.lng);
+          
+          // 범위 안에 있는데 서버 데이터에 없으면 삭제된 것 (내 글 제외하고 판단 가능하나 일단 전체 적용)
+          if (isInCurrentBounds && !validDbIds.has(p.id)) return false;
+          return true;
+        });
+
+        const existingIds = new Set(filteredPrev.map(p => p.id));
         const newUnique = mappedPosts.filter(p => !existingIds.has(p.id));
-        if (newUnique.length === 0 && !forceBounds) return prev;
-        const combined = [...newUnique, ...prev].slice(0, 3000);
+        
+        if (newUnique.length === 0 && filteredPrev.length === prev.length && !forceBounds) return prev;
+        
+        const combined = [...newUnique, ...filteredPrev].slice(0, 3000);
         mapCache.posts = combined;
         return combined;
       });

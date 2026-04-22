@@ -153,6 +153,13 @@
   100% { transform: scale(1.8); opacity: 0; }
 }
 
+/* 마커 사라짐 애니메이션 (작아지면서 숑!) */
+@keyframes markerDisappear {
+  0% { transform: scale(var(--marker-scale, 1)); opacity: 1; }
+  30% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
 .animate-marker-appear {
   animation: markerAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   transform-origin: bottom center;
@@ -176,13 +183,9 @@
   z-index: 10;
 }
 
-@keyframes marker-disappear {
-  0% { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0) translateY(24px); }
-}
 .animate-marker-disappear {
-  pointer-events: none;
-  animation: marker-disappear 0.26s ease-in forwards;
+  animation: markerDisappear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform-origin: bottom center;
 }
 
 @keyframes shine-sweep {
