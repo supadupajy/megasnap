@@ -261,18 +261,23 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
+    // 줌 레벨에 따른 스케일 계산 (강제 재계산)
+    const level = mapInstance.current.getLevel();
     let scale = 1.0;
-    if (currentLevel === 6) scale = 0.75;
-    else if (currentLevel === 7) scale = 0.5;
-    else if (currentLevel >= 8) scale = 0;
+    if (level === 6) scale = 0.75;
+    else if (level === 7) scale = 0.5;
+    else if (level >= 8) scale = 0;
     
-    if (currentLevel >= 8) {
+    console.log('[MapContainer] Current Level:', level, 'Applying Scale:', scale);
+
+    if (level >= 8) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       return;
     }
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
+    // 1. 제거될 마커 처리 및 기존 마커 스타일 강제 업데이트
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
       if (!currentPostIds.has(id)) {
@@ -282,17 +287,18 @@ const MapContainer = ({
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
         }
+        // ✅ [강력 조치] 기존 마커 엘리먼트의 transform을 직접 즉시 수정
         if (content instanceof HTMLElement) {
-          // [수정] 줌 변경 시 튕김 현상을 유발하는 transition을 일시적으로 제거하거나 매우 짧게 설정
-          content.style.transition = 'none'; 
           content.style.transformOrigin = 'bottom center';
+          content.style.transition = 'transform 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
-          // 브라우저가 스타일 변화를 즉시 인지하도록 강제 리플로우 유도 가능 (필요 시)
-          // void content.offsetWidth; 
+          // important 속성으로 다른 애니메이션의 scale 간섭 차단
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
         }
       }
     });
 
+    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
@@ -300,13 +306,13 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}`;
+      // ✅ level을 키에 포함하여 줌 변경 시 렌더링 유도
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        // ✅ 등장 애니메이션 다시 활성화 (부드러운 생성)
         if (post.isNewRealtime) {
           content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         } else {
@@ -315,12 +321,10 @@ const MapContainer = ({
 
         if (isHighlighted) content.classList.add('highlighted');
         
+        // 초기 생성 시 스케일 적용
         content.style.transformOrigin = 'bottom center';
-        // ✅ scale 스타일을 content 자체가 아닌 transform 속성으로 관리 (카카오맵 기본 구조 유지)
-        content.style.transform = `scale(${scale})`;
-        
-        // transition을 0.2s 정도로 적당히 주어 튕김을 억제하면서 부드럽게 유지
-        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+        content.style.setProperty('transform', `scale(${scale})`, 'important');
+        content.style.transition = 'transform 0.2s ease-out';
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -346,9 +350,9 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          content.style.transition = 'none'; // 줌 변경 시 튕김 방지를 위해 즉시 적용
+          // ✅ 갱신 시에도 스케일 강제 적용
           content.style.transformOrigin = 'bottom center';
-          content.style.transform = `scale(${scale})`;
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
