@@ -527,25 +527,26 @@ const MapContainer = ({
       displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80&sig=${post.id}`;
     }
 
-    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
-    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
-    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container'; }
-    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container'; }
-    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; borderClass = 'diamond-border-container'; }
-    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; borderClass = 'gold-border-container'; }
-    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container'; }
+    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white';
+    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; }
+    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; }
+    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; }
+    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; }
+    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; }
+    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; }
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
     
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
 
-    let inlineBorderStyle = "border: 2.5px solid #ffffff;";
-    let inlineShadow = "0 8px 16px -2px rgba(0, 0, 0, 0.15)";
+    // [FINAL FIX] 모든 마커에 동일한 60px 크기와 테두리 구조 강제 적용
+    let inlineBorderStyle = "border: 3px solid #ffffff;"; 
+    let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
 
     if (borderType === 'diamond') {
       inlineBorderStyle = "border: 4px solid #22d3ee;";
-      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), 0 0 0 2px #a5f3fc";
+      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8)";
     } else if (borderType === 'gold') {
       inlineBorderStyle = "border: 4px solid #fbbf24;";
       inlineShadow = "0 0 15px rgba(251, 191, 36, 0.6)";
@@ -558,13 +559,24 @@ const MapContainer = ({
     } else if (isMine) {
       inlineBorderStyle = "border: 3.5px solid #4f46e5;";
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
-    } else {
-      // [FIX] 일반 포스팅에 하얀색 테두리 일괄 적용
-      inlineBorderStyle = "border: 3px solid #ffffff;";
-      inlineShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
     }
 
-    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
+    return `<div class="marker-content-wrapper">
+      <div class="marker-highlight-ping"></div>
+      <div class="${animationClass}">
+        ${labelHtml}
+        <div style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;">
+            <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" />
+            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
+              ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
+            </div>
+            ${videoIconHtml}
+          </div>
+        </div>
+        ${pinColor ? `<div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
+      </div>
+    </div>`;
   };
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
