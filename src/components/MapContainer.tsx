@@ -554,7 +554,7 @@ const MapContainer = ({
       <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
         <div style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
-          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;">
+          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="shine-overlay">
             <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" />
             <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
