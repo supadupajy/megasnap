@@ -124,51 +124,7 @@ const Popular = () => {
 
   const handlePostDelete = useCallback((postId: string) => { setPosts(prev => prev.filter(p => p.id !== postId)); }, []);
 
-  if (authLoading || (isInitialLoading && posts.length === 0)) {
-    return (
-      <div className="min-h-screen bg-white pb-32">
-        {/* 고정 상단 헤더 - 여기보기와 스타일 통일 */}
-        <div className="fixed top-[88px] inset-x-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-          <div className="flex flex-col">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trending Now</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-black text-rose-500">LIVE</span>
-          </div>
-        </div>
-
-        <div className="pt-[160px]">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-              <p className="text-gray-400 font-bold text-sm">인기 포스팅을 불러오는 중...</p>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {posts.map((post) => (
-                <div key={post.id} className="border-b border-gray-100 last:border-0">
-                  <PostItem 
-                    post={post} 
-                    onLikeToggle={() => handleLikeToggle(post.id)} 
-                    onLocationClick={handleLocationClick} 
-                    onDelete={handlePostDelete}
-                    autoPlayVideo={true} // 인기 페이지에서도 자동 재생 활성화
-                  />
-                </div>
-              ))}
-              {posts.length === 0 && (
-                <div className="text-center py-20 text-gray-400 font-medium">
-                  표시할 인기 포스팅이 없습니다.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
   return (
     <div className="min-h-screen bg-white pb-32">
@@ -185,7 +141,7 @@ const Popular = () => {
       </div>
 
       <div className="pt-[160px]">
-        {loading ? (
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
             <p className="text-gray-400 font-bold text-sm">인기 포스팅을 불러오는 중...</p>
@@ -206,6 +162,11 @@ const Popular = () => {
             {posts.length === 0 && (
               <div className="text-center py-20 text-gray-400 font-medium">
                 표시할 인기 포스팅이 없습니다.
+              </div>
+            )}
+            {hasMore && (
+              <div ref={loadMoreRef} className="py-10 flex justify-center">
+                {isLoadingMore && <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />}
               </div>
             )}
           </div>
