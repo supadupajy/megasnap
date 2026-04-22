@@ -155,8 +155,8 @@ const Index = () => {
         const val = Math.abs(h % 1000) / 1000;
         
         if (val < 0.01) borderType = 'diamond';      // 1%
-        else if (val < 0.04) borderType = 'gold';    // 3% (0.01 + 0.03)
-        else if (val < 0.09) borderType = 'silver';  // 5% (0.04 + 0.05)
+        else if (val < 0.04) borderType = 'gold';    // 3%
+        // 실버(val < 0.09) 구간 삭제
       }
       
       // 작성자 프로필 정보 별도 조회
@@ -467,7 +467,7 @@ const Index = () => {
       let matches = false;
       if (selectedCategories.includes('mine')) matches = authUser && post.user.id === authUser.id;
       else if (selectedCategories.includes('all')) matches = true;
-      else matches = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      else matches = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
       return matches;
     });
     const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());

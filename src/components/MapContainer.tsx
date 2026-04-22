@@ -556,11 +556,7 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #fbbf24;";
       inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)";
       influencerClass = "influencer-glow";
-    } else if (borderType === 'silver') {
-      inlineBorderStyle = "border: 4.5px solid #94a3b8;";
-      inlineShadow = "0 0 15px rgba(148, 163, 184, 0.5), inset 0 0 10px rgba(148, 163, 184, 0.3)";
-      influencerClass = "influencer-glow";
-    }
+    } 
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
