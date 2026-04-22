@@ -110,20 +110,23 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     if (!vv) return;
     
     const handleResize = () => {
-      // [CRITICAL FIX] 모바일 브라우저에서 키보드가 올라올 때 
-      // visualViewport의 높이가 줄어드는 것을 이용해 실제 키보드 높이 계산
-      const keyboardH = window.innerHeight - vv.height;
-      
-      // 모바일 사파리/크롬 등에서 툴바 등으로 인해 발생하는 미세한 오차 제외
-      if (keyboardH > 60) {
-        setKeyboardHeight(keyboardH);
-        // [FIX] 키보드 활성 시 body에 클래스 추가하여 외부 스크롤 방지
-        document.body.classList.add('keyboard-open');
-      } else {
-        setKeyboardHeight(0);
-        document.body.classList.remove('keyboard-open');
+    const keyboardH = window.innerHeight - vv.height - vv.offsetTop; // offsetTop 추가
+    if (keyboardH > 60) {
+      setKeyboardHeight(keyboardH);
+      document.body.classList.add('keyboard-open');
+    } else {
+      setKeyboardHeight(0);
+      document.body.classList.remove('keyboard-open');
       }
-    };
+      };
+
+      vv.addEventListener('resize', handleResize);
+      vv.addEventListener('scroll', handleResize); // scroll 이벤트 추가
+      return () => {
+        vv.removeEventListener('resize', handleResize);
+        vv.removeEventListener('scroll', handleResize); // scroll 이벤트 제거 추가
+        document.body.classList.remove('keyboard-open');
+      };
 
     vv.addEventListener('resize', handleResize);
     return () => {
