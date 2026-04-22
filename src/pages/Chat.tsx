@@ -168,36 +168,37 @@ const Chat = () => {
       const keyboardHeight = window.innerHeight - vp.height - offsetTop;
       const isKeyboardOpen = keyboardHeight > 100;
 
-      // 1. 헤더 위치 조정
+      // [FIX] 뷰포트 변경 시 헤더 위치 조정 (상단에 고정)
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
-      // 2. 입력창 위치 및 여백 고정 (위치 밀림 원천 차단)
+      // [FIX] 입력창 레이아웃 깨짐 해결
+      // 키보드가 열릴 때 transform으로 위치를 조정하면 
+      // 렌더링 타이밍 이슈로 레이아웃이 출렁이거나 바닥으로 내려갈 수 있습니다.
+      // bottom 값을 직접 제어하여 뷰포트 바닥에 밀착시킵니다.
       if (inputRef.current) {
-        const bottomOffset = Math.max(0, keyboardHeight);
-        
         if (isKeyboardOpen) {
-          // 키보드가 열리면 하단바 무시하고 뷰포트 바닥에 밀착
-          inputRef.current.style.bottom = '0px';
-          inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
-          inputRef.current.style.paddingBottom = '8px';
+          // 키보드 노출 시: transform을 0으로 초기화하고 bottom 값을 offsetTop과 keyboardHeight를 활용해 계산
+          // visualViewport 환경에서는 뷰포트 하단이 물리적 화면 바닥보다 높으므로
+          // transform 대신 하단 여백을 직접 계산하여 적용하는 것이 가장 안정적입니다.
+          inputRef.current.style.bottom = `${keyboardHeight}px`;
+          inputRef.current.style.transform = `translateY(${offsetTop}px)`;
+          inputRef.current.style.paddingBottom = '12px';
         } else {
-          // 키보드가 닫히면 항상 하단 메뉴바(BottomNav) 위(100px)에 고정
-          // fixed로 되어있으므로 하단바 높이만큼 명시적으로 띄워야 함
+          // 키보드 미노출 시: BottomNav 위(100px)에 위치 고정
           inputRef.current.style.bottom = '100px'; 
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '12px';
         }
       }
 
-      // 3. 스크롤 영역 하단 패딩 동적 계산 (메시지가 입력창에 가려지지 않게 함)
+      // 3. 스크롤 영역 하단 패딩 동적 계산
       if (scrollRef.current) {
-        const baseBottomPad = isKeyboardOpen ? 100 : 200; // 기본 여백 확보
-        scrollRef.current.style.paddingBottom = `${baseBottomPad + Math.max(0, keyboardHeight)}px`;
+        const baseBottomPad = isKeyboardOpen ? 80 : 180;
+        scrollRef.current.style.paddingBottom = `${baseBottomPad + keyboardHeight}px`;
       }
 
-      // 전송 직후 등 위치 변경 시 스크롤 보정
       setTimeout(scrollToBottom, 50);
     };
 
