@@ -296,33 +296,34 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
 
   return (
-    <motion.div 
+    <div 
       ref={containerRef}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white transition-all",
+        "bg-white transition-none",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
       {/* Header Section */}
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
             <img 
               src={user.avatar} 
               alt={user.name} 
-              className="w-full h-full rounded-full object-cover border-2 border-white" 
-              onError={(e) => (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg"} 
+              className="w-full h-full rounded-full object-cover border-2 border-white"
             />
           </div>
-          <div>
+          <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
                 {user.name}
               </p>
+              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
             </div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-1">
+              <MapPin className="w-3 h-3" />
+              <span className="text-[10px] font-medium">{post.location}</span>
+            </div>
           </div>
         </div>
         <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
@@ -485,7 +486,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         </AnimatePresence>
       </div>
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
-    </motion.div>
+    </div>
   );
 };
 
