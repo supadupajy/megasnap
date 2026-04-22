@@ -403,65 +403,106 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                                     {media.type === 'image' ? (
                                       <div className="w-full h-full relative p-3">
-                                        <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50">
+                                        <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50 flex items-center justify-center">
                                           <img 
                                             src={media.url} 
                                             alt={`Preview ${idx}`} 
-                                            className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
+                                            className="absolute transition-none select-none pointer-events-none z-10 max-w-none max-h-none"
                                             style={{ 
-                                              width: '100%', 
+                                              width: 'auto',
                                               height: 'auto',
+                                              minWidth: '100%',
+                                              minHeight: '100%',
                                               top: '50%',
-                                              left: '0',
-                                              transform: `translateY(calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
+                                              left: '50%',
+                                              transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
                                             }}
                                           />
-                                        </div>
-                                        {/* 드래그 핸들러 */}
-                                        <div 
-                                          className="absolute inset-0 z-30 cursor-move touch-none bg-transparent"
-                                          onPointerDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setIsDragging(true);
-                                            setDragStart({ x: e.clientX, y: e.clientY });
-                                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                                          }}
-                                          onPointerMove={(e) => {
-                                            if (!isDragging) return;
-                                            
-                                            const target = e.currentTarget;
-                                            const containerWidth = target.clientWidth;
-                                            const containerHeight = target.clientHeight;
-                                            
-                                            const imgElement = target.previousElementSibling as HTMLImageElement;
-                                            if (!imgElement) return;
-                                            
-                                            const displayedImgHeight = (imgElement.naturalHeight / imgElement.naturalWidth) * containerWidth;
-                                            
-                                            const deltaX = e.clientX - dragStart.x;
-                                            const deltaY = e.clientY - dragStart.y;
-                                            
-                                            setMediaFiles(prev => prev.map((m, i) => {
-                                              if (i !== idx) return m;
-                                              let newY = (m.crop?.y || 0) + deltaY;
-                                              if (displayedImgHeight > containerHeight) {
-                                                const maxAbsY = (displayedImgHeight - containerHeight) / 2;
-                                                newY = Math.max(-maxAbsY, Math.min(maxAbsY, newY));
-                                              } else {
-                                                newY = 0;
+                                          {/* 드래그 핸들러 */}
+                                          <div 
+                                            className="absolute inset-0 z-30 cursor-move touch-none bg-transparent"
+                                            onPointerDown={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setIsDragging(true);
+                                              setDragStart({ x: e.clientX, y: e.clientY });
+                                              (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                                            }}
+                                            onPointerMove={(e) => {
+                                              if (!isDragging) return;
+                                              
+                                              const target = e.currentTarget;
+                                              const containerWidth = target.clientWidth;
+                                              const containerHeight = target.clientHeight;
+                                              
+                                              const imgElement = target.previousElementSibling as HTMLImageElement;
+                                              if (!imgElement) return;
+                                              
+                                              // 실제 렌더링되는 이미지 크기 계산
+                                              const imgAspect = imgElement.naturalWidth / imgElement.naturalHeight;
+                                              let displayedW, displayedH;
+                                              
+                                              if (imgAspect > 1) { // 가로가 더 긴 경우
+                                                displayedH = containerHeight;
+                                                displayedW = containerHeight * imgAspect;
+                                              } else { // 세로가 더 긴 경우
+                                                displayedW = containerWidth;
+                                                displayedH = containerWidth / imgAspect;
                                               }
-                                              return { ...m, crop: { x: 0, y: newY } };
-                                            }));
-                                            
-                                            setDragStart({ x: e.clientX, y: e.clientY });
-                                          }}
-                                          onPointerUp={(e) => {
-                                            setIsDragging(false);
-                                            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-                                          }}
-                                          onPointerCancel={() => setIsDragging(false)}
-                                        />
+                                              
+                                              const deltaX = e.clientX - dragStart.x;
+                                              const deltaY = e.clientY - dragStart.y;
+                                              
+                                              setMediaFiles(prev => prev.map((m, i) => {
+                                                if (i !== idx) return m;
+                                                
+                                                let newX = (m.crop?.x || 0) + deltaX;
+                                                let newY = (m.crop?.y || 0) + deltaY;
+                                                
+                                                // 가로 제한
+                                                if (displayedW > containerWidth) {
+                                                  const maxAbsX = (displayedW - containerWidth) / 2;
+                                                  newX = Math.max(-maxAbsX, Math.min(maxAbsX, newX));
+                                                } else { newX = 0; }
+                                                
+                                                // 세로 제한
+                                                if (displayedH > containerHeight) {
+                                                  const maxAbsY = (displayedH - containerHeight) / 2;
+                                                  newY = Math.max(-maxAbsY, Math.min(maxAbsY, newY));
+                                                } else { newY = 0; }
+                                                
+                                                return { ...m, crop: { x: newX, y: newY } };
+                                              }));
+                                              
+                                              setDragStart({ x: e.clientX, y: e.clientY });
+                                            }}
+                                            onPointerUp={(e) => {
+                                              setIsDragging(false);
+                                              (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                                            }}
+                                            onPointerCancel={() => setIsDragging(false)}
+                                          />
+                                        </div>
+                                        <button
+                                          onClick={() => removeMedia(idx)}
+                                          className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-[100]"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                        
+                                        {mediaFiles.length > 1 && (
+                                          <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
+                                            {mediaFiles.map((_, i) => (
+                                              <div 
+                                                key={i} 
+                                                className={cn(
+                                                  "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-md",
+                                                  currentSlide === i ? "bg-white w-4" : "bg-white/40"
+                                                )} 
+                                              />
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <video 
@@ -472,26 +513,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                         muted
                                         loop
                                       />
-                                    )}
-                                    <button
-                                      onClick={() => removeMedia(idx)}
-                                      className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-[100]"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                    
-                                    {mediaFiles.length > 1 && (
-                                      <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
-                                        {mediaFiles.map((_, i) => (
-                                          <div 
-                                            key={i} 
-                                            className={cn(
-                                              "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-md",
-                                              currentSlide === i ? "bg-white w-4" : "bg-white/40"
-                                            )} 
-                                          />
-                                        ))}
-                                      </div>
                                     )}
                                   </div>
                                 </CarouselItem>
