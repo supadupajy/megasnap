@@ -69,7 +69,6 @@
 
 .my-post-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #4f46e5, #818cf8, #4f46e5, #818cf8, #4f46e5);
   animation: rotate-border 2s linear infinite;
@@ -78,7 +77,6 @@
 
 .popular-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #ef4444, #f87171, #ef4444, #f87171, #ef4444);
   animation: rotate-border 1.5s linear infinite;
@@ -87,7 +85,6 @@
 
 .silver-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #94a3b8, #e2e8f0, #94a3b8, #e2e8f0, #94a3b8);
   animation: rotate-border 3s linear infinite;
@@ -96,7 +93,6 @@
 
 .gold-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #fbbf24, #fde68a, #fbbf24, #fde68a, #fbbf24);
   animation: rotate-border 2s linear infinite;
@@ -105,7 +101,6 @@
 
 .diamond-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #22d3ee, #a5f3fc, #22d3ee, #a5f3fc, #22d3ee);
   animation: rotate-border 1s linear infinite;
@@ -114,11 +109,25 @@
 
 .ad-border-container {
   position: relative;
-  padding: 3px;
   border-radius: 1.25rem;
   background-image: conic-gradient(from var(--angle), #3b82f6, #93c5fd, #3b82f6, #93c5fd, #3b82f6);
   animation: rotate-border 2s linear infinite;
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.my-post-border-container::before,
+.popular-border-container::before,
+.silver-border-container::before,
+.gold-border-container::before,
+.diamond-border-container::before,
+.ad-border-container::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.4rem;
+  background: inherit;
+  animation: inherit;
+  z-index: -1;
 }
 
 @keyframes ad-breathing {
