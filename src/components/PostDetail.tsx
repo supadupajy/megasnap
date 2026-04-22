@@ -358,15 +358,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   {/* 미디어 영역 */}
                   <div className="px-4">
                     <div className={cn(
-                      "relative aspect-square w-full rounded-[30px]",
-                      isMine && "my-post-border-container p-1",
-                      isAd && "ad-border-container p-1",
-                      post.borderType === 'popular' && "popular-border-container p-1",
-                      post.borderType === 'diamond' && "diamond-border-container p-1",
-                      post.borderType === 'gold' && "gold-border-container p-1",
-                      post.borderType === 'silver' && "silver-border-container p-1"
+                      "relative aspect-square w-full rounded-[30px] overflow-hidden",
+                      isMine && "my-post-border-container",
+                      isAd && "ad-border-container",
+                      post.borderType === 'popular' && "popular-border-container",
+                      post.borderType === 'diamond' && "diamond-border-container",
+                      post.borderType === 'gold' && "gold-border-container",
+                      post.borderType === 'silver' && "silver-border-container",
+                      (!isMine && !isAd && post.borderType === 'none') && "border border-gray-100"
                     )}>
-                      <div className="relative w-full h-full overflow-hidden bg-black rounded-[26px]">
+                      <div className={cn(
+                        "relative bg-black",
+                        (isMine || isAd || post.borderType !== 'none') 
+                          ? "m-0.5 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[28px] top-[2px] left-[2px]" 
+                          : "w-full h-full rounded-[30px]"
+                      )}>
                         {youtubeId ? (
                           <iframe
                             className="w-full h-full"
