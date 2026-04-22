@@ -323,7 +323,8 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        content.className = 'marker-container kakao-overlay';
+        // [FIX] marker-appear-animation 클래스 추가로 뿅 나타나는 효과 적용
+        content.className = 'marker-container kakao-overlay marker-appear-animation';
         
         content.style.opacity = '0';
         content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
