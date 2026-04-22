@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
 import { handleBrokenImage } from '@/lib/mock-data';
@@ -42,6 +42,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
+const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+
 interface PostItemProps {
   post: Post;
   onLikeToggle: (id: string) => void;
@@ -74,6 +76,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -266,6 +270,25 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     );
   };
 
+  // 이미지 슬라이더 데이터 준비
+  const displayImages = useMemo(() => {
+    const baseImages = Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image];
+    // 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입 (광고 포스트가 아닐 때도 포함하거나 광고 포스트일 때만 할지 결정)
+    // 사용자 요청에 따라 "모든 포스팅 화면"에 적용
+    if (baseImages.length > 0) {
+      const newImages = [...baseImages];
+      newImages.splice(1, 0, COCA_COLA_AD);
+      return newImages;
+    }
+    return [COCA_COLA_AD];
+  }, [post.images, post.image, post.image_url]);
+
+  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentImageIndex) setCurrentImageIndex(index);
+  };
+
   return (
     <motion.div 
       ref={containerRef}
@@ -322,12 +345,44 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             )}
           </div>
         ) : (
-          <img
-            src={currentImage}
-            alt=""
-            className="w-full h-full object-cover transition-transform duration-500 will-change-transform"
-            onError={handleImageError}
-          />
+          <div className="relative w-full h-full">
+            <div
+              ref={imageScrollRef}
+              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+              onScroll={handleImageScroll}
+            >
+              {displayImages.map((img, index) => (
+                <div key={index} className="w-full h-full shrink-0 snap-center relative">
+                  <img
+                    src={img}
+                    alt={`Content ${index}`}
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                  {img === COCA_COLA_AD && (
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
+                      AD
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* 페이지 인디케이터 (구분자) */}
+            {displayImages.length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                {displayImages.map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
         
         {/* ... badges and buttons ... */}
