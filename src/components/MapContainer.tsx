@@ -596,13 +596,15 @@ const MapContainer = ({
     // floating 애니메이션
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) ? 'animate-marker-float' : '');
 
+    // [FIX] 테두리 유무에 상관없이 이미지 영역을 100%로 유지하기 위해 마커 크기 및 내부 구조 조정
+    // 테두리는 마커 외부로 확장되는 느낌으로 표현
     return `
       <div class="marker-content-wrapper">
         <div class="marker-highlight-ping"></div>
         <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; margin-top: 14px;">
           ${labelHtml}
-          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-clip: border-box;">
-            <div style="position: absolute; inset: 3px; border-radius: 12px; overflow: hidden; background: white; z-index: 3;">
+          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); background-clip: border-box;">
+            <div style="position: absolute; inset: -2px; border-radius: 18px; overflow: hidden; background: white; z-index: 3; border: 2px solid white;">
               <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${videoIconHtml}

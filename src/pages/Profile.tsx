@@ -72,13 +72,31 @@ const Profile = () => {
       const clean = url.trim();
       return clean.startsWith('http') && !/post\s*content/i.test(clean);
     };
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&q=90";
 
     let finalImage = sanitized.image_url;
     let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.filter(isValidUrl)
+      ? sanitized.images.map(img => {
+          if (isValidUrl(img)) {
+            // 해상도 보정
+            let cleanImg = img;
+            if (cleanImg.includes('unsplash.com')) {
+              cleanImg = cleanImg.replace('w=800', 'w=1080').replace('q=80', 'q=90');
+            }
+            return cleanImg;
+          }
+          return SAFE_FALLBACK;
+        })
       : [finalImage];
 
+    if (finalImage.includes('unsplash.com')) {
+      // [FIX] Unsplash URL 파라미터 보정 (해상도 및 품질 상향)
+      if (finalImage.includes('w=800')) finalImage = finalImage.replace('w=800', 'w=1080');
+      if (finalImage.includes('q=80')) finalImage = finalImage.replace('q=80', 'q=90');
+      
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
+    }
+    
     let isLiked = false;
     let isSaved = false;
     
