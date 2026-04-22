@@ -451,16 +451,36 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           (e.target as HTMLElement).setPointerCapture(e.pointerId);
                                         }}
                                         onPointerMove={(e) => {
-                                          if (!isDragging) return;
-                                          const deltaX = e.clientX - dragStart.x;
-                                          const deltaY = e.clientY - dragStart.y;
-                                          setMediaFiles(prev => prev.map((m, i) =>
-                                            i === idx
-                                              ? { ...m, crop: { x: (m.crop?.x || 0) + deltaX, y: (m.crop?.y || 0) + deltaY } }
-                                              : m
-                                          ));
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                        }}
+  if (!isDragging) return;
+  const deltaX = e.clientX - dragStart.x;
+  const deltaY = e.clientY - dragStart.y;
+
+  setMediaFiles(prev => prev.map((m, i) => {
+    if (i !== idx) return m;
+
+    const container = e.currentTarget.parentElement;
+    if (!container) return m;
+
+    const imgEl = container.querySelector('img') as HTMLImageElement;
+    if (!imgEl) return m;
+
+    const imgW = imgEl.offsetWidth;
+    const imgH = imgEl.offsetHeight;
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+
+    // 이미지가 컨테이너보다 큰 방향만 이동 가능
+    const maxX = Math.max(0, (imgW - conW) / 2);
+    const maxY = Math.max(0, (imgH - conH) / 2);
+
+    const newX = Math.max(-maxX, Math.min(maxX, (m.crop?.x || 0) + deltaX));
+    const newY = Math.max(-maxY, Math.min(maxY, (m.crop?.y || 0) + deltaY));
+
+    return { ...m, crop: { x: newX, y: newY } };
+  }));
+
+  setDragStart({ x: e.clientX, y: e.clientY });
+}}
                                         onPointerUp={(e) => {
                                           setIsDragging(false);
                                           (e.target as HTMLElement).releasePointerCapture(e.pointerId);
