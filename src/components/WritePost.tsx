@@ -425,17 +425,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                       <img 
                                         src={media.url} 
                                         alt={`Preview ${idx}`} 
-                                        className="absolute transition-none select-none pointer-events-none z-10 max-w-none max-h-none"
+                                        className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
                                         style={{ 
-                                          width: 'auto',
+                                          width: '100%',
                                           height: 'auto',
-                                          minWidth: '100%',
-                                          minHeight: '100%',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
                                         }}
                                         onLoad={(e) => {
                                           const img = e.target as HTMLImageElement;
-                                          console.log('[WritePost] Original Image Size:', img.naturalWidth, 'x', img.naturalHeight);
+                                          console.log('[WritePost] Image Fit-to-Width:', img.naturalWidth, '-> 100%');
                                         }}
                                       />
                                       {/* 드래그 핸들러 */}
