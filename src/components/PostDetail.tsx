@@ -459,12 +459,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                       />
                                       {isThisAdSlide && (
                                         <>
-                                          {/* 투명한 클릭 레이어를 최상단(z-[9999])에 배치 */}
                                           <div 
-                                            onClick={handleAdClick}
-                                            className="absolute inset-0 z-[9999] cursor-pointer bg-transparent active:bg-black/10 transition-colors"
+                                            onMouseDown={handleAdClick}
+                                            onTouchStart={(e) => {
+                                              e.preventDefault();
+                                              handleAdClick(e as any);
+                                            }}
+                                            className="absolute inset-0 z-[99999] cursor-pointer bg-transparent active:bg-black/5"
+                                            style={{ pointerEvents: 'auto' }}
                                           />
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[10000] pointer-events-none">
+                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[100000] pointer-events-none">
                                             <ExternalLink className="w-3.5 h-3.5" />
                                             <span className="font-bold">{adLabel}</span>
                                           </div>
