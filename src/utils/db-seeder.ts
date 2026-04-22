@@ -92,7 +92,10 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         } else if (globalIndex % 2 === 0) {
           const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
           finalYoutubeUrl = candidateUrl;
-          finalImage = getYoutubeThumbnail(candidateUrl) || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          // [FIX] 유튜브 포스팅 생성 시 썸네일을 우선적으로 image_url에 저장
+          const ytThumbnail = getYoutubeThumbnail(candidateUrl);
+          finalImage = ytThumbnail || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i);
+          console.log(`[Seeder] YouTube Post Created - URL: ${candidateUrl}, Thumbnail: ${finalImage}`);
         } else {
           finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
         }
