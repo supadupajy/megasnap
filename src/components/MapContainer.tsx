@@ -544,8 +544,8 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #4f46e5;"; // Indigo 600
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
     } else if (isAd) {
-      // [FIX] 광고 마커의 테두리 색상을 상단 표기 색상(Blue 500)과 동일하게 맞춤
-      inlineBorderStyle = `border: 4px solid ${labelBg};`; 
+      // 광고 마커의 테두리 색상을 상단 표기 색상(Blue 500)과 동일하게 맞춤
+      inlineBorderStyle = "border: 4px solid #3b82f6;"; 
       inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)";
     }
 
