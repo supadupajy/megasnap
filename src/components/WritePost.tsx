@@ -364,15 +364,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
                             "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                            "h-[120px]", // 스크린샷 사이즈에 맞춰 고정
-                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]", // 사진이 있을 때 더 줄여서 공간 확보
+                            mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
-                            <Video className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
+                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
                           </div>
-                          <span className={cn("text-xs font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
+                          <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-xs text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
                           </span>
                         </button>
@@ -427,32 +427,32 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
+                                  
+                                  {/* 스크롤 인디케이터 (이미지 안쪽 하단 배치) */}
+                                  {mediaFiles.length > 1 && (
+                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-40 pointer-events-none">
+                                      {mediaFiles.map((_, i) => (
+                                        <div 
+                                          key={i} 
+                                          className={cn(
+                                            "w-1.5 h-1.5 rounded-full transition-all duration-300 shadow-sm",
+                                            currentSlide === i ? "bg-white w-3" : "bg-white/50"
+                                          )} 
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </CarouselItem>
                             ))}
                           </CarouselContent>
                           {mediaFiles.length > 1 && (
                             <>
-                              <CarouselPrevious className="left-2 bg-white/80 border-none hover:bg-white z-20" />
-                              <CarouselNext className="right-2 bg-white/80 border-none hover:bg-white z-20" />
+                              <CarouselPrevious className="left-2 bg-white/40 border-none hover:bg-white/60 z-20 h-8 w-8" />
+                              <CarouselNext className="right-2 bg-white/40 border-none hover:bg-white/60 z-20 h-8 w-8" />
                             </>
                           )}
                         </Carousel>
-                        
-                        {/* 스크롤 인디케이터 (점) */}
-                        {mediaFiles.length > 1 && (
-                          <div className="flex justify-center gap-1.5 mt-4">
-                            {mediaFiles.map((_, i) => (
-                              <div 
-                                key={i} 
-                                className={cn(
-                                  "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                  currentSlide === i ? "bg-indigo-600 w-3" : "bg-gray-300"
-                                )} 
-                              />
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                   </motion.div>
