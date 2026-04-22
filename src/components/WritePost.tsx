@@ -65,6 +65,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
 
   const { isKeyboardOpen } = useKeyboard();
   const mediaInputRef = useRef<HTMLInputElement>(null);
