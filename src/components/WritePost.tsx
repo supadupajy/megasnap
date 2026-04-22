@@ -37,6 +37,7 @@ interface MediaFile {
   thumbnail?: string;
   crop?: { x: number; y: number };
   zoom?: number;
+  orientation?: 'landscape' | 'portrait'; // ✅ 추가
 }
 
 const CATEGORIES = [
@@ -101,6 +102,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
+  // ✅ 이미지 가로/세로 방향 감지
+  const getOrientation = (url: string): Promise<'landscape' | 'portrait'> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img.width >= img.height ? 'landscape' : 'portrait');
+      img.onerror = () => resolve('landscape'); // fallback
+      img.src = url;
+    });
+  };
+
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -109,10 +120,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
       let thumbnail = undefined;
+      let orientation: 'landscape' | 'portrait' | undefined = undefined;
+
       if (type === 'video') {
         thumbnail = await captureVideoThumbnail(url).catch(() => undefined);
+      } else {
+        // ✅ 이미지일 때 orientation 감지
+        orientation = await getOrientation(url);
       }
-      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1 } as MediaFile;
+
+      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1, orientation } as MediaFile;
     }));
 
     setMediaFiles(prev => {
@@ -370,14 +387,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       />
                     </div>
 
-                    {/* ✅ 핵심 수정: 미리보기 영역 — flex/h-full 제거, 명시적 픽셀 높이 사용 */}
+                    {/* 미리보기 영역 */}
                     <div
-                      className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-100"
+                      className="w-full rounded-2xl overflow-hidden bg-black border border-gray-100"
                       style={{ height: `${PREVIEW_HEIGHT}px` }}
                     >
                       {mediaFiles.length === 0 ? (
-                        /* 빈 상태 placeholder */
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-100">
                           <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                             <ImageIcon className="w-7 h-7 text-gray-300" />
                           </div>
@@ -390,7 +406,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           className="w-full"
                           style={{ height: `${PREVIEW_HEIGHT}px` }}
                         >
-                          {/* ✅ CarouselContent도 overflow-hidden + 명시적 높이 */}
                           <CarouselContent
                             className="ml-0"
                             style={{ height: `${PREVIEW_HEIGHT}px` }}
@@ -401,24 +416,30 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                 className="pl-0 basis-full"
                                 style={{ height: `${PREVIEW_HEIGHT}px` }}
                               >
-                                {/* ✅ 각 슬라이드: 완전한 픽셀 높이 컨테이너 */}
                                 <div
-                                  className="relative w-full overflow-hidden bg-black"
+                                  className="relative w-full overflow-hidden bg-black flex items-center justify-center"
                                   style={{ height: `${PREVIEW_HEIGHT}px` }}
                                 >
                                   {media.type === 'image' ? (
                                     <>
-                                      {/* ✅ 핵심: object-cover + translate transform으로 단순하게 */}
+                                      {/*
+                                        ✅ orientation 기반 이미지 사이징:
+                                        - landscape(가로형): height=100% → 세로에 맞춤, 가로는 auto
+                                        - portrait(세로형): width=100% → 가로에 맞춤, 세로는 auto
+                                        crop 없이 원본 전체가 보임
+                                      */}
                                       <img
                                         src={media.url}
                                         alt={`Preview ${idx + 1}`}
                                         draggable={false}
-                                        className="w-full h-full select-none pointer-events-none"
+                                        className="select-none pointer-events-none"
                                         style={{
-                                          objectFit: 'cover',
+                                          width: media.orientation === 'portrait' ? '100%' : 'auto',
+                                          height: media.orientation === 'landscape' ? '100%' : 'auto',
+                                          objectFit: 'none',
+                                          display: 'block',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
                                           transition: isDragging ? 'none' : 'transform 0.05s linear',
-                                          display: 'block',
                                         }}
                                       />
                                       {/* 드래그 오버레이 */}
