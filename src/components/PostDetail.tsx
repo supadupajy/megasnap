@@ -355,77 +355,59 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                       ) : (
                         <div className="relative w-full h-full">
-                          {/* 네이티브 스크롤 슬라이더 — Carousel 이벤트 충돌 없음 */}
-                          <div
-                            ref={imageScrollRef}
-                            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                            onScroll={handleImageScroll}
-                          >
-                            {displayImages.map((img, index) => {
-                              const isThisAdSlide = index === 1;
-                              return (
-                                <div
-                                  key={index}
-                                  className="w-full h-full shrink-0 snap-center relative"
-                                  style={{ scrollSnapStop: 'always' }}
-                                >
-                                  <img
-                                    src={img}
-                                    alt={`Post content ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                    draggable={false}
-                                  />
-                                  {isThisAdSlide && (
-                                    <>
-                                      {/* AD 뱃지 */}
-                                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                        <span className="font-bold">AD</span>
-                                      </div>
-                                      {/* 광고 클릭 오버레이 */}
-                                      <div
-  className="absolute inset-0 z-20 cursor-pointer"
-  onPointerDown={(e) => {
-    e.currentTarget.dataset.startX = String(e.clientX);
-    e.currentTarget.dataset.startY = String(e.clientY);
-  }}
-  onPointerUp={(e) => {
-    const dist = Math.sqrt(
-      Math.pow(e.clientX - Number(e.currentTarget.dataset.startX), 2) +
-      Math.pow(e.clientY - Number(e.currentTarget.dataset.startY), 2)
-    );
-    if (dist < 10) {
-      e.stopPropagation();
-      window.open(adLink, '_blank', 'noopener,noreferrer');
-    }
-  }}
-  onClick={(e) => e.stopPropagation()}  // ← 이 줄 추가
-/>
-                                      />
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+  {/* 네이티브 스크롤 슬라이더 */}
+  <div
+    ref={imageScrollRef}
+    className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+    onScroll={handleImageScroll}
+  >
+    {displayImages.map((img, index) => (
+      <div
+        key={index}
+        className="w-full h-full shrink-0 snap-center relative"
+        style={{ scrollSnapStop: 'always' }}
+      >
+        <img
+          src={img}
+          alt={`Post content ${index + 1}`}
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
+      </div>
+    ))}
+  </div>
 
-                          {/* 인디케이터 */}
-                          {displayImages.length > 1 && (
-                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
-                              {displayImages.map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                                    currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+  {/* 광고 슬라이드일 때만 바깥에서 오버레이 — 스크롤과 완전 분리 */}
+  {currentImageIndex === 1 && (
+    <div className="absolute inset-0 z-20 flex">
+      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 pointer-events-none">
+        <ExternalLink className="w-3.5 h-3.5" />
+        <span className="font-bold">AD</span>
+      </div>
+      <button
+        className="w-full h-full bg-transparent"
+        onClick={(e) => {
+          e.stopPropagation();
+          window.open(adLink, '_blank', 'noopener,noreferrer');
+        }}
+      />
+    </div>
+  )}
+
+  {/* 인디케이터 */}
+  {displayImages.length > 1 && (
+    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+      {displayImages.map((_, i) => (
+        <div
+          key={i}
+          className={`h-1.5 rounded-full transition-all duration-300 ${
+            currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+          }`}
+        />
+      ))}
+    </div>
+  )}
+</div>
 
                   {/* 액션 버튼 및 내용 */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
