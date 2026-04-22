@@ -431,10 +431,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                     draggable={false}
                                   />
                                   {index === 1 && (
-                                    <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <ExternalLink className="w-3 h-3" />
-                                      AD
-                                    </div>
+                                    <a 
+                                      href="https://www.coca-cola.co.kr/"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 active:scale-95 transition-all z-20 cursor-pointer"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      <span className="font-bold">AD</span>
+                                    </a>
                                   )}
                                 </div>
                               </CarouselItem>
