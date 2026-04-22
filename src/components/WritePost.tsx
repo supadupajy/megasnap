@@ -337,14 +337,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         )}
       </AnimatePresence>
 
-      
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
           className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
           style={{ 
             bottom: 0,
-            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)',
-            transition: 'transform 0.1s linear',
+            // [FIX] 키보드가 올라올 때 DrawerContent 자체가 밀리지 않도록 고정하고 내부 스크롤을 유도
+            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
             willChange: 'transform'
           }}
         >
@@ -376,7 +375,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             </div>
             
             {/* 페이지 콘텐츠 — 하단 버튼(fixed) 높이만큼 pb 확보 */}
-            <div className="flex-1 min-h-0 overflow-y-auto pb-24">
+            <div 
+              className="flex-1 min-h-0 overflow-y-auto pb-32 no-scrollbar"
+              style={{ 
+                // [FIX] 키보드가 올라올 때 하단 버튼에 가려지는 부분을 위해 여백을 키보드 높이만큼 동적으로 추가
+                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 80}px` : '120px' 
+              }}
+            >
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
@@ -662,10 +667,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
       {isOpen && (
         <div
-          className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-100"
+          className="fixed left-0 right-0 px-5 pt-3 pb-6 bg-white z-[1002] transition-all duration-300 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]"
           style={{ 
-            bottom: keyboardHeight > 0 ? '0px' : '110px',
-            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'translateY(0)'
+            bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
+            // [FIX] 키보드가 있을 때는 하단 네비게이션바 뒤로 숨지 않도록 padding-bottom 제거
+            paddingBottom: keyboardHeight > 0 ? '16px' : '110px'
           }}
         >
           {currentPage === 1 ? (
