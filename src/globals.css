@@ -359,45 +359,18 @@
 .influencer-glow::before {
   content: "";
   position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 0deg,
-    transparent,
-    rgba(255, 255, 255, 0.8),
-    transparent 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.8),
-    transparent 75%,
-    transparent
-  );
-  z-index: 1;
-  pointer-events: none;
-  animation: influencer-rotate 2s linear infinite;
-}
-
-/* 다이아몬드/골드 전용 입자 반짝임 효과 */
-.influencer-glow::after {
-  content: "";
-  position: absolute;
   inset: 0;
   border-radius: inherit;
-  background-image: radial-gradient(circle, #fff 10%, transparent 20%);
-  background-size: 10px 10px;
-  opacity: 0;
-  z-index: 4;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.6);
+  z-index: 3;
   pointer-events: none;
-  animation: influencer-sparkle 1.5s ease-in-out infinite;
+  animation: influencer-pulse 2s ease-in-out infinite;
 }
 
-@keyframes influencer-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes influencer-sparkle {
-  0%, 100% { opacity: 0; transform: scale(0.8); }
-  50% { opacity: 0.5; transform: scale(1.1); }
+@keyframes influencer-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
 }
 
 /* [FIX] 이전 버전의 선명하고 부드러운 샤인 이펙트로 복구 */
