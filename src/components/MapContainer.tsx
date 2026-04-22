@@ -194,16 +194,6 @@ const MapContainer = ({
         const newLevel = map.getLevel();
         setCurrentLevel(newLevel);
         currentLevelRef.current = newLevel;
-        
-        // ✅ 줌이 바뀔 때 즉시 마커를 체크하여 8단계 이상이면 강제로 지움
-        if (newLevel >= 8) {
-          markersRef.current.forEach(m => m.setMap(null));
-          markersRef.current = [];
-          // postToMarkerMap도 초기화하여 참조 오류 방지
-          postToMarkerMap.current.clear();
-        } else {
-          updateMarkers();
-        }
       });
 
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -258,64 +248,8 @@ const MapContainer = ({
     return 0;                    // 8단계 이상: 숨김
   };
 
-  // 마커 업데이트 로직
-  const updateMarkers = useCallback(() => {
-    if (!mapInstance.current || !posts) return;
-
-    // 현재 레벨을 직접 가져와서 판단
-    const level = mapInstance.current.getLevel();
-    const currentScale = getMarkerScale(level);
-
-    // 8단계 이상이면 무조건 싹 지우기
-    if (level >= 8 || currentScale <= 0) {
-      markersRef.current.forEach(m => m.setMap(null));
-      markersRef.current = [];
-      postToMarkerMap.current.clear();
-      return;
-    }
-
-    const bounds = mapInstance.current.getBounds();
-    const currentPostIds = new Set(posts.map(p => p.id));
-    
-    // 기존 마커 중 화면 밖으로 나간 것들 정리
-    const nextMarkers: any[] = [];
-    
-    // postToMarkerMap에 있는 마커들 중, 현재 posts에 없거나 화면 밖에 있는 것 제거
-    postToMarkerMap.current.forEach((marker, postId) => {
-      const post = posts.find(p => p.id === postId);
-      const pos = marker.getPosition();
-      
-      if (!currentPostIds.has(postId) || !bounds.contain(pos)) {
-        marker.setMap(null);
-        postToMarkerMap.current.delete(postId);
-      } else {
-        // 크기 업데이트
-        const icon = marker.getImage();
-        if (icon) {
-          const size = new (window as any).kakao.maps.Size(40 * currentScale, 40 * currentScale);
-          icon.size = size;
-          marker.setImage(icon);
-        }
-        nextMarkers.push(marker);
-      }
-    });
-
-    // 화면 안에 새로 들어온 마커 추가
-    posts.forEach(post => {
-      if (!postToMarkerMap.current.has(post.id)) {
-        const position = new (window as any).kakao.maps.LatLng(post.latitude, post.longitude);
-        
-        if (bounds.contain(position)) {
-          const marker = createMarker(post, currentScale);
-          marker.setMap(mapInstance.current);
-          postToMarkerMap.current.set(post.id, marker);
-          nextMarkers.push(marker);
-        }
-      }
-    });
-
-    markersRef.current = nextMarkers;
-  }, [posts, createMarker]);
+  // 마커 업데이트 로직 제거 (CustomOverlay 로직과 중복됨)
+  // REMOVED: updateMarkers() function and related code
 
   useEffect(() => {
     const timer = setInterval(() => { 
@@ -536,22 +470,20 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // ✅ 9단계 이상인 경우 렌더링하지 않도록 보장
-      if (currentLevel >= 9) return;
+      // ✅ 8단계 이상인 경우 렌더링하지 않도록 보장
+      if (currentLevel >= 8) return;
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
+      // ✅ 줌 레벨에 따른 스케일 계산
       // 1~5단계: 1.0 (100%)
       // 6단계: 0.75 (75%)
       // 7단계: 0.5 (50%)
-      // 8단계: 0.25 (25%)
-      // 9단계 이상: 0 (안 보임)
+      // 8단계 이상: 0 (안 보임)
       let scale = 1.0;
       if (currentLevel === 6) scale = 0.75;
       else if (currentLevel === 7) scale = 0.5;
-      else if (currentLevel === 8) scale = 0.25;
-      else if (currentLevel > 8) scale = 0;
+      else if (currentLevel >= 8) scale = 0;
       
       // 최소 스케일 제한
       scale = Math.max(scale, 0);
