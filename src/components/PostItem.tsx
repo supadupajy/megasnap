@@ -118,20 +118,27 @@ const PostItem = ({
     
     // [FIX] 'Post content 1' 같은 텍스트가 이미지로 들어오는 경우를 포함하여 더 강력한 필터링
     const isValidUrl = (url: string) => {
-      if (!url) return false;
+      if (!url || typeof url !== 'string') return false;
       const cleanUrl = url.trim();
+      // 명확하게 이미지 URL 형식(http로 시작)이고 가짜 텍스트가 아닌지 확인
       return cleanUrl.startsWith('http') && 
              !cleanUrl.includes('Post content') && 
              cleanUrl !== 'null' && 
              cleanUrl !== 'undefined';
     };
 
-    const validImages = (images && images.length > 0) 
+    const validImages = (images && Array.isArray(images)) 
       ? images.filter(isValidUrl)
       : [];
     
-    // 유효한 이미지가 하나도 없다면 image prop 검사, 그것도 없으면 FALLBACK
-    const baseImage = isValidUrl(image) ? image : FALLBACK_IMAGE;
+    // [핵심] image prop 자체가 깨진 경우(텍스트 등)를 대비해 완전히 다른 링크로 강제 할당
+    const getSafeImage = (url: any) => {
+      if (isValidUrl(url)) return url;
+      // 깨진 경우 무조건 작동하는 고정 고화질 풍경 이미지로 대체
+      return "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    };
+
+    const baseImage = getSafeImage(image);
     const finalBaseImages = validImages.length > 0 ? validImages : [baseImage];
     
     const img1 = finalBaseImages[0];
