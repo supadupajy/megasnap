@@ -106,34 +106,34 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   // 키보드 높이 감지
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    
-    const handleResize = () => {
-    const keyboardH = window.innerHeight - vv.height - vv.offsetTop; // offsetTop 추가
-    if (keyboardH > 60) {
-      setKeyboardHeight(keyboardH);
-      document.body.classList.add('keyboard-open');
-    } else {
-      setKeyboardHeight(0);
-      document.body.classList.remove('keyboard-open');
-      }
-      };
-
-      vv.addEventListener('resize', handleResize);
-      vv.addEventListener('scroll', handleResize); // scroll 이벤트 추가
-      return () => {
-        vv.removeEventListener('resize', handleResize);
-        vv.removeEventListener('scroll', handleResize); // scroll 이벤트 제거 추가
-        document.body.classList.remove('keyboard-open');
-      };
+  const vv = window.visualViewport;
+  if (!vv) return;
+  
+  const handleResize = () => {
+  const keyboardH = window.innerHeight - vv.height - vv.offsetTop; // offsetTop 추가
+  if (keyboardH > 60) {
+    setKeyboardHeight(keyboardH);
+    document.body.classList.add('keyboard-open');
+  } else {
+    setKeyboardHeight(0);
+    document.body.classList.remove('keyboard-open');
+    }
+    };
 
     vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize); // scroll 이벤트 추가
     return () => {
       vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize); // scroll 이벤트 제거 추가
       document.body.classList.remove('keyboard-open');
     };
-  }, []);
+
+  vv.addEventListener('resize', handleResize);
+  return () => {
+    vv.removeEventListener('resize', handleResize);
+    document.body.classList.remove('keyboard-open');
+  };
+}, []);
 
   // Drawer 닫힐 때 키보드 높이 초기화
   useEffect(() => {
