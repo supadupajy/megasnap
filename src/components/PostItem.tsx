@@ -112,6 +112,7 @@ const PostItem = ({
   
   const youtubeId = getYoutubeId(youtubeUrl || '');
   
+  const adIndex = 1;
   const displayImages = useMemo(() => {
     if (isAd) return [image];
     if (youtubeId) return [image]; 

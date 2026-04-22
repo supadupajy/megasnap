@@ -46,8 +46,6 @@ const MapContainer = ({
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(5);
 
-  // ✅ [핵심 FIX] center/level을 ref로 관리
-  // initMap의 deps를 비워서 "props 변경 → initMap 재생성 → setInterval 재실행 → 지도 재초기화" 루프를 차단
   const centerRef = useRef(center);
   const levelRef = useRef(5);
   useEffect(() => { centerRef.current = center; }, [center]);
@@ -67,7 +65,6 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // IndexSizeError 차단 (브라우저 확장 프로그램 대응)
   useEffect(() => {
     const originalGetRangeAt = Selection.prototype.getRangeAt;
     Selection.prototype.getRangeAt = function(index: number) {
@@ -121,16 +118,13 @@ const MapContainer = ({
     };
   }, []);
 
-  // ✅ [핵심 FIX] deps 배열 완전 제거 → 이 함수는 컴포넌트 생애주기 동안 절대 재생성되지 않음
   const initMap = useCallback(() => {
     try {
       const kakao = (window as any).kakao;
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
 
-      // ✅ [핵심 FIX] 이미 초기화된 경우 즉시 true 반환 — 재초기화 완전 방지
       if (mapInstance.current) return true;
 
-      // ✅ 캐시된 lastZoom 무시하고 무조건 5단계로 시작하도록 우선순위 조정
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
       const initialLevel = 5; 
 
@@ -155,8 +149,6 @@ const MapContainer = ({
           setCurrentLevel(mapLevel);
           currentLevelRef.current = mapLevel;
 
-          // ✅ [핵심 FIX] 부모(Index.tsx)로 지도 영역 정보를 전달할 때 
-          // 현재 화면에 실제로 보이는 마커들의 기반이 되는 bounds 정보를 정확히 전달
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
@@ -164,7 +156,6 @@ const MapContainer = ({
             },
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
             level: mapLevel,
-            // 추가로 현재 카운트를 직접 계산해서 보낼 수도 있지만, Index.tsx의 필터 로직이 중요함
           });
         } catch (e) {
           console.error('Map update error:', e);
@@ -198,12 +189,10 @@ const MapContainer = ({
         setCurrentLevel(newLevel);
         currentLevelRef.current = newLevel;
         
-        // ✅ [긴급 수정] 8단계 이상이면 즉시 모든 오버레이를 지도에서 제거
         if (newLevel >= 8) {
           overlaysRef.current.forEach((overlay) => {
             overlay.setMap(null);
           });
-          // Note: overlaysRef는 useEffect 내의 동기화를 위해 clear() 하지 않고 유지
         }
       });
 
@@ -220,16 +209,14 @@ const MapContainer = ({
       console.error('Kakao Map Init Error:', e);
       return false;
     }
-  }, []); // ✅ 의존성 없음 — 생애 동안 1회만 생성
+  }, []); 
 
-  // 초기 지도 로딩 및 레벨 감시
   useEffect(() => {
     const checkMap = setInterval(() => {
       if ((window as any).kakao?.maps) {
         const isInit = initMap();
         if (isInit) {
           clearInterval(checkMap);
-          // ✅ 초기 시작 시 무조건 5단계로 세팅 (다른 캐시 무시)
           if (mapInstance.current) {
             mapInstance.current.setLevel(5, { animate: false });
             setCurrentLevel(5);
@@ -241,25 +228,14 @@ const MapContainer = ({
     return () => clearInterval(checkMap);
   }, [initMap]);
 
-  // 외부 level prop 변경 감시
   useEffect(() => {
     if (mapInstance.current && level !== undefined) {
-      // ✅ 외부 level prop이 들어올 때만 변경하되, 초기 마운트 시에는 5를 유지하도록
       mapInstance.current.setLevel(level);
       setCurrentLevel(level);
       currentLevelRef.current = level;
     }
   }, [level]);
 
-  // 마커 크기 계산 (level에 따른 scale)
-  const getMarkerScale = (lvl: number) => {
-    if (lvl <= 5) return 1;     // 5단계 이하: 100%
-    if (lvl === 6) return 0.75;  // 6단계: 75%
-    if (lvl === 7) return 0.5;   // 7단계: 50%
-    return 0;                    // 8단계 이상: 숨김
-  };
-
-  // 마커 업데이트 로직
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
@@ -270,7 +246,6 @@ const MapContainer = ({
     else if (level === 7) scale = 0.5;
     else if (level >= 8) scale = 0;
     
-    // 8단계 이상이면 무조건 모든 오버레이 제거
     if (level >= 8) {
       overlaysRef.current.forEach((overlay) => {
         const content = overlay.getContent();
@@ -288,32 +263,65 @@ const MapContainer = ({
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // 1. 제거될 마커 처리 (Fade Out)
     overlaysRef.current.forEach((overlay, id) => {
-      // posts 목록에 없으면 즉시 제거 시도
-      if (!currentPostIds.has(id)) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
+      const content = overlay.getContent();
+      const position = overlay.getPosition();
+      
+      if (!currentPostIds.has(id) || !bounds.contain(position)) {
+        if (content instanceof HTMLElement) {
+          content.style.opacity = '0';
+          content.style.transition = 'opacity 0.3s ease-out';
+          setTimeout(() => {
+            if (!currentPostIds.has(id) || !bounds.contain(position)) {
+              overlay.setMap(null);
+              overlaysRef.current.delete(id);
+            }
+          }, 300);
+        } else {
+          overlay.setMap(null);
+          overlaysRef.current.delete(id);
+        }
+      } else {
+        if (overlay.getMap() === null) {
+          overlay.setMap(mapInstance.current);
+          if (content instanceof HTMLElement) {
+            content.style.opacity = '0';
+            requestAnimationFrame(() => {
+              content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
+              content.style.opacity = '1';
+            });
+          }
+        }
+        if (content instanceof HTMLElement) {
+          content.style.transformOrigin = 'bottom center';
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
+        }
       }
     });
 
-    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       if (!post) return;
       
       const position = new (window as any).kakao.maps.LatLng(post.lat, post.lng);
+      
+      if (!bounds.contain(position)) {
+        return;
+      }
+
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
+      
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        content.style.opacity = '1'; // 즉시 표시
+        content.style.opacity = '0';
+        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
         content.style.transformOrigin = 'bottom center';
         content.style.setProperty('transform', `scale(${scale})`, 'important');
 
@@ -329,7 +337,7 @@ const MapContainer = ({
         };
 
         const overlay = new (window as any).kakao.maps.CustomOverlay({ 
-          position: position, 
+          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
@@ -337,6 +345,10 @@ const MapContainer = ({
         
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
+
+        requestAnimationFrame(() => {
+          content.style.opacity = '1';
+        });
       } else {
         const content = existingOverlay.getContent();
         existingOverlay.setZIndex(baseZIndex);
@@ -492,7 +504,7 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const borderType = post.borderType || 'none';
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-
+    
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
       return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
@@ -503,10 +515,21 @@ const MapContainer = ({
       displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${post.id}`;
     }
 
-    // ✅ 테두리 스타일을 인라인으로 직접 정의
+    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
+    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
+    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container'; }
+    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container'; }
+    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; borderClass = 'diamond-border-container'; }
+    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; borderClass = 'gold-border-container'; }
+    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container'; }
+
+    const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
+    const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
+    
+    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
+
     let inlineBorderStyle = "border: 2.5px solid #ffffff;";
     let inlineShadow = "0 8px 16px -2px rgba(0, 0, 0, 0.15)";
-    let finalBorderClass = borderClass || '';
 
     if (borderType === 'diamond') {
       inlineBorderStyle = "border: 4px solid #22d3ee;";
@@ -524,22 +547,6 @@ const MapContainer = ({
       inlineBorderStyle = "border: 3.5px solid #4f46e5;";
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
     }
-
-    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
-    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
-    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container'; }
-    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container'; }
-    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; borderClass = 'diamond-border-container'; }
-    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; borderClass = 'gold-border-container'; }
-    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container'; }
-
-    const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
-    
-    // 라벨 디자인 개선: 그림자 및 폰트 강조
-    const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
-    
-    // 내부 floating 애니메이션
-    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
 
     return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass}" style="width: 58px; height: 58px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: visible; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
   };
@@ -578,7 +585,6 @@ const MapContainer = ({
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </div>
       )}
-      {/* ✅ [FIX] ref를 카카오맵이 실제 마운트되는 div에 직접 부착 */}
       <div 
         ref={containerRef}
         id="kakao-map" 
