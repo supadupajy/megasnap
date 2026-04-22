@@ -333,9 +333,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         {/* ... badges and buttons ... */}
       </div>
 
-      {/* Interaction Buttons & Badges - 간격 밀착 및 넓이 조정 */}
-      <div className="px-4 pt-3 pb-2 flex items-start justify-between">
-        <div className="flex items-center gap-3.5 pt-0.5">
+      {/* Interaction Buttons & Badges - 아이콘 그룹과 버튼 그룹 분리 */}
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+        {/* 왼쪽: 순수 아이콘 그룹 */}
+        <div className="flex items-center gap-4">
           <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
             <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
           </button>
@@ -350,19 +351,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           </button>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            {renderCategoryBadge()}
-            {lat !== undefined && lng !== undefined && (
-              <button 
-                onClick={(e) => onLocationClick(e, lat, lng)} 
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100 shrink-0 whitespace-nowrap"
-              >
-                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                <span className="text-[10px] font-black">위치보기</span>
-              </button>
-            )}
-          </div>
+        {/* 오른쪽: 뱃지 및 액션 버튼 그룹 */}
+        <div className="flex items-center gap-2">
+          {renderCategoryBadge()}
+          {lat !== undefined && lng !== undefined && (
+            <button 
+              onClick={(e) => onLocationClick(e, lat, lng)} 
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100/50 shrink-0 whitespace-nowrap"
+            >
+              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+              <span className="text-[10px] font-black">위치보기</span>
+            </button>
+          )}
           {isAd && (
             <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
               <ShoppingBag className="w-3.5 h-3.5 fill-white" />

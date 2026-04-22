@@ -490,10 +490,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
                     </div>
 
-                    {/* 액션 버튼 및 내용 - px-1 제거하여 미디어 컨테이너의 시작점과 아이콘의 시작점을 완벽하게 일치시킴 */}
+                    {/* 액션 버튼 및 내용 - 아이콘 그룹과 버튼 그룹 분리 */}
                     <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-4 pt-1">
+                      <div className="flex items-center justify-between mb-3">
+                        {/* 왼쪽: 순수 아이콘 그룹 (상세 페이지에서도 북마크 포함) */}
+                        <div className="flex items-center gap-4">
                           <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
                             <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                           </button>
@@ -503,20 +504,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           <button className="text-gray-700" onClick={(e) => e.stopPropagation()}>
                             <Share2 className="w-6 h-6" />
                           </button>
+                          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+                          </button>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="flex items-center gap-3">
-                            <button className="transition-transform active:scale-125 pt-1" onClick={handleSaveToggle}>
-                              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+
+                        {/* 오른쪽: 뱃지 및 액션 버튼 그룹 */}
+                        <div className="flex items-center gap-2">
+                          {renderCategoryBadge()}
+                          {currentPost.lat !== undefined && currentPost.lng !== undefined && (
+                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
+                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                              <span className="text-[10px] font-black">위치보기</span>
                             </button>
-                            {renderCategoryBadge()}
-                            {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-                              <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
-                                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                                <span className="text-[10px] font-black">위치보기</span>
-                              </button>
-                            )}
-                          </div>
+                          )}
                           {isAd && (
                             <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
                               <ShoppingBag className="w-3.5 h-3.5 fill-white" />
@@ -525,6 +526,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           )}
                         </div>
                       </div>
+
                       <div className="space-y-1.5 mb-4 cursor-pointer" onClick={onClose}>
                         <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                         <div className="flex gap-2 items-start">
