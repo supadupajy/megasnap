@@ -194,29 +194,14 @@ const MapContainer = ({
         const newLevel = map.getLevel();
         setCurrentLevel(newLevel);
         currentLevelRef.current = newLevel;
-
-        // ✅ [최적화] 줌 변경 시 마커를 다시 그리지 않고 스케일만 조절
-        let scale = 1.0;
-        if (newLevel === 6) scale = 0.75;
-        else if (newLevel === 7) scale = 0.5;
-        else if (newLevel >= 8) scale = 0;
-
-        overlaysRef.current.forEach((overlay) => {
-          if (newLevel >= 8) {
+        
+        // ✅ [긴급 수정] 8단계 이상이면 즉시 모든 오버레이를 지도에서 제거
+        if (newLevel >= 8) {
+          overlaysRef.current.forEach((overlay) => {
             overlay.setMap(null);
-            return;
-          }
-          if (overlay.getMap() === null) {
-            overlay.setMap(mapInstance.current);
-          }
-          const content = overlay.getContent();
-          if (content instanceof HTMLElement) {
-            content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-            content.style.transform = `scale(${scale})`;
-            content.style.transformOrigin = 'bottom center';
-            content.style.setProperty('--marker-scale', scale.toString());
-          }
-        });
+          });
+          // Note: overlaysRef는 useEffect 내의 동기화를 위해 clear() 하지 않고 유지
+        }
       });
 
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
@@ -276,12 +261,13 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // 현재 레벨에 따른 초기 스케일 계산
+    // 줌 레벨에 따른 스케일 계산
     let scale = 1.0;
     if (currentLevel === 6) scale = 0.75;
     else if (currentLevel === 7) scale = 0.5;
     else if (currentLevel >= 8) scale = 0;
     
+    // 8단계 이상이면 무조건 모든 오버레이 제거
     if (currentLevel >= 8) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       return;
@@ -289,19 +275,24 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // 1. 제거될 마커 처리
+    // 1. 제거될 마커 처리 및 기존 마커 재부착/스케일 조정
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
         overlaysRef.current.delete(id);
       } else {
-        if (overlay.getMap() === null && currentLevel < 8) {
+        // 7단계 이하일 때는 다시 지도에 부착
+        if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
         }
-        // 기존 마커 스케일 유지
+        // ✅ [강력 조치] 인라인 스타일로 직접 scale 주입
         if (content instanceof HTMLElement) {
+          content.style.transformOrigin = 'bottom center';
+          content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
+          // CSS 변수도 업데이트 (필요 시 CSS 파일에서 활용 가능)
+          content.style.setProperty('--marker-scale', scale.toString());
         }
       }
     });
@@ -315,8 +306,8 @@ const MapContainer = ({
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ [최적화] contentStateKey에서 currentLevel 제거 (불필요한 re-render 방지)
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
+      // ✅ currentLevel에 따라 변하는 고유 키 생성
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -330,6 +321,7 @@ const MapContainer = ({
 
         if (isHighlighted) content.classList.add('highlighted');
         
+        // 초기 생성 시 스케일 적용
         content.style.transformOrigin = 'bottom center';
         content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
         content.style.transform = `scale(${scale})`;
@@ -358,6 +350,8 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
+          // 기존 마커 스케일 갱신
+          content.style.transform = `scale(${scale})`;
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
@@ -373,7 +367,7 @@ const MapContainer = ({
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
