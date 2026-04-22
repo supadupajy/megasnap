@@ -55,41 +55,34 @@ const Profile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
+    // [FIX] sanitizeYoutubeMedia 내부에서 이미 잘못된 데이터를 걸러내도록 수정함
     const sanitized = await sanitizeYoutubeMedia(p);
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // [FIX] 특정 이미지가 깨지는 문제 해결 (Unsplash 특정 시그니처나 잘못된 URL 대응)
-    let finalImage = sanitized.image_url;
-    
-    const isBrokenUnsplash = (url: string) => {
-      if (!url) return true;
-      if (url === 'null' || url === 'undefined') return true;
-      // 특정 Unsplash ID가 문제를 일으키는 경우를 대비해 placeholder로 교체
-      return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
+    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+
+    const isValidUrl = (url: any) => {
+      if (typeof url !== 'string') return false;
+      const clean = url.trim();
+      return clean.startsWith('http') && !clean.includes('Post content');
     };
 
-    if (isBrokenUnsplash(finalImage)) {
-      if (sanitized.youtube_url) {
-        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || getUnsplashPlaceholder(sanitized.id, sanitized.category);
-      } else {
-        finalImage = getUnsplashPlaceholder(sanitized.id, sanitized.category);
-      }
-    } else if (finalImage.includes('unsplash.com')) {
-      // Unsplash 이미지인 경우 리맵핑 유틸을 통해 안정적인 URL로 변환
+    let finalImage = sanitized.image_url;
+    if (!isValidUrl(finalImage)) {
+      finalImage = SAFE_FALLBACK;
+    }
+    
+    if (finalImage.includes('unsplash.com')) {
       finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
     }
     
-    // images 배열 처리
     let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.filter((img: any) => img && img !== 'null' && img !== 'undefined' && img.trim() !== '')
+      ? sanitized.images.filter(isValidUrl)
       : [];
       
     if (finalImages.length === 0) {
       finalImages = [finalImage];
-    } else {
-      // 배열 내의 깨진 Unsplash 이미지들도 교체
-      finalImages = finalImages.map((img: string) => isBrokenUnsplash(img) ? finalImage : img);
     }
 
     let isLiked = false;

@@ -35,27 +35,50 @@ export const verifyYoutubeUrl = async (url: string): Promise<boolean> => {
   return request;
 };
 
-export const sanitizeYoutubeMedia = async <T extends { youtube_url?: string | null; image_url?: string | null }>(item: T): Promise<T> => {
-  if (!item.youtube_url) return item;
+export const sanitizeYoutubeMedia = async <T extends { youtube_url?: string | null; image_url?: string | null; id?: any; images?: any }>(item: T): Promise<T> => {
+  // [CRITICAL FIX] "Post content 1" 같은 텍스트 데이터가 이미지로 들어오는 것을 원천 차단
+  const isValidUrl = (url: any) => {
+    if (typeof url !== 'string') return false;
+    const clean = url.trim();
+    return clean.startsWith('http') && !clean.includes('Post content');
+  };
 
-  const isValid = await verifyYoutubeUrl(item.youtube_url);
+  const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+
+  let sanitizedItem = { ...item };
+
+  // 1. image_url 검증
+  if (!isValidUrl(sanitizedItem.image_url)) {
+    sanitizedItem.image_url = SAFE_FALLBACK;
+  }
+
+  // 2. images 배열 검증
+  if (Array.isArray(sanitizedItem.images)) {
+    sanitizedItem.images = sanitizedItem.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK);
+  } else {
+    sanitizedItem.images = [sanitizedItem.image_url];
+  }
+
+  if (!sanitizedItem.youtube_url) return sanitizedItem;
+
+  const isValid = await verifyYoutubeUrl(sanitizedItem.youtube_url);
   if (isValid) {
-    const preferredThumbnail = getYoutubeThumbnail(item.youtube_url);
+    const preferredThumbnail = getYoutubeThumbnail(sanitizedItem.youtube_url);
 
-    if (preferredThumbnail && (!item.image_url || isYoutubeThumbnailUrl(item.image_url)) && item.image_url !== preferredThumbnail) {
+    if (preferredThumbnail && (!sanitizedItem.image_url || isYoutubeThumbnailUrl(sanitizedItem.image_url)) && sanitizedItem.image_url !== preferredThumbnail) {
       return {
-        ...item,
+        ...sanitizedItem,
         image_url: preferredThumbnail,
       };
     }
 
-    return item;
+    return sanitizedItem;
   }
 
-  const nextImage = isYoutubeThumbnailUrl(item.image_url) ? YOUTUBE_FALLBACK_IMAGE : item.image_url;
+  const nextImage = isYoutubeThumbnailUrl(sanitizedItem.image_url) ? YOUTUBE_FALLBACK_IMAGE : sanitizedItem.image_url;
 
   return {
-    ...item,
+    ...sanitizedItem,
     youtube_url: null,
     image_url: nextImage || YOUTUBE_FALLBACK_IMAGE,
   };
