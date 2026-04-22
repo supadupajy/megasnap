@@ -265,10 +265,10 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
     const level = mapInstance.current.getLevel();
-    let scale = 1.0;
-    if (level === 6) scale = 0.75;
-    else if (level === 7) scale = 0.5;
-    else if (level >= 8) scale = 0;
+    let markerSize = 64;
+    if (level === 6) markerSize = 48;
+    else if (level === 7) markerSize = 32;
+    else if (level >= 8) markerSize = 0;
     
     // 8단계 이상이면 무조건 모든 오버레이 제거
     if (level >= 8) {
@@ -313,17 +313,10 @@ const MapContainer = ({
         // 화면 안에 있으면 다시 지도에 부착 (필요 시)
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
-          if (content instanceof HTMLElement) {
-            content.style.opacity = '0';
-            requestAnimationFrame(() => {
-              content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
-              content.style.opacity = '1';
-            });
-          }
         }
         if (content instanceof HTMLElement) {
-          content.style.transformOrigin = 'bottom center';
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
+          // [FIX] transform: scale 대신 변수 업데이트
+          content.style.setProperty('--marker-size', `${markerSize}px`);
         }
       }
     });
@@ -344,7 +337,7 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}`;
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${markerSize}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -352,9 +345,8 @@ const MapContainer = ({
         
         // 기존 팝업 애니메이션 대신 Fade In 효과 적용
         content.style.opacity = '0';
-        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
-        content.style.transformOrigin = 'bottom center';
-        content.style.setProperty('transform', `scale(${scale})`, 'important');
+        content.style.transition = 'opacity 0.3s ease-out';
+        content.style.setProperty('--marker-size', `${markerSize}px`);
 
         if (isHighlighted) content.classList.add('highlighted');
         
@@ -368,7 +360,7 @@ const MapContainer = ({
         };
 
         const overlay = new (window as any).kakao.maps.CustomOverlay({ 
-          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
+          position: position, 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
@@ -387,8 +379,7 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          content.style.transformOrigin = 'bottom center';
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
+          content.style.setProperty('--marker-size', `${markerSize}px`);
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
@@ -601,18 +592,18 @@ const MapContainer = ({
     // 2. 테두리가 있는 경우에도 이미지가 작아지지 않도록 꽉 채우는 구조
     // 3. YouTube/Unsplash 썸네일 해상도 보존을 위해 object-fit 및 렌더링 최적화
     return `
-      <div class="marker-content-wrapper">
+      <div class="marker-content-wrapper" style="width: var(--marker-size); height: var(--marker-size); will-change: width, height;">
         <div class="marker-highlight-ping"></div>
-        <div class="${animationClass}" style="position: relative; width: 64px; height: 64px; margin-top: 14px;">
-          ${labelHtml ? `<div style="position: absolute; top: -14px; left: 0; width: 64px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0; border-radius: 8px 8px 0 0; text-align: center; z-index: 1;">${labelText}</div>` : ''}
-          <div class="${borderClass}" style="width: 64px; height: 64px; border-radius: 20px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);">
+        <div class="${animationClass}" style="position: relative; width: 100%; height: 100%; margin-top: 14px;">
+          ${labelHtml ? `<div style="position: absolute; top: -14px; left: 0; width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: calc(var(--marker-size) * 0.125); font-weight: 900; padding: 2px 0; border-radius: 8px 8px 0 0; text-align: center; z-index: 1;">${labelText}</div>` : ''}
+          <div class="${borderClass}" style="width: 100%; height: 100%; border-radius: 20px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);">
             <div style="position: absolute; inset: 0; border-radius: 18px; overflow: hidden; background: white; z-index: 3; border: 2px solid white;">
               <img src="${displayImage}" 
                    onerror="this.src='${FALLBACK_IMAGE}'" 
-                   style="width: 100%; height: 100%; object-fit: cover; image-rendering: -webkit-optimize-contrast; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" 
+                   style="width: 100%; height: 100%; object-fit: cover; image-rendering: auto; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" 
               />
-              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 10px; font-weight: 900; padding: 1px 5px; border-radius: 5px; z-index: 5; letter-spacing: -0.02em;">${post.likes}</div>
-              ${videoIconHtml ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; shadow: 0 4px 12px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : ''}
+              <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: calc(var(--marker-size) * 0.15); font-weight: 900; padding: 1px 5px; border-radius: 5px; z-index: 5; letter-spacing: -0.02em;">${post.likes}</div>
+              ${videoIconHtml}
             </div>
           </div>
           ${pinColor ? `<div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1;"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}
