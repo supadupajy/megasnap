@@ -113,8 +113,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         setIsVisible(entry.isIntersecting);
       },
       {
-        threshold: 0.3, // 30%만 보여도 재생 시도 (첫 항목 대응 및 더 민감한 반응)
-        rootMargin: '0px'
+        // [FIX] 인식 구간을 더 좁게 설정하여 두 영상이 동시에 재생되는 현상 방지
+        // 화면의 80% 이상이 보여야만 재생되도록 하여 중앙에 위치한 영상에 집중
+        threshold: 0.8, 
+        rootMargin: '-10% 0px -10% 0px' // 상하단 10% 영역은 무시하여 더 중앙에 위치할 때만 재생
       }
     );
 
