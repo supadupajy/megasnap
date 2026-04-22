@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { Camera, MapPin, X, Loader2, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft } from 'lucide-react';
+import { MapPin, X, Map as MapIcon, Video, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -13,7 +13,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { AnimatePresence, motion } from 'framer-motion';
-import Cropper from 'react-easy-crop';
 import {
   Carousel,
   CarouselContent,
@@ -112,43 +111,40 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const newMediaItems = await Promise.all(files.map(async (file) => {
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
-      
-      // Blob URL을 사용하여 이미지가 정상 로드되는지 확인하기 위해 로그 추가
-      console.log('[WritePost] New media URL created:', url);
-      
       let thumbnail = undefined;
+
       if (type === 'video') {
-        thumbnail = await captureVideoThumbnail(url);
+        // ✅ Fix: reject 및 timeout fallback 추가
+        thumbnail = await captureVideoThumbnail(url).catch(() => undefined);
       }
 
-      // 초기 좌표와 줌 값을 명확히 설정
-      return { 
-        file, 
-        url, 
-        type, 
-        thumbnail, 
-        crop: { x: 0, y: 0 }, 
-        zoom: 1 
-      } as MediaFile;
+      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1 } as MediaFile;
     }));
 
-    setMediaFiles(prev => [...prev, ...newMediaItems]);
-    
-    // 드래프트 썸네일 설정
-    if (newMediaItems[0].type === 'image') {
-      postDraftStore.set({ image: newMediaItems[0].url });
-    } else if (newMediaItems[0].thumbnail) {
-      postDraftStore.set({ image: newMediaItems[0].thumbnail });
-    }
+    setMediaFiles(prev => {
+      const updated = [...prev, ...newMediaItems];
+      // ✅ Fix: 추가 선택 시에도 draft 이미지가 항상 첫 번째 이미지로 유지
+      const firstImage = updated.find(m => m.type === 'image');
+      const firstVideo = updated.find(m => m.type === 'video');
+      if (firstImage) {
+        postDraftStore.set({ image: firstImage.url });
+      } else if (firstVideo?.thumbnail) {
+        postDraftStore.set({ image: firstVideo.thumbnail });
+      }
+      return updated;
+    });
   };
 
+  // ✅ Fix: reject + timeout 추가로 Promise가 영원히 pending 상태로 남는 문제 해결
   const captureVideoThumbnail = (url: string): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Thumbnail capture timeout')), 5000);
       const video = document.createElement('video');
       video.src = url;
       video.muted = true;
       video.onloadeddata = () => { video.currentTime = 0.5; };
       video.onseeked = () => {
+        clearTimeout(timeout);
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -156,7 +152,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL('image/jpeg', 0.8));
+        } else {
+          reject(new Error('Canvas context not available'));
         }
+      };
+      video.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error('Video load error'));
       };
     });
   };
@@ -164,17 +166,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const removeMedia = (index: number) => {
     setMediaFiles(prev => {
       const updated = prev.filter((_, i) => i !== index);
-      if (updated.length === 0) postDraftStore.set({ image: null });
+      if (updated.length === 0) {
+        postDraftStore.set({ image: null });
+      } else {
+        const firstImage = updated.find(m => m.type === 'image');
+        if (firstImage) postDraftStore.set({ image: firstImage.url });
+      }
       return updated;
     });
-  };
-
-  const onCropChange = (crop: { x: number; y: number }, index: number) => {
-    setMediaFiles(prev => prev.map((item, i) => i === index ? { ...item, crop } : item));
-  };
-
-  const onZoomChange = (zoom: number, index: number) => {
-    setMediaFiles(prev => prev.map((item, i) => i === index ? { ...item, zoom } : item));
   };
 
   const handlePost = async () => {
@@ -378,13 +377,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         <button 
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
-                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300 h-[80px]",
-                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                            "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
+                            mediaFiles.length > 0 ? "h-[80px]" : "h-[120px]",
+                            mediaFiles.length > 0 ? "border-indigo-600/50 bg-indigo-50/50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
-                            <Video className={cn("w-5 h-5", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
+                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-6 h-6 text-gray-400")} />
                           </div>
                           <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-xs text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
@@ -404,44 +404,38 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    <div className="flex-1 min-h-[300px] mb-2 relative rounded-2xl overflow-hidden border border-gray-100 bg-white">
-                      {mediaFiles.length > 0 ? (
+                    {/* ✅ Fix: flex-1 + h-full 중첩 제거 → 명시적 고정 높이 h-[300px] 사용 */}
+                    {mediaFiles.length > 0 && (
+                      <div className="relative w-full h-[300px] shrink-0">
                         <Carousel 
                           setApi={setApi}
-                          className="w-full h-full" 
+                          className="w-full h-full"
                           opts={{ 
                             align: "start", 
                             containScroll: "trimSnaps",
                             watchDrag: !isDragging
                           }}
                         >
-                          <CarouselContent className="h-full ml-0">
+                          <CarouselContent className="-ml-0 h-[300px]">
                             {mediaFiles.map((media, idx) => (
-                              <CarouselItem key={`${media.url}-${idx}`} className="h-full pl-0">
-                                <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
+                              <CarouselItem key={idx} className="pl-0 basis-full h-[300px]">
+                                <div className="relative w-full h-[300px] rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <div className="w-full h-full relative">
-                                      {/* 최적화: <img> 태그의 기본 스타일을 absolute inset-0으로 고정 */}
+                                    <div className="absolute inset-0 select-none">
                                       <img 
                                         src={media.url} 
-                                        alt={`Preview ${idx}`} 
-                                        className="absolute inset-0 w-full h-full object-cover z-10"
+                                        alt="Preview" 
+                                        draggable={false}
+                                        className="w-full h-full object-cover pointer-events-none"
+                                        // ✅ Fix: zoom 초기값 1 사용 (기존 하드코딩 1.2 제거)
                                         style={{ 
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                        }}
-                                        onLoad={() => console.log('[WritePost] Image render success:', media.url)}
-                                        onError={(e) => {
-                                          console.error('[WritePost] Image render fail:', media.url);
-                                          // 에러 시 임시 이미지라도 띄움
-                                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000';
+                                          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
                                         }}
                                       />
-                                      {/* 드래그 핸들러 */}
                                       <div 
-                                        className="absolute inset-0 z-30 cursor-move touch-none bg-transparent"
+                                        className="absolute inset-0 z-20 cursor-move touch-none"
                                         onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
                                           setIsDragging(true);
                                           setDragStart({ x: e.clientX, y: e.clientY });
                                           (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -450,6 +444,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           if (!isDragging) return;
                                           const deltaX = e.clientX - dragStart.x;
                                           const deltaY = e.clientY - dragStart.y;
+                                          
                                           setMediaFiles(prev => prev.map((m, i) => 
                                             i === idx ? { 
                                               ...m, 
@@ -509,17 +504,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             </>
                           )}
                         </Carousel>
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
-                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                            <ImageIcon className="w-8 h-8 text-gray-200" />
-                          </div>
-                          <p className="text-sm font-black text-gray-300 tracking-tighter">
-                            미리보기 영역
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </motion.div>
                 ) : (
                   <motion.div 
