@@ -320,7 +320,7 @@ const PostListOverlay = ({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed inset-0 z-[100] bg-white flex flex-col"
+          className="fixed inset-0 top-[env(safe-area-inset-top,0px)] mt-16 z-[100] bg-white flex flex-col rounded-t-[32px] shadow-2xl overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
