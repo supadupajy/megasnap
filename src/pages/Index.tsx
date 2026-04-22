@@ -39,7 +39,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
+  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();

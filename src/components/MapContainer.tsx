@@ -27,7 +27,7 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level = 6,
+  level = 5,
   searchResultLocation
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ const MapContainer = ({
   // ✅ [핵심 FIX] center/level을 ref로 관리
   // initMap의 deps를 비워서 "props 변경 → initMap 재생성 → setInterval 재실행 → 지도 재초기화" 루프를 차단
   const centerRef = useRef(center);
-  const levelRef = useRef(level);
+  const levelRef = useRef(level || 5);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -131,7 +131,7 @@ const MapContainer = ({
       if (mapInstance.current) return true;
 
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = levelRef.current || mapCache.lastZoom || 6;
+      const initialLevel = levelRef.current || mapCache.lastZoom || 5;
 
       const options = {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
@@ -139,7 +139,7 @@ const MapContainer = ({
       };
 
       const map = new kakao.maps.Map(containerRef.current!, options);
-      map.setMaxLevel(14);
+      map.setMaxLevel(11);
       mapInstance.current = map;
 
       const updateMapData = () => {
@@ -440,17 +440,19 @@ const MapContainer = ({
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
       // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
-      // 1~6단계: 1.0 (100%)
+      // 1~5단계: 1.0 (100%)
+      // 6단계: 0.75 (75%)
       // 7단계: 0.5 (50%)
       // 8단계: 0.25 (25%)
       // 9단계 이상: 0 (안 보임)
       let scale = 1.0;
-      if (currentLevel > 6) {
-        scale = Math.pow(0.5, currentLevel - 6);
-      }
+      if (currentLevel === 6) scale = 0.75;
+      else if (currentLevel === 7) scale = 0.5;
+      else if (currentLevel === 8) scale = 0.25;
+      else if (currentLevel > 8) scale = 0;
       
-      // 최소 스케일 제한 (너무 작아지지 않게)
-      scale = Math.max(scale, 0.05);
+      // 최소 스케일 제한
+      scale = Math.max(scale, 0);
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
