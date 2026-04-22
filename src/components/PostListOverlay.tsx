@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -89,228 +89,24 @@ const PostListOverlay = ({
   onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
-  const { viewedIds, markAsViewed } = useViewedPosts();
-  const { blockedIds } = useBlockedUsers();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [expansionStep, setExpansionStep] = useState(0);
-  const loadedPostIds = useRef<Set<string>>(new Set(initialPosts.map(p => p.id)));
+  const [activeFilter, setActiveFilter] = useState<'all' | 'popular' | 'influencer'>('all');
   
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  const now = Date.now();
-  const timeLimitMs = timeValueHours * 60 * 60 * 1000;
-  const baseLatSpan = useMemo(() => {
-    if (!currentBounds) return 0.08;
-    return Math.max(currentBounds.ne.lat - currentBounds.sw.lat, 0.08);
-  }, [currentBounds]);
-  const baseLngSpan = useMemo(() => {
-    if (!currentBounds) return 0.08;
-    return Math.max(currentBounds.ne.lng - currentBounds.sw.lng, 0.08);
-  }, [currentBounds]);
-
-  useLayoutEffect(() => {
-    if (isOpen) {
-      setPosts(initialPosts);
-      loadedPostIds.current = new Set(initialPosts.map(p => p.id));
-      setHasMore(true);
-      setExpansionStep(0);
+  // ✅ [FIX] window 객체에 상태 기록하여 BottomNav 등에서 감지하게 함
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__isPostListOpen = isOpen;
     }
-  }, [isOpen, initialPosts]);
-
-  const matchesOverlayFilters = useCallback((post: Post) => {
-    if (blockedIds.has(post.user.id)) return false;
-    if (!post.isAd && (now - post.createdAt.getTime()) > timeLimitMs) return false;
-
-    let matchesCategory = false;
-    if (selectedCategories.includes('mine')) {
-      matchesCategory = !!authUserId && post.user.id === authUserId;
-    } else if (selectedCategories.includes('all')) {
-      matchesCategory = true;
-    } else {
-      matchesCategory = selectedCategories.includes(post.category || 'none')
-        || (selectedCategories.includes('hot') && post.borderType === 'popular')
-        || (selectedCategories.includes('influencer') && post.isInfluencer);
-    }
-
-    return matchesCategory;
-  }, [authUserId, blockedIds, now, selectedCategories, timeValueHours]);
-
-  const visiblePosts = useMemo(() => {
-    if (!isOpen) return posts;
-    if (posts.length === 0 && initialPosts.length > 0) return initialPosts;
-    return posts;
-  }, [isOpen, posts, initialPosts]);
+  }, [isOpen]);
 
   const filteredPosts = useMemo(() => {
-    return visiblePosts.filter(matchesOverlayFilters);
-  }, [visiblePosts, matchesOverlayFilters]);
+    return initialPosts.filter(post => {
+      if (activeFilter === 'popular') return post.likes >= 1000 || post.borderType === 'popular' || post.borderType === 'diamond';
+      if (activeFilter === 'influencer') return post.isInfluencer;
+      return true;
+    });
+  }, [initialPosts, activeFilter]);
 
-  const getExpandedBounds = useCallback((step: number) => {
-    const multiplier = 1 + (step * 0.75);
-    const latHalf = (baseLatSpan * multiplier) / 2;
-    const lngHalf = (baseLngSpan * multiplier) / 2;
-
-    return {
-      sw: { lat: mapCenter.lat - latHalf, lng: mapCenter.lng - lngHalf },
-      ne: { lat: mapCenter.lat + latHalf, lng: mapCenter.lng + lngHalf },
-    };
-  }, [baseLatSpan, baseLngSpan, mapCenter.lat, mapCenter.lng]);
-
-  const isWithinBounds = useCallback((post: Post, bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } }) => {
-    return post.lat >= bounds.sw.lat
-      && post.lat <= bounds.ne.lat
-      && post.lng >= bounds.sw.lng
-      && post.lng <= bounds.ne.lng;
-  }, []);
-
-  const getDistanceFromCenter = useCallback((post: Post) => {
-    return Math.hypot(post.lat - mapCenter.lat, post.lng - mapCenter.lng);
-  }, [mapCenter.lat, mapCenter.lng]);
-
-  const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !isOpen) return;
-
-    setIsLoadingMore(true);
-    
-    try {
-      let currentStep = expansionStep;
-      let foundPostsCount = 0;
-      let newPostsBatch: Post[] = [];
-
-      for (let i = 0; i < 10; i++) {
-        const nextStep = currentStep + 1;
-        if (nextStep > 50) {
-          setHasMore(false);
-          break;
-        }
-
-        const multiplier = 1 + (0.2 * nextStep);
-        const expandLat = baseLatSpan * multiplier;
-        const expandLng = baseLngSpan * multiplier;
-
-        const expandedBounds = {
-          sw: { lat: mapCenter.lat - expandLat, lng: mapCenter.lng - expandLng },
-          ne: { lat: mapCenter.lat + expandLat, lng: mapCenter.lng + expandLng }
-        };
-
-        // ✅ [수정] 여기보기 리스트를 위해 모든 정보를 포함한 데이터를 가져옵니다.
-        // 마커는 가벼운 데이터를 쓰지만, 리스트는 전체 정보가 필요합니다.
-        const { data: newRawPosts, error } = await supabase
-          .from('posts')
-          .select('*')
-          .gte('latitude', Math.min(expandedBounds.sw.lat, expandedBounds.ne.lat))
-          .lte('latitude', Math.max(expandedBounds.sw.lat, expandedBounds.ne.lat))
-          .gte('longitude', Math.min(expandedBounds.sw.lng, expandedBounds.ne.lng))
-          .lte('longitude', Math.max(expandedBounds.sw.lng, expandedBounds.ne.lng))
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (error) throw error;
-
-        const uniqueNewRawPosts = (newRawPosts || []).filter(p => !loadedPostIds.current.has(p.id));
-        
-        if (uniqueNewRawPosts.length > 0) {
-          const mappedPosts = await Promise.all(uniqueNewRawPosts.map(async (p) => {
-            const isAd = p.content?.trim().startsWith('[AD]');
-            return {
-  id: p.id,
-  isAd,
-  isGif: false,
-  isInfluencer: false,
-  user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
-  content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-  location: p.location_name || '알 수 없는 장소',
-  lat: p.latitude,
-  lng: p.longitude,
-  likes: Number(p.likes || 0),
-  commentsCount: 0,
-  comments: [],
-  image: p.image_url,
-  images: Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : []), // ✅ 추가
-  videoUrl: p.video_url,
-  youtubeUrl: p.youtube_url,
-  category: p.category || 'none',
-  isLiked: false,
-  createdAt: new Date(p.created_at),
-  borderType: 'none',
-} as Post;
-          }));
-
-          mappedPosts.forEach(p => loadedPostIds.current.add(p.id));
-          
-          const sortedNew = mappedPosts.sort((a, b) => {
-            const distA = Math.sqrt(Math.pow((a.lat || 0) - mapCenter.lat, 2) + Math.pow((a.lng || 0) - mapCenter.lng, 2));
-            const distB = Math.sqrt(Math.pow((b.lat || 0) - mapCenter.lat, 2) + Math.pow((b.lng || 0) - mapCenter.lng, 2));
-            return distA - distB;
-          });
-
-          newPostsBatch = [...newPostsBatch, ...sortedNew];
-          foundPostsCount += sortedNew.length;
-          currentStep = nextStep;
-
-          if (foundPostsCount >= 10) break;
-        } else {
-          currentStep = nextStep;
-        }
-      }
-
-      if (newPostsBatch.length > 0) {
-        setPosts(prev => [...prev, ...newPostsBatch]);
-        setExpansionStep(currentStep);
-      } else if (currentStep >= 50) {
-        setHasMore(false);
-      } else {
-        setExpansionStep(currentStep);
-      }
-    } catch (err) {
-      console.error('[PostList] Load more error:', err);
-      setHasMore(false);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [isLoadingMore, hasMore, isOpen, expansionStep, mapCenter, baseLatSpan, baseLngSpan]);
-
-  useEffect(() => {
-    if (!isOpen || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMorePosts();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [isOpen, hasMore, loadMorePosts]);
-
-  const handleLikeToggle = useCallback((postId: string) => {
-    setPosts(prev => prev.map(post => {
-      if (post.id === postId) {
-        const isLiked = !post.isLiked;
-        return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
-      }
-      return post;
-    }));
-  }, []);
-
-  const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
-    const post = visiblePosts.find(p => p.lat === lat && p.lng === lng);
-    onClose();
-    navigate('/', { state: { center: { lat, lng }, post } });
-  }, [navigate, visiblePosts, onClose]);
-
-  const handleLocalDelete = (id: string) => {
-    setPosts(prev => prev.filter(p => p.id !== id));
-    if (onDeletePost) onDeletePost(id);
-  };
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -319,17 +115,56 @@ const PostListOverlay = ({
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed inset-0 top-[20%] z-[100] bg-white flex flex-col rounded-t-[40px] shadow-[0_-15px_40px_rgba(0,0,0,0.15)] overflow-hidden border-t border-gray-100"
+          transition={{ type: 'tween', duration: 0.3, ease: "easeOut" }}
+          className="fixed inset-0 top-[72px] z-[100] bg-white flex flex-col shadow-none overflow-hidden"
         >
-          {/* Handle bar for visual cue */}
-          <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-3 mb-1 shrink-0" />
-          
           {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
+            <div className="flex flex-col">
+              <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {filteredPosts.length} Posts</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            >
+              <ChevronDown className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Filters */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <div>
-              <h2 className="text-lg font-black text-gray-900">주변 포스트</h2>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total {filteredPosts.length} Posts</p>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => setActiveFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeFilter === 'all' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                전체
+              </button>
+              <button 
+                onClick={() => setActiveFilter('popular')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeFilter === 'popular' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                인기
+              </button>
+              <button 
+                onClick={() => setActiveFilter('influencer')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeFilter === 'influencer' 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                영향력자
+              </button>
             </div>
             <button 
               onClick={onClose}
