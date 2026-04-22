@@ -281,15 +281,29 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(50);
+      // [FIX] 좋아요 순이 아닌 전체 포스팅에서 랜덤으로 50개를 가져와 리스트 구성
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('id') // 고정된 랜덤성을 위해 ID 순으로 가져온 뒤 클라이언트에서 섞음
+        .limit(100);
+
       if (!error && data) {
-        const mapped = await Promise.all(data.map(mapDbToPost));
-        const filtered = mapped.filter(p => p && !p.isAd).slice(0, 20);
+        // 클라이언트 사이드에서 랜덤하게 섞기
+        const shuffled = [...data].sort(() => Math.random() - 0.5);
+        const mapped = await Promise.all(shuffled.map(mapDbToPost));
+        
+        // 유효한 포스트만 필터링 (광고 포함 여부는 사용자 요청에 따라 유동적일 수 있으나 일단 일반/인기/인플루언서 위주)
+        const filtered = mapped.filter(p => p !== null).slice(0, 20);
+        
+        // 순위 부여 (1위~20위)
         const ranked = filtered.map((p, idx) => ({ ...p, rank: idx + 1 }));
         setGlobalTrendingPosts(ranked);
       }
     } catch (err) { console.error(err); }
   }, [mapDbToPost]);
+
+  useEffect(() => { if (authUser) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending]);
 
   useEffect(() => {
     if (!authUser) return;
