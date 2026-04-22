@@ -447,7 +447,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <CarouselContent>
                               {displayImages.map((img, index) => {
                                 const isThisAdSlide = index === 1;
-                                
                                 return (
                                   <CarouselItem key={index} className="relative">
                                     <div className="relative aspect-square w-full">
@@ -458,45 +457,45 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                         draggable={false}
                                       />
                                       {isThisAdSlide && (
-                                        <>
-                                          <div 
-                                            onClick={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              console.log('[PostDetail] Direct click detected on Ad banner');
-                                              window.open(adLink, '_blank', 'noopener,noreferrer');
-                                            }}
-                                            onMouseDown={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                            }}
-                                            className="absolute inset-0 z-[100] cursor-pointer bg-transparent active:bg-black/5"
-                                            style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
-                                          />
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[110] pointer-events-none">
-                                            <ExternalLink className="w-3.5 h-3.5" />
-                                            <span className="font-bold">{adLabel}</span>
-                                          </div>
-                                        </>
+                                        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-10">
+                                          <ExternalLink className="w-3.5 h-3.5" />
+                                          <span className="font-bold">{adLabel}</span>
+                                        </div>
                                       )}
                                     </div>
                                   </CarouselItem>
                                 );
                               })}
                             </CarouselContent>
-                            {displayImages.length > 1 && (
-                              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
-                                {displayImages.map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                                      currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            )}
                           </Carousel>
+
+                          {currentImageIndex === 1 && (
+                            <a
+                              href={adLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => {
+                                console.log('[PostDetail] Top-level anchor link clicked');
+                              }}
+                              className="absolute inset-0 z-[1000] cursor-pointer flex items-center justify-center"
+                              style={{ pointerEvents: 'auto' }}
+                            >
+                              <div className="w-full h-full bg-white/0 active:bg-black/5 transition-colors" />
+                            </a>
+                          )}
+                          
+                          {displayImages.length > 1 && (
+                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
+                              {displayImages.map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                                    currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
