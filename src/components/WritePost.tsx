@@ -660,7 +660,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </AnimatePresence>
 
               {/* [FIX] 버튼을 스크롤 가능한 콘텐츠 영역 내부 맨 하단에 배치 */}
-              <div className="mt5 mb-32 px-1">
+              <div className="mt-5 mb-32 px-1">
                 {currentPage === 1 ? (
                   <Button
                     className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
