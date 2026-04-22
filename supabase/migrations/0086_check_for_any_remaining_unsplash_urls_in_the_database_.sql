@@ -1,0 +1,1 @@
+SELECT id, user_name, image_url, category FROM posts WHERE image_url LIKE '%unsplash.com%' LIMIT 20;

@@ -572,13 +572,24 @@ const MapContainer = ({
     };
 
     let displayImage = post.image;
-    // [FIX] 마커 이미지도 고화질로 처리
+
+    // [DEBUG/FIX] Unsplash 링크가 발견되면 즉시 Pexels 대체 이미지로 전환 (로그 확인용)
     if (displayImage && displayImage.includes('unsplash.com')) {
-      displayImage = displayImage.split('?')[0] + "?auto=format&fit=crop&w=200&q=80";
+      console.log(`[MapContainer] Unsplash detected on map! ID: ${post.id}, URL: ${displayImage}`);
+      const pexelsPool = [
+        "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
+        "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
+        "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
+        "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg"
+      ];
+      let h = 0;
+      const idStr = String(post.id);
+      for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+      displayImage = pexelsPool[Math.abs(h) % pexelsPool.length];
     }
 
     if (isBrokenUrl(displayImage)) {
-      displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80&sig=${post.id}`;
+      displayImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
     }
 
     let borderType = post.borderType || 'none'; // Move this declaration UP
