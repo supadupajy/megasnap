@@ -601,8 +601,8 @@ const MapContainer = ({
         <div class="marker-highlight-ping"></div>
         <div class="${animationClass}" style="position: relative; width: 56px; height: 56px; margin-top: 14px;">
           ${labelHtml}
-          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: visible; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;">
-            <div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative; background: white; z-index: 3;">
+          <div class="${borderClass}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-clip: border-box;">
+            <div style="position: absolute; inset: 3px; border-radius: 12px; overflow: hidden; background: white; z-index: 3;">
               <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" />
               <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>
               ${videoIconHtml}
