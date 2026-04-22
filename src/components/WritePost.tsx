@@ -37,7 +37,7 @@ interface MediaFile {
   thumbnail?: string;
   crop?: { x: number; y: number };
   zoom?: number;
-  orientation?: 'landscape' | 'portrait'; // ✅ 추가
+  orientation?: 'landscape' | 'portrait';
 }
 
 const CATEGORIES = [
@@ -63,7 +63,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+
+  // ✅ isDragging을 ref로 관리 — RAF 클로저 안에서도 항상 최신값 참조
+  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
 
@@ -103,12 +105,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
-  // ✅ 이미지 가로/세로 방향 감지
   const getOrientation = (url: string): Promise<'landscape' | 'portrait'> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img.width >= img.height ? 'landscape' : 'portrait');
-      img.onerror = () => resolve('landscape'); // fallback
+      img.onerror = () => resolve('landscape');
       img.src = url;
     });
   };
@@ -126,7 +127,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       if (type === 'video') {
         thumbnail = await captureVideoThumbnail(url).catch(() => undefined);
       } else {
-        // ✅ 이미지일 때 orientation 감지
         orientation = await getOrientation(url);
       }
 
@@ -403,7 +403,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       ) : (
                         <Carousel
                           setApi={setApi}
-                          opts={{ align: "start", containScroll: "trimSnaps", watchDrag: !isDragging }}
+                          // ✅ isDraggingRef.current으로 Carousel 드래그 제어
+                          opts={{ align: "start", containScroll: "trimSnaps", watchDrag: !isDraggingRef.current }}
                           className="w-full"
                           style={{ height: `${PREVIEW_HEIGHT}px` }}
                         >
@@ -423,71 +424,76 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                 >
                                   {media.type === 'image' ? (
                                     <>
-                                      {/*
-                                        ✅ orientation 기반 이미지 사이징:
-                                        - landscape(가로형): height=100% → 세로에 맞춤, 가로는 auto
-                                        - portrait(세로형): width=100% → 가로에 맞춤, 세로는 auto
-                                        crop 없이 원본 전체가 보임
-                                      */}
-<img
-  src={media.url}
-  alt={`Preview ${idx + 1}`}
-  draggable={false}
-  className="select-none pointer-events-none block"
-  style={{
-    width: media.orientation === 'portrait' ? '100%' : 'auto',
-    height: media.orientation === 'landscape' ? '100%' : 'auto',
-    // objectFit 없음 — width/height auto로 비율 자연스럽게 유지
-    transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-    transition: isDragging ? 'none' : 'transform 0.05s linear',
-  }}
-/>
+                                      <img
+                                        src={media.url}
+                                        alt={`Preview ${idx + 1}`}
+                                        draggable={false}
+                                        className="select-none pointer-events-none block"
+                                        style={{
+                                          width: media.orientation === 'portrait' ? '100%' : 'auto',
+                                          height: media.orientation === 'landscape' ? '100%' : 'auto',
+                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
+                                          transition: isDraggingRef.current ? 'none' : 'transform 0.05s linear',
+                                        }}
+                                      />
                                       {/* 드래그 오버레이 */}
                                       <div
-                                        className="absolute inset-0 z-10 cursor-move touch-none"
+                                        className="absolute inset-0 z-10 touch-none"
+                                        style={{ cursor: isDraggingRef.current ? 'grabbing' : 'grab' }}
                                         onPointerDown={(e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  setIsDragging(true);
-  dragStartRef.current = { x: e.clientX, y: e.clientY };
-  (e.target as HTMLElement).setPointerCapture(e.pointerId);
-}}
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          // ✅ ref로 즉시 설정 — 리렌더링 없이 RAF 안에서도 정확히 읽힘
+                                          isDraggingRef.current = true;
+                                          dragStartRef.current = { x: e.clientX, y: e.clientY };
+                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                                        }}
                                         onPointerMove={(e) => {
-  if (!isDragging) return;
-  if (rafRef.current) cancelAnimationFrame(rafRef.current);
+                                          // ✅ ref로 체크 — 클로저 문제 없음
+                                          if (!isDraggingRef.current) return;
+                                          if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
-  const clientX = e.clientX;
-  const clientY = e.clientY;
-  const container = e.currentTarget.parentElement;
+                                          const clientX = e.clientX;
+                                          const clientY = e.clientY;
+                                          const container = e.currentTarget.parentElement;
 
-  rafRef.current = requestAnimationFrame(() => {
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
+                                          rafRef.current = requestAnimationFrame(() => {
+                                            const deltaX = clientX - dragStartRef.current.x;
+                                            const deltaY = clientY - dragStartRef.current.y;
 
-    setMediaFiles(prev => prev.map((m, i) => {
-      if (i !== idx) return m;
-      if (!container) return m;
+                                            setMediaFiles(prev => prev.map((m, i) => {
+                                              if (i !== idx) return m;
+                                              if (!container) return m;
 
-      const imgEl = container.querySelector('img') as HTMLImageElement;
-      if (!imgEl) return m;
+                                              const imgEl = container.querySelector('img') as HTMLImageElement;
+                                              if (!imgEl) return m;
 
-      const imgW = imgEl.offsetWidth;
-      const imgH = imgEl.offsetHeight;
-      const conW = container.offsetWidth;
-      const conH = container.offsetHeight;
+                                              const imgW = imgEl.offsetWidth;
+                                              const imgH = imgEl.offsetHeight;
+                                              const conW = container.offsetWidth;
+                                              const conH = container.offsetHeight;
 
-      const maxX = Math.max(0, (imgW - conW) / 2);
-      const maxY = Math.max(0, (imgH - conH) / 2);
+                                              const maxX = Math.max(0, (imgW - conW) / 2);
+                                              const maxY = Math.max(0, (imgH - conH) / 2);
 
-      const newX = Math.max(-maxX, Math.min(maxX, (m.crop?.x || 0) + deltaX));
-      const newY = Math.max(-maxY, Math.min(maxY, (m.crop?.y || 0) + deltaY));
+                                              const newX = Math.max(-maxX, Math.min(maxX, (m.crop?.x || 0) + deltaX));
+                                              const newY = Math.max(-maxY, Math.min(maxY, (m.crop?.y || 0) + deltaY));
 
-      return { ...m, crop: { x: newX, y: newY } };
-    }));
+                                              return { ...m, crop: { x: newX, y: newY } };
+                                            }));
 
-    dragStartRef.current = { x: clientX, y: clientY };
-  });
-}}
+                                            dragStartRef.current = { x: clientX, y: clientY };
+                                          });
+                                        }}
+                                        onPointerUp={(e) => {
+                                          if (rafRef.current) cancelAnimationFrame(rafRef.current);
+                                          isDraggingRef.current = false;
+                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                                        }}
+                                        onPointerCancel={() => {
+                                          if (rafRef.current) cancelAnimationFrame(rafRef.current);
+                                          isDraggingRef.current = false;
+                                        }}
                                       />
                                     </>
                                   ) : (
