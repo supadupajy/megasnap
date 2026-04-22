@@ -117,14 +117,22 @@ const PostItem = ({
     if (isAd) return [image];
     if (youtubeId) return [image]; 
     
-    // [FINAL ULTIMATE FIX] "Post content"라는 글자가 조금이라도 보이면 무조건 강제 교체
+    // [FINAL ULTIMATE FIX] 고해상도 이미지 처리 로직 추가
     const forceSafeUrl = (url: any) => {
-      if (!url || typeof url !== 'string') return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+      const HIGH_RES_PLACEHOLDER = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
+      
+      if (!url || typeof url !== 'string') return HIGH_RES_PLACEHOLDER;
       const clean = url.trim();
-      // "Post content"가 포함되어 있거나, http로 시작하지 않으면 무조건 무시하고 새 링크 할당
+      
       if (/post\s*content/i.test(clean) || !clean.startsWith('http')) {
-        return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+        return HIGH_RES_PLACEHOLDER;
       }
+      
+      // Unsplash 이미지인 경우 고해상도로 강제 변경
+      if (clean.includes('unsplash.com')) {
+        return clean.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+      }
+      
       return clean;
     };
 
@@ -152,9 +160,8 @@ const PostItem = ({
     if (onImageError) {
       onImageError(id);
     } else {
-      // Prevent infinite error loops
-      if (!target.src.includes('sig=')) {
-        target.src = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${id}`;
+      if (!target.src.includes('w=1200')) {
+        target.src = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=90&sig=${id}`;
       }
     }
   };

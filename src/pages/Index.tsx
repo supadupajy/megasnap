@@ -101,28 +101,30 @@ const Index = () => {
   }, []);
 
   const getTierFromId = (id: string, likes: number = 0) => {
-    // [FIX] ID뿐만 아니라 좋아요 숫자를 기반으로 실시간 티어 할당
-    if (likes >= 10000) return 'diamond';
-    if (likes >= 5000) return 'gold';
-    if (likes >= 2000) return 'silver';
-    if (likes >= 500) return 'popular';
+    // [FIX] 실버 및 상위 티어 할당 로직 완화 (좋아요 기준 하향 및 확률 상향)
+    if (likes >= 5000) return 'diamond';
+    if (likes >= 2000) return 'gold';
+    if (likes >= 500) return 'silver'; // 기존 2000 -> 500으로 대폭 하향
+    if (likes >= 100) return 'popular'; // 기존 500 -> 100으로 하향
     
-    // 기본 해시 로직 (데이터가 적을 때를 대비)
+    // 데이터가 적을 때를 대비한 해시 기반 할당 확률 대폭 상향
     if (!id || id.length < 5) return 'none';
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
-    if (val < 0.01) return 'diamond';
-    if (val < 0.03) return 'gold';
-    if (val < 0.07) return 'silver';
-    if (val < 0.15) return 'popular';
+    
+    if (val < 0.05) return 'diamond'; // 1% -> 5%
+    if (val < 0.15) return 'gold';    // 3% -> 15%
+    if (val < 0.35) return 'silver';  // 7% -> 35%
+    if (val < 0.60) return 'popular'; // 15% -> 60%
     return 'none';
   };
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+      // [FIX] 고해상도 고퀄리티 이미지로 폴백 변경
+      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
       
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
@@ -145,13 +147,13 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
-      // [FIX] DB 데이터와 클라이언트 좋아요 수를 합산하여 테두리 타입 결정
-      const finalLikes = Number(p.likes || 0);
-      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
-      
-      if (p.border_type) borderType = p.border_type;
-
+      // [FIX] 고해상도 처리를 위해 URL 파라미터 최적화
       let finalImage = p.image_url;
+      if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
+        // 기존 저화질/리사이징 파라미터 제거 후 고화질로 변경
+        finalImage = finalImage.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+      }
+
       if (p.youtube_url) {
         finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
       }
@@ -160,8 +162,19 @@ const Index = () => {
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
       const validImages = Array.isArray(p.images) && p.images.length > 0
-        ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
+        ? p.images.map(img => {
+            if (isValidUrl(img) && img.includes('unsplash.com')) {
+              return img.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+            }
+            return isValidUrl(img) ? img : SAFE_FALLBACK;
+          })
         : [finalImage];
+
+      // [FIX] DB 데이터와 클라이언트 좋아요 수를 합산하여 테두리 타입 결정
+      const finalLikes = Number(p.likes || 0);
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
+      
+      if (p.border_type) borderType = p.border_type;
 
       return {
         id: p.id,

@@ -511,8 +511,13 @@ const MapContainer = ({
     };
 
     let displayImage = post.image;
+    // [FIX] 마커 이미지도 고화질로 처리
+    if (displayImage && displayImage.includes('unsplash.com')) {
+      displayImage = displayImage.split('?')[0] + "?auto=format&fit=crop&w=200&q=80";
+    }
+
     if (isBrokenUrl(displayImage)) {
-      displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${post.id}`;
+      displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=200&q=80&sig=${post.id}`;
     }
 
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
