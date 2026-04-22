@@ -59,14 +59,15 @@ const Search = () => {
     setIsLoading(true);
     try {
       await fetchFollowingList();
-      // 최적화: id, nickname, avatar_url, bio 필드만 선택 (전체 데이터 트래픽 감소)
+      // [FIX] '탐험가1'과 같은 숫자가 포함된 닉네임을 우선적으로 불러오도록 정렬 수정
+      // 최근 업데이트된 사용자 중 닉네임이 있는 사용자를 최대 50명까지 가져옴
       const { data, error } = await supabase
         .from('profiles')
         .select('id, nickname, avatar_url, bio')
         .neq('id', authUser.id)
         .not('nickname', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(15);
+        .order('nickname', { ascending: true }) // 가나다/숫자 오름차순 정렬 (탐험가1, 탐험가2...)
+        .limit(50);
 
       if (error) throw error;
       setUsers(data || []);
