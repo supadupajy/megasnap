@@ -185,7 +185,7 @@ const App = () => {
     // 6초(2.5+@) 동안 스플래시 유지하여 안정적인 로딩 도모
     const timer = setTimeout(() => { 
       setShowSplash(false); 
-    }, 6000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
