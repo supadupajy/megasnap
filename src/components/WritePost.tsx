@@ -406,7 +406,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                               <CarouselItem key={idx} className="h-full pl-0">
                                 <div className="relative h-full w-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <div className="relative w-full h-full">
+                                    <div className="absolute inset-0 w-full h-full">
                                       <Cropper
                                         image={media.url}
                                         crop={media.crop || { x: 0, y: 0 }}
@@ -415,8 +415,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                         onCropChange={(crop) => onCropChange(crop, idx)}
                                         onZoomChange={(zoom) => onZoomChange(zoom, idx)}
                                         showGrid={false}
-                                        classes={{
-                                          containerClassName: "h-full w-full",
+                                        style={{
+                                          containerStyle: {
+                                            width: '100%',
+                                            height: '100%',
+                                            position: 'absolute'
+                                          }
                                         }}
                                       />
                                     </div>
