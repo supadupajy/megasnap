@@ -128,15 +128,11 @@ const Popular = () => {
 
   return (
     <div className="min-h-screen bg-white pb-32">
-      {/* 고정 상단 헤더 - 여기보기와 스타일 통일 */}
-      <div className="fixed top-[88px] inset-x-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      {/* 고정 상단 헤더 - 불필요한 요소 제거 및 배경 불투명 처리 */}
+      <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trending Now</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-black text-rose-500">LIVE</span>
         </div>
       </div>
 
