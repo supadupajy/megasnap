@@ -429,7 +429,6 @@ const MapContainer = ({
 
     // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
-
       if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
@@ -440,27 +439,21 @@ const MapContainer = ({
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ 줌 레벨에 따른 스케일 계산 (사용자 요청 반영)
-      // 6단계 이하: 1.0 (100%)
-      // 7단계: 0.5 (6단계의 50%)
-      // 8단계: 0.25 (7단계의 50%)
-      // 9단계: 0.125 (8단계의 50%)
       let scale = 1.0;
       if (currentLevel > 6) {
         scale = Math.pow(0.5, currentLevel - 6);
       }
-      
-      // 최소 스케일 제한 (너무 작아지지 않게)
       scale = Math.max(scale, 0.05);
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
+        // 클래스명 설정 최적화
         content.className = 'marker-container kakao-overlay';
         
-        // 실시간 새 포스팅인 경우 특수 애니메이션 적용
         if (post.isNewRealtime) {
+          console.log('[MapContainer] Applying REALTIME animation to marker:', post.id);
           content.classList.add('animate-realtime-marker-appear');
         } else {
           content.classList.add('animate-marker-appear');
@@ -470,17 +463,20 @@ const MapContainer = ({
         content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
+        
         content.onclick = (e) => { 
           e.stopPropagation(); 
           if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
           if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
         };
+
         const overlay = new kakao.maps.CustomOverlay({ 
           position: new kakao.maps.LatLng(post.lat, post.lng), 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
         });
+        
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
@@ -488,8 +484,13 @@ const MapContainer = ({
         existingOverlay.setZIndex(baseZIndex);
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
-          content.classList.remove('animate-marker-disappear');
-          content.classList.add('animate-marker-appear');
+          
+          // 이미 있는 마커가 isNewRealtime으로 다시 들어온 경우 애니메이션 재적용 가능
+          if (post.isNewRealtime && !content.classList.contains('animate-realtime-marker-appear')) {
+            content.classList.remove('animate-marker-appear');
+            content.classList.add('animate-realtime-marker-appear');
+          }
+
           content.style.setProperty('--marker-scale', scale.toString());
           content.style.opacity = "1";
           content.style.visibility = "visible";
