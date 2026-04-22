@@ -39,6 +39,7 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  // ✅ 5단계를 명시적으로 디폴트 설정 (기존 캐시 무시하도록 강제 가능)
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -494,7 +495,8 @@ const Index = () => {
     if (!routeState) return;
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
-      setTimeout(() => { setCurrentZoom(10); }, 500);
+      // ✅ 내 포스팅 필터 시 줌 레벨 조정 (기존 10에서 6으로 변경 제안 또는 유지)
+      setTimeout(() => { setCurrentZoom(6); }, 500);
       if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
       else if (routeState.center) setMapCenter(routeState.center);
       else handleCurrentLocation();
@@ -556,7 +558,11 @@ const Index = () => {
   const handlePostCreated = (newPost: any) => {
     setAllPosts(prev => [newPost, ...prev]);
     setDisplayedMarkers(prev => [newPost, ...prev]);
-    if (newPost.lat && newPost.lng) { setMapCenter({ lat: newPost.lat, lng: newPost.lng }); setCurrentZoom(6); }
+    if (newPost.lat && newPost.lng) { 
+      setMapCenter({ lat: newPost.lat, lng: newPost.lng }); 
+      // ✅ 글쓰기 완료 후에도 5단계 유지
+      setCurrentZoom(5); 
+    }
     setIsWriteOpen(false);
   };
 
