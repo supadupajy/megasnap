@@ -1,0 +1,1 @@
+SELECT id, likes, content, user_name FROM posts ORDER BY likes DESC LIMIT 20;
