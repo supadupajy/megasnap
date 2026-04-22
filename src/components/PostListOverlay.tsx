@@ -2,7 +2,10 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
