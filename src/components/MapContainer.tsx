@@ -423,6 +423,34 @@ const MapContainer = ({
     }
   };
 
+  // ✅ [수정] 줌 레벨에 따라 마커의 크기를 강제로 조절하는 별도의 효과 추가
+  useEffect(() => {
+    if (!isMapReady) return;
+    
+    // 줌 레벨에 따른 스케일 계산
+    let scale = 1.0;
+    if (currentLevel === 6) scale = 0.75;
+    else if (currentLevel === 7) scale = 0.5;
+    else if (currentLevel >= 8) scale = 0;
+    
+    // 현재 지도에 있는 모든 커스텀 오버레이 엘리먼트를 직접 찾아서 스타일 적용
+    overlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent();
+      if (content instanceof HTMLElement) {
+        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+        content.style.transform = `scale(${scale})`;
+        content.style.transformOrigin = 'bottom center';
+        
+        // 8단계 이상이면 숨김 처리 보강
+        if (currentLevel >= 8) {
+          overlay.setMap(null);
+        } else if (overlay.getMap() === null) {
+          overlay.setMap(mapInstance.current);
+        }
+      }
+    });
+  }, [currentLevel, isMapReady]);
+
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
