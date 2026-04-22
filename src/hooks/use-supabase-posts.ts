@@ -83,27 +83,22 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  // ✅ 지도를 축소할수록(넓게 볼수록) 훨씬 더 많은 데이터를 가져와서 공백을 방지
-  let limit = 1000;
-  if (currentLevel >= 7) limit = 2000;
-  if (currentLevel >= 8) limit = 3000;
-  if (currentLevel >= 9) limit = 4000;
-  if (currentLevel >= 10) limit = 5000;
+  // ✅ [데이터 다이어트] 줌 레벨에 따라 limit을 현실적으로 조정 (사용량 급감 대책)
+  let limit = 300; // 기본 마커는 300개면 충분
+  if (currentLevel >= 8) limit = 500;
+  if (currentLevel >= 10) limit = 800;
 
   try {
-    // ✅ [STRATEGY] 데이터 쏠림 방지를 위해 정렬 기준을 섞어서 쿼리
-    // 1. 좋아요 순으로 상위 노출 데이터를 확보
-    // 2. 동시에 랜덤/최신 데이터를 섞기 위해 limit을 충분히 늘리고 
-    //    서버에서 가져온 후 클라이언트에서 거리에 따라 정렬하거나 필터링하는 방식이 더 안정적
-    
+    // ✅ [데이터 다이어트 핵심] select('*') 대신 마커 생성에 꼭 필요한 필드만 선택
+    // content, user_name, image_url 등 무거운 텍스트 전송 차단
     const { data, error } = await supabase
       .from('posts')
-      .select('*')
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
       .lte('longitude', Math.max(sw.lng, ne.lng))
-      .order('created_at', { ascending: false }) // 최신순으로 가져오면 최근 데이터가 중심부에 나타날 확률이 높음
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;

@@ -207,6 +207,7 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   const handleMapChange = useCallback((data: any) => {
+    // 지도를 직접 조작해서 움직인 경우(isSelectingLocation이 아닐 때) 위치 선택 정보 초기화
     if (!isSelectingLocation) {
       setFinalSelectedLocation(null);
       postDraftStore.clear();
@@ -215,6 +216,7 @@ const Index = () => {
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
 
     if (zoomChanged) {
+      // 줌이 바뀌면 즉시 업데이트 (사용자 체감 중요)
       if (throttleTimer.current) {
         clearTimeout(throttleTimer.current);
         throttleTimer.current = null;
@@ -227,7 +229,6 @@ const Index = () => {
       mapCache.lastZoom = data.level;
       
       if (isSelectingLocation) setTempSelectedLocation(data.center);
-
       setFinalSelectedLocation(null);
       
       setTimeout(() => {
@@ -236,6 +237,8 @@ const Index = () => {
       return;
     }
     
+    // [데이터 다이어트] 단순 이동 시 쓰로틀링 강화 (100ms -> 600ms)
+    // 지도를 슥 움직이는 동안 불필요한 연속 호출 방지
     if (throttleTimer.current) return;
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
@@ -246,9 +249,10 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 100);
+    }, 600); // 0.6초 대기 후 동기화
   }, [isSelectingLocation, currentZoom]);
 
+  // ✅ [데이터 다이어트] 이미 불러온 마커는 다시 그리지 않도록 로직 최적화
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds) return;
@@ -261,15 +265,20 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
 
     try {
+      // 가벼운 마커 전용 데이터를 가져옴
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       
       const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
       const validMappedPosts = mappedPosts.filter(p => p !== null);
 
       setAllPosts(prev => {
+        // 기존에 이미 메모리에 있는 포스트 ID들
         const existingIds = new Set(prev.map(p => p.id));
+        // 정말로 새로 가져온 포스트만 선별
         const newUnique = validMappedPosts.filter(p => !existingIds.has(p.id));
         
+        if (newUnique.length === 0) return prev; // 새로운 게 없으면 상태 업데이트 안 함
+
         if (center) {
           newUnique.sort((a, b) => {
             const distA = Math.hypot(a.lat - center.lat, a.lng - center.lng);
@@ -278,7 +287,8 @@ const Index = () => {
           });
         }
 
-        const combined = [...newUnique, ...prev].slice(0, 15000);
+        // 최대 보유 마커 수를 줄여 메모리 관리
+        const combined = [...newUnique, ...prev].slice(0, 2000);
         mapCache.posts = combined;
         return combined;
       });
