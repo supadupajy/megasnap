@@ -658,6 +658,31 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           </div>
         </DrawerContent>
       </Drawer>
+      {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
+      {isOpen && (
+        <div
+          className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-150"
+          style={{ bottom: `${keyboardHeight}px` }}
+        >
+          {currentPage === 1 ? (
+            <Button
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+              onClick={handleNextPage}
+              disabled={mediaFiles.length === 0}
+            >
+              다음
+            </Button>
+          ) : (
+            <Button
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              onClick={handlePost}
+              disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
+            >
+              {isSubmitting ? '저장 중...' : '등록하기'}
+            </Button>
+          )}
+        </div>
+      )}
     </>
   );
 };
