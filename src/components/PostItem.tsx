@@ -135,24 +135,16 @@ const PostItem = ({
   }, [videoUrl, youtubeId]);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    if (onImageError) onImageError(id);
-    else (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+    const target = e.target as HTMLImageElement;
+    if (onImageError) {
+      onImageError(id);
+    } else {
+      // Prevent infinite error loops by checking if we already tried the fallback
+      if (!target.src.includes('unsplash.com')) {
+        target.src = FALLBACK_IMAGE;
+      }
+    }
   };
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      if (!authUser || !id || !isPersistedPostId(id)) return;
-      
-      // 좋아요 상태 확인
-      const { data: likeData } = await supabase.from('likes').select('id').eq('post_id', id).eq('user_id', authUser.id).maybeSingle();
-      if (likeData) setIsLiked(true);
-
-      // 저장 상태 확인
-      const { data: saveData } = await supabase.from('saved_posts').select('id').eq('post_id', id).eq('user_id', authUser.id).maybeSingle();
-      if (saveData) setIsSaved(true);
-    };
-    checkStatus();
-  }, [authUser, id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -355,7 +347,19 @@ const PostItem = ({
               )
             ) : (
               <div className="relative w-full h-full">
-                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img, idx) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt={`post-${idx}`} className="w-full h-full object-cover transition-all duration-700" onError={handleImageError} />{idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
+                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  {displayImages.map((img, idx) => (
+                    <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
+                      <img 
+                        src={img || FALLBACK_IMAGE} 
+                        alt="" 
+                        className="w-full h-full object-cover transition-all duration-700" 
+                        onError={handleImageError} 
+                      />
+                      {idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
+                    </div>
+                  ))}
+                </div>
                 {(videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
                 {displayImages.length > 1 && !(videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_, idx) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
               </div>

@@ -59,20 +59,24 @@ const Profile = () => {
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // 동영상 썸네일(image_url)이 있다면 우선적으로 사용, 아니면 유튜브 썸네일, 그외 unsplash 리맵핑
+    // [FIX] 동영상/유튜브 썸네일 처리 강화 및 빈 이미지 방어 로직
     let finalImage = sanitized.image_url;
     
-    if (!finalImage || finalImage.includes('unsplash.com')) {
+    if (!finalImage || finalImage.trim() === '' || finalImage === 'null') {
       if (sanitized.youtube_url) {
-        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || sanitized.image_url;
+        finalImage = getYoutubeThumbnail(sanitized.youtube_url) || FALLBACK_IMAGE;
       } else {
-        finalImage = remapUnsplashDisplayUrl(sanitized.image_url, sanitized.id, isAd ? 'food' : 'general') || sanitized.image_url;
+        // ID 기반으로 일관된 Unsplash 이미지 할당
+        finalImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${sanitized.id}`;
       }
+    } else if (finalImage.includes('unsplash.com')) {
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : 'general') || finalImage;
     }
     
-    // [FIX] 프로필 정보 실시간 동기화: DB에 저장된 user_avatar/user_name 대신 profiles 테이블과 조인하여 최신 정보를 가져올 수도 있지만,
-    // 현재는 트리거로 DB를 업데이트했으므로 클라이언트 캐시를 방지하기 위해 쿼리 시점의 데이터를 신뢰합니다.
-    // 만약 여전히 옛날 이미지가 보인다면 브라우저 캐시 이슈일 수 있으므로 URL 뒤에 타임스탬프를 붙이는 처리를 고려할 수 있습니다.
+    // images 배열이 비어있거나 깨진 경우를 대비
+    const finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
+      ? sanitized.images.filter((img: any) => img && img !== 'null')
+      : [finalImage];
 
     let isLiked = false;
     let isSaved = false;
@@ -90,7 +94,10 @@ const Profile = () => {
       id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
+      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
+      image: finalImage, 
+      images: finalImages.length > 0 ? finalImages : [finalImage], 
+      youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
       isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType
     };
   };
