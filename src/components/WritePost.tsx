@@ -62,7 +62,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const [drawerHeight, setDrawerHeight] = useState('92vh');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -104,19 +104,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
-  // 키보드 높이에 따라 Drawer 높이 조절
+  // 키보드 높이 감지 — 버튼을 키보드 바로 위에 붙이기 위해
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
     const handleResize = () => {
-      const windowHeight = window.innerHeight;
-      const viewportHeight = vv.height;
-      if (windowHeight - viewportHeight > 100) {
-        // 키보드가 올라온 상태 — Drawer 높이를 줄여서 내부 스크롤로 접근 가능하게
-        setDrawerHeight(`${viewportHeight * 0.98}px`);
-      } else {
-        setDrawerHeight('92vh');
-      }
+      const keyboardH = window.innerHeight - vv.height;
+      setKeyboardHeight(keyboardH > 100 ? keyboardH : 0);
     };
     vv.addEventListener('resize', handleResize);
     return () => vv.removeEventListener('resize', handleResize);
@@ -336,11 +330,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl rounded-t-[40px]"
+          className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
           style={{ 
             bottom: 0,
-            height: drawerHeight,
-            transition: 'height 0.15s ease-out, transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
             willChange: 'transform'
           }}
         >
@@ -376,11 +369,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
-  key="page1"
-  initial={{ opacity: 0, x: 20 }}
-  animate={{ opacity: 1, x: 0 }}
-  exit={{ opacity: 0 }}   // ← x 이동 없이 fade만
-  className="flex flex-col gap-6 pb-2"
+                    key="page1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col gap-4 pb-2"
                   >
                     {/* 미디어 첨부 버튼 */}
                     <div className="space-y-2">
@@ -570,11 +563,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                   </motion.div>
                 ) : (
                   <motion.div
-  key="page2"
-  initial={{ opacity: 0, x: 20 }}
-  animate={{ opacity: 1, x: 0 }}
-  exit={{ opacity: 0 }}   // ← x 이동 없이 fade만
-  className="flex flex-col gap-6 pb-2"
+                    key="page2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col gap-6 pb-2"
                   >
                     {/* 위치 */}
                     <div className="space-y-3">
@@ -638,16 +631,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 shrink-0">
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
-                      <Textarea 
+                      <Textarea
                         placeholder="이 장소에서의 추억을 기록해보세요..."
                         className="flex-1 min-h-[80px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
-                        onFocus={(e) => {
-  e.stopPropagation();
-}}
+                        onFocus={(e) => e.stopPropagation()}
                       />
                     </div>
                   </motion.div>
@@ -655,8 +646,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </AnimatePresence>
             </div>
 
-            {/* 하단 버튼 */}
-            <div className="py-4 pb-[120px] bg-white shrink-0">
+            {/* 하단 버튼 — 키보드가 올라오면 키보드 바로 위에 붙도록 */}
+            <div
+              className="py-4 bg-white shrink-0 transition-all duration-150"
+              style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : '120px' }}
+            >
               {currentPage === 1 ? (
                 <Button
                   className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
