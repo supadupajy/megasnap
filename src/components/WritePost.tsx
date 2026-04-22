@@ -640,12 +640,16 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
                       <Textarea
-                        placeholder="이 장소에서의 추억을 기록해보세요..."
-                        className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
-                        value={draft.content}
-                        onChange={(e) => postDraftStore.set({ content: e.target.value })}
-                        // [FIX] 인풋 포커스 시 브라우저가 자동으로 해당 요소를 키보드 위로 올리도록 유도
-                      />
+  placeholder="이 장소에서의 추억을 기록해보세요..."
+  className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+  value={draft.content}
+  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+  onFocus={(e) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }}
+/>
                     </div>
                   </motion.div>
                 )}
