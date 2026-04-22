@@ -198,27 +198,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return [post.image];
     if (youtubeId) return [post.image]; 
     
-    // ✅ 사용자가 등록한 전체 이미지 목록(images 배열) 가져오기
-    // DB에서 가져온 데이터가 images 컬럼에 배열로 저장되어 있는지 확인
+    // ✅ 1. 사용자가 등록한 전체 이미지 목록(images 배열) 가져오기
     let userImages: string[] = [];
     
-    if (Array.isArray(post.images) && post.images.length > 0) {
+    // post.images가 배열인지, 그리고 내용이 있는지 철저히 검사
+    if (post.images && Array.isArray(post.images) && post.images.length > 0) {
       userImages = [...post.images];
     } else if (post.image) {
+      // images 배열이 없는 경우를 대비한 Fallback
       userImages = [post.image];
     }
     
-    // 유효한 이미지가 없는 경우 대비
-    if (userImages.length === 0) return [FALLBACK_IMAGE];
-    
-    // 두 번째 자리에 코카콜라 광고 삽입 로직
+    // 2. 코카콜라 광고 이미지 (두 번째 자리에 고정)
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
     
-    const combined = [...userImages];
-    // 이미지가 최소 1개 이상일 때, 인덱스 1(두 번째) 자리에 광고 삽입
-    combined.splice(1, 0, COCA_COLA_AD);
+    // 3. 이미지 조합 (1번 이미지 -> 광고 -> 나머지 이미지들)
+    const result = [];
+    if (userImages.length > 0) {
+      // 첫 번째 이미지 추가
+      result.push(userImages[0]);
+      // 두 번째 자리에 광고 추가
+      result.push(COCA_COLA_AD);
+      // 세 번째 자리부터 나머지 이미지들 추가
+      if (userImages.length > 1) {
+        result.push(...userImages.slice(1));
+      }
+    } else {
+      // 이미지가 아예 없는 경우 (그럴 일은 거의 없지만)
+      result.push(FALLBACK_IMAGE, COCA_COLA_AD);
+    }
     
-    return combined;
+    console.log('[PostDetail] Final display images count:', result.length, result);
+    return result;
   }, [isAd, post.images, post.image, youtubeId]);
 
   const adIndex = 1;
