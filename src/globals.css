@@ -256,17 +256,19 @@
   background: linear-gradient(
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0) 40%,
-    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.6) 50%,
     rgba(255, 255, 255, 0) 60%,
     rgba(255, 255, 255, 0) 100%
   );
   transform: rotate(30deg);
-  animation: marker-shine 3.5s infinite;
+  animation: marker-shine 3s infinite !important;
+  z-index: 10;
+  pointer-events: none;
 }
 
 @keyframes marker-shine {
   0% { transform: translateX(-100%) rotate(30deg); }
-  20% { transform: translateX(100%) rotate(30deg); }
+  30% { transform: translateX(100%) rotate(30deg); }
   100% { transform: translateX(100%) rotate(30deg); }
 }
 
@@ -346,4 +348,10 @@
 @keyframes border-glow-pulse {
   0%, 100% { filter: brightness(1) drop-shadow(0 0 2px currentColor); }
   50% { filter: brightness(1.2) drop-shadow(0 0 8px currentColor); }
+}
+
+/* [FIX] 모든 마커에 빛나는 shine 이펙트 추가 */
+.shine-overlay {
+  position: relative;
+  overflow: hidden;
 }
