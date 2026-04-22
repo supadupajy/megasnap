@@ -202,6 +202,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             finalImageUrl = tUrl;
           }
         } else {
+          // ✅ 이미지가 여러 장일 때도 첫 번째 이미지를 마커 썸네일(finalImageUrl)로 설정
           finalImageUrl = publicUrl;
         }
       }
