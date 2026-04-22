@@ -338,30 +338,46 @@ const Index = () => {
 
   const handleViewAllClick = useCallback(async () => { 
     if (displayedMarkers.length > 0 && currentZoom < 9) {
-      setIsPostListOpen(true);
+      console.log('[Index] Opening PostListOverlay and fetching full data');
+      
+      // 현재 보이는 마커들의 ID 목록 추출
       const currentIds = displayedMarkers.map(p => p.id);
       
       try {
-        const { data, error } = await supabase.from('posts').select('*').in('id', currentIds);
-        
+        // 1. 먼저 오버레이를 열어 로딩 상태 진입 (이때는 아직 ... 일 수 있음)
+        setIsPostListOpen(true);
+
+        // 2. 전체 데이터를 Supabase에서 다시 가져옴
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', currentIds);
+
         if (!error && data) {
+          console.log(`[Index] Fetched ${data.length} full posts for list`);
           const mapped = await Promise.all(data.map(p => mapDbToPost(p)));
           const validMapped = mapped.filter(p => p !== null);
           
+          // 3. allPosts 상태를 먼저 업데이트
           setAllPosts(prev => {
             const postMap = new Map(prev.map(p => [p.id, p]));
-            
-            validMapped.forEach(p => {
-              postMap.set(p.id, p);
+            validMapped.forEach(p => postMap.set(p.id, p));
+            const newList = Array.from(postMap.values());
+            mapCache.posts = newList;
+            return newList;
+          });
+
+          // 4. ✅ [핵심] displayedMarkers 자체를 보강된 데이터로 교체하여
+          // PostListOverlay가 리렌더링될 때 확실히 새 데이터를 받게 함
+          setDisplayedMarkers(prev => {
+            return prev.map(m => {
+              const fullData = validMapped.find(f => f.id === m.id);
+              return fullData || m;
             });
-            
-            const updatedList = Array.from(postMap.values());
-            mapCache.posts = updatedList;
-            return updatedList;
           });
         }
-      } catch (err) { 
-        console.error('[Index] ViewAll Error:', err); 
+      } catch (err) {
+        console.error('[Index] Failed to fetch full info for list:', err);
       }
     } 
   }, [displayedMarkers, currentZoom, mapDbToPost]);
