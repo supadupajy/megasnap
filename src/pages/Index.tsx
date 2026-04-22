@@ -117,18 +117,26 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const p = await sanitizeYoutubeMedia(rawPost);
-      const isAd = p.content?.trim().startsWith('[AD]');
-      
       const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
       
-      // [FIX] 'Post content' 등의 가짜 데이터 원천 필터링 로직 추가
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
         return clean.startsWith('http') && !/post\s*content/i.test(clean);
       };
 
+      // [FIX] sanitize하기 전 원본 rawPost를 먼저 변조 방지 (잠깐 나타났다 사라지는 현상 방지)
+      const sanitizedRaw = { ...rawPost };
+      if (!isValidUrl(sanitizedRaw.image_url)) sanitizedRaw.image_url = SAFE_FALLBACK;
+      if (Array.isArray(sanitizedRaw.images)) {
+        sanitizedRaw.images = sanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
+      } else {
+        sanitizedRaw.images = [sanitizedRaw.image_url];
+      }
+
+      const p = await sanitizeYoutubeMedia(sanitizedRaw);
+      const isAd = p.content?.trim().startsWith('[AD]');
+      
       // ✅ [수정] 강제로 특정 테두리가 생기지 않도록 보정
       let borderType: any = isAd ? 'none' : getTierFromId(p.id);
       
@@ -136,17 +144,16 @@ const Index = () => {
       // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
       if (p.border_type) borderType = p.border_type;
 
-      let finalImage = null;
+      let finalImage = p.image_url;
       if (p.youtube_url) finalImage = getYoutubeThumbnail(p.youtube_url);
-      else {
-        // [FIX] 가짜 텍스트("Post content") 필터링 적용
-        finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
-      }
+      
+      // [FIX] 가짜 텍스트("Post content") 필터링 재검증
+      if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
       // images 배열 필터링
       const validImages = Array.isArray(p.images) 
-        ? p.images.filter(isValidUrl) 
-        : (isValidUrl(p.image_url) ? [p.image_url] : [SAFE_FALLBACK]);
+        ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
+        : [finalImage];
 
       return {
         id: p.id,
@@ -162,7 +169,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: validImages.length > 0 ? validImages : [SAFE_FALLBACK], // ✅ [수정] 깨진 이미지 필터링된 배열 사용
+        images: validImages,
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
