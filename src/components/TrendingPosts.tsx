@@ -134,11 +134,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       >
         {/* 광고 구좌 (고정) - 나이키 광고로 변경 */}
 <div className="px-5 py-3 border-b border-gray-100">
-  
-    href="https://www.nike.com/kr/"
-    target="_blank"
-    rel="noopener noreferrer"
-    onClick={(e) => e.stopPropagation()}
+  <div
+    onClick={(e) => {
+      e.stopPropagation();
+      window.open('https://www.nike.com/kr/', '_blank', 'noopener,noreferrer');
+    }}
     className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
   >
     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
@@ -177,7 +177,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
       </div>
     </div>
-  </a>
+  </div>
 </div>
 
         {/* 스크롤 가능한 포스팅 리스트 */}
