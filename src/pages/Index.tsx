@@ -144,15 +144,14 @@ const Index = () => {
       const p = postData;
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
-      
-      // [FIX] 확률 조정: 다이아몬드(3%)와 골드(5%)로 상향
-      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      
       const likesCount = Number(p.likes || 0);
       
-      // [FIX] 인기 포스팅: 좋아요 1만개 이상인 경우 최우선 적용
+      // [FINAL FIX] borderType 결정 시 isAd 조건보다 likesCount 조건을 우선하거나 병합 검토
+      // 광고이면서 인기글일 수는 없으므로, 광고가 아닐 때만 티어/인기 체크
+      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      
       if (likesCount >= 10000) {
-        borderType = 'popular';
+        borderType = 'popular'; // 좋아요 1만개 이상이면 최우선으로 빨간색 테두리
       } else if (!isAd) {
         // ID 해시를 사용하여 고정된 확률값 생성
         let h = 0;
@@ -161,7 +160,7 @@ const Index = () => {
         const val = Math.abs(h % 1000) / 1000;
         
         if (val < 0.03) borderType = 'diamond';      // 3%
-        else if (val < 0.08) borderType = 'gold';    // 5% (0.03 + 0.05)
+        else if (val < 0.08) borderType = 'gold';    // 5%
       }
       
       // 작성자 프로필 정보 별도 조회
@@ -234,7 +233,7 @@ const Index = () => {
         id: p.id,
         isAd: isAd3, // 이제 [AD]로 시작하는 글은 true로 설정됨
         isGif: false,
-        isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+        isInfluencer: ['gold', 'diamond'].includes(borderType),
         user: { 
           id: p.user_id || '', 
           name: userName, 
@@ -254,7 +253,7 @@ const Index = () => {
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType: borderType // 할당된 티어 저장
+        borderType // [CRITICAL] 여기서 결정된 borderType이 Post 객체에 정확히 담겨야 함
       };
     } catch (err) { return null as any; }
   }, []);
