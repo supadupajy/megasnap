@@ -430,10 +430,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           />
                         </div>
                       ) : (
-                        <Carousel className="w-full h-full" setApi={setCurrentImageIndex}>
+                        <Carousel className="w-full h-full">
                           <CarouselContent>
-                            {displayImages.map((img, index) => (
-                              <CarouselItem key={index}>
+                            {displayImages.map((img, index) => {
+                              const isThisAdSlide = index === 1;
+                              const content = (
                                 <div className="relative aspect-square w-full">
                                   <img
                                     src={img}
@@ -441,24 +442,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                     className="w-full h-full object-cover"
                                     draggable={false}
                                   />
-                                  {index === 1 && (
+                                  {isThisAdSlide && (
+                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-20">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      <span className="font-bold">{adLabel}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+
+                              return (
+                                <CarouselItem key={index}>
+                                  {isThisAdSlide ? (
                                     <a 
                                       href={adLink}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 active:scale-95 transition-all z-20 cursor-pointer"
+                                      className="block w-full h-full cursor-pointer active:opacity-90 transition-opacity"
                                     >
-                                      <ExternalLink className="w-3.5 h-3.5" />
-                                      <span className="font-bold">{adLabel}</span>
+                                      {content}
                                     </a>
+                                  ) : (
+                                    content
                                   )}
-                                </div>
-                              </CarouselItem>
-                            ))}
+                                </CarouselItem>
+                              );
+                            })}
                           </CarouselContent>
                           {displayImages.length > 1 && (
-                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10">
+                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
                               {displayImages.map((_, i) => (
                                 <div
                                   key={i}
