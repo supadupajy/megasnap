@@ -402,16 +402,21 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                 <CarouselItem key={`${media.url}-${idx}`} className="h-full pl-0">
                                   <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                                     {media.type === 'image' ? (
-                                      <div className="w-full h-full relative">
-                                        <img 
-                                          src={media.url} 
-                                          alt={`Preview ${idx}`} 
-                                          className="block w-full h-full object-cover select-none pointer-events-none"
-                                          style={{ 
-                                            transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                          }}
-                                          onLoad={() => console.log('[WritePost] Image load successful')}
-                                        />
+                                      <div className="w-full h-full relative p-3">
+                                        <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-gray-50">
+                                          <img 
+                                            src={media.url} 
+                                            alt={`Preview ${idx}`} 
+                                            className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
+                                            style={{ 
+                                              width: '100%', 
+                                              height: 'auto',
+                                              top: '50%',
+                                              left: '0',
+                                              transform: `translateY(calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
+                                            }}
+                                          />
+                                        </div>
                                         {/* 드래그 핸들러 */}
                                         <div 
                                           className="absolute inset-0 z-30 cursor-move touch-none bg-transparent"
