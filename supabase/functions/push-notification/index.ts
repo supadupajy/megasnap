@@ -128,14 +128,14 @@ serve(async (req) => {
         android: {
           priority: "high",
           notification: {
-            channel_id: "messages_v2",
-            sound: "message_chime"
+            channel_id: "messages_v3",
+            sound: "message_pop"
           }
         },
         apns: {
           payload: {
             aps: {
-              sound: "message_chime.caf",
+              sound: "message_pop.caf",
               badge: 1
             }
           }
