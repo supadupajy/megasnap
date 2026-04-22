@@ -339,21 +339,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   return (
     <>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-[1px]"
-            onClick={onClose}
-          />
-        )}
-      </AnimatePresence>
-
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
+          className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[95vh] rounded-t-[40px] border-none"
           style={{ 
             position: 'fixed',
             bottom: 0,
