@@ -445,11 +445,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                       <div
                                         className="absolute inset-0 z-10 cursor-move touch-none"
                                         onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          setIsDragging(true);
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                                        }}
+  e.preventDefault();
+  e.stopPropagation();
+  setIsDragging(true);
+  setDragStart({ x: e.clientX, y: e.clientY });
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+}}
                                         onPointerMove={(e) => {
   if (!isDragging) return;
   const deltaX = e.clientX - dragStart.x;
