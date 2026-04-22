@@ -105,12 +105,12 @@ const PostListOverlay = ({
 
   return (
     <motion.div 
-      initial={{ y: "100%" }}
+      initial={{ y: "calc(100vh - 88px)" }}
       animate={{ y: 0 }}
-      exit={{ y: "100%" }}
+      exit={{ y: "calc(100vh - 88px)" }}
       transition={{ 
         type: 'tween', 
-        duration: 0.3, 
+        duration: 0.35, 
         ease: [0.32, 0.72, 0, 1] 
       }}
       style={{ willChange: 'transform' }}
