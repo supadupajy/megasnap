@@ -129,10 +129,32 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
+      // [FIX] 상세 정보를 가져오기 위해 조인 쿼리 사용
+      const { data: fullPostData, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            nickname,
+            avatar_url
+          )
+        `)
+        .eq('id', rawPost.id)
+        .single();
+
+      const p = fullPostData || rawPost;
+      const contentText = p.content || '';
+      const isAd = contentText.trim().startsWith('[AD]');
+      
+      const userProfile = p.profiles;
+      const userName = userProfile?.nickname || p.user_name || '탐험가';
+      const userAvatar = userProfile?.avatar_url || p.user_avatar || '';
+
       const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
       
-      const contentText = rawPost.content || '';
-      const isAd = contentText.trim().startsWith('[AD]');
+      const contentText2 = p.content || '';
+      const isAd2 = contentText2.trim().startsWith('[AD]');
       
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
@@ -152,25 +174,25 @@ const Index = () => {
         preSanitizedRaw.images = [preSanitizedRaw.image_url];
       }
 
-      const p = await sanitizeYoutubeMedia(preSanitizedRaw);
+      const p2 = await sanitizeYoutubeMedia(preSanitizedRaw);
       
       // [FIX] [AD] 태그를 감지하여 isAd 플래그를 정확히 설정
-      const contentText2 = p.content || '';
-      const isAd2 = contentText2.trim().startsWith('[AD]');
+      const contentText3 = p2.content || '';
+      const isAd3 = contentText3.trim().startsWith('[AD]');
       
-      let finalImage = p.image_url;
+      let finalImage = p2.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
         finalImage = finalImage.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
       }
 
-      if (p.youtube_url) {
-        finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
+      if (p2.youtube_url) {
+        finalImage = getYoutubeThumbnail(p2.youtube_url) || finalImage;
       }
       
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
-      const validImages = Array.isArray(p.images) && p.images.length > 0
-        ? p.images.map(img => {
+      const validImages = Array.isArray(p2.images) && p2.images.length > 0
+        ? p2.images.map(img => {
             if (isValidUrl(img) && img.includes('unsplash.com')) {
               return img.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
             }
@@ -180,11 +202,15 @@ const Index = () => {
 
       return {
         id: p.id,
-        isAd: isAd2, // 이제 [AD]로 시작하는 글은 true로 설정됨
+        isAd: isAd3, // 이제 [AD]로 시작하는 글은 true로 설정됨
         isGif: false,
         isInfluencer: false,
-        user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
-        content: contentText2.replace(/^\[AD\]\s*/, '') || '',
+        user: { 
+          id: p.user_id || '', 
+          name: userName, 
+          avatar: userAvatar 
+        },
+        content: contentText3.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
@@ -193,8 +219,8 @@ const Index = () => {
         comments: [],
         image: finalImage,
         images: validImages,
-        youtubeUrl: p.youtube_url,
-        videoUrl: p.video_url,
+        youtubeUrl: p2.youtube_url,
+        videoUrl: p2.video_url,
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),

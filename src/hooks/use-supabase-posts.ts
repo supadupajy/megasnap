@@ -89,11 +89,11 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 800;
 
   try {
-    // ✅ [데이터 다이어트 핵심] select('*') 대신 마커 생성에 꼭 필요한 필드만 선택
-    // [FIX] 광고 판별을 위해 content 필드를 반드시 포함해야 함! (기존 누락으로 인해 마커 렌더링 시 isAd 판별 불가)
+    // ✅ [FIX] 마커 렌더링 시 사용자 정보를 올바르게 표시하기 위해 user_id 필드 추가
+    // Index.tsx의 mapDbToPost에서 이 user_id를 기반으로 내 글 여부를 판단함
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url')
+      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
