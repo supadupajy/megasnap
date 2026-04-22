@@ -335,13 +335,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             "flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl",
             isKeyboardOpen ? "h-full rounded-t-none" : "h-[92vh] rounded-t-[40px]"
           )}
-          style={{
-            bottom: 0,
-            height: isKeyboardOpen ? '100%' : '92vh',
-            top: 'auto',
-            transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), height 0.3s ease-in-out',
-            willChange: 'transform'
-          }}
+          style={{ 
+  position: 'fixed',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  // top은 건드리지 않음 — Drawer가 위로 튀는 원인
+  height: '92vh',
+  maxHeight: '92vh',
+  // 키보드가 올라와도 Drawer 크기/위치 변경 없음
+  transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+  willChange: 'transform'
+}}
         >
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
