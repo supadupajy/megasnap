@@ -109,14 +109,19 @@ const PostListOverlay = ({
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
         <motion.div 
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ type: 'tween', duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 top-[88px] z-[100] bg-white flex flex-col shadow-none overflow-hidden"
+          transition={{ 
+            type: 'tween', 
+            duration: 0.25, 
+            ease: [0.32, 0.72, 0, 1] 
+          }}
+          style={{ willChange: 'transform' }}
+          className="fixed inset-x-0 bottom-0 top-[88px] z-[100] bg-white flex flex-col shadow-none overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
