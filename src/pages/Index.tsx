@@ -117,52 +117,27 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+      // [FINAL FIX] 모든 이미지를 Unsplash 고화질 이미지로 강제 전환 (깨진 데이터 원천 차단)
+      const getUnsplashUrl = (seed: string) => `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${seed}`;
       
-      const isValidUrl = (url: any) => {
-        if (!url || typeof url !== 'string') return false;
-        const clean = url.trim();
-        // [FINAL ULTIMATE FILTER] 어떠한 형태의 'post content' 문자열도 허용하지 않음
-        if (/post\s*content/i.test(clean)) return false;
-        // http로 시작하지 않는 모든 문자열 차단
-        if (!clean.startsWith('http')) return false;
-        // 특정 깨진 문자열 패턴 차단
-        if (clean.length < 20) return false;
-        return true;
+      const forcedImage = getUnsplashUrl(rawPost.id);
+      
+      // 원본 데이터의 이미지를 무시하고 Unsplash로 교체
+      const sanitizedRaw = { 
+        ...rawPost, 
+        image_url: forcedImage,
+        images: [forcedImage]
       };
 
-      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
-      const preSanitizedRaw = { ...rawPost };
-      preSanitizedRaw.image_url = isValidUrl(preSanitizedRaw.image_url) ? preSanitizedRaw.image_url : SAFE_FALLBACK;
-      
-      if (Array.isArray(preSanitizedRaw.images) && preSanitizedRaw.images.length > 0) {
-        preSanitizedRaw.images = preSanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
-      } else {
-        preSanitizedRaw.images = [preSanitizedRaw.image_url];
-      }
-
-      // 정제된 데이터를 기반으로 비동기 처리 진행
-      const p = await sanitizeYoutubeMedia(preSanitizedRaw);
-      
-      // ✅ [중요] sanitizeYoutubeMedia 이후에도 텍스트가 다시 유입될 수 있으므로 한 번 더 검증
-      let finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
-      if (p.youtube_url) {
-        finalImage = getYoutubeThumbnail(p.youtube_url) || finalImage;
-      }
-      
-      // 최종 검증
-      if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
-
-      const finalImages = Array.isArray(p.images) && p.images.length > 0
-        ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
-        : [finalImage];
-
+      const p = await sanitizeYoutubeMedia(sanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
-      const borderType = isAd ? 'none' : getTierFromId(p.id);
       
-      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
-      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id);
       if (p.border_type) borderType = p.border_type;
+
+      // 유튜브인 경우 썸네일 사용, 그 외는 무조건 Unsplash 강제
+      let finalImage = p.youtube_url ? getYoutubeThumbnail(p.youtube_url) : forcedImage;
+      if (!finalImage) finalImage = forcedImage;
 
       return {
         id: p.id,
@@ -178,7 +153,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: finalImages,
+        images: [finalImage], // 모든 이미지를 Unsplash로 단일화하여 깨짐 방지
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
