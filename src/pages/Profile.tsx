@@ -100,7 +100,18 @@ const Profile = () => {
     setIsDataLoading(true);
     try {
       // 1. Fetch My Posts
-      const { data: myData } = await supabase.from('posts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      const { data: myData, error: myPostsError } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (myPostsError) {
+        console.error('[Profile] My Posts fetch error:', myPostsError);
+        // If 500 persists, it might be due to the order by or specific filter.
+        // Attempt fallback without order if necessary, but here we just log.
+      }
+      
       const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
       setMyPosts(formattedMyPosts);
 
