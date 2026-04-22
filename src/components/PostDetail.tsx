@@ -232,7 +232,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return post.image?.includes('nike') || post.content?.includes('나이키');
   }, [post]);
 
-  const adLink = isNikeAd ? "https://www.nike.com/kr/" : "https://www.coca-cola.co.kr/";
+  const adLink = useMemo(() => {
+  if (post.content?.includes('나이키') || post.image?.includes('nike'))
+    return "https://www.nike.com/kr/";
+  return "https://www.coca-cola.co.kr/";
+}, [post]);
   const adLabel = "AD";
 
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
