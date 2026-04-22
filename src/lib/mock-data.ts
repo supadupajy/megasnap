@@ -156,38 +156,44 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
 
 const WEB_SEARCHED_IMAGES = {
   scenery: [
-    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg", // Seoul Night
-    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg", // Korean Temple
-    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg", // N Seoul Tower
-    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg", // Hanok Village
-    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg", // Forest Scenery
-    "https://images.pexels.com/photos/3363363/pexels-photo-3363363.jpeg", // Jeju Sea
-    "https://cdn.pixabay.com/photo/2014/11/30/14/11/seoul-551502_1280.jpg",
-    "https://cdn.pixabay.com/photo/2017/12/10/17/40/seoul-3010309_1280.jpg",
-    "https://cdn.pixabay.com/photo/2016/11/29/03/40/architecture-1867114_1280.jpg",
+    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
+    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
+    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
+    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg",
+    "https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg",
+    "https://images.pexels.com/photos/3363363/pexels-photo-3363363.jpeg",
+    "https://images.pexels.com/photos/210012/pexels-photo-210012.jpeg",
+    "https://images.pexels.com/photos/599439/pexels-photo-599439.jpeg"
   ],
   food: [
-    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg", // Salad/Food
-    "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg", // Gourmet Plate
-    "https://images.pexels.com/photos/1273765/pexels-photo-1273765.jpeg", // Asian Dish
-    "https://images.pexels.com/photos/1234535/pexels-photo-1234535.jpeg", // Korean BBQ style
-    "https://images.pexels.com/photos/2641886/pexels-photo-2641886.jpeg", // Hot Pot
-    "https://cdn.pixabay.com/photo/2017/06/02/18/24/fruit-2367029_1280.jpg",
-    "https://cdn.pixabay.com/photo/2015/04/08/13/13/food-712665_1280.jpg",
-    "https://cdn.pixabay.com/photo/2017/01/26/02/06/platter-2009590_1280.jpg",
+    "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg",
+    "https://images.pexels.com/photos/1273765/pexels-photo-1273765.jpeg",
+    "https://images.pexels.com/photos/1234535/pexels-photo-1234535.jpeg",
+    "https://images.pexels.com/photos/2641886/pexels-photo-2641886.jpeg",
+    "https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg"
   ],
   animal: [
-    "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg", // Dogs
-    "https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg", // Cat
-    "https://images.pexels.com/photos/617278/pexels-photo-617278.jpeg", // Cute Cat
+    "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
+    "https://images.pexels.com/photos/45201/kitty-cat-baby-akitas-45201.jpeg",
+    "https://images.pexels.com/photos/617278/pexels-photo-617278.jpeg"
   ]
 };
 
 const getStableWebImage = (seed: string, type: 'scenery' | 'food' | 'animal' = 'scenery') => {
   const pool = WEB_SEARCHED_IMAGES[type];
-  let h = 0;
-  for(let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
-  return pool[Math.abs(h) % pool.length];
+  if (!pool || pool.length === 0) return "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+  
+  // [FIX] 해시 알고리즘 개선: 단순히 문자열 길이나 마지막 글자가 아닌 전체 문자열을 골고루 활용
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  
+  const index = Math.abs(hash) % pool.length;
+  console.log(`[ImagePool] Type: ${type}, Seed: ${seed}, Hash: ${hash}, Index: ${index}`);
+  return pool[index];
 };
 
 export const cityThemes: Record<string, string[]> = {
