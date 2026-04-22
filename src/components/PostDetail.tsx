@@ -48,9 +48,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [adOverlayRect, setAdOverlayRect] = useState<DOMRect | null>(null);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+  const imageAreaRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +72,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       vp.removeEventListener('scroll', handleViewport);
     };
   }, []);
+
+  // 이미지 영역 위치 추적 — 광고 오버레이 위치 계산용
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateRect = () => {
+      if (imageAreaRef.current) {
+        setAdOverlayRect(imageAreaRef.current.getBoundingClientRect());
+      }
+    };
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect);
+    return () => {
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect);
+    };
+  }, [isOpen, currentIndex]);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -140,7 +159,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentImageIndex) setCurrentImageIndex(index);
+    if (index !== currentImageIndex) {
+      setCurrentImageIndex(index);
+      // 슬라이드 변경 시 rect 업데이트
+      setTimeout(() => {
+        if (imageAreaRef.current) {
+          setAdOverlayRect(imageAreaRef.current.getBoundingClientRect());
+        }
+      }, 50);
+    }
   };
 
   const handleAddComment = async (e?: React.FormEvent) => {
@@ -195,7 +222,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return result;
   }, [isAd, post.images, post.image, youtubeId]);
 
-  // 광고 링크
   const adLink = useMemo(() => {
     if (post.content?.includes('나이키') || post.image?.includes('nike'))
       return "https://www.nike.com/kr/";
@@ -266,10 +292,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   };
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+  const showAdOverlay = currentImageIndex === 1 && !youtubeId && !post.videoUrl && adOverlayRect;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
+      
       <div 
         className="absolute top-8 right-6 z-[1100] transition-all duration-500"
         style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
@@ -278,6 +306,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
           <X className="w-6 h-6 stroke-[2.5px]" />
         </Button>
       </div>
+
+      {/* 광고 클릭 오버레이 — fixed로 DOM 최상위에 독립 배치, 모든 이벤트 충돌 회피 */}
+      {showAdOverlay && (
+        <div
+          className="fixed z-[1050] cursor-pointer"
+          style={{
+            top: adOverlayRect.top,
+            left: adOverlayRect.left,
+            width: adOverlayRect.width,
+            height: adOverlayRect.height,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            window.open(adLink, '_blank', 'noopener,noreferrer');
+          }}
+        >
+          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 pointer-events-none">
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="font-bold">AD</span>
+          </div>
+        </div>
+      )}
+
       <div 
         className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
         style={{ 
@@ -340,8 +392,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   </div>
 
                   {/* 미디어 영역 */}
-<div className="px-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+                  <div className="px-4">
+                    <div ref={imageAreaRef} className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                       {youtubeId ? (
                         <iframe
                           className="w-full h-full"
@@ -355,62 +407,46 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                       ) : (
                         <div className="relative w-full h-full">
-  {/* 네이티브 스크롤 슬라이더 */}
-  <div
-    ref={imageScrollRef}
-    className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-    onScroll={handleImageScroll}
-  >
-    {displayImages.map((img, index) => (
-      <div
-        key={index}
-        className="w-full h-full shrink-0 snap-center relative"
-        style={{ scrollSnapStop: 'always' }}
-      >
-        <img
-          src={img}
-          alt={`Post content ${index + 1}`}
-          className="w-full h-full object-cover"
-          draggable={false}
-        />
-      </div>
-    ))}
-  </div>
+                          {/* 네이티브 스크롤 슬라이더 */}
+                          <div
+                            ref={imageScrollRef}
+                            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                            onScroll={handleImageScroll}
+                          >
+                            {displayImages.map((img, index) => (
+                              <div
+                                key={index}
+                                className="w-full h-full shrink-0 snap-center relative"
+                                style={{ scrollSnapStop: 'always' }}
+                              >
+                                <img
+                                  src={img}
+                                  alt={`Post content ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                  draggable={false}
+                                />
+                              </div>
+                            ))}
+                          </div>
 
-  {/* 광고 슬라이드일 때만 바깥에서 오버레이 — 스크롤과 완전 분리 */}
-  {currentImageIndex === 1 && (
-    <div className="absolute inset-0 z-20 flex">
-      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 pointer-events-none">
-        <ExternalLink className="w-3.5 h-3.5" />
-        <span className="font-bold">AD</span>
-      </div>
-      <button
-        className="w-full h-full bg-transparent"
-        onClick={(e) => {
-          e.stopPropagation();
-          window.open(adLink, '_blank', 'noopener,noreferrer');
-        }}
-      />
-    </div>
-  )}
-
-  {/* 인디케이터 */}
-  {displayImages.length > 1 && (
-    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-      {displayImages.map((_, i) => (
-        <div
-          key={i}
-          className={`h-1.5 rounded-full transition-all duration-300 ${
-            currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-          }`}
-        />
-      ))}
-    </div>
-  )}
-</div>
-   )}
+                          {/* 인디케이터 */}
+                          {displayImages.length > 1 && (
+                            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+                              {displayImages.map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                                    currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
+
                   {/* 액션 버튼 및 내용 */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
