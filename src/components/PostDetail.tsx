@@ -178,20 +178,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     ? getFallbackImage(currentPost.id) 
     : currentPost.image;
 
-  // [FIX] isAd 변수 선언을 useMemo(displayImages) 보다 위로 이동
   const isAd = currentPost?.isAd || false;
   const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
+  const COCA_COLA_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
   };
 
-  // [FIX] displayImages 변수 선언 (기존 코드에서 누락된 부분 복구)
+  // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
     
-    // images 배열의 각 요소에 대해서도 더미 체크 적용
     let baseImages = currentPost.images && currentPost.images.length > 0 
       ? currentPost.images.filter((img: string) => !isDummyUrl(img))
       : [];
@@ -200,14 +199,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       baseImages = [displayImage];
     }
     
-    let images = baseImages;
-
-    if (isAd && images.length === 1) {
-      images = [images[0], images[0]];
+    // 코카콜라 광고 삽입 로직 (두 번째 장)
+    const imagesWithAd = [...baseImages];
+    if (imagesWithAd.length > 0) {
+      imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);
+    } else {
+      imagesWithAd.push(COCA_COLA_IMAGE);
     }
     
-    return images;
-  }, [currentPost, displayImage, isAd]);
+    return imagesWithAd;
+  }, [currentPost, displayImage]);
 
   const adLink = useMemo(() => {
     if (!currentPost) return "https://www.coca-cola.co.kr/";
@@ -423,40 +424,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               onScroll={handleImageScroll}
                             >
                               {displayImages.map((img, index) => {
-                                const isAdSlide = index === 1;
+                                const isAdSlide = img === COCA_COLA_IMAGE;
                                 if (isAdSlide) {
                                   return (
-                                    // ✅ 광고 슬라이드: touchstart/touchend로 탭 vs 스와이프 직접 판별
-                                    // onClick 300ms 딜레이 없이 즉시 반응
                                     <div
                                       key={index}
-                                      className="w-full h-full shrink-0 snap-center relative"
+                                      className="w-full h-full shrink-0 snap-center relative cursor-pointer"
                                       style={{ scrollSnapStop: 'always' }}
-                                      onTouchStart={(e) => {
-                                        touchStartRef.current = {
-                                          x: e.touches[0].clientX,
-                                          y: e.touches[0].clientY,
-                                        };
-                                      }}
-                                      onTouchEnd={(e) => {
-                                        if (!touchStartRef.current) return;
-                                        const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
-                                        const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
-                                        touchStartRef.current = null;
-                                        // 10px 미만 이동 = 탭으로 판정 → 링크 열기
-                                        if (dx < 10 && dy < 10) {
-                                          e.stopPropagation();
-                                          window.open(adLink, '_blank', 'noopener,noreferrer');
-                                        }
-                                      }}
+                                      onClick={handleAdClick}
                                     >
                                       <img
                                         src={img}
                                         alt="Advertisement"
-                                        className={cn(
-                                          "w-full h-full object-cover",
-                                          img === COCA_COLA_AD && "cursor-pointer"
-                                        )}
+                                        className="w-full h-full object-cover"
                                         draggable={false}
                                       />
                                       <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
