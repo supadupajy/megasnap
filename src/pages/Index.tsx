@@ -171,13 +171,13 @@ const Index = () => {
     if (!authUser) return;
 
     console.log('[Realtime] Initializing posts subscription...');
-    
+
     // 이전에 생성된 채널이 있다면 제거 (중복 구독 방지)
     const oldChannel = supabase.getChannels().find(c => (c as any).topic === 'realtime:public:posts' || (c as any).name === 'global-posts-updates');
     if (oldChannel) supabase.removeChannel(oldChannel);
 
     const channel = supabase
-      .channel('global-posts-updates') 
+      .channel('global-posts-updates')
       .on(
         'postgres_changes',
         { 
@@ -213,7 +213,7 @@ const Index = () => {
 
           if (isInBounds && newPostRaw.user_id !== authUser.id) {
             console.log('[Realtime] MATCH! Adding to map and firing local fireworks');
-            
+
             const newPost: Post = {
               id: newPostRaw.id,
               isAd: false,
@@ -234,7 +234,7 @@ const Index = () => {
               isLiked: false,
               createdAt: new Date(newPostRaw.created_at),
               borderType: 'none',
-              isNewRealtime: true 
+              isNewRealtime: true
             };
 
             setAllPosts(prev => {
@@ -243,13 +243,13 @@ const Index = () => {
             });
 
             // 폭죽 효과를 전체 화면이 아닌 마커 위치 부근에서 터지도록 좌표 계산
-            // 카카오맵 좌표를 화면 좌표로 변환하기는 복잡하므로, 
+            // 카카오맵 좌표를 화면 좌표로 변환하기는 복잡하므로,
             // 캔버스 컨페티의 origin을 지도상의 대략적인 위치로 계산 (내 지도 중심 기준)
             const mapCenter = mapData?.center;
             if (mapCenter) {
               const relX = 0.5 + (newPostRaw.longitude - mapCenter.lng) * 5; // 화면 비율 보정
               const relY = 0.5 - (newPostRaw.latitude - mapCenter.lat) * 5;
-              
+
               confetti({
                 particleCount: 15, // 수량 대폭 축소
                 spread: 40,
@@ -290,7 +290,7 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
-      
+
       // 서버에서 가져온 포스트 ID 셋 (현재 화면 범위 내 유효한 포스트들)
       const validDbIds = new Set(dbPosts.map(p => p.id));
 
@@ -325,7 +325,7 @@ const Index = () => {
             p.lat <= Math.max(sw.lat, ne.lat) && 
             p.lng >= Math.min(sw.lng, ne.lng) && 
             p.lng <= Math.max(sw.lng, ne.lng);
-          
+
           // 범위 안에 있는데 서버 데이터에 없으면 삭제된 것 (내 글 제외하고 판단 가능하나 일단 전체 적용)
           if (isInCurrentBounds && !validDbIds.has(p.id)) return false;
           return true;
@@ -333,9 +333,9 @@ const Index = () => {
 
         const existingIds = new Set(filteredPrev.map(p => p.id));
         const newUnique = mappedPosts.filter(p => !existingIds.has(p.id));
-        
+
         if (newUnique.length === 0 && filteredPrev.length === prev.length && !forceBounds) return prev;
-        
+
         const combined = [...newUnique, ...filteredPrev].slice(0, 3000);
         mapCache.posts = combined;
         return combined;
@@ -364,7 +364,7 @@ const Index = () => {
       if (data.level !== undefined) { setCurrentZoom(data.level); mapCache.lastZoom = data.level; }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 100); 
+    }, 100);
   }, [isSelectingLocation, currentZoom, syncPostsWithSupabase]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
@@ -416,7 +416,7 @@ const Index = () => {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchGlobalTrending(); 
+    await fetchGlobalTrending();
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       try {
@@ -510,12 +510,12 @@ const Index = () => {
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
 
-  const handleViewAllClick = useCallback(async () => { 
+  const handleViewAllClick = useCallback(async () => {
     if (displayedMarkers.length > 0 && currentZoom < 9) {
       console.log('[Index] Opening PostListOverlay and fetching full data');
-      
+
       const currentIds = displayedMarkers.map(p => p.id);
-      
+
       try {
         setIsPostListOpen(true);
 
@@ -527,7 +527,7 @@ const Index = () => {
         if (!error && data) {
           const mapped = await Promise.all(data.map(p => mapDbToPost(p)));
           const validMapped = mapped.filter(p => p !== null);
-          
+
           setAllPosts(prev => {
             const postMap = new Map(prev.map(p => [p.id, p]));
             validMapped.forEach(p => {
@@ -552,16 +552,16 @@ const Index = () => {
       } catch (err) {
         console.error('[Index] Failed to fetch full info for list:', err);
       }
-    } 
+    }
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
     setAllPosts(prev => [newPost, ...prev]);
     setDisplayedMarkers(prev => [newPost, ...prev]);
-    if (newPost.lat && newPost.lng) { 
-      setMapCenter({ lat: newPost.lat, lng: newPost.lng }); 
+    if (newPost.lat && newPost.lng) {
+      setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       // ✅ 글쓰기 완료 후에도 5단계 유지
-      setCurrentZoom(5); 
+      setCurrentZoom(5);
     }
     setIsWriteOpen(false);
   };
@@ -581,16 +581,16 @@ const Index = () => {
     <>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer 
-            posts={displayedMarkers} 
-            viewedPostIds={viewedIds} 
-            highlightedPostId={highlightedPostId} 
+          <MapContainer
+            posts={displayedMarkers}
+            viewedPostIds={viewedIds}
+            highlightedPostId={highlightedPostId}
             onMarkerClick={handleMarkerClick}
-            onMapChange={handleMapChange} 
-            onMapClick={handleMapClick} 
-            center={mapCenter} 
-            level={currentZoom} 
-            searchResultLocation={searchResultLocation} 
+            onMapChange={handleMapChange}
+            onMapClick={handleMapClick}
+            center={mapCenter}
+            level={currentZoom}
+            searchResultLocation={searchResultLocation}
           />
           <AnimatePresence>
             {isSelectingLocation && (
@@ -646,16 +646,16 @@ const Index = () => {
       </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
-      <PostListOverlay 
-        isOpen={isPostListOpen} 
-        onClose={() => setIsPostListOpen(false)} 
-        initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
-        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
-        currentBounds={mapData?.bounds} 
-        selectedCategories={selectedCategories} 
-        timeValueHours={timeValue} 
-        authUserId={authUser?.id} 
-        onDeletePost={handlePostDeleted} 
+      <PostListOverlay
+        isOpen={isPostListOpen}
+        onClose={() => setIsPostListOpen(false)}
+        initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
+        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
+        currentBounds={mapData?.bounds}
+        selectedCategories={selectedCategories}
+        timeValueHours={timeValue}
+        authUserId={authUser?.id}
+        onDeletePost={handlePostDeleted}
       />
     </>
   );

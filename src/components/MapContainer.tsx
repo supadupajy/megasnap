@@ -155,13 +155,16 @@ const MapContainer = ({
           setCurrentLevel(mapLevel);
           currentLevelRef.current = mapLevel;
 
+          // ✅ [핵심 FIX] 부모(Index.tsx)로 지도 영역 정보를 전달할 때 
+          // 현재 화면에 실제로 보이는 마커들의 기반이 되는 bounds 정보를 정확히 전달
           onMapChangeRef.current({
             bounds: { 
               sw: { lat: sw.getLat(), lng: sw.getLng() }, 
               ne: { lat: ne.getLat(), lng: ne.getLng() } 
             },
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: mapLevel
+            level: mapLevel,
+            // 추가로 현재 카운트를 직접 계산해서 보낼 수도 있지만, Index.tsx의 필터 로직이 중요함
           });
         } catch (e) {
           console.error('Map update error:', e);
