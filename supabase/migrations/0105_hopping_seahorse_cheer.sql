@@ -1,0 +1,1 @@
+SELECT id, nickname FROM profiles WHERE nickname LIKE '탐험가%' ORDER BY nickname ASC LIMIT 10;
