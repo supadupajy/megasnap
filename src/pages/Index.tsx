@@ -131,6 +131,9 @@ const Index = () => {
     try {
       const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
       
+      const contentText = rawPost.content || '';
+      const isAd = contentText.trim().startsWith('[AD]');
+      
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
@@ -152,8 +155,8 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       
       // [FIX] [AD] 태그를 감지하여 isAd 플래그를 정확히 설정
-      const contentText = p.content || '';
-      const isAd = contentText.trim().startsWith('[AD]');
+      const contentText2 = p.content || '';
+      const isAd2 = contentText2.trim().startsWith('[AD]');
       
       let finalImage = p.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
@@ -177,11 +180,11 @@ const Index = () => {
 
       return {
         id: p.id,
-        isAd, // 이제 [AD]로 시작하는 글은 true로 설정됨
+        isAd: isAd2, // 이제 [AD]로 시작하는 글은 true로 설정됨
         isGif: false,
         isInfluencer: false,
         user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
-        content: contentText.replace(/^\[AD\]\s*/, '') || '',
+        content: contentText2.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
@@ -336,30 +339,9 @@ const Index = () => {
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
 
-      // 서버에서 가져온 포스트 ID 셋 (현재 화면 범위 내 유효한 포스트들)
       const validDbIds = new Set(dbPosts.map(p => p.id));
 
-      const mappedPosts: Post[] = dbPosts.map(p => ({
-        id: p.id,
-        isAd: false,
-        isGif: false,
-        isInfluencer: false,
-        user: { id: '', name: '...', avatar: '' },
-        content: '',
-        location: '...',
-        lat: p.latitude,
-        lng: p.longitude,
-        likes: Number(p.likes || 0),
-        commentsCount: 0,
-        comments: [],
-        image: p.image_url,
-        videoUrl: p.video_url,
-        youtubeUrl: p.youtube_url,
-        category: p.category || 'none',
-        isLiked: false,
-        createdAt: new Date(p.created_at),
-        borderType: 'none',
-      }));
+      const mappedPosts: Post[] = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
 
       setAllPosts(prev => {
         // 1. 현재 화면 범위 내에 있는데 서버 응답(dbPosts)에 없는 포스트는 삭제된 것으로 간주
@@ -386,7 +368,7 @@ const Index = () => {
         return combined;
       });
     } catch (err) { console.error(err); } finally { isSyncing.current = false; }
-  }, [mapData, currentZoom]);
+  }, [mapData, currentZoom, mapDbToPost]);
 
   const handleMapChange = useCallback((data: any) => {
     if (!isSelectingLocation) { setFinalSelectedLocation(null); postDraftStore.clear(); }
