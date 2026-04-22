@@ -470,19 +470,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           </Carousel>
 
                           {currentImageIndex === 1 && (
-                            <a
-                              href={adLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => {
-                                console.log('[PostDetail] Top-level anchor link clicked');
-                              }}
-                              className="absolute inset-0 z-[1000] cursor-pointer flex items-center justify-center"
-                              style={{ pointerEvents: 'auto' }}
-                            >
-                              <div className="w-full h-full bg-white/0 active:bg-black/5 transition-colors" />
-                            </a>
-                          )}
+  <div
+    className="absolute inset-0 z-[1000] cursor-pointer"
+    style={{ pointerEvents: 'auto' }}
+    onPointerUp={(e) => {
+      e.stopPropagation();
+      window.open(adLink, '_blank', 'noopener,noreferrer');
+    }}
+  />
+)}
                           
                           {displayImages.length > 1 && (
                             <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
