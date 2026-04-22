@@ -64,7 +64,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
 
   const { isKeyboardOpen } = useKeyboard();
