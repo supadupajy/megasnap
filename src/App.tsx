@@ -65,9 +65,27 @@ const AnimatedRoutes = () => {
   const isMainTab = ["/", "/popular", "/search", "/messages", "/profile"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
-  // ✅ [FIX] location.state 대신 window 플래그로 즉시 읽기
-  // PostListOverlay 열림 여부는 Index.tsx에서 window.__isPostListOpen 에 동기적으로 기록됨
-  const isPostListOpenForNav = typeof window !== 'undefined' && (window as any).__isPostListOpen === true;
+  // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
+  const [isPostListVisible, setIsPostListVisible] = useState(false);
+
+  useEffect(() => {
+    const handleSync = () => {
+      const isOpen = typeof window !== 'undefined' && (window as any).__isPostListOpen === true;
+      setIsPostListVisible(isOpen);
+    };
+    
+    // 초기값 동기화
+    handleSync();
+
+    // 커스텀 이벤트나 상태 변경 감지를 위한 인터벌 (더 확실한 동기화)
+    const interval = setInterval(handleSync, 100);
+    window.addEventListener('close-post-list-overlay', () => setIsPostListVisible(false));
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('close-post-list-overlay', () => setIsPostListVisible(false));
+    };
+  }, []);
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
@@ -165,8 +183,8 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {/* ✅ [FIX] BottomNav 숨김 조건도 window 플래그로 통일 */}
-      {!isFullPage && session && !isPostListOpenForNav && <BottomNav />}
+      {/* ✅ [FIX] isPostListVisible 상태를 사용하여 BottomNav 노출 여부 결정 */}
+      {!isFullPage && session && !isPostListVisible && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
