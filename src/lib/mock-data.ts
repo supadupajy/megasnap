@@ -175,11 +175,13 @@ export const placeImages = [
   "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
 ];
 
-export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW);
-export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW);
-export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW);
-export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW);
-export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW);
+export const BLACKLIST_IDS = ["photo-1506057585508-85603cee9e17"];
+
+export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
+export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 
 export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
 
