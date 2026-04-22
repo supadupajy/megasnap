@@ -161,7 +161,7 @@ const Index = () => {
     console.log('[Realtime] Initializing posts subscription...');
     
     // 이전에 생성된 채널이 있다면 제거 (중복 구독 방지)
-    const oldChannel = supabase.getChannels().find(c => c.name === 'global-posts-updates');
+    const oldChannel = supabase.getChannels().find(c => (c as any).topic === 'realtime:public:posts' || (c as any).name === 'global-posts-updates');
     if (oldChannel) supabase.removeChannel(oldChannel);
 
     const channel = supabase
