@@ -104,21 +104,31 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
-  // [FIX] 키보드 높이 감지 - body를 건드리지 않고 keyboardHeight state만 업데이트
+  // 키보드 높이 감지
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-
+    
     const handleResize = () => {
-      const keyboardH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKeyboardHeight(keyboardH > 60 ? keyboardH : 0);
+      // [CRITICAL FIX] 모바일 브라우저에서 키보드가 올라올 때 
+      // visualViewport의 높이가 줄어드는 것을 이용해 실제 키보드 높이 계산
+      const keyboardH = window.innerHeight - vv.height;
+      
+      // 모바일 사파리/크롬 등에서 툴바 등으로 인해 발생하는 미세한 오차 제외
+      if (keyboardH > 60) {
+        setKeyboardHeight(keyboardH);
+        // [FIX] 키보드 활성 시 body에 클래스 추가하여 외부 스크롤 방지
+        document.body.classList.add('keyboard-open');
+      } else {
+        setKeyboardHeight(0);
+        document.body.classList.remove('keyboard-open');
+      }
     };
 
     vv.addEventListener('resize', handleResize);
-    vv.addEventListener('scroll', handleResize); // iOS Safari 대응
     return () => {
       vv.removeEventListener('resize', handleResize);
-      vv.removeEventListener('scroll', handleResize);
+      document.body.classList.remove('keyboard-open');
     };
   }, []);
 
@@ -346,8 +356,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             bottom: 0,
             left: 0,
             right: 0,
+            // [FIX] transform 보정을 완전히 제거하여 브라우저의 기본 키보드 대응(스크롤 상쇄)을 허용
             transform: 'none',
-            transition: 'none',
+            transition: 'none'
           }}
         >
           <div className="sr-only">
@@ -377,11 +388,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </Button>
             </div>
             
-            {/* [FIX] 스크롤 컨테이너 - paddingBottom을 키보드 높이만큼 동적으로 늘려서
-                내부 스크롤만 발생하고 페이지 전체가 밀리지 않도록 함 */}
+            {/* 페이지 콘텐츠 */}
             <div 
-              className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
-              style={{ paddingBottom: `${keyboardHeight + 160}px` }}
+              className="flex-1 min-h-0 overflow-y-auto pb-40 no-scrollbar"
             >
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
@@ -653,13 +662,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                         className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
-                        // [FIX] 키보드 올라온 후 애니메이션 완료 시점(350ms)에
-                        // Drawer 내부 스크롤 컨테이너 안에서만 스크롤되도록 처리
-                        onFocus={(e) => {
-                          setTimeout(() => {
-                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }, 350);
-                        }}
+                        // [FIX] 인풋 포커스 시 브라우저가 자동으로 해당 요소를 키보드 위로 올리도록 유도
                       />
                     </div>
                   </motion.div>
@@ -667,13 +670,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </AnimatePresence>
             </div>
             
-            {/* [FIX] 하단 버튼 - 키보드 높이만큼 bottom을 올려서 키보드에 가려지지 않도록 처리 */}
+            {/* [FIX] 하단 버튼을 fixed가 아닌 DrawerContent 내부의 absolute로 배치 */}
             <div
-              className="absolute left-0 right-0 px-5 pt-3 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
+              className="absolute bottom-0 left-0 right-0 px-5 pt-3 pb-8 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
               style={{ 
-                bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
-                paddingBottom: keyboardHeight > 0 ? '16px' : '110px',
-                transition: 'bottom 0.2s ease, padding-bottom 0.2s ease',
+                // 하단 탭바 높이만큼 띄움 (키보드가 없을 때)
+                paddingBottom: '110px'
               }}
             >
               {currentPage === 1 ? (
