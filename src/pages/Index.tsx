@@ -306,6 +306,34 @@ const Index = () => {
     highlightTimeoutRef.current = window.setTimeout(() => { setHighlightedPostId(null); highlightTimeoutRef.current = null; }, 4000);
   }, []);
 
+  const handleMarkerClick = useCallback(async (lightPost: Post) => {
+    // 1. 먼저 팝업을 띄우기 위해 ID 설정 (이때는 ... 정보일 수 있음)
+    setSelectedPostId(lightPost.id);
+
+    // 2. 이미 전체 정보가 있는지 확인 (user.name이 '...'이 아닌 경우)
+    if (lightPost.user.name !== '...') return;
+
+    try {
+      // 3. 서버에서 해당 포스트의 전체 정보를 가져옴
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', lightPost.id)
+        .single();
+
+      if (!error && data) {
+        const fullPost = await mapDbToPost(data);
+        if (fullPost) {
+          // 4. allPosts와 displayedMarkers를 업데이트하여 화면에 즉시 반영
+          setAllPosts(prev => prev.map(p => p.id === fullPost.id ? fullPost : p));
+          setDisplayedMarkers(prev => prev.map(p => p.id === fullPost.id ? fullPost : p));
+        }
+      }
+    } catch (err) {
+      console.error('[Index] Marker detail fetch error:', err);
+    }
+  }, [mapDbToPost]);
+
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 찾는 중...');
     try {
@@ -404,7 +432,17 @@ const Index = () => {
     <>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer posts={displayedMarkers} viewedPostIds={viewedIds} highlightedPostId={highlightedPostId} onMarkerClick={(p) => setSelectedPostId(p.id)} onMapChange={handleMapChange} onMapClick={handleMapClick} center={mapCenter} level={currentZoom} searchResultLocation={searchResultLocation} />
+          <MapContainer 
+            posts={displayedMarkers} 
+            viewedPostIds={viewedIds} 
+            highlightedPostId={highlightedPostId} 
+            onMarkerClick={handleMarkerClick}
+            onMapChange={handleMapChange} 
+            onMapClick={handleMapClick} 
+            center={mapCenter} 
+            level={currentZoom} 
+            searchResultLocation={searchResultLocation} 
+          />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
