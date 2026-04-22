@@ -142,6 +142,15 @@ const Header = () => {
           
           // 수신자일 때만 안읽은 카운트 증가 및 사운드 재생
           if (newMsg.receiver_id === user.id) {
+            // 현재 활성화된 채팅방 ID 확인 (localStorage)
+            const activeChatId = localStorage.getItem('activeChatId');
+            
+            // 현재 채팅 중인 상대방의 메시지라면 카운트 증가를 건너뜀
+            if (activeChatId === newMsg.sender_id) {
+              console.log('[Header] Message from active chat partner, skipping badge increment');
+              return;
+            }
+
             setUnreadMsgCount(prev => prev + 1);
             if (!window.location.pathname.startsWith('/chat/')) {
               playSound();
