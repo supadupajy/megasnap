@@ -469,9 +469,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="space-y-6 px-1 h-full overflow-y-auto no-scrollbar"
+                    className="flex flex-col h-full space-y-6 px-1"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-3 shrink-0">
                       <div className="flex items-center justify-between px-1">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보 (선택)</p>
                         <button onClick={onStartLocationSelection} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
@@ -504,7 +504,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 shrink-0">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
                         카테고리 선택 <span className="text-indigo-600">(필수)</span>
                       </p>
@@ -529,13 +529,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+                    <div className="space-y-2 flex-1 flex flex-col min-h-0 mb-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 shrink-0">
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
                       <Textarea 
                         placeholder="이 장소에서의 추억을 기록해보세요..."
-                        className="min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                        className="flex-1 min-h-0 border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
                         onPointerDown={(e) => e.stopPropagation()}
