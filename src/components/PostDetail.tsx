@@ -359,7 +359,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
             className="flex transition-transform duration-300 ease-out h-full"
             style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
           >
-            {allImages.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <div key={idx} className="w-full h-full flex-shrink-0 relative">
                 {post.videoUrl && idx === 0 ? (
                   <video 
