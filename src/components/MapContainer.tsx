@@ -27,14 +27,14 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level = 5,
+  level = 6,
   searchResultLocation
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState<number>(5);
+  const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [isMapMoving, setIsMapMoving] = useState(false);
   
   const overlaysRef = useRef<Map<string, any>>(new Map());
@@ -44,12 +44,12 @@ const MapContainer = ({
   const isDragging = useRef(false);
   const isProgrammaticMove = useRef(false);
   const lastDragEnd = useRef(0);
-  const currentLevelRef = useRef<number>(5);
+  const currentLevelRef = useRef<number>(6);
 
   // ✅ [핵심 FIX] center/level을 ref로 관리
   // initMap의 deps를 비워서 "props 변경 → initMap 재생성 → setInterval 재실행 → 지도 재초기화" 루프를 차단
   const centerRef = useRef(center);
-  const levelRef = useRef(5);
+  const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -130,9 +130,9 @@ const MapContainer = ({
       // ✅ [핵심 FIX] 이미 초기화된 경우 즉시 true 반환 — 재초기화 완전 방지
       if (mapInstance.current) return true;
 
-      // ✅ 캐시된 lastZoom 무시하고 무조건 5단계로 시작하도록 우선순위 조정
+      // ✅ 캐시된 lastZoom 무시하고 무조건 6단계로 시작하도록 우선순위 조정
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = 5; 
+      const initialLevel = 6; 
 
       const options = {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
@@ -229,11 +229,11 @@ const MapContainer = ({
         const isInit = initMap();
         if (isInit) {
           clearInterval(checkMap);
-          // ✅ 초기 시작 시 무조건 5단계로 세팅 (다른 캐시 무시)
+          // ✅ 초기 시작 시 무조건 6단계로 세팅 (다른 캐시 무시)
           if (mapInstance.current) {
-            mapInstance.current.setLevel(5, { animate: false });
-            setCurrentLevel(5);
-            currentLevelRef.current = 5;
+            mapInstance.current.setLevel(6, { animate: false });
+            setCurrentLevel(6);
+            currentLevelRef.current = 6;
           }
         }
       }
@@ -244,7 +244,7 @@ const MapContainer = ({
   // 외부 level prop 변경 감시
   useEffect(() => {
     if (mapInstance.current && level !== undefined) {
-      // ✅ 외부 level prop이 들어올 때만 변경하되, 초기 마운트 시에는 5를 유지하도록
+      // ✅ 외부 level prop이 들어올 때만 변경하되, 초기 마운트 시에는 6을 유지하도록
       mapInstance.current.setLevel(level);
       setCurrentLevel(level);
       currentLevelRef.current = level;
@@ -253,10 +253,10 @@ const MapContainer = ({
 
   // 마커 크기 계산 (level에 따른 scale)
   const getMarkerScale = (lvl: number) => {
-    if (lvl <= 5) return 1;     // 5단계 이하: 100%
-    if (lvl === 6) return 0.75;  // 6단계: 75%
-    if (lvl === 7) return 0.5;   // 7단계: 50%
-    return 0;                    // 8단계 이상: 숨김
+    if (lvl <= 6) return 1;      // 6단계 이하: 100%
+    if (lvl === 7) return 0.75;   // 7단계: 75%
+    if (lvl === 8) return 0.5;    // 8단계: 50%
+    return 0;                    // 9단계 이상: 숨김
   };
 
   // 마커 업데이트 로직
@@ -265,13 +265,10 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
     const level = mapInstance.current.getLevel();
-    let scale = 1.0;
-    if (level === 6) scale = 0.75;
-    else if (level === 7) scale = 0.5;
-    else if (level >= 8) scale = 0;
+    const scale = getMarkerScale(level);
     
-    // 8단계 이상이면 무조건 모든 오버레이 제거
-    if (level >= 8) {
+    // 9단계 이상이면 무조건 모든 오버레이 제거
+    if (level >= 9) {
       overlaysRef.current.forEach((overlay) => {
         const content = overlay.getContent();
         if (content instanceof HTMLElement) {
@@ -294,13 +291,13 @@ const MapContainer = ({
       const position = overlay.getPosition();
       
       // ✅ 현재 화면(bounds) 밖에 있거나, 게시물 목록에 없는 경우 제거
-      if (!currentPostIds.has(id) || !bounds.contain(position)) {
+      if (!currentPostIds.has(id) || !bounds.contain(position) || level >= 9) {
         if (content instanceof HTMLElement) {
           content.style.opacity = '0';
           content.style.transition = 'opacity 0.3s ease-out';
           setTimeout(() => {
             // 체크 시점에 여전히 화면 밖이거나 삭제된 상태면 실제 제거
-            if (!currentPostIds.has(id) || !bounds.contain(position)) {
+            if (!currentPostIds.has(id) || !bounds.contain(position) || level >= 9) {
               overlay.setMap(null);
               overlaysRef.current.delete(id);
             }
