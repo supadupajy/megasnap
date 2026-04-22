@@ -147,7 +147,13 @@ const Index = () => {
       
       // [FIX] 확률 조정: 다이아몬드(3%)와 골드(5%)로 상향
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      if (!isAd) {
+      
+      const likesCount = Number(p.likes || 0);
+      
+      // [FIX] 인기 포스팅: 좋아요 1만개 이상인 경우 최우선 적용
+      if (likesCount >= 10000) {
+        borderType = 'popular';
+      } else if (!isAd) {
         // ID 해시를 사용하여 고정된 확률값 생성
         let h = 0;
         const idStr = p.id.toString();
