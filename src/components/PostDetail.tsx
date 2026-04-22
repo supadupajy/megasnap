@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId } from '@/lib/utils';
@@ -13,11 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
@@ -37,8 +32,6 @@ interface PostDetailProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
-const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; 
-const THIRD_PLACEHOLDER = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80";
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick, onDelete }: PostDetailProps) => {
   const navigate = useNavigate();
@@ -65,19 +58,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
-
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
       const heightDiff = window.innerHeight - vp.height - offsetTop;
-      const isKeyboardOpen = heightDiff > 100;
-
-      if (isKeyboardOpen) {
-        setKeyboardHeight(heightDiff);
-      } else {
-        setKeyboardHeight(0);
-      }
+      setKeyboardHeight(heightDiff > 100 ? heightDiff : 0);
     };
-
     vp.addEventListener('resize', handleViewport);
     vp.addEventListener('scroll', handleViewport);
     return () => {
@@ -127,31 +112,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   useEffect(() => {
     let cancelled = false;
     const currentPost = posts[currentIndex];
-
     const loadComments = async () => {
       if (!isOpen || !currentPost) return;
       if (!isPersistedPostId(currentPost.id)) {
         setLocalComments(currentPost.comments || []);
         return;
       }
-
       try {
         const dbComments = await fetchCommentsByPostId(currentPost.id);
-        if (!cancelled) {
-          setLocalComments(dbComments);
-        }
+        if (!cancelled) setLocalComments(dbComments);
       } catch (err) {
-        console.error('[PostDetail] Failed to load comments:', err);
-        if (!cancelled) {
-          setLocalComments(currentPost.comments || []);
-        }
+        if (!cancelled) setLocalComments(currentPost.comments || []);
       }
     };
-
     loadComments();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [currentIndex, isOpen, posts]);
 
   useEffect(() => {
@@ -186,7 +161,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
     } catch (err: any) {
-      console.error('[PostDetail] Comment insert failed:', err);
       showError(err.message || '댓글 등록에 실패했습니다.');
     } finally { setIsSubmittingComment(false); }
   };
@@ -210,28 +184,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     }
     
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
-    
     const result = [];
     if (userImages.length > 0) {
       result.push(userImages[0]);
       result.push(COCA_COLA_AD);
-      if (userImages.length > 1) {
-        result.push(...userImages.slice(1));
-      }
+      if (userImages.length > 1) result.push(...userImages.slice(1));
     } else {
       result.push(FALLBACK_IMAGE, COCA_COLA_AD);
     }
     return result;
   }, [isAd, post.images, post.image, youtubeId]);
 
-  // 광고 링크 — 나이키 광고 여부에 따라 분기
+  // 광고 링크
   const adLink = useMemo(() => {
     if (post.content?.includes('나이키') || post.image?.includes('nike'))
       return "https://www.nike.com/kr/";
     return "https://www.coca-cola.co.kr/";
   }, [post]);
 
-  const adLabel = "AD";
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -245,10 +215,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
     if (!isPersistedPostId(post.id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
-
     const prevSaved = isSaved;
     setIsSaved(!prevSaved);
-
     try {
       if (prevSaved) {
         await supabase.from('saved_posts').delete().eq('post_id', post.id).eq('user_id', authUser.id);
@@ -265,24 +233,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (!post.id) {
-        showError('유효하지 않은 포스팅입니다.');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', post.id);
-
+      if (!post.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+      const { error } = await supabase.from('posts').delete().eq('id', post.id);
       if (error) throw error;
-
       showSuccess('포스팅이 삭제되었습니다.');
       setIsDeleteDialogOpen(false);
-      
       if (onDelete) onDelete(post.id);
       onClose();
-      
     } catch (err: any) { 
       showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`); 
       setIsDeleteDialogOpen(false);
@@ -300,34 +257,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
     }
     if (!Icon) return null;
-    return (<div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}><Icon className="w-3.5 h-3.5" /> <span className="text-[10px] font-black">{label}</span></div>);
-  };
-
-  const getMediaBorderContainerClass = () => {
-    if (isMine) return 'my-post-border-container';
-    if (isAd) return 'ad-border-container';
-    if (post.borderType === 'popular') return 'popular-border-container';
-    if (post.borderType === 'diamond') return 'diamond-border-container';
-    if (post.borderType === 'gold') return 'gold-border-container';
-    if (post.borderType === 'silver') return 'silver-border-container';
-    return '';
+    return (
+      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-black">{label}</span>
+      </div>
+    );
   };
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
-  const mediaBorderContainerClass = getMediaBorderContainerClass();
-  const hasMediaBorder = mediaBorderContainerClass !== '';
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
       <div 
-        className="absolute top-8 right-6 z-[1100] transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
+        className="absolute top-8 right-6 z-[1100] transition-all duration-500"
         style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
       >
-        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button>
+        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all">
+          <X className="w-6 h-6 stroke-[2.5px]" />
+        </Button>
       </div>
       <div 
-        className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
+        className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
         style={{ 
           paddingTop: '16px',
           paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
@@ -336,17 +288,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       >
         <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
           <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-
             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
             <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
               <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                 <div className="flex flex-col">
+                  {/* 헤더 */}
                   <div className="flex items-center justify-between px-4 py-4 shrink-0">
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" /></div>
+                      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                        <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                      </div>
                       <div>
-                        <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
-                        <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>
+                          {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+                        </div>
+                        <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          <span className="text-[10px] font-medium">{post.location}</span>
+                        </div>
                       </div>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
@@ -358,14 +318,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
                           {isMine ? (
-                            <DropdownMenuItem 
-                              onClick={(e) => { 
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setIsDeleteDialogOpen(true); 
-                              }} 
-                              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                            >
+                            <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                               <Trash2 className="w-4 h-4 text-red-600" />
                               <span className="text-sm font-bold text-red-600">삭제하기</span>
                             </DropdownMenuItem>
@@ -385,86 +338,76 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </DropdownMenu>
                     </div>
                   </div>
+
+                  {/* 미디어 영역 */}
                   <div className="px-4">
-                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl group">
+                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                       {youtubeId ? (
-                        <div className="w-full h-full relative">
-                          <iframe
-                            className="w-full h-full object-cover"
-                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
-                        </div>
+                        <iframe
+                          className="w-full h-full"
+                          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
                       ) : post.videoUrl ? (
-                        <div className="w-full h-full relative">
-                          <video
-                            src={post.videoUrl}
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            loop
-                            playsInline
-                            controls
-                          />
-                        </div>
+                        <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                       ) : (
                         <div className="relative w-full h-full">
-                          <Carousel 
-                            className="w-full h-full" 
-                            opts={{ dragFree: false, loop: true }}
-                            onSelect={(api) => setCurrentImageIndex(api.selectedScrollSnap())}
+                          {/* 네이티브 스크롤 슬라이더 — Carousel 이벤트 충돌 없음 */}
+                          <div
+                            ref={imageScrollRef}
+                            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                            onScroll={handleImageScroll}
                           >
-                            <CarouselContent>
-                              {displayImages.map((img, index) => {
-                                const isThisAdSlide = index === 1;
-                                return (
-                                  <CarouselItem key={index} className="relative">
-                                    <div className="relative aspect-square w-full">
-                                      <img
-                                        src={img}
-                                        alt={`Post content ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                        draggable={false}
+                            {displayImages.map((img, index) => {
+                              const isThisAdSlide = index === 1;
+                              return (
+                                <div
+                                  key={index}
+                                  className="w-full h-full shrink-0 snap-center relative"
+                                  style={{ scrollSnapStop: 'always' }}
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`Post content ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    draggable={false}
+                                  />
+                                  {isThisAdSlide && (
+                                    <>
+                                      {/* AD 뱃지 */}
+                                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        <span className="font-bold">AD</span>
+                                      </div>
+                                      {/* 광고 클릭 오버레이 */}
+                                      <div
+                                        className="absolute inset-0 z-20 cursor-pointer"
+                                        onPointerDown={(e) => {
+                                          e.currentTarget.dataset.startX = String(e.clientX);
+                                          e.currentTarget.dataset.startY = String(e.clientY);
+                                        }}
+                                        onPointerUp={(e) => {
+                                          const dist = Math.sqrt(
+                                            Math.pow(e.clientX - Number(e.currentTarget.dataset.startX), 2) +
+                                            Math.pow(e.clientY - Number(e.currentTarget.dataset.startY), 2)
+                                          );
+                                          if (dist < 10) {
+                                            e.stopPropagation();
+                                            window.open(adLink, '_blank', 'noopener,noreferrer');
+                                          }
+                                        }}
                                       />
-                                      {isThisAdSlide && (
-                                        <>
-                                          {/* AD 뱃지 */}
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                            <ExternalLink className="w-3.5 h-3.5" />
-                                            <span className="font-bold">{adLabel}</span>
-                                          </div>
-                                          {/* 광고 클릭 오버레이 — CarouselItem 내부에서 처리 */}
-                                          <div
-                                            className="absolute inset-0 z-20 cursor-pointer"
-                                            onPointerDown={(e) => {
-                                              e.currentTarget.dataset.startX = String(e.clientX);
-                                              e.currentTarget.dataset.startY = String(e.clientY);
-                                            }}
-                                            onPointerUp={(e) => {
-                                              const startX = Number(e.currentTarget.dataset.startX);
-                                              const startY = Number(e.currentTarget.dataset.startY);
-                                              const dist = Math.sqrt(
-                                                Math.pow(e.clientX - startX, 2) +
-                                                Math.pow(e.clientY - startY, 2)
-                                              );
-                                              // 10px 이하 이동이면 탭으로 인식해서 링크 열기
-                                              if (dist < 10) {
-                                                e.stopPropagation();
-                                                window.open(adLink, '_blank', 'noopener,noreferrer');
-                                              }
-                                            }}
-                                          />
-                                        </>
-                                      )}
-                                    </div>
-                                  </CarouselItem>
-                                );
-                              })}
-                            </CarouselContent>
-                          </Carousel>
-                          
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* 인디케이터 */}
                           {displayImages.length > 1 && (
                             <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
                               {displayImages.map((_, i) => (
@@ -481,9 +424,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       )}
                     </div>
                   </div>
+
+                  {/* 액션 버튼 및 내용 */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
+                      <div className="flex items-center gap-4 pt-1.5">
+                        <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
+                          <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                          <MessageCircle className="w-6 h-6 text-gray-700" />
+                        </button>
+                        <button className="text-gray-700" onClick={(e) => e.stopPropagation()}>
+                          <Share2 className="w-6 h-6" />
+                        </button>
+                      </div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-3">
                           <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
@@ -498,36 +453,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           )}
                         </div>
                         {isAd && (
-                          <a 
-                            href="https://s.baemin.com/t3000fBqlbHGL" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            onClick={(e) => e.stopPropagation()} 
-                            className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
-                          >
+                          <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
                             <ShoppingBag className="w-3.5 h-3.5 fill-white" />
                             <span className="text-[10px] font-black">주문하기</span>
                           </a>
                         )}
                       </div>
                     </div>
-                    <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}><p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p><div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div></div>
+                    <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}>
+                      <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
+                      <div className="flex gap-2 items-start">
+                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span>
+                        <p className="text-gray-800 text-sm leading-snug">{post.content}</p>
+                      </div>
+                    </div>
                     <div className="border-t border-gray-100 pt-4">
-                      <form 
-                        onSubmit={handleAddComment} 
-                        className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
-                      >
-                        <Input 
+                      <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+                        <Input
                           ref={commentInputRef}
-                          placeholder="댓글 달기..." 
-                          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
-                          value={commentInput} 
-                          onChange={(e) => setCommentInput(e.target.value)} 
-                          disabled={isSubmittingComment} 
+                          placeholder="댓글 달기..."
+                          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+                          value={commentInput}
+                          onChange={(e) => setCommentInput(e.target.value)}
+                          disabled={isSubmittingComment}
                         />
-                        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
+                        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+                          <Send className="w-4 h-4" />
+                        </button>
                       </form>
-                      {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
+                      {lastComment && (
+                        <div className="flex gap-2 items-start mt-1 mb-2">
+                          <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+                          <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                        </div>
+                      )}
                       <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group">
                         <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
                         {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
