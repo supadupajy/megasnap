@@ -68,7 +68,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
 
-  const { isKeyboardOpen } = useKeyboard();
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
