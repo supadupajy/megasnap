@@ -116,7 +116,7 @@ const PostListOverlay = ({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: 'tween', duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 top-[72px] z-[100] bg-white flex flex-col shadow-none overflow-hidden"
+          className="fixed inset-0 top-[64px] z-[100] bg-white flex flex-col shadow-none overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
@@ -129,48 +129,6 @@ const PostListOverlay = ({
               className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
             >
               <ChevronDown className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => setActiveFilter('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeFilter === 'all' 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                전체
-              </button>
-              <button 
-                onClick={() => setActiveFilter('popular')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeFilter === 'popular' 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                인기
-              </button>
-              <button 
-                onClick={() => setActiveFilter('influencer')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeFilter === 'influencer' 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-white text-gray-400 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                영향력자
-              </button>
-            </div>
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 active:scale-90 transition-all close-popup-btn"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-600 -rotate-90" />
             </button>
           </div>
 
