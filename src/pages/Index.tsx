@@ -129,10 +129,6 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      // [FIX] 400 Bad Request 해결: 
-      // posts.user_id가 TEXT 타입이고 profiles.id가 UUID 타입인 경우 JOIN 시 타입 오류가 발생할 수 있습니다.
-      // 먼저 posts 데이터만 가져오고, 그 다음에 profiles 데이터를 별도로 가져와 클라이언트에서 합칩니다.
-      
       const { data: postData, error: postError } = await supabase
         .from('posts')
         .select('*')
@@ -146,7 +142,6 @@ const Index = () => {
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
 
-      // [FIX] 고장난 Unsplash URL 차단 및 자동 교체 블랙리스트
       const BROKEN_URL_PART = "photo-1548199973-03cbf5292374";
       const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
 
@@ -154,7 +149,6 @@ const Index = () => {
         if (!url || typeof url !== 'string' || url.includes(BROKEN_URL_PART)) {
           return HIGH_RES_FALLBACK + "&sig=" + p.id;
         }
-        // Unsplash인 경우 무조건 고해상도 파라미터 강제
         if (url.includes('unsplash.com')) {
           return url.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
         }
@@ -167,24 +161,20 @@ const Index = () => {
         ? p.images.map(img => sanitizeUrl(img))
         : [finalImage];
 
-      // [FIX] borderType 결정 시 isAd 조건보다 likesCount 조건을 우선하거나 병합 검토
-      // 광고이면서 인기글일 수는 없으므로, 광고가 아닐 때만 티어/인기 체크
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       
       if (likesCount >= 10000) {
-        borderType = 'popular'; // 좋아요 1만개 이상이면 최우선으로 빨간색 테두리
+        borderType = 'popular';
       } else if (!isAd) {
-        // ID 해시를 사용하여 고정된 확률값 생성
         let h = 0;
         const idStr = p.id.toString();
         for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
         const val = Math.abs(h % 1000) / 1000;
         
-        if (val < 0.03) borderType = 'diamond';      // 3%
-        else if (val < 0.08) borderType = 'gold';    // 5%
+        if (val < 0.03) borderType = 'diamond';
+        else if (val < 0.08) borderType = 'gold';
       }
       
-      // 작성자 프로필 정보 별도 조회
       let userName = p.user_name || '탐험가';
       let userAvatar = p.user_avatar || '';
 
@@ -201,58 +191,9 @@ const Index = () => {
         }
       }
 
-      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=90";
-      
-      const contentText2 = p.content || '';
-      const isAd2 = contentText2.trim().startsWith('[AD]');
-      
-      const isValidUrl = (url: any) => {
-        if (!url || typeof url !== 'string') return false;
-        const clean = url.trim();
-        if (/post\s*content/i.test(clean)) return false;
-        if (!clean.startsWith('http')) return false;
-        if (clean.length < 20) return false;
-        return true;
-      };
-
-      const preSanitizedRaw = { ...rawPost };
-      preSanitizedRaw.image_url = isValidUrl(preSanitizedRaw.image_url) ? preSanitizedRaw.image_url : SAFE_FALLBACK;
-      
-      if (Array.isArray(preSanitizedRaw.images) && preSanitizedRaw.images.length > 0) {
-        preSanitizedRaw.images = preSanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
-      } else {
-        preSanitizedRaw.images = [preSanitizedRaw.image_url];
-      }
-
-      const p2 = await sanitizeYoutubeMedia(preSanitizedRaw);
-      
-      // [FIX] [AD] 태그를 감지하여 isAd 플래그를 정확히 설정
-      const contentText3 = p2.content || '';
-      const isAd3 = contentText3.trim().startsWith('[AD]');
-      
-      let finalImage2 = p2.image_url;
-      if (isValidUrl(finalImage2) && finalImage2.includes('unsplash.com')) {
-        finalImage2 = finalImage2.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
-      }
-
-      if (p2.youtube_url) {
-        finalImage2 = getYoutubeThumbnail(p2.youtube_url) || finalImage2;
-      }
-      
-      if (!isValidUrl(finalImage2)) finalImage2 = SAFE_FALLBACK;
-
-      const validImages2 = Array.isArray(p2.images) && p2.images.length > 0
-        ? p2.images.map(img => {
-            if (isValidUrl(img) && img.includes('unsplash.com')) {
-              return img.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
-            }
-            return isValidUrl(img) ? img : SAFE_FALLBACK;
-          })
-        : [finalImage2];
-
       return {
         id: p.id,
-        isAd: isAd3, // 이제 [AD]로 시작하는 글은 true로 설정됨
+        isAd,
         isGif: false,
         isInfluencer: ['gold', 'diamond'].includes(borderType),
         user: { 
@@ -260,21 +201,21 @@ const Index = () => {
           name: userName, 
           avatar: userAvatar 
         },
-        content: contentText3.replace(/^\[AD\]\s*/, '') || '',
+        content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
         likes: likesCount,
         commentsCount: 0,
         comments: [],
-        image: finalImage2,
-        images: validImages2,
-        youtubeUrl: p2.youtube_url,
-        videoUrl: p2.video_url,
+        image: finalImage,
+        images: validImages,
+        youtubeUrl: p.youtube_url,
+        videoUrl: p.video_url,
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType // [CRITICAL] 여기서 결정된 borderType이 Post 객체에 정확히 담겨야 함
+        borderType
       };
     } catch (err) { return null as any; }
   }, []);

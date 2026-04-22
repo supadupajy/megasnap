@@ -118,18 +118,18 @@ const Chat = () => {
     
     try {
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
-      audio.volume = inChat ? 0.3 : 0.6;
+      audio.volume = inChat ? 0.2 : 0.5; // [CLEANUP] 볼륨 미세 조정
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
           if (e.name !== 'NotAllowedError') {
-            console.warn('[Chat] Sound playback failed:', e.name);
+            // [CLEANUP] 불필요한 로그 삭제
           }
         });
       }
     } catch (e) {
-      console.error('[Chat] Sound play error:', e);
+      // [CLEANUP] 에러 처리 단순화
     }
   }, [canPlaySound]);
 
@@ -173,20 +173,13 @@ const Chat = () => {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
-      // [FIX] 입력창 레이아웃 깨짐 해결
-      // 키보드가 열릴 때 transform으로 위치를 조정하면 
-      // 렌더링 타이밍 이슈로 레이아웃이 출렁이거나 바닥으로 내려갈 수 있습니다.
-      // bottom 값을 직접 제어하여 뷰포트 바닥에 밀착시킵니다.
+      // [CLEANUP] 입력창 레이아웃 로직 가독성 개선
       if (inputRef.current) {
         if (isKeyboardOpen) {
-          // 키보드 노출 시: transform을 0으로 초기화하고 bottom 값을 offsetTop과 keyboardHeight를 활용해 계산
-          // visualViewport 환경에서는 뷰포트 하단이 물리적 화면 바닥보다 높으므로
-          // transform 대신 하단 여백을 직접 계산하여 적용하는 것이 가장 안정적입니다.
           inputRef.current.style.bottom = `${keyboardHeight}px`;
           inputRef.current.style.transform = `translateY(${offsetTop}px)`;
           inputRef.current.style.paddingBottom = '12px';
         } else {
-          // 키보드 미노출 시: BottomNav 위(100px)에 위치 고정
           inputRef.current.style.bottom = '100px'; 
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '12px';
