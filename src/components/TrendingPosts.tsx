@@ -24,6 +24,20 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const listRef = useRef<HTMLDivElement>(null);
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // 1위~20위 순환 로직 (접혀있을 때만 동작)
+  useEffect(() => {
+    if (isExpanded || posts.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % posts.length);
+    }, 4000); // 4초마다 다음 순위로 변경
+
+    return () => clearInterval(timer);
+  }, [isExpanded, posts.length]);
+
+  const currentPost = posts[currentIndex] || posts[0];
 
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
@@ -65,14 +79,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         onClick={onToggle}
       >
         <span className="text-indigo-600 font-black text-sm w-4 italic shrink-0">
-          {isExpanded ? "HOT" : posts[0]?.rank}
+          {isExpanded ? "HOT" : currentPost?.rank}
         </span>
         
         {!isExpanded ? (
           <div className="flex flex-1 items-center gap-2 overflow-hidden">
             <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
               <img
-                src={posts[0]?.image}
+                src={currentPost?.image}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={handleImageError}
@@ -81,14 +95,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             <div className="flex-1 overflow-hidden relative h-5">
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={`${posts[0]?.id}-${0}`}
+                  key={`${currentPost?.id}-${currentIndex}`}
                   initial={{ y: 15, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -15, opacity: 0 }}
                   transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                   className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                 >
-                  {posts[0]?.content}
+                  {currentPost?.content}
                 </motion.p>
               </AnimatePresence>
             </div>
