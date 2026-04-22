@@ -25,20 +25,27 @@ interface PostDetailProps {
   initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  onDelete?: (postId: string) => void;
   onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
   onLocationClick?: (lat: number, lng: number) => void;
-  onDelete?: (postId: string) => void;
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick, onDelete }: PostDetailProps) => {
+const getFallbackImage = (postId: string) => {
+  return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
+};
+
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
   const { blockUser } = useBlockedUsers();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  
+  const currentPost = posts[currentPostIndex];
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -74,11 +81,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-  }, [currentIndex, isOpen]);
+  }, [currentPostIndex, isOpen]);
 
   useEffect(() => {
     if (isOpen && !hasInitialized && initialIndex !== -1) {
-      setCurrentIndex(initialIndex);
+      setCurrentPostIndex(initialIndex);
       setHasInitialized(true);
       setShowComments(false);
       setCurrentImageIndex(0);
@@ -92,7 +99,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
-    const currentPost = posts[currentIndex];
+    const currentPost = posts[currentPostIndex];
     if (isOpen && currentPost) {
       if (onViewPost) onViewPost(currentPost.id);
       setShowComments(false);
@@ -108,11 +115,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       };
       checkSaveStatus();
     }
-  }, [currentIndex, isOpen, onViewPost, posts, authUser]);
+  }, [currentPostIndex, isOpen, onViewPost, posts, authUser]);
 
   useEffect(() => {
     let cancelled = false;
-    const currentPost = posts[currentIndex];
+    const currentPost = posts[currentPostIndex];
     const loadComments = async () => {
       if (!isOpen || !currentPost) return;
       if (!isPersistedPostId(currentPost.id)) {
@@ -128,15 +135,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     };
     loadComments();
     return () => { cancelled = true; };
-  }, [currentIndex, isOpen, posts]);
+  }, [currentPostIndex, isOpen, posts]);
 
   useEffect(() => {
-    const currentPost = posts[currentIndex];
+    const currentPost = posts[currentPostIndex];
     if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
     const observer = new IntersectionObserver(([entry]) => { }, { threshold: 0.6 });
     if (videoContainerRef.current) observer.observe(videoContainerRef.current);
     return () => observer.disconnect();
-  }, [currentIndex, isOpen, posts]);
+  }, [currentPostIndex, isOpen, posts]);
 
   // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단하는 헬퍼
   const isValidUrl = (url: any) => {
@@ -147,49 +154,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
-  const post = posts[currentIndex];
+  const handleImageError = (postId: string) => {
+    console.log(`[PostDetail] Image error for post: ${postId}, using fallback.`);
+    setImgErrors(prev => ({ ...prev, [postId]: true }));
+  };
 
-  const displayImages = useMemo(() => {
-    if (!post) return [];
-    const isAd = post.isAd;
-    const youtubeId = getYoutubeId(post.youtubeUrl || '');
-    
-    // [FINAL ULTIMATE FIX] "Post content"라는 글자가 조금이라도 보이면 무조건 강제 교체
-    const forceSafeUrl = (url: any) => {
-      if (!url || typeof url !== 'string') return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
-      const clean = url.trim();
-      if (/post\s*content/i.test(clean) || !clean.startsWith('http')) {
-        return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
-      }
-      return clean;
-    };
-
-    if (isAd) return [forceSafeUrl(post.image)];
-    if (youtubeId) return [forceSafeUrl(post.image)];
-
-    let userImages: string[] = [];
-    if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      userImages = post.images.map(forceSafeUrl);
-    } else {
-      userImages = [forceSafeUrl(post.image)];
-    }
-
-    return userImages;
-  }, [post]);
+  const displayImage = imgErrors[currentPost.id] ? getFallbackImage(currentPost.id) : (currentPost.image || getFallbackImage(currentPost.id));
 
   const adLink = useMemo(() => {
-    if (!post) return "https://www.coca-cola.co.kr/";
-    if (post.content?.includes('나이키') || post.image?.includes('nike'))
+    if (!currentPost) return "https://www.coca-cola.co.kr/";
+    if (currentPost.content?.includes('나이키') || currentPost.image?.includes('nike'))
       return "https://www.nike.com/kr/";
     return "https://www.coca-cola.co.kr/";
-  }, [post]);
+  }, [currentPost]);
 
   // ✅ 조건부 return은 모든 훅 선언 이후에
-  if (!isOpen || posts.length === 0 || !post) return null;
+  if (!isOpen || posts.length === 0 || !currentPost) return null;
 
-  const isAd = post.isAd;
-  const youtubeId = getYoutubeId(post.youtubeUrl || '');
-  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+  const isAd = currentPost.isAd;
+  const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
+  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -202,21 +186,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     e.stopPropagation();
     onClose();
     if (isMine) navigate('/profile');
-    else navigate(`/profile/${post.user.id}`);
+    else navigate(`/profile/${currentPost.user.id}`);
   };
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    if (!isPersistedPostId(post.id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
+    if (!isPersistedPostId(currentPost.id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
     const prevSaved = isSaved;
     setIsSaved(!prevSaved);
     try {
       if (prevSaved) {
-        await supabase.from('saved_posts').delete().eq('post_id', post.id).eq('user_id', authUser.id);
+        await supabase.from('saved_posts').delete().eq('post_id', currentPost.id).eq('user_id', authUser.id);
         showSuccess('저장이 취소되었습니다.');
       } else {
-        await supabase.from('saved_posts').insert({ post_id: post.id, user_id: authUser.id });
+        await supabase.from('saved_posts').insert({ post_id: currentPost.id, user_id: authUser.id });
         showSuccess('포스팅을 저장했습니다! ✨');
       }
     } catch (err) {
@@ -227,17 +211,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
   const confirmDelete = async () => {
     try {
-      if (!post || !post.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+      if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
       
       // [FIX] 삭제 프로세스 안정화:
       // 1. UI에서 즉시 제거될 수 있도록 핸들러 먼저 호출 (상위에서 setSelectedPostId(null) 수행)
-      if (onDelete) onDelete(post.id);
+      if (onDelete) onDelete(currentPost.id);
       
       // 2. 모달 즉시 닫기
       onClose();
 
       // 3. 실제 DB 삭제는 백그라운드에서 진행
-      const { error } = await supabase.from('posts').delete().eq('id', post.id);
+      const { error } = await supabase.from('posts').delete().eq('id', currentPost.id);
       if (error) throw error;
       
       showSuccess('포스팅이 삭제되었습니다.');
@@ -257,7 +241,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     try {
       const savedComment = await insertComment({
-        postId: post.id,
+        postId: currentPost.id,
         userId: authUser.id,
         userName: displayName,
         userAvatar: profile?.avatar_url,
@@ -272,7 +256,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   };
 
   const renderCategoryBadge = () => {
-    const category = post.category || 'none';
+    const category = currentPost.category || 'none';
     if (category === 'none') return null;
     let Icon = null; let bgColor = ""; let label = "";
     switch (category) {
@@ -291,7 +275,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
 
       <div
@@ -321,16 +305,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   <div className="flex items-center justify-between px-4 py-4 shrink-0">
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                        <img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                        <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>
+                          <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
                           {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
                         </div>
                         <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
                           <MapPin className="w-3 h-3" />
-                          <span className="text-[10px] font-medium">{post.location}</span>
+                          <span className="text-[10px] font-medium">{currentPost.location}</span>
                         </div>
                       </div>
                     </div>
@@ -353,7 +337,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                 <AlertCircle className="w-4 h-4 text-gray-600" />
                                 <span className="text-sm font-bold text-gray-700">신고</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                                 <Ban className="w-4 h-4 text-red-600" />
                                 <span className="text-sm font-bold text-red-600">차단</span>
                               </DropdownMenuItem>
@@ -376,8 +360,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                         />
-                      ) : post.videoUrl ? (
-                        <video src={post.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+                      ) : currentPost.videoUrl ? (
+                        <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                       ) : (
                         <div className="relative w-full h-full">
                           {/* 네이티브 스크롤 슬라이더 */}
@@ -464,8 +448,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-4 pt-1.5">
-                        <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}>
-                          <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+                        <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
+                          <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
                           <MessageCircle className="w-6 h-6 text-gray-700" />
@@ -480,8 +464,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                           </button>
                           {renderCategoryBadge()}
-                          {post.lat !== undefined && post.lng !== undefined && (
-                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                          {currentPost.lat !== undefined && currentPost.lng !== undefined && (
+                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                               <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
                               <span className="text-[10px] font-black">위치보기</span>
                             </button>
@@ -496,10 +480,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       </div>
                     </div>
                     <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}>
-                      <p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p>
+                      <p className="text-sm font-bold text-gray-500">좋아요 {currentPost.likes.toLocaleString()}개</p>
                       <div className="flex gap-2 items-start">
-                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span>
-                        <p className="text-gray-800 text-sm leading-snug">{post.content}</p>
+                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{currentPost.user.name}</span>
+                        <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                       </div>
                     </div>
                     <div className="border-t border-gray-100 pt-4">
@@ -535,7 +519,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </div>
       </div>
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
-    </div>
+    </Dialog>
   );
 };
 

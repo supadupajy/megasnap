@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Post } from '@/types';
+import { getFallbackImage } from '@/lib/utils';
 import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Navigation, Utensils, Car, TreePine, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
 import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -21,366 +23,55 @@ import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface PostItemProps {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    avatar: string;
-    followers?: number;
-  };
-  content: string;
-  location: string;
-  likes: number;
-  commentsCount: number;
-  comments: Comment[];
-  image: string;
-  images?: string[];
-  adImageIndex?: number;
-  lat?: number;
-  lng?: number;
-  isLiked?: boolean;
-  isSaved?: boolean;
-  isAd?: boolean;
-  isGif?: boolean;
-  isInfluencer?: boolean;
-  isViewed?: boolean;
-  category?: 'food' | 'accident' | 'place' | 'animal' | 'none';
-  borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
-  disablePulse?: boolean;
-  videoUrl?: string;
-  youtubeUrl?: string;
+  post: Post;
   onLikeToggle?: (e: React.MouseEvent) => void;
-  onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (postId: string) => void;
-  onImageError?: (postId: string) => void;
-  onSaveToggle?: (isSaved: boolean) => void;
-  onClick?: () => void;
+  onCommentClick?: (e: React.MouseEvent, comment: Comment) => void;
+  onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onShare?: (e: React.MouseEvent) => void;
+  onSave?: (e: React.MouseEvent) => void;
 }
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
-const AD_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"; 
-const THIRD_PLACEHOLDER = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80";
-
-const PostItem = ({ 
-  id,
-  user, 
-  content, 
-  location, 
-  likes: initialLikes, 
-  commentsCount: initialCommentsCount = 0,
-  comments: initialComments = [],
-  image, 
-  images = [],
-  adImageIndex: initialAdIndex,
-  lat,
-  lng,
-  isLiked: initialIsLiked, 
-  isSaved: initialIsSaved,
-  isAd, 
-  isGif: initialIsGif, 
-  isInfluencer,
-  isViewed,
-  category = 'none',
-  borderType = 'none',
-  disablePulse = false,
-  videoUrl,
-  youtubeUrl,
-  onLikeToggle,
-  onLocationClick,
-  onDelete,
-  onImageError,
-  onSaveToggle,
-  onClick
-}: PostItemProps) => {
-  const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
-  const { blockUser } = useBlockedUsers();
+const PostItem = ({ post, onLikeToggle, onDelete, onCommentClick, onLocationClick, onShare, onSave }: PostItemProps) => {
+  const [imgError, setImgError] = useState(false);
+  const { user: authUser } = useAuth();
   
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showComments, setShowComments] = useState(false);
-  const [isSaved, setIsSaved] = useState(initialIsSaved || false);
-  const [localComments, setLocalComments] = useState<Comment[]>(initialComments || []);
-  const [commentInput, setCommentInput] = useState('');
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [likesCount, setLikesCount] = useState(initialLikes);
-  const [isLiked, setIsLiked] = useState(initialIsLiked);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const youtubeId = getYoutubeId(youtubeUrl || '');
-  
-  const adIndex = 1;
-  const displayImages = useMemo(() => {
-    if (isAd) return [image];
-    if (youtubeId) return [image]; 
-    
-    // [FINAL ULTIMATE FIX] 고해상도 이미지 처리 로직 추가
-    const forceSafeUrl = (url: any) => {
-      const HIGH_RES_PLACEHOLDER = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
-      
-      if (!url || typeof url !== 'string') return HIGH_RES_PLACEHOLDER;
-      const clean = url.trim();
-      
-      if (/post\s*content/i.test(clean) || !clean.startsWith('http')) {
-        return HIGH_RES_PLACEHOLDER;
-      }
-      
-      // Unsplash 이미지인 경우 고해상도로 강제 변경
-      if (clean.includes('unsplash.com')) {
-        return clean.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
-      }
-      
-      return clean;
-    };
-
-    const validImages = (images && Array.isArray(images) && images.length > 0)
-      ? images.map(forceSafeUrl)
-      : [forceSafeUrl(image)];
-    
-    return validImages;
-  }, [isAd, images, image, youtubeId, id]);
-
-  const isMine = authUser && (user.id === authUser.id || user.id === 'me');
-
-  useEffect(() => {
-    if (!(videoUrl || youtubeId)) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { setIsPlayingVideo(entry.isIntersecting); },
-      { threshold: 0.6 }
-    );
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [videoUrl, youtubeId]);
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    if (onImageError) {
-      onImageError(id);
-    } else {
-      if (!target.src.includes('w=1200')) {
-        target.src = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=90&sig=${id}`;
-      }
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadComments = async () => {
-      if (!isPersistedPostId(id)) {
-        setLocalComments(initialComments || []);
-        return;
-      }
-
-      try {
-        const dbComments = await fetchCommentsByPostId(id);
-        if (!cancelled) {
-          setLocalComments(dbComments);
-        }
-      } catch (err) {
-        console.error('[PostItem] Failed to load comments:', err);
-        if (!cancelled) {
-          setLocalComments(initialComments || []);
-        }
-      }
-    };
-
-    loadComments();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, initialComments]);
-
-  const handleLikeToggleLocal = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    const prevLiked = isLiked;
-    const prevCount = likesCount;
-    setIsLiked(!prevLiked);
-    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
-    try {
-      if (prevLiked) {
-        await supabase.from('likes').delete().eq('post_id', id).eq('user_id', authUser.id);
-        await supabase.rpc('decrement_likes', { post_id: id });
-      } else {
-        await supabase.from('likes').insert({ post_id: id, user_id: authUser.id });
-        await supabase.rpc('increment_likes', { post_id: id });
-      }
-    } catch (err) { setIsLiked(prevLiked); setLikesCount(prevCount); }
-    if (onLikeToggle) onLikeToggle(e);
-  };
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!commentInput.trim() || !authUser) return;
-    setIsSubmittingComment(true);
-    const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-    try {
-      const savedComment = await insertComment({
-        postId: id,
-        userId: authUser.id,
-        userName: displayName,
-        userAvatar: profile?.avatar_url,
-        content: newCommentText,
-      });
-      setLocalComments((prev) => [...prev, savedComment]);
-      setCommentInput('');
-      showSuccess('댓글이 등록되었습니다.');
-    } catch (err: any) {
-      console.error('[PostItem] Comment insert failed:', err);
-      showError(err.message || '댓글 등록에 실패했습니다.');
-    } finally { setIsSubmittingComment(false); }
-  };
-
-  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    setCurrentImageIndex(index);
-  };
-
-  const handleUserClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isMine) navigate('/profile');
-    else navigate(`/profile/${user.id}`);
-  };
-
-  const handleLocationClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (lat !== undefined && lng !== undefined && onLocationClick) onLocationClick(e, lat, lng);
-  };
-
-  const handleSaveToggle = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    if (!isPersistedPostId(id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
-
-    const prevSaved = isSaved;
-    setIsSaved(!prevSaved);
-
-    try {
-      if (prevSaved) {
-        await supabase.from('saved_posts').delete().eq('post_id', id).eq('user_id', authUser.id);
-        showSuccess('저장이 취소되었습니다.');
-      } else {
-        await supabase.from('saved_posts').insert({ post_id: id, user_id: authUser.id });
-        showSuccess('포스팅을 저장했습니다! ✨');
-      }
-      
-      if (onSaveToggle) onSaveToggle(!prevSaved);
-    } catch (err) {
-      setIsSaved(prevSaved);
-      showError('저장 처리 중 오류가 발생했습니다.');
-    }
-  };
-
-  const confirmDelete = async () => {
-    try {
-      if (id.length > 20) {
-        const { error } = await supabase.from('posts').delete().eq('id', id);
-        if (error) throw error;
-      }
-      showSuccess('포스팅이 삭제되었습니다.');
-      if (onDelete) onDelete(id);
-    } catch (err) { showError('삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); }
-  };
-
-  const renderCategoryBadge = () => {
-    if (category === 'none') return null;
-    let Icon = null; let bgColor = ""; let label = "";
-    switch (category) {
-      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
-      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
-      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
-      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
-    }
-    if (!Icon) return null;
-    return (
-      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-[10px] font-black">{label}</span>
-      </div>
-    );
-  };
-
-  const getMediaBorderContainerClass = () => {
-    if (isAd) return 'ad-border-container';
-    if (isMine) return 'my-post-border-container';
-    return '';
-  };
-
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
-  const mediaBorderContainerClass = getMediaBorderContainerClass();
-  const hasMediaBorder = mediaBorderContainerClass !== '';
+  const displayImage = imgError ? getFallbackImage(post.id) : post.image;
 
   return (
-    <div
-      ref={containerRef}
-      onClick={onClick}
-      className={cn(
-        "relative bg-white mb-2 last:mb-20 cursor-pointer rounded-[28px] overflow-hidden border border-gray-100 shadow-sm"
-      )}
-    >
+    <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm mb-4">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={(e) => e.stopPropagation()}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
             <img 
-              src={isMine && profile?.avatar_url ? profile.avatar_url : user.avatar} 
-              alt={isMine && profile?.nickname ? profile.nickname : user.name} 
+              src={post.user.avatar} 
+              alt={post.user.name} 
               className="w-full h-full rounded-full object-cover border-2 border-white" 
-              onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} 
+              onError={(e) => (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80"} 
             />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
-                {isMine && profile?.nickname ? profile.nickname : user.name}
+                {post.user.name}
               </p>
-              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
             </div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{location}</span></div>
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
           </div>
         </div>
         <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
       </div>
 
-      <div className="px-4">
-        <div className={cn("relative aspect-square w-full rounded-2xl", mediaBorderContainerClass)}>
-          <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
-            {isPlayingVideo ? (
-              youtubeId ? (
-                <div className="relative w-full h-full">
-                  <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
-                  <button onClick={(e) => { e.stopPropagation(); window.open(youtubeUrl, '_blank'); }} className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-white/20 active:scale-95 transition-all z-20"><ExternalLink className="w-3 h-3" /> 유튜브에서 보기</button>
-                </div>
-              ) : (
-                <video src={videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />
-              )
-            ) : (
-              <div className="relative w-full h-full">
-                <div ref={scrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                  {displayImages.map((img, idx) => (
-                    <div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative">
-                      <img 
-                        src={img || FALLBACK_IMAGE} 
-                        alt="" 
-                        className="w-full h-full object-cover transition-all duration-700" 
-                        onError={handleImageError} 
-                      />
-                      {idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}
-                    </div>
-                  ))}
-                </div>
-                {(videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
-                {displayImages.length > 1 && !(videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_, idx) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
-              </div>
-            )}
-          </div>
-        </div>
+      <div className="relative aspect-square overflow-hidden bg-gray-50">
+        <img 
+          src={displayImage} 
+          alt={post.content}
+          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+          onError={() => {
+            console.log(`[PostItem] Image failed to load, replacing with fallback: ${post.id}`);
+            setImgError(true);
+          }}
+        />
       </div>
 
       <div className="px-4 pt-3 pb-4">
