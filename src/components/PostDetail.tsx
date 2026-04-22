@@ -115,7 +115,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setIsSaved(currentPost.isSaved || false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
 
-      // 저장 상태 확인
       const checkSaveStatus = async () => {
         if (!authUser || !isPersistedPostId(currentPost.id)) return;
         const { data } = await supabase.from('saved_posts').select('id').eq('post_id', currentPost.id).eq('user_id', authUser.id).maybeSingle();
@@ -210,8 +209,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       userImages = [post.image];
     }
     
-    // ✅ 실시간 인기 포스팅에서 나이키 광고 구분을 위해 이미지 URL 체크 로직 활용 가능
-    // 현재 코드 구조상 두 번째 슬라이드에 삽입되는 광고 이미지를 정의
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
     
     const result = [];
@@ -227,18 +224,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return result;
   }, [isAd, post.images, post.image, youtubeId]);
 
-  // ✅ 나이키 광고 여부 확인 (특정 이미지 URL 또는 데이터 속성 활용)
-  const isNikeAd = useMemo(() => {
-    return post.image?.includes('nike') || post.content?.includes('나이키');
+  // 광고 링크 — 나이키 광고 여부에 따라 분기
+  const adLink = useMemo(() => {
+    if (post.content?.includes('나이키') || post.image?.includes('nike'))
+      return "https://www.nike.com/kr/";
+    return "https://www.coca-cola.co.kr/";
   }, [post]);
 
-  const adLink = useMemo(() => {
-  if (post.content?.includes('나이키') || post.image?.includes('nike'))
-    return "https://www.nike.com/kr/";
-  return "https://www.coca-cola.co.kr/";
-}, [post]);
   const adLabel = "AD";
-
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -277,37 +270,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         return;
       }
 
-      console.log('[PostDetail] Attempting to delete post:', post.id);
-      
       const { error } = await supabase
         .from('posts')
         .delete()
         .eq('id', post.id);
 
-      if (error) {
-        console.error('[PostDetail] Delete query error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('[PostDetail] Delete success from DB');
-      
-      // 1. 성공 메시지 표시
       showSuccess('포스팅이 삭제되었습니다.');
-      
-      // 2. 다이얼로그 즉시 닫기
       setIsDeleteDialogOpen(false);
       
-      // 3. 부모 컴포넌트(Index.tsx)에 삭제 알림 - 여기서 지도의 markers가 업데이트됨
-      if (onDelete) {
-        console.log('[PostDetail] Calling onDelete callback');
-        onDelete(post.id);
-      }
-      
-      // 4. 상세 팝업 닫기
+      if (onDelete) onDelete(post.id);
       onClose();
       
     } catch (err: any) { 
-      console.error('[PostDetail] Final delete error:', err);
       showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`); 
       setIsDeleteDialogOpen(false);
     }
@@ -340,14 +316,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
   const mediaBorderContainerClass = getMediaBorderContainerClass();
   const hasMediaBorder = mediaBorderContainerClass !== '';
-
-  // [강력 조치] 캐러셀 외부에서도 이벤트를 캐치할 수 있도록 핸들러 분리
-  const handleAdClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('[PostDetail] Ad banner clicked, opening:', adLink);
-    window.open(adLink, '_blank', 'noopener,noreferrer');
-  };
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
@@ -461,10 +429,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                         draggable={false}
                                       />
                                       {isThisAdSlide && (
-                                        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-10">
-                                          <ExternalLink className="w-3.5 h-3.5" />
-                                          <span className="font-bold">{adLabel}</span>
-                                        </div>
+                                        <>
+                                          {/* AD 뱃지 */}
+                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                                            <ExternalLink className="w-3.5 h-3.5" />
+                                            <span className="font-bold">{adLabel}</span>
+                                          </div>
+                                          {/* 광고 클릭 오버레이 — CarouselItem 내부에서 처리 */}
+                                          <div
+                                            className="absolute inset-0 z-20 cursor-pointer"
+                                            onPointerDown={(e) => {
+                                              e.currentTarget.dataset.startX = String(e.clientX);
+                                              e.currentTarget.dataset.startY = String(e.clientY);
+                                            }}
+                                            onPointerUp={(e) => {
+                                              const startX = Number(e.currentTarget.dataset.startX);
+                                              const startY = Number(e.currentTarget.dataset.startY);
+                                              const dist = Math.sqrt(
+                                                Math.pow(e.clientX - startX, 2) +
+                                                Math.pow(e.clientY - startY, 2)
+                                              );
+                                              // 10px 이하 이동이면 탭으로 인식해서 링크 열기
+                                              if (dist < 10) {
+                                                e.stopPropagation();
+                                                window.open(adLink, '_blank', 'noopener,noreferrer');
+                                              }
+                                            }}
+                                          />
+                                        </>
                                       )}
                                     </div>
                                   </CarouselItem>
@@ -472,17 +464,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               })}
                             </CarouselContent>
                           </Carousel>
-
-                          {currentImageIndex === 1 && (
-  <div
-    className="absolute inset-0 z-[1000] cursor-pointer"
-    style={{ pointerEvents: 'auto' }}
-    onPointerUp={(e) => {
-      e.stopPropagation();
-      window.open(adLink, '_blank', 'noopener,noreferrer');
-    }}
-  />
-)}
                           
                           {displayImages.length > 1 && (
                             <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
@@ -505,15 +486,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                       <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-3">
-                          {/* 저장 버튼 (북마크) */}
                           <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
                             <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                           </button>
-                          
-                          {/* 카테고리 뱃지 */}
                           {renderCategoryBadge()}
-                          
-                          {/* 위치보기 버튼 */}
                           {post.lat !== undefined && post.lng !== undefined && (
                             <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
                               <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
@@ -551,7 +527,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                         />
                         <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
                       </form>
-                      {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
+                      {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}
+                      <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group">
+                        <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
+                        {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+                      </button>
                     </div>
                   </div>
                 </div>
