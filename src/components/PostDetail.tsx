@@ -138,30 +138,47 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     return () => observer.disconnect();
   }, [currentIndex, isOpen, posts]);
 
-  // ✅ 모든 훅을 조건부 return 이전에 선언
+  // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단하는 헬퍼
+  const isValidUrl = (url: any) => {
+    if (typeof url !== 'string') return false;
+    const clean = url.trim();
+    return clean.startsWith('http') && !/post\s*content/i.test(clean);
+  };
+
+  const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+
   const post = posts[currentIndex];
 
   const displayImages = useMemo(() => {
     if (!post) return [];
     const isAd = post.isAd;
     const youtubeId = getYoutubeId(post.youtubeUrl || '');
-    if (isAd) return [post.image];
-    if (youtubeId) return [post.image];
+    
+    // [FIX] 'Post content' 등의 가짜 데이터 원천 필터링
+    const getVerifiedImage = (url: any) => isValidUrl(url) ? url : SAFE_FALLBACK;
+
+    if (isAd) return [getVerifiedImage(post.image)];
+    if (youtubeId) return [getVerifiedImage(post.image)];
 
     let userImages: string[] = [];
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      userImages = [...post.images];
-    } else if (post.image) {
-      userImages = [post.image];
+      userImages = post.images.filter(isValidUrl);
+    } 
+    
+    if (userImages.length === 0 && post.image) {
+      const singleImg = getVerifiedImage(post.image);
+      userImages = [singleImg];
     }
 
     const result = [];
     if (userImages.length > 0) {
       result.push(userImages[0]);
       result.push(COCA_COLA_AD);
-      if (userImages.length > 1) result.push(...userImages.slice(1));
+      if (userImages.length > 1) {
+        result.push(...userImages.slice(1).map(getVerifiedImage));
+      }
     } else {
-      result.push(FALLBACK_IMAGE, COCA_COLA_AD);
+      result.push(SAFE_FALLBACK, COCA_COLA_AD);
     }
     return result;
   }, [post]);
