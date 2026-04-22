@@ -1,13 +1,13 @@
 export interface User {
   id: string;
   name: string;
-  nickname?: string;
   avatar: string;
+  avatar_url?: string;
+  nickname?: string;
   bio?: string;
-  followers?: number;
-  following?: number;
-  postsCount?: number;
-  isFollowing?: boolean;
+  followers_count?: number;
+  following_count?: number;
+  is_verified?: boolean;
 }
 
 export interface Comment {

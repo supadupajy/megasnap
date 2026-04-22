@@ -1,7 +1,23 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Settings, Grid, Bookmark, User as UserIcon, ChevronLeft, Play, Map, Loader2 } from 'lucide-react';
+import { 
+  Settings, 
+  Grid, 
+  Map as MapIcon, 
+  LogOut, 
+  ChevronLeft, 
+  Heart, 
+  MessageCircle, 
+  Share2, 
+  Bookmark, 
+  MoreHorizontal, 
+  Navigation, 
+  Map,
+  Loader2,
+  User as UserIcon,
+  Play
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import WritePost from '@/components/WritePost';
@@ -250,12 +266,11 @@ const Profile = () => {
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                     <PostItem 
-                      post={post}
+                      post={post} 
                       disablePulse={true} 
-                      onLikeToggle={() => handleLikeToggle(post.id, true)}
-                      onSaveToggle={() => handleSaveToggle(post.id, true)}
+                      onLikeToggle={() => handleLikeToggle(post.id, true)} 
+                      onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} 
                       onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
-                      onImageError={() => handleImageError(post.id)} 
                     />
                   </div>
                 ))}
@@ -264,19 +279,38 @@ const Profile = () => {
                 )}
               </div>
             ) : (
-              <><div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors"><h3 className="text-sm font-black text-indigo-600 flex items-center gap-2"><Map className="w-4 h-4 fill-indigo-600" />지도에서 보기</h3><p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p></div>{(viewMode === 'list' || viewMode === 'gif-list') ? (<div className="flex flex-col">{(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
+              <>
+                <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
+                    <Map className="w-4 h-4 fill-indigo-600" />지도에서 보기
+                  </h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
+                </div>
+                {(viewMode === 'list' || viewMode === 'gif-list') ? (
+                  <div className="flex flex-col">
+                    {(viewMode === 'gif-list' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
                       <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
                         <PostItem 
-                          post={post}
+                          post={post} 
                           disablePulse={true} 
                           onLikeToggle={() => handleLikeToggle(post.id, false)} 
                           onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} 
                           onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)} 
                           onDelete={handlePostDelete} 
-                          onImageError={() => handleImageError(post.id)} 
                         />
                       </div>
-                    ))}</div>) : (<div className="grid grid-cols-3 gap-1 px-6">{(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (<div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}><img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} /></div>))}{myPosts.length === 0 && !isDataLoading && (<div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>)}</div>)}</>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 px-6">
+                    {savedPosts.map((post) => (
+                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}>
+                        <img src={post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" onError={() => handleImageError(post.id)} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

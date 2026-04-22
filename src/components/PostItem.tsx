@@ -1,25 +1,40 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
 import { handleBrokenImage } from '@/lib/mock-data';
-import { Heart, MapPin, MessageCircle, Share2, MoreHorizontal, Navigation, Utensils, Car, TreePine, PawPrint, Send, ChevronDown, ChevronUp, Bookmark, ShoppingBag, AlertCircle, Ban, Trash2, Play, ExternalLink } from 'lucide-react';
+import { 
+  Heart, 
+  MessageCircle, 
+  Share2, 
+  Bookmark, 
+  MoreHorizontal, 
+  Navigation, 
+  Send, 
+  ChevronDown, 
+  ChevronUp,
+  Trash2,
+  AlertCircle,
+  Ban,
+  MapPin,
+  ShoppingBag
+} from 'lucide-react';
 import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { showSuccess, showError } from '@/utils/toast';
-import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
+import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
@@ -36,7 +51,10 @@ interface PostItemProps {
 
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: authUser, session } = useAuth();
+  const { blockUser } = useBlockedUsers();
+  const [profile, setProfile] = useState<any>(null);
+  
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(post.comments || []);
@@ -51,6 +69,24 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { user, content, isAd } = post;
+  const isMine = authUser?.id === user.id;
+
+  // 프로필 정보 가져오기
+  useEffect(() => {
+    if (authUser?.id) {
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single();
+        if (data) setProfile(data);
+      };
+      fetchProfile();
+    }
+  }, [authUser]);
 
   // Intersection Observer to track visibility
   useEffect(() => {
@@ -141,41 +177,40 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     e?.preventDefault();
     if (!commentInput.trim() || !authUser) return;
     setIsSubmittingComment(true);
+
     const newCommentText = commentInput.trim();
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    
     try {
-      const savedComment = await insertComment({
+      const newComment = {
         postId: post.id,
         userId: authUser.id,
         userName: displayName,
         userAvatar: profile?.avatar_url,
         content: newCommentText,
-      });
-      setLocalComments((prev) => [...prev, savedComment]);
+      };
+
+      setLocalComments(prev => [...prev, { user: displayName, text: newCommentText }]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
-    } catch (err: any) {
-      showError(err.message || '댓글 등록에 실패했습니다.');
-    } finally { setIsSubmittingComment(false); }
+    } catch (err) {
+      showError('댓글 등록에 실패했습니다.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
+
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const renderCategoryBadge = () => {
     const category = post.category || 'none';
-    if (category === 'none') return null;
-    let Icon = null; let bgColor = ""; let label = "";
-    switch (category) {
-      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
-      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
-      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
-      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
-    }
-    if (!Icon) return null;
-    return (
-      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-[10px] font-black">{label}</span>
-      </div>
-    );
+    const badges: Record<string, JSX.Element> = {
+      food: <div className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> 맛집</div>,
+      place: <div className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1"><MapPin className="w-3 h-3" /> 장소</div>,
+      animal: <div className="bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">🐾 반려동물</div>,
+      none: <></>
+    };
+    return badges[category] || badges.none;
   };
 
   return (
