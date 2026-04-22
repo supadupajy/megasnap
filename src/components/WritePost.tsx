@@ -485,7 +485,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       return { ...m, crop: { x: newX, y: newY } };
     }));
 
-    setDragStart({ x: clientX, y: clientY });
+    dragStartRef.current = { x: clientX, y: clientY };
   });
 }}
                                       />
