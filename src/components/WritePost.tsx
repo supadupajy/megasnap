@@ -386,41 +386,34 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       </div>
                     </div>
 
-                    {/* ✅ Fix: flex-1 + h-full 중첩 제거 → 명시적 고정 높이 h-[300px] 사용 */}
-                    {mediaFiles.length > 0 && (
-                      <div className="relative w-full h-[300px] shrink-0">
+                    <div className="flex-1 min-h-0 mb-2 relative rounded-2xl overflow-hidden border border-gray-100 bg-white">
+                      {mediaFiles.length > 0 ? (
                         <Carousel 
                           setApi={setApi}
-                          className="w-full h-full"
+                          className="w-full h-full" 
                           opts={{ 
                             align: "start", 
                             containScroll: "trimSnaps",
                             watchDrag: !isDragging
                           }}
                         >
-                          <CarouselContent className="-ml-0 h-[300px]">
+                          <CarouselContent className="h-full ml-0">
                             {mediaFiles.map((media, idx) => (
-                              <CarouselItem key={idx} className="pl-0 basis-full h-[300px]">
-                                <div className="relative w-full h-[300px] rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
+                              <CarouselItem key={`${media.url}-${idx}`} className="h-full pl-0">
+                                <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white">
                                   {media.type === 'image' ? (
-                                    <div className="w-full h-full relative bg-gray-50 flex items-center justify-center overflow-hidden">
+                                    <div className="w-full h-full relative">
                                       <img 
                                         src={media.url} 
                                         alt={`Preview ${idx}`} 
-                                        className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
+                                        className="absolute inset-0 w-full h-full object-cover z-10"
                                         style={{ 
-                                          width: '100%', 
-                                          height: 'auto',
                                           transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                        }}
-                                        onLoad={(e) => {
-                                          const img = e.target as HTMLImageElement;
-                                          console.log('[WritePost] Image Fit-to-Width:', img.naturalWidth, '-> 100%');
                                         }}
                                       />
                                       {/* 드래그 핸들러 */}
                                       <div 
-                                        className="absolute inset-0 z-20 cursor-move touch-none bg-transparent active:cursor-grabbing"
+                                        className="absolute inset-0 z-30 cursor-move touch-none bg-transparent"
                                         onPointerDown={(e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
@@ -435,7 +428,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           const containerWidth = target.clientWidth;
                                           const containerHeight = target.clientHeight;
                                           
-                                          // 현재 이미지의 실제 표시 높이 계산 (가로 100% 기준)
                                           const imgElement = target.previousElementSibling as HTMLImageElement;
                                           if (!imgElement) return;
                                           
@@ -446,23 +438,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                           
                                           setMediaFiles(prev => prev.map((m, i) => {
                                             if (i !== idx) return m;
-                                            
-                                            // 새로운 위치 계산
-                                            let newX = (m.crop?.x || 0) + deltaX;
                                             let newY = (m.crop?.y || 0) + deltaY;
-                                            
-                                            // 가로 고정 (width 100%이므로 좌우 이동 차단)
-                                            newX = 0; 
-                                            
-                                            // 세로 범위 제한 (이미지가 컨테이너보다 클 때만)
                                             if (displayedImgHeight > containerHeight) {
                                               const maxAbsY = (displayedImgHeight - containerHeight) / 2;
                                               newY = Math.max(-maxAbsY, Math.min(maxAbsY, newY));
                                             } else {
-                                              newY = 0; // 이미지가 컨테이너보다 작으면 이동 차단
+                                              newY = 0;
                                             }
-                                            
-                                            return { ...m, crop: { x: newX, y: newY } };
+                                            return { ...m, crop: { x: 0, y: newY } };
                                           }));
                                           
                                           setDragStart({ x: e.clientX, y: e.clientY });
@@ -486,7 +469,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   )}
                                   <button
                                     onClick={() => removeMedia(idx)}
-                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
+                                    className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-[100]"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -515,8 +498,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             </>
                           )}
                         </Carousel>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                            <ImageIcon className="w-8 h-8 text-gray-200" />
+                          </div>
+                          <p className="text-sm font-black text-gray-300 tracking-tighter">
+                            미리보기 영역
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div 
