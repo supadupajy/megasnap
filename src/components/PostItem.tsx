@@ -109,14 +109,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // 첫 번째 항목은 초기 상태에서 즉시 감지되도록 함
         setIsVisible(entry.isIntersecting);
       },
       {
-        // [FIX] 인식 구간을 더 좁게 설정하여 두 영상이 동시에 재생되는 현상 방지
-        // 화면의 80% 이상이 보여야만 재생되도록 하여 중앙에 위치한 영상에 집중
-        threshold: 0.8, 
-        rootMargin: '-10% 0px -10% 0px' // 상하단 10% 영역은 무시하여 더 중앙에 위치할 때만 재생
+        // [FIX] 감지 수치 최적화
+        // threshold를 0.5로 낮추어 절반만 보여도 재생을 시도하되,
+        // rootMargin을 통해 화면 중앙 근처(상하단 25% 제외)에서만 활성화되도록 하여 
+        // 겹침 방지와 재생 반응성 사이의 균형을 맞춤
+        threshold: 0.5, 
+        rootMargin: '-25% 0px -25% 0px' 
       }
     );
 
