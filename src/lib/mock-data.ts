@@ -159,6 +159,21 @@ const ANIMAL_UNSPLASH_IDS_RAW = [
   "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
 ];
 
+export const cityThemes: Record<string, string[]> = {
+  seoul: ["photo-1503899036084-c55cdd92da26", "photo-1540959733332-eab4deabeeaf", "photo-1538332576228-eb5b4c4de6f5", "photo-1535223289827-42f1e9919769"],
+  busan: ["photo-1546271876-af3ef285b470", "photo-1516450360452-9312f5e86fc7", "photo-1514933651103-005eec06c04b", "photo-1441974231531-c6227db76b6e"],
+  food: ["photo-1504674900247-0877df9cc836", "photo-1546069901-ba9599a7e63c", "photo-1567620905732-2d1ec7bb7445", "photo-1467003909585-2f8a72700288"],
+  general: ["photo-1501785888041-af3ef285b470", "photo-1470071459604-3b5ec3a7fe05", "photo-1506744038136-46273834b3fb", "photo-1511497584788-915e57d2c9c5"]
+};
+
+// [FIX] 고장난 이미지 ID 제거 및 안전한 이미지 목록으로 교체
+export const placeImages = [
+  "photo-1506744038136-46273834b3fb", "photo-1518717758241-b8497f81b10c", "photo-1517849845537-4d257902454a",
+  "photo-1516979187457-637abb4f9356", "photo-1514888673529-525381262790", "photo-1517331156700-3c241d2b4d80",
+  "photo-1510414842594-a61c69b5ae57", "photo-1519046904884-53103b34b206", "photo-1533105079780-92b9be482077",
+  "photo-1501183638710-841dd1904471", "photo-1515238152791-8216bfdf89a7", "photo-1510414842594-a61c69b5ae57",
+];
+
 export const UNSPLASH_IDS = buildUniquePool(GENERAL_UNSPLASH_IDS_RAW);
 export const FOOD_UNSPLASH_IDS = buildUniquePool(FOOD_UNSPLASH_IDS_RAW);
 export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW);
