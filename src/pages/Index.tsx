@@ -120,6 +120,15 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(rawPost);
       const isAd = p.content?.trim().startsWith('[AD]');
       
+      const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+      
+      // [FIX] 'Post content' 등의 가짜 데이터 원천 필터링 로직 추가
+      const isValidUrl = (url: any) => {
+        if (!url || typeof url !== 'string') return false;
+        const clean = url.trim();
+        return clean.startsWith('http') && !/post\s*content/i.test(clean);
+      };
+
       // ✅ [수정] 강제로 특정 테두리가 생기지 않도록 보정
       let borderType: any = isAd ? 'none' : getTierFromId(p.id);
       
@@ -129,7 +138,16 @@ const Index = () => {
 
       let finalImage = null;
       if (p.youtube_url) finalImage = getYoutubeThumbnail(p.youtube_url);
-      else if (p.image_url && (p.image_url.startsWith('http') || p.image_url.startsWith('data:'))) finalImage = p.image_url;
+      else {
+        // [FIX] 가짜 텍스트("Post content") 필터링 적용
+        finalImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+      }
+
+      // images 배열 필터링
+      const validImages = Array.isArray(p.images) 
+        ? p.images.filter(isValidUrl) 
+        : (isValidUrl(p.image_url) ? [p.image_url] : [SAFE_FALLBACK]);
+
       return {
         id: p.id,
         isAd,
@@ -144,7 +162,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
-        images: p.images || (finalImage ? [finalImage] : []), // ✅ [중요] 상세 페이지용 images 배열 명시적 매핑
+        images: validImages.length > 0 ? validImages : [SAFE_FALLBACK], // ✅ [수정] 깨진 이미지 필터링된 배열 사용
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
