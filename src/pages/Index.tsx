@@ -675,12 +675,24 @@ const Index = () => {
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
-    setAllPosts(prev => [newPost, ...prev]);
-    setDisplayedMarkers(prev => [newPost, ...prev]);
+    // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가 (MapContainer에서 사용)
+    const postWithEffect = { ...newPost, isNewRealtime: true };
+    
+    setAllPosts(prev => [postWithEffect, ...prev]);
+    setDisplayedMarkers(prev => [postWithEffect, ...prev]);
+    
     if (newPost.lat && newPost.lng) {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-      // ✅ 글쓰기 완료 후에도 5단계 유지
       setCurrentZoom(5);
+
+      // [FIX] 내가 쓴 글 등록 시에도 폭죽 효과 발사
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444'],
+        zIndex: 15000
+      });
     }
     setIsWriteOpen(false);
   };
