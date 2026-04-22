@@ -35,9 +35,46 @@ interface PostItemProps {
 }
 
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const [commentInput, setCommentInput] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [localComments, setLocalComments] = useState(post.comments || []);
+  const [showComments, setShowComments] = useState(false);
+  const [isLiked, setIsLiked] = useState(post.isLiked);
+  const [isSaved, setIsSaved] = useState(post.isSaved || false);
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isNewRealtime, setIsNewRealtime] = useState(post.isNewRealtime || false);
   const [imgError, setImgError] = useState(false);
   const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer to track visibility
+  useEffect(() => {
+    if (!autoPlayVideo) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.6, // 60% of the item must be visible to play
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current);
+      }
+    };
+  }, [autoPlayVideo]);
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
@@ -69,26 +106,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setCurrentImage(post.image_url || post.image || getFallbackImage());
     setImgError(false);
   }, [post.image_url, post.image]);
-
-  const [showComments, setShowComments] = useState(false);
-  const [isSaved, setIsSaved] = useState(post.isSaved || false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [commentInput, setCommentInput] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [localComments, setLocalComments] = useState<Comment[]>(post.comments || []);
-  
-  const { user: authUser, profile } = useAuth();
-  const { blockUser } = useBlockedUsers();
-  const navigate = useNavigate();
-
-  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-  const isAd = post.isAd;
-  const displayImage = imgError ? getFallbackImage(post.id) : post.image;
-  const isLiked = post.isLiked;
-  const likesCount = post.likes;
-  const content = post.content;
-  const user = post.user;
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,6 +180,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   return (
     <motion.div 
+      ref={containerRef}
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -201,7 +219,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         {videoId ? (
           <div className="w-full h-full">
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=${autoPlayVideo ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=${(autoPlayVideo && isVisible) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`}
               className="w-full h-full object-cover"
               allow="autoplay; encrypted-media"
               allowFullScreen
