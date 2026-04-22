@@ -99,35 +99,27 @@ const Profile = () => {
     // Reset fetch ref to allow re-fetching when needed
     setIsDataLoading(true);
     try {
-      // 1. Fetch My Posts with LIMIT to prevent timeout
-      const { data: myData, error: myPostsError } = await supabase
+      // 1. Fetch My Posts
+      // [FIX] statement timeout 해결을 위해 쿼리 구조를 가장 단순하게 변경
+      let myData: any[] = [];
+      const { data, error: myPostsError } = await supabase
         .from('posts')
         .select('*')
         .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(100); // [FIX] Limit data to prevent statement timeout
+        .limit(50); // 정렬 제외하고 데이터만 먼저 가져옴
 
       if (myPostsError) {
         console.error('[Profile] My Posts fetch error:', myPostsError);
-        // Fallback without sorting if sorting is the bottleneck
-        if (myPostsError.code === '57014') {
-          const { data: fallbackData } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('user_id', uid)
-            .limit(50);
-          
-          if (fallbackData) {
-            const formattedFallback = await Promise.all(fallbackData.map(mapDbToPost));
-            setMyPosts(formattedFallback);
-          }
-        }
       } else {
-        const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
-        setMyPosts(formattedMyPosts);
+        myData = data || [];
+        // 클라이언트 사이드 정렬로 서버 부하 분산
+        myData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
+      
+      const formattedMyPosts = await Promise.all(myData.map(mapDbToPost));
+      setMyPosts(formattedMyPosts);
 
-      // 2. Fetch Saved Posts with LIMIT
+      // 2. Fetch Saved Posts
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select(`
@@ -135,11 +127,12 @@ const Profile = () => {
           posts:posts (*)
         `)
         .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(50); // [FIX] Limit saved posts
+        .limit(30);
 
-      if (savedError) throw savedError;
-
+      if (savedError) {
+        console.error('[Profile] Saved Posts fetch error:', savedError);
+      }
+      
       if (savedData) {
         // Extract the nested post objects and format them
         const validPosts = savedData
