@@ -47,44 +47,34 @@ const Profile = () => {
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
-    if (val < 0.01) return 'diamond';
-    if (val < 0.03) return 'gold';
-    if (val < 0.07) return 'silver';
-    if (val < 0.15) return 'popular';
+    if (val < 0.05) return 'diamond';
+    if (val < 0.15) return 'gold';
+    if (val < 0.30) return 'silver';
+    if (val < 0.50) return 'popular';
     return 'none';
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
+    const isAd = p.content?.trim().startsWith('[AD]');
+    const isMine = authUser && p.user_id === authUser.id;
+    
+    // [FIX] 테두리 결정 로직 동기화
+    let borderType: any = 'none';
+    if (!isMine && !isAd) {
+      borderType = getTierFromId(p.id);
+    }
+
+    const sanitized = await sanitizeYoutubeMedia(p);
+    
+    // [FIX] 'Post content' 등의 가짜 데이터 원천 필터링
+    const isValidUrl = (url: any) => {
+      if (typeof url !== 'string') return false;
+      const clean = url.trim();
+      return clean.startsWith('http') && !/post\s*content/i.test(clean);
+    };
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
-    const isValidUrl = (url: any) => {
-      if (!url || typeof url !== 'string') return false;
-      const clean = url.trim();
-      // [FINAL FIX] 어떤 변형이든 'post content'가 들어있거나 http로 시작하지 않으면 무조건 배제
-      if (/post\s*content/i.test(clean)) return false;
-      if (!clean.startsWith('http')) return false;
-      return true;
-    };
-
-    // [핵심] 원본 데이터(p.image_url, p.images)를 신뢰하지 않고 여기서 즉시 강제 필터링
-    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
-    let rawImages = Array.isArray(p.images) && p.images.length > 0 
-      ? p.images.filter(isValidUrl)
-      : [];
-      
-    if (rawImages.length === 0) rawImages = [rawImage];
-
-    // 정제된 데이터를 바탕으로 sanitize 진행
-    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
-    const isAd = sanitized.content?.trim().startsWith('[AD]');
-    const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
-    
-    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
-    
-    if (finalImage.includes('unsplash.com')) {
-      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
-    }
-    
+    let finalImage = sanitized.image_url;
     let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
       ? sanitized.images.filter(isValidUrl)
       : [finalImage];
@@ -102,12 +92,13 @@ const Profile = () => {
     }
 
     return {
-      id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      id: sanitized.id, isAd, isGif: false, 
+      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
       likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
       image: finalImage, 
-      images: finalImages.length > 0 ? finalImages : [finalImage], 
+      images: finalImages, 
       youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
       isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType
     };
@@ -140,7 +131,7 @@ const Profile = () => {
       // 2. Fetch Saved Posts
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
-        .select(`
+        .select(``
           post_id,
           posts:posts (*)
         `)
