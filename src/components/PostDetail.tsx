@@ -180,6 +180,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   // [FIX] isAd 변수 선언을 useMemo(displayImages) 보다 위로 이동
   const isAd = currentPost?.isAd || false;
+  const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
+
+  const handleAdClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
+  };
 
   // [FIX] displayImages 변수 선언 (기존 코드에서 누락된 부분 복구)
   const displayImages = useMemo(() => {
@@ -447,7 +453,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                       <img
                                         src={img}
                                         alt="Advertisement"
-                                        className="w-full h-full object-cover"
+                                        className={cn(
+                                          "w-full h-full object-cover",
+                                          img === COCA_COLA_AD && "cursor-pointer"
+                                        )}
                                         draggable={false}
                                       />
                                       <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
@@ -462,6 +471,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                     key={index}
                                     className="w-full h-full shrink-0 snap-center relative"
                                     style={{ scrollSnapStop: 'always' }}
+                                    onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
                                   >
                                     <img
                                       src={img}

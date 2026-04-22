@@ -43,6 +43,7 @@ import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
 
 interface PostItemProps {
   post: Post;
@@ -90,7 +91,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   }, [autoPlayVideo]);
 
   const { user, content, isAd } = post;
-  const isMine = authUser?.id === user.id;
+  
+  const handleAdClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
+  };
 
   // 프로필 정보 가져오기
   useEffect(() => {
@@ -352,11 +357,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               onScroll={handleImageScroll}
             >
               {displayImages.map((img, index) => (
-                <div key={index} className="w-full h-full shrink-0 snap-center relative">
+                <div 
+                  key={index} 
+                  className="w-full h-full shrink-0 snap-center relative"
+                  onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
+                >
                   <img
                     src={img}
                     alt={`Content ${index}`}
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover",
+                      img === COCA_COLA_AD && "cursor-pointer"
+                    )}
                     onError={handleImageError}
                   />
                   {img === COCA_COLA_AD && (
