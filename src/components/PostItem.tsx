@@ -319,10 +319,21 @@ const PostItem = ({
       )}
     >
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-2 border-white" onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE} /></div>
+          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+            <img
+              src={isMine && profile?.avatar_url ? profile.avatar_url : user.avatar}
+              alt={isMine && profile?.nickname ? profile.nickname : user.name}
+              className="w-full h-full rounded-full object-cover border-2 border-white"
+              onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGE}
+            />
+          </div>
           <div>
-            <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
+                {isMine && profile?.nickname ? profile.nickname : user.name}
+              </p>
+              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+            </div>
             <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{location}</span></div>
           </div>
         </div>

@@ -249,7 +249,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         image_url: finalImageUrl,
         images: uploadedUrls,
         user_id: authUser.id,
-        user_name: displayName,
+        user_name: profile?.nickname || authUser.email?.split('@')[0] || '탐험가',
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
         likes: 0,
         category: selectedCategory,

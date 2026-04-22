@@ -70,7 +70,9 @@ const Profile = () => {
       }
     }
     
-    // Check if liked and saved by current user
+    // [FIX] 프로필 정보 실시간 동기화: DB에 저장된 user_avatar/user_name 대신 profiles 테이블과 조인하여 최신 정보를 가져올 수도 있지만,
+    // 현재는 트리거로 DB를 업데이트했으므로 클라이언트 캐시를 방지하기 위해 쿼리 시점의 데이터를 신뢰합니다.
+    // 만약 여전히 옛날 이미지가 보인다면 브라우저 캐시 이슈일 수 있으므로 URL 뒤에 타임스탬프를 붙이는 처리를 고려할 수 있습니다.
 
     let isLiked = false;
     let isSaved = false;
