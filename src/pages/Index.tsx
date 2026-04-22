@@ -145,7 +145,7 @@ const Index = () => {
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       
-      // [FIX] 확률 기반 인플루언서 티어 할당 로직
+      // [FIX] 확률 조정: 다이아몬드(3%)와 골드(5%)로 상향
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       if (!isAd) {
         // ID 해시를 사용하여 고정된 확률값 생성
@@ -154,9 +154,8 @@ const Index = () => {
         for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
         const val = Math.abs(h % 1000) / 1000;
         
-        if (val < 0.01) borderType = 'diamond';      // 1%
-        else if (val < 0.04) borderType = 'gold';    // 3%
-        // 실버(val < 0.09) 구간 삭제
+        if (val < 0.03) borderType = 'diamond';      // 3%
+        else if (val < 0.08) borderType = 'gold';    // 5% (0.03 + 0.05)
       }
       
       // 작성자 프로필 정보 별도 조회
