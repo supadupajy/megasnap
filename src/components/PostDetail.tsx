@@ -192,6 +192,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     } finally { setIsSubmittingComment(false); }
   };
 
+  // [강력 조치] 핸들러를 컴포넌트 최상단에 정의
+  const handleAdClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetUrl = post.image?.includes('nike') || post.content?.includes('나이키') 
+      ? "https://www.nike.com/kr/" 
+      : "https://www.coca-cola.co.kr/";
+    
+    console.log('[PostDetail] Ad banner clicked, opening:', targetUrl);
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
   if (!isOpen || posts.length === 0) return null;
   const post = posts[currentIndex];
   if (!post) return null;
@@ -337,14 +349,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const mediaBorderContainerClass = getMediaBorderContainerClass();
   const hasMediaBorder = mediaBorderContainerClass !== '';
 
-  // [강력 조치] 캐러셀 외부에서도 이벤트를 캐치할 수 있도록 핸들러 분리
-  const handleAdClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('[PostDetail] Ad banner clicked, opening:', adLink);
-    window.open(adLink, '_blank', 'noopener,noreferrer');
-  };
-
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
@@ -414,7 +418,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     </div>
                   </div>
                   <div className="px-4">
-                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl group">
+                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                       {youtubeId ? (
                         <div className="w-full h-full relative">
                           <iframe
@@ -442,51 +446,45 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                           <Carousel 
                             className="w-full h-full" 
                             opts={{ dragFree: false, loop: true }}
-                            onSelect={(api) => setCurrentImageIndex(api.selectedScrollSnap())}
                           >
-                            <CarouselContent>
+                            <CarouselContent className="ml-0">
                               {displayImages.map((img, index) => {
                                 const isThisAdSlide = index === 1;
                                 
                                 return (
-                                  <CarouselItem key={index} className="relative">
+                                  <CarouselItem key={index} className="pl-0 relative">
                                     <div className="relative aspect-square w-full">
                                       <img
                                         src={img}
                                         alt={`Post content ${index + 1}`}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover pointer-events-none"
+                                        style={{ transform: 'none' }} // 확대 효과 방지
                                         draggable={false}
                                       />
                                       {isThisAdSlide && (
-                                        <>
-                                          {/* 투명한 클릭 레이어를 최상단(z-[9999])에 배치 */}
-                                          <div 
-                                            onClick={handleAdClick}
-                                            className="absolute inset-0 z-[9999] cursor-pointer bg-transparent active:bg-black/10 transition-colors"
-                                          />
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[10000] pointer-events-none">
+                                        <div 
+                                          onPointerDown={(e) => {
+                                            // 캐러셀의 드래그 이벤트를 막고 직접 팝업 실행
+                                            e.stopPropagation();
+                                            const targetUrl = post.image?.includes('nike') || post.content?.includes('나이키') 
+                                              ? "https://www.nike.com/kr/" 
+                                              : "https://www.coca-cola.co.kr/";
+                                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                                          }}
+                                          className="absolute inset-0 z-[99999] cursor-pointer"
+                                          style={{ touchAction: 'none' }}
+                                        >
+                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[100000] pointer-events-none">
                                             <ExternalLink className="w-3.5 h-3.5" />
-                                            <span className="font-bold">{adLabel}</span>
+                                            <span className="font-bold">AD</span>
                                           </div>
-                                        </>
+                                        </div>
                                       )}
                                     </div>
                                   </CarouselItem>
                                 );
                               })}
                             </CarouselContent>
-                            {displayImages.length > 1 && (
-                              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
-                                {displayImages.map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                                      currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            )}
                           </Carousel>
                         </div>
                       )}
