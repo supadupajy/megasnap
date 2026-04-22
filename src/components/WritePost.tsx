@@ -394,7 +394,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             <div 
   className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
   style={{
-  paddingBottom: keyboardHeight > 0 ? '80px' : '100px'
+  paddingBottom: '16px'
 }}
 >
               <AnimatePresence mode="wait">
