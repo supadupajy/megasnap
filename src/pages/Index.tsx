@@ -37,11 +37,8 @@ const Index = () => {
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
-  const [mapData, setMapData] = useState<{
-    bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
-    center: { lat: number; lng: number };
-    level: number;
-  } | null>(null);
+  const [mapData, setMapData] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   // ✅ 5단계를 명시적으로 디폴트 설정 (기존 캐시 무시하도록 강제 가능)
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
   
@@ -347,11 +344,28 @@ const Index = () => {
   }, [mapData, currentZoom]);
 
   const handleMapChange = useCallback((data: any) => {
-    setMapData(data);
-    // mapCache 업데이트
-    mapCache.lastCenter = data.center;
-    mapCache.lastZoom = data.level;
-  }, []);
+    if (!isSelectingLocation) { setFinalSelectedLocation(null); postDraftStore.clear(); }
+    const zoomChanged = data.level !== undefined && data.level !== currentZoom;
+    if (zoomChanged) {
+      if (throttleTimer.current) clearTimeout(throttleTimer.current);
+      setMapData(data);
+      setCurrentZoom(data.level);
+      mapCache.lastCenter = data.center;
+      mapCache.lastZoom = data.level;
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      setFinalSelectedLocation(null);
+      setTimeout(() => { syncPostsWithSupabase(data.bounds, data.level); }, 50);
+      return;
+    }
+    if (throttleTimer.current) return;
+    throttleTimer.current = setTimeout(() => {
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+      if (data.level !== undefined) { setCurrentZoom(data.level); mapCache.lastZoom = data.level; }
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      throttleTimer.current = null;
+    }, 100); 
+  }, [isSelectingLocation, currentZoom, syncPostsWithSupabase]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
