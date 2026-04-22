@@ -319,7 +319,7 @@ export const seedInBoundsPosts = async (
     const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').limit(10);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, avatar_url: null }];
 
-    const count = 15;
+    const count = 10;
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
