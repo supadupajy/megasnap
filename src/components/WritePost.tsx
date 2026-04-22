@@ -76,13 +76,17 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const unsubscribe = postDraftStore.subscribe(() => {
       const currentDraft = postDraftStore.get();
       setDraft(currentDraft);
-      if (!currentDraft.image && !currentDraft.content) {
-        setMediaFiles([]);
+      
+      // ✅ [중요] 드래프트가 완전히 비워졌을 때만 1페이지로 리셋
+      // 키보드가 올라오면서 발생하는 리렌더링 시에는 페이지를 유지해야 함
+      if (!currentDraft.image && !currentDraft.content && mediaFiles.length === 0) {
         setCurrentPage(1);
       }
     });
-    return () => { unsubscribe(); };
-  }, []);
+    return () => {
+      unsubscribe();
+    };
+  }, [mediaFiles.length]); // mediaFiles 길이 변화 감지 추가
 
   useEffect(() => {
     if (!api) return;
@@ -635,16 +639,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     </div>
 
                     {/* 내용 입력 */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    <div className="space-y-2 flex-1 flex flex-col min-h-0 mb-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 shrink-0">
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
-                      <Textarea
+                      <Textarea 
                         placeholder="이 장소에서의 추억을 기록해보세요..."
-                        className="h-[160px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium"
+                        className="flex-1 min-h-0 border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
                         onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.stopPropagation()}
                       />
                     </div>
                   </motion.div>
