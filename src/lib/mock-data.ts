@@ -186,7 +186,10 @@ export const ACCIDENT_UNSPLASH_IDS = buildUniquePool(ACCIDENT_UNSPLASH_IDS_RAW).
 export const PLACE_UNSPLASH_IDS = buildUniquePool(PLACE_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 export const ANIMAL_UNSPLASH_IDS = buildUniquePool(ANIMAL_UNSPLASH_IDS_RAW).filter(id => !BLACKLIST_IDS.includes(id));
 
-export const getUnsplashUrl = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
+export const getUnsplashUrl = (id: string) => {
+  const finalId = BLACKLIST_IDS.includes(id) ? "photo-1506744038136-46273834b3fb" : id;
+  return `https://images.unsplash.com/${finalId}?auto=format&fit=crop&w=800&q=80`;
+};
 
 export const isUnsplashImageUrl = (url?: string | null) =>
   typeof url === 'string' && url.includes('images.unsplash.com');

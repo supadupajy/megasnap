@@ -151,9 +151,11 @@ const Index = () => {
         if (!url || typeof url !== 'string') return HIGH_RES_FALLBACK + "&sig=" + p.id;
         
         const clean = url.trim();
-        // 배열(some) 기반 체크 및 기본 유효성 검사
-        if (BROKEN_IDS.some(id => clean.includes(id)) || !clean.startsWith('http') || /post\s*content/i.test(clean)) {
-          console.log('[Sanitize] Blocking broken or dummy URL:', clean);
+        // [FIX] 블랙리스트 ID 강제 차단 (photo-1506057585508-85603cee9e17 포함)
+        const BLACKLIST_ID = "photo-1506057585508-85603cee9e17";
+        
+        if (clean.includes(BLACKLIST_ID) || BROKEN_IDS.some(id => clean.includes(id)) || !clean.startsWith('http') || /post\s*content/i.test(clean)) {
+          console.log('[Sanitize] Blocking blacklisted, broken or dummy URL:', clean);
           return HIGH_RES_FALLBACK + "&sig=" + p.id;
         }
 
