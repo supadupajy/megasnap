@@ -161,7 +161,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     setImgErrors(prev => ({ ...prev, [postId]: true }));
   };
 
-  const displayImage = imgErrors[currentPost.id] ? getFallbackImage(currentPost.id) : (currentPost.image || getFallbackImage(currentPost.id));
+  if (!currentPost) return null;
+
+  // [CRITICAL FIX] 이미지 URL 유효성 검사 강화
+  const isDummyUrl = (url: any) => {
+    if (!url || typeof url !== 'string') return true;
+    return url.length < 10 || /post\s*content/i.test(url) || !url.startsWith('http');
+  };
+
+  const displayImage = (imgErrors[currentPost.id] || isDummyUrl(currentPost.image)) 
+    ? getFallbackImage(currentPost.id) 
+    : currentPost.image;
 
   // [FIX] isAd 변수 선언을 useMemo(displayImages) 보다 위로 이동
   const isAd = currentPost?.isAd || false;
