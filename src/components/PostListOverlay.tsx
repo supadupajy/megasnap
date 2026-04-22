@@ -140,12 +140,13 @@ const PostListOverlay = ({
                   post={post}
                   onLikeToggle={() => {}}
                   onLocationClick={(e, lat, lng) => {
-                    onClose();
-                    // Index.tsx의 focusPostOnMap이 동작하도록 이벤트 발생
+                    // REMOVED: onClose(); - 이미지를 눌러도 닫히지 않도록 수정
+                    // 위치보기 버튼 클릭 시에만 닫고 싶다면 여기에 별도 로직 유지 가능
+                    // 하지만 사용자 요청에 따라 "우측 상단 내리기 버튼 제외하고는 닫히지 않도록" 함
                     window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                   }}
                   onDelete={(id) => onDeletePost?.(id)}
-                  autoPlayVideo={true} // 리스트에서 자동 재생 활성화
+                  autoPlayVideo={true}
                 />
               </div>
             ))}
