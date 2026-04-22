@@ -461,8 +461,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const container = e.currentTarget.parentElement;
 
   rafRef.current = requestAnimationFrame(() => {
-    const deltaX = clientX - dragStart.x;
-    const deltaY = clientY - dragStart.y;
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
 
     setMediaFiles(prev => prev.map((m, i) => {
       if (i !== idx) return m;
