@@ -316,7 +316,7 @@ export const seedGangnamSpecialPosts = async (currentUserId: string) => {
     const { data: profiles } = await supabase.from('profiles').select('id').limit(10);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId }];
 
-    // 강남 및 그 주변(반포, 잠실, 한남 등) 확장 좌표
+    // 강남 및 그 주변 확장 좌표
     const gangnamSpots = [
       { name: "강남역", lat: 37.4979, lng: 127.0276 },
       { name: "압구정 로데오", lat: 37.5273, lng: 127.0391 },
@@ -334,7 +334,7 @@ export const seedGangnamSpecialPosts = async (currentUserId: string) => {
       { name: "신사역 5번출구", lat: 37.5160, lng: 127.0190 },
       { name: "학동역 가구거리", lat: 37.5140, lng: 127.0320 },
       { name: "언주역 언덕", lat: 37.5070, lng: 127.0340 },
-      { name: "성수동 카페거리", lat: 37.5445, lng: 127.0560 }, // 인근 지역 확장
+      { name: "성수동 카페거리", lat: 37.5445, lng: 127.0560 },
       { name: "매봉 산책길", lat: 37.4860, lng: 127.0420 },
       { name: "교대 법조타운", lat: 37.4930, lng: 127.0140 },
       { name: "대치 학원가", lat: 37.4940, lng: 127.0590 }
@@ -345,20 +345,25 @@ export const seedGangnamSpecialPosts = async (currentUserId: string) => {
       const isYoutube = i % 2 === 0;
       const category = CATEGORIES[i % CATEGORIES.length];
       
+      const imageSeed = `gangnam_special_${i}_${Date.now()}`; // [FIX] Seed를 더 고유하게 변경
+      
       let finalYoutubeUrl = null;
       let finalImage = "";
 
       if (isYoutube) {
         finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(i);
-        finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getDiverseUnsplashUrl(`gangnam:${i}`, category);
+        finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getDiverseUnsplashUrl(imageSeed, category);
       } else {
-        finalImage = getDiverseUnsplashUrl(`gangnam:${i}`, category);
+        finalImage = getDiverseUnsplashUrl(imageSeed, category);
       }
+
+      // [DEBUG] 생성되는 이미지 URL 확인
+      console.log(`[Seeder] Gangnam Special Image: ${finalImage}`);
 
       return {
         content: REALISTIC_COMMENTS[i % REALISTIC_COMMENTS.length],
         location_name: `서울시 강남구 ${spot.name} 인근`,
-        latitude: spot.lat + (Math.random() - 0.5) * 0.002, // 미세한 랜덤 오차
+        latitude: spot.lat + (Math.random() - 0.5) * 0.002,
         longitude: spot.lng + (Math.random() - 0.5) * 0.002,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
