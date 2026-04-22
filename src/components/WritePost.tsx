@@ -407,47 +407,57 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   style={{ height: `${PREVIEW_HEIGHT}px` }}
                                 >
                                   {media.type === 'image' ? (
-                                    <>
-                                      {/* ✅ 핵심: object-cover + translate transform으로 단순하게 */}
-                                      <img
-                                        src={media.url}
-                                        alt={`Preview ${idx + 1}`}
-                                        draggable={false}
-                                        className="w-full h-full select-none pointer-events-none"
-                                        style={{
-                                          objectFit: 'cover',
-                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                          transition: isDragging ? 'none' : 'transform 0.05s linear',
-                                          display: 'block',
-                                        }}
-                                      />
-                                      {/* 드래그 오버레이 */}
-                                      <div
-                                        className="absolute inset-0 z-10 cursor-move touch-none"
-                                        onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          setIsDragging(true);
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                                        }}
-                                        onPointerMove={(e) => {
-                                          if (!isDragging) return;
-                                          const deltaX = e.clientX - dragStart.x;
-                                          const deltaY = e.clientY - dragStart.y;
-                                          setMediaFiles(prev => prev.map((m, i) =>
-                                            i === idx
-                                              ? { ...m, crop: { x: (m.crop?.x || 0) + deltaX, y: (m.crop?.y || 0) + deltaY } }
-                                              : m
-                                          ));
-                                          setDragStart({ x: e.clientX, y: e.clientY });
-                                        }}
-                                        onPointerUp={(e) => {
-                                          setIsDragging(false);
-                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-                                        }}
-                                        onPointerCancel={() => setIsDragging(false)}
-                                      />
-                                    </>
+                                    <div className="w-full h-full relative p-3">
+                                      <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-black flex items-center justify-center">
+                                        <img 
+                                          src={media.url} 
+                                          alt={`Preview ${idx}`} 
+                                          className="block max-w-none max-h-none select-none pointer-events-none z-10"
+                                          style={{ 
+                                            position: 'absolute',
+                                            top: '50%',
+                                            left: '50%',
+                                            width: 'auto',
+                                            height: 'auto',
+                                            minWidth: '100%',
+                                            minHeight: '100%',
+                                            transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
+                                          }}
+                                          onLoad={(e) => {
+                                            const img = e.target as HTMLImageElement;
+                                            img.style.opacity = '1';
+                                          }}
+                                        />
+                                        {/* 드래그 핸들러 */}
+                                        <div
+                                          className="absolute top-1/2 left-1/2 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center cursor-move"
+                                          style={{ transform: 'translate(-50%, -50%)' }}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            setIsDragging(true);
+                                            setDragStart({ x: e.clientX, y: e.clientY });
+                                          }}
+                                          onMouseMove={(e) => {
+                                            if (!isDragging) return;
+                                            const dx = e.clientX - dragStart.x;
+                                            const dy = e.clientY - dragStart.y;
+                                            const newCrop = { x: media.crop?.x + dx, y: media.crop?.y + dy };
+                                            setMediaFiles(prev => prev.map((m, i) => 
+                                              i === idx ? { ...m, crop: newCrop } : m
+                                            ));
+                                            setDragStart({ x: e.clientX, y: e.clientY });
+                                          }}
+                                          onMouseUp={() => {
+                                            setIsDragging(false);
+                                          }}
+                                          onMouseLeave={() => {
+                                            setIsDragging(false);
+                                          }}
+                                        >
+                                          <div className="w-2 h-2 bg-white rounded-full" />
+                                        </div>
+                                      </div>
+                                    </div>
                                   ) : (
                                     <video
                                       src={media.url}
