@@ -391,7 +391,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                     </div>
 
                     {mediaFiles.length > 0 && (
-                      <div className="relative flex-1 min-h-0">
+                      <div className="relative flex-1 min-h-0 mb-2">
                         <Carousel 
                           setApi={setApi}
                           className="w-full h-full" 
@@ -401,10 +401,10 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                             watchDrag: true
                           }}
                         >
-                          <CarouselContent className="h-full">
+                          <CarouselContent className="h-full ml-0">
                             {mediaFiles.map((media, idx) => (
-                              <CarouselItem key={idx} className="h-full">
-                                <div className="relative h-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
+                              <CarouselItem key={idx} className="h-full pl-0">
+                                <div className="relative h-full w-full rounded-2xl overflow-hidden bg-black/5 shadow-inner">
                                   {media.type === 'image' ? (
                                     <img 
                                       src={media.url} 
@@ -447,8 +447,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           </CarouselContent>
                           {mediaFiles.length > 1 && (
                             <>
-                              <CarouselPrevious className="left-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg" />
-                              <CarouselNext className="right-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg" />
+                              <CarouselPrevious className="left-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
+                              <CarouselNext className="right-3 bg-white/30 border-none hover:bg-white/50 z-20 h-10 w-10 text-white shadow-lg flex" />
                             </>
                           )}
                         </Carousel>
