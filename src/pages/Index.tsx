@@ -334,29 +334,30 @@ const Index = () => {
               isAd: false,
               isGif: false,
               isInfluencer: false,
-              user: { id: '', name: '...', avatar: '' },
-              content: '',
-              location: '...',
+              user: {
+                id: session?.user?.id || 'anonymous',
+                name: profile?.first_name || '익명 사용자',
+                avatar: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+              },
+              content: content,
+              location: '실시간 위치',
               lat: newPostRaw.latitude,
               lng: newPostRaw.longitude,
+              latitude: newPostRaw.latitude,
+              longitude: newPostRaw.longitude,
               likes: 0,
               commentsCount: 0,
               comments: [],
               image: newPostRaw.image_url,
-              videoUrl: newPostRaw.video_url,
-              youtubeUrl: newPostRaw.youtube_url,
-              category: newPostRaw.category || 'none',
+              image_url: newPostRaw.image_url,
+              images: [newPostRaw.image_url],
               isLiked: false,
-              createdAt: new Date(newPostRaw.created_at),
               borderType: 'none',
+              createdAt: new Date(),
               isNewRealtime: true
             };
 
-            setAllPosts(prev => {
-              if (prev.some(p => p.id === newPost.id)) return prev;
-              return [newPost, ...prev];
-            });
-
+            setAllPosts(prev => [newPost, ...prev]);
             // 폭죽 효과를 전체 화면이 아닌 마커 위치 부근에서 터지도록 좌표 계산
             // 카카오맵 좌표를 화면 좌표로 변환하기는 복잡하므로,
             // 캔버스 컨페티의 origin을 지도상의 대략적인 위치로 계산 (내 지도 중심 기준)

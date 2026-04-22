@@ -23,6 +23,8 @@ export interface Post {
   location_name?: string;
   latitude?: number;
   longitude?: number;
+  lat?: number; // legacy/calculated field
+  lng?: number; // legacy/calculated field
   likes: number;
   commentsCount: number;
   comments: Comment[];
@@ -33,9 +35,12 @@ export interface Post {
   isAd: boolean;
   isGif: boolean;
   isInfluencer?: boolean;
-  borderType?: 'gold' | 'silver' | 'none';
+  borderType?: 'gold' | 'silver' | 'none' | 'popular' | 'diamond';
   youtubeUrl?: string;
   videoUrl?: string;
   category?: string;
   isSaved?: boolean;
+  rank?: number; // for trending/popular lists
+  createdAt: Date;
+  isNewRealtime?: boolean;
 }

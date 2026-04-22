@@ -49,6 +49,9 @@ const PostItem = ({
   const [imgError, setImgError] = useState(false);
   const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
 
+  const lat = post.latitude ?? post.lat;
+  const lng = post.longitude ?? post.lng;
+
   // 이미지 에러 핸들러 강화
   const handleImageError = async () => {
     if (imgError) return; // 무한 루프 방지
@@ -86,8 +89,6 @@ const PostItem = ({
   const likesCount = post.likes;
   const content = post.content;
   const user = post.user;
-  const lat = post.latitude || (post as any).lat;
-  const lng = post.longitude || (post as any).lng;
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
