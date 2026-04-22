@@ -60,33 +60,33 @@ const Profile = () => {
     const isValidUrl = (url: any) => {
       if (!url || typeof url !== 'string') return false;
       const clean = url.trim();
-      // 'Post content'가 포함되어 있거나 http로 시작하지 않으면 무조건 false (정규식으로 더 강력하게 검사)
-      return clean.startsWith('http') && !/post\s*content/i.test(clean);
+      // [FINAL FIX] 어떤 변형이든 'post content'가 들어있거나 http로 시작하지 않으면 무조건 배제
+      if (/post\s*content/i.test(clean)) return false;
+      if (!clean.startsWith('http')) return false;
+      return true;
     };
 
-    // 1. 원본 데이터 자체에서 바로 검증 및 교체 (sanitize 전)
-    let rawImage = p.image_url;
-    if (!isValidUrl(rawImage)) {
-      rawImage = SAFE_FALLBACK;
-    }
+    // [핵심] 원본 데이터(p.image_url, p.images)를 신뢰하지 않고 여기서 즉시 강제 필터링
+    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+    let rawImages = Array.isArray(p.images) && p.images.length > 0 
+      ? p.images.filter(isValidUrl)
+      : [];
+      
+    if (rawImages.length === 0) rawImages = [rawImage];
 
-    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage });
+    // 정제된 데이터를 바탕으로 sanitize 진행
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // 2. 최종 이미지 다시 한 번 강제 검증
-    let finalImage = sanitized.image_url;
-    if (!isValidUrl(finalImage)) {
-      finalImage = SAFE_FALLBACK;
-    }
+    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
     
     if (finalImage.includes('unsplash.com')) {
       finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
     }
     
-    // 3. 이미지 배열 전수 검사
     let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
+      ? sanitized.images.filter(isValidUrl)
       : [finalImage];
 
     let isLiked = false;
