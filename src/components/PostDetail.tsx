@@ -394,7 +394,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
                     </div>
 
-                    {/* 미디어 영역 */}
+                    {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
                     <div className="px-4">
                       <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                         {youtubeId ? (
@@ -490,10 +490,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
                     </div>
 
-                    {/* 액션 버튼 및 내용 */}
+                    {/* 액션 버튼 및 내용 - 간격 밀착 및 좌우 패딩 px-4로 통일 */}
                     <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-4 pt-1.5">
+                      <div className="flex items-start justify-between mb-2 px-1">
+                        <div className="flex items-center gap-4 pt-1">
                           <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
                             <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                           </button>
@@ -506,33 +506,33 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <div className="flex items-center gap-3">
-                            <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                            <button className="transition-transform active:scale-125 pt-1" onClick={handleSaveToggle}>
                               <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                             </button>
                             {renderCategoryBadge()}
                             {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-                              <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                              <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
                                 <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
                                 <span className="text-[10px] font-black">위치보기</span>
                               </button>
                             )}
                           </div>
                           {isAd && (
-                            <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
+                            <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
                               <ShoppingBag className="w-3.5 h-3.5 fill-white" />
                               <span className="text-[10px] font-black">주문하기</span>
                             </a>
                           )}
                         </div>
                       </div>
-                      <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}>
-                        <p className="text-sm font-bold text-gray-500">좋아요 {currentPost.likes.toLocaleString()}개</p>
+                      <div className="space-y-1.5 mb-4 px-1 cursor-pointer" onClick={onClose}>
+                        <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                         <div className="flex gap-2 items-start">
                           <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{currentPost.user.name}</span>
                           <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                         </div>
                       </div>
-                      <div className="border-t border-gray-100 pt-4">
+                      <div className="border-t border-gray-100 pt-4 px-1">
                         <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                           <Input
                             ref={commentInputRef}
