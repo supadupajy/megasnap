@@ -116,26 +116,22 @@ const PostItem = ({
     if (isAd) return [image];
     if (youtubeId) return [image]; 
     
-    // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 들어오는 경우를 포함하여 더 강력한 필터링
-    const isValidUrl = (url: string) => {
-      if (!url || typeof url !== 'string') return false;
-      const cleanUrl = url.trim();
-      // 'Post content'가 포함되어 있으면 무조건 false
-      if (/post\s*content/i.test(cleanUrl)) return false;
-      return cleanUrl.startsWith('http');
+    // [FINAL ULTIMATE FIX] "Post content"라는 글자가 조금이라도 보이면 무조건 강제 교체
+    const forceSafeUrl = (url: any) => {
+      if (!url || typeof url !== 'string') return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+      const clean = url.trim();
+      // "Post content"가 포함되어 있거나, http로 시작하지 않으면 무조건 무시하고 새 링크 할당
+      if (/post\s*content/i.test(clean) || !clean.startsWith('http')) {
+        return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+      }
+      return clean;
     };
 
-    const validImages = (images && images.length > 0) 
-      ? images.filter(isValidUrl)
-      : [];
+    const validImages = (images && Array.isArray(images) && images.length > 0)
+      ? images.map(forceSafeUrl)
+      : [forceSafeUrl(image)];
     
-    // 유효한 이미지가 하나도 없다면 image prop 검사, 그것도 없으면 FALLBACK
-    const baseImage = isValidUrl(image) ? image : FALLBACK_IMAGE;
-    const finalBaseImages = validImages.length > 0 ? validImages : [baseImage];
-    
-    // [FIX] 강제로 광고 이미지를 삽입하는 로직이 2번째 슬라이드에 깨진 이미지를 유발할 수 있으므로 제거하거나 검증
-    // 기존에 고정적으로 index 1에 AD_IMAGE를 넣던 로직을 제거하고 실제 데이터만 보여줍니다.
-    return finalBaseImages;
+    return validImages;
   }, [isAd, images, image, youtubeId, id]);
 
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');

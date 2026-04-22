@@ -154,25 +154,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     const isAd = post.isAd;
     const youtubeId = getYoutubeId(post.youtubeUrl || '');
     
-    // [FIX] 'Post content' 등의 가짜 데이터 원천 필터링
-    const getVerifiedImage = (url: any) => isValidUrl(url) ? url : SAFE_FALLBACK;
+    // [FINAL ULTIMATE FIX] "Post content"라는 글자가 조금이라도 보이면 무조건 강제 교체
+    const forceSafeUrl = (url: any) => {
+      if (!url || typeof url !== 'string') return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+      const clean = url.trim();
+      if (/post\s*content/i.test(clean) || !clean.startsWith('http')) {
+        return "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80";
+      }
+      return clean;
+    };
 
-    if (isAd) return [getVerifiedImage(post.image)];
-    if (youtubeId) return [getVerifiedImage(post.image)];
+    if (isAd) return [forceSafeUrl(post.image)];
+    if (youtubeId) return [forceSafeUrl(post.image)];
 
     let userImages: string[] = [];
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      userImages = post.images.filter(isValidUrl);
-    } 
-    
-    if (userImages.length === 0 && post.image) {
-      const singleImg = getVerifiedImage(post.image);
-      userImages = [singleImg];
+      userImages = post.images.map(forceSafeUrl);
+    } else {
+      userImages = [forceSafeUrl(post.image)];
     }
 
-    // [FIX] 강제로 index 1에 광고 이미지를 끼워넣던 로직을 제거하여 
-    // 데이터베이스의 실제 이미지만 정확하게 노출되도록 수정합니다.
-    return userImages.length > 0 ? userImages : [SAFE_FALLBACK];
+    return userImages;
   }, [post]);
 
   const adLink = useMemo(() => {
