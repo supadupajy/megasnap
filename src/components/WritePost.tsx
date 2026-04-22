@@ -407,58 +407,47 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   style={{ height: `${PREVIEW_HEIGHT}px` }}
                                 >
                                   {media.type === 'image' ? (
-                                    <div className="w-full h-full relative p-3">
-                                      <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-black flex items-center justify-center">
-                                        <img 
-                                          src={media.url} 
-                                          alt={`Preview ${idx}`} 
-                                          className="absolute transition-none select-none pointer-events-none z-10 max-w-none max-h-none"
-                                          style={{ 
-                                            width: 'auto',
-                                            height: 'auto',
-                                            // 화면 가로 세로 중 어디에도 빈틈이 없도록 강제
-                                            minWidth: '100%',
-                                            minHeight: '100%',
-                                            top: '50%',
-                                            left: '50%',
-                                            transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1})`,
-                                          }}
-                                          onLoad={(e) => {
-                                            const img = e.target as HTMLImageElement;
-                                            // 원본 사이즈 로드 확인 로그
-                                            console.log('[WritePost] Original Image Loaded:', img.naturalWidth, 'x', img.naturalHeight);
-                                            // 로드 직후 투명도 해제
-                                            img.style.opacity = '1';
-                                          }}
-                                        />
-                                        {/* 드래그 핸들러 */}
-                                        <div
-                                          className="absolute inset-0 z-10 cursor-move touch-none"
-                                          onPointerDown={(e) => {
-                                            e.preventDefault();
-                                            setIsDragging(true);
-                                            setDragStart({ x: e.clientX, y: e.clientY });
-                                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                                          }}
-                                          onPointerMove={(e) => {
-                                            if (!isDragging) return;
-                                            const deltaX = e.clientX - dragStart.x;
-                                            const deltaY = e.clientY - dragStart.y;
-                                            setMediaFiles(prev => prev.map((m, i) =>
-                                              i === idx
-                                                ? { ...m, crop: { x: (m.crop?.x || 0) + deltaX, y: (m.crop?.y || 0) + deltaY } }
-                                                : m
-                                            ));
-                                            setDragStart({ x: e.clientX, y: e.clientY });
-                                          }}
-                                          onPointerUp={(e) => {
-                                            setIsDragging(false);
-                                            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-                                          }}
-                                          onPointerCancel={() => setIsDragging(false)}
-                                        />
-                                      </div>
-                                    </div>
+                                    <>
+                                      {/* ✅ 핵심: object-cover + translate transform으로 단순하게 */}
+                                      <img
+                                        src={media.url}
+                                        alt={`Preview ${idx + 1}`}
+                                        draggable={false}
+                                        className="w-full h-full select-none pointer-events-none"
+                                        style={{
+                                          objectFit: 'cover',
+                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
+                                          transition: isDragging ? 'none' : 'transform 0.05s linear',
+                                          display: 'block',
+                                        }}
+                                      />
+                                      {/* 드래그 오버레이 */}
+                                      <div
+                                        className="absolute inset-0 z-10 cursor-move touch-none"
+                                        onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          setIsDragging(true);
+                                          setDragStart({ x: e.clientX, y: e.clientY });
+                                          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                                        }}
+                                        onPointerMove={(e) => {
+                                          if (!isDragging) return;
+                                          const deltaX = e.clientX - dragStart.x;
+                                          const deltaY = e.clientY - dragStart.y;
+                                          setMediaFiles(prev => prev.map((m, i) =>
+                                            i === idx
+                                              ? { ...m, crop: { x: (m.crop?.x || 0) + deltaX, y: (m.crop?.y || 0) + deltaY } }
+                                              : m
+                                          ));
+                                          setDragStart({ x: e.clientX, y: e.clientY });
+                                        }}
+                                        onPointerUp={(e) => {
+                                          setIsDragging(false);
+                                          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                                        }}
+                                        onPointerCancel={() => setIsDragging(false)}
+                                      />
+                                    </>
                                   ) : (
                                     <video
                                       src={media.url}
