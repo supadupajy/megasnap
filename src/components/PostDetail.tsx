@@ -12,18 +12,7 @@ import {
   MoreHorizontal,
   X,
   MessageSquare,
-  ShoppingBag,
-  AlertCircle,
-  Utensils,
-  Car,
-  TreePine,
-  PawPrint,
-  Trash2,
-  Ban,
-  ExternalLink,
-  Send,
-  ChevronUp,
-  ChevronDown
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
