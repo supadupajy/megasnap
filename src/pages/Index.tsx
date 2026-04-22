@@ -122,13 +122,16 @@ const Index = () => {
       const isValidUrl = (url: any) => {
         if (!url || typeof url !== 'string') return false;
         const clean = url.trim();
-        return clean.startsWith('http') && !/post\s*content/i.test(clean);
+        // [FORCE FIX] 어떠한 경우에도 'Post content'가 포함된 텍스트는 이미지로 인정하지 않음
+        if (/post\s*content/i.test(clean) || !clean.startsWith('http')) return false;
+        return true;
       };
 
-      // [FIX] sanitize하기 전 원본 rawPost를 먼저 변조 방지 (잠깐 나타났다 사라지는 현상 방지)
+      // [CRITICAL] sanitize하기 전 원본 데이터를 즉시 유효한 이미지로 교체
       const sanitizedRaw = { ...rawPost };
-      if (!isValidUrl(sanitizedRaw.image_url)) sanitizedRaw.image_url = SAFE_FALLBACK;
-      if (Array.isArray(sanitizedRaw.images)) {
+      sanitizedRaw.image_url = isValidUrl(sanitizedRaw.image_url) ? sanitizedRaw.image_url : SAFE_FALLBACK;
+      
+      if (Array.isArray(sanitizedRaw.images) && sanitizedRaw.images.length > 0) {
         sanitizedRaw.images = sanitizedRaw.images.map((img: any) => isValidUrl(img) ? img : SAFE_FALLBACK);
       } else {
         sanitizedRaw.images = [sanitizedRaw.image_url];
@@ -145,13 +148,15 @@ const Index = () => {
       if (p.border_type) borderType = p.border_type;
 
       let finalImage = p.image_url;
-      if (p.youtube_url) finalImage = getYoutubeThumbnail(p.youtube_url);
+      if (p.youtube_url) {
+        finalImage = getYoutubeThumbnail(p.youtube_url);
+      }
       
-      // [FIX] 가짜 텍스트("Post content") 필터링 재검증
+      // [FINAL CHECK] 마지막 렌더링 전 다시 한 번 검증
       if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
 
-      // images 배열 필터링
-      const validImages = Array.isArray(p.images) 
+      // images 배열 필터링 및 교체
+      const validImages = Array.isArray(p.images) && p.images.length > 0
         ? p.images.map(img => isValidUrl(img) ? img : SAFE_FALLBACK)
         : [finalImage];
 
