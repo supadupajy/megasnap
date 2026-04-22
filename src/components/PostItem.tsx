@@ -272,12 +272,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white p-4 transition-all",
+        "bg-white transition-all",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
       {/* Header Section */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
             <img 
@@ -301,7 +301,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
       {/* Media Section */}
       <div 
-        className="relative aspect-square mb-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+        className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
         onClick={() => !videoId && onLocationClick?.({} as any, lat!, lng!)}
       >
         {videoId ? (
@@ -333,92 +333,88 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         {/* ... badges and buttons ... */}
       </div>
 
-      <div className="px-4 pt-3 pb-4">
-        <div className="flex items-start justify-between mb-3 px-1">
-          <div className="flex items-center gap-4 pt-1">
-            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
-              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="active:scale-110 transition-transform">
-              <MessageCircle className="w-6 h-6 text-gray-700" />
-            </button>
-            <button onClick={(e) => e.stopPropagation()} className="active:scale-110 transition-transform">
-              <Share2 className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
-
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-3">
-              <button className="transition-transform active:scale-125 pt-1" onClick={handleSaveToggle}>
-                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-              </button>
-              
-              {renderCategoryBadge()}
-
-              {/* 위치보기 버튼 */}
-              {lat !== undefined && lng !== undefined && (
-                <button 
-                  onClick={(e) => onLocationClick(e, lat, lng)} 
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100 shrink-0 whitespace-nowrap"
-                >
-                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                  <span className="text-[10px] font-black">위치보기</span>
-                </button>
-              )}
-            </div>
-            
-            {isAd && (
-              <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
-                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                <span className="text-[10px] font-black">주문하기</span>
-              </a>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-1 px-1">
-          <p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p>
-          <div className="flex gap-2 items-start">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-            </div>
-            <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
-          </div>
-          <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-            <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
-            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-          {lastComment && (
-            <div className="flex gap-2 items-start mt-1">
-              <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-              <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-            </div>
-          )}
-          <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-            <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-            {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+      {/* Interaction Buttons & Badges - 간격 밀착 및 넓이 조정 */}
+      <div className="px-4 pt-3 pb-2 flex items-start justify-between">
+        <div className="flex items-center gap-3.5 pt-0.5">
+          <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
+            <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
           </button>
-          <AnimatePresence>
-            {showComments && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden space-y-2 mt-2"
-              >
-                {localComments.slice(0, -1).map((c, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                    <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="active:scale-110 transition-transform">
+            <MessageCircle className="w-6 h-6 text-gray-700" />
+          </button>
+          <button onClick={(e) => e.stopPropagation()} className="active:scale-110 transition-transform">
+            <Share2 className="w-6 h-6 text-gray-700" />
+          </button>
+          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+          </button>
         </div>
+
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            {renderCategoryBadge()}
+            {lat !== undefined && lng !== undefined && (
+              <button 
+                onClick={(e) => onLocationClick(e, lat, lng)} 
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100 shrink-0 whitespace-nowrap"
+              >
+                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                <span className="text-[10px] font-black">위치보기</span>
+              </button>
+            )}
+          </div>
+          {isAd && (
+            <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
+              <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+              <span className="text-[10px] font-black">주문하기</span>
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="px-4 pb-4 space-y-1">
+        <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
+        <div className="flex gap-2 items-start">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+            {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+          </div>
+          <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
+        </div>
+        <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+          <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+          <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+        {lastComment && (
+          <div className="flex gap-2 items-start mt-1">
+            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+          </div>
+        )}
+        <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+          <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
+          {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+        </button>
+        <AnimatePresence>
+          {showComments && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden space-y-2 mt-2"
+            >
+              {localComments.slice(0, -1).map((c, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                  <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </motion.div>
