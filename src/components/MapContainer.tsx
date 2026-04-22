@@ -70,13 +70,30 @@ const MapContainer = ({
       const postId = e.detail?.id;
       if (!postId) return;
       
-      const overlay = overlaysRef.current.get(postId);
-      if (overlay) {
-        const content = overlay.getContent();
-        if (content instanceof HTMLElement) {
-          content.classList.remove('marker-appear-animation');
-          content.classList.add('marker-disappear-animation');
+      try {
+        const overlay = overlaysRef.current.get(postId);
+        if (overlay) {
+          const content = overlay.getContent();
+          if (content instanceof HTMLElement) {
+            // [FIX] 클래스 조작 시 발생할 수 있는 잠재적 에러 방지
+            content.classList.remove('marker-appear-animation');
+            content.classList.add('marker-disappear-animation');
+            
+            // 물리적으로 DOM에서 제거되기 전까지 상호작용 차단
+            content.style.pointerEvents = 'none';
+          }
+          
+          // 일정 시간 후 오버레이 인스턴스 자체를 안전하게 제거
+          setTimeout(() => {
+            if (overlaysRef.current.has(postId)) {
+              const targetOverlay = overlaysRef.current.get(postId);
+              targetOverlay?.setMap(null);
+              overlaysRef.current.delete(postId);
+            }
+          }, 500);
         }
+      } catch (err) {
+        console.error('[MapContainer] Delete animation error:', err);
       }
     };
     window.addEventListener('animate-marker-delete', handleAnimateDelete);
