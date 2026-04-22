@@ -679,8 +679,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             <div
               className="absolute bottom-0 left-0 right-0 px-5 pt-3 bg-white/90 backdrop-blur-md z-[1002] border-t border-gray-50"
               style={{
-                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : '110px'
-              }}
+  paddingBottom: '110px'
+}}
             >
               {currentPage === 1 ? (
                 <Button
