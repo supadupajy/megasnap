@@ -87,101 +87,96 @@ serve(async (req) => {
   }
 
   try {
-    const { record, table, type, schema } = await req.json()
-    console.log(`[push-notification] Processing ${type} on ${schema}.${table}`)
+    const payload = await req.json()
+    // 트리거(record) 또는 직접 호출({chatId, ...}) 모두 대응
+    const record = payload.record || payload;
+    console.log(`[push-notification] Processing payload:`, JSON.stringify(record))
 
-    if (table === 'messages' && type === 'INSERT') {
-      const { sender_id, receiver_id, content } = record
+    const senderId = record.sender_id || record.senderId;
+    const receiverId = record.receiver_id || record.receiverId;
+    const content = record.content;
 
-      // 수신자의 활성 세션(Presence) 확인하여 채팅 중인지 체크
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      )
-
-      // 1. 수신자가 현재 발신자와의 채팅창을 열고 있는지 확인 (Presence 등 활용 가능하나 여기선 간단히 채널 참여 여부 가정)
-      // 실제로는 클라이언트에서 'is_in_chat' 상태를 DB나 Redis에 저장하거나, 
-      // FCM의 data-only 메시지를 보내서 클라이언트가 직접 결정하게 하는 것이 정확함.
-      // 하지만 여기서는 기본적으로 뱃지를 포함하되, 클라이언트 사이드에서 처리하도록 유도하거나
-      // 특정 조건(예: 최근 3초 내 읽음 처리됨) 등을 고려할 수 있음.
-      
-      // 여기서는 수신자에게 알림을 보냅니다.
-      const { data: receiverProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('push_token, nickname')
-        .eq('id', receiver_id)
-        .single()
-
-      if (!receiverProfile?.push_token) return new Response("No token", { status: 200 })
-
-      const senderId = record.sender_id || record.actor_id;
-      const { data: senderProfile } = await supabaseClient.from('profiles').select('nickname').eq('id', senderId).single();
-      const senderNickname = senderProfile?.nickname || "누군가";
-
-      let title = "ChoraSnap";
-      let body = "알림이 도착했습니다.";
-
-      if (record.receiver_id) {
-        title = `${senderNickname}님의 메시지`;
-        body = record.content;
-      } else if (record.type === 'like_post') {
-        title = "좋아요";
-        body = `${senderNickname}님이 포스팅을 좋아합니다.`;
-      }
-
-      // 1. OAuth2 토큰 생성
-      const accessToken = await getAccessToken();
-
-      // 2. FCM v1 전송 페이로드 구성
-      const fcmV1Payload = {
-        message: {
-          token: profile.push_token,
-          notification: {
-            title: title,
-            body: body
-          },
-          android: {
-            priority: "high",
-            notification: {
-              channel_id: "messages_v3",
-              sound: "message_pop"
-            }
-          },
-          apns: {
-            payload: {
-              aps: {
-                sound: "message_pop.caf",
-                badge: 1
-              }
-            }
-          },
-          data: {
-            chatId: record.sender_id || "",
-            type: record.receiver_id ? "message" : "notif"
-          }
-        }
-      };
-
-      // 3. FCM v1 엔드포인트 호출
-      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FB_SERVICE_ACCOUNT.project_id}/messages:send`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(fcmV1Payload)
-      });
-
-      const result = await res.json();
-      console.log("[FCM v1] Result:", JSON.stringify(result));
-
-      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-    } else {
-      return new Response("Unsupported operation", { status: 400 });
+    if (!receiverId || !content) {
+      return new Response("Missing required fields", { status: 400, headers: corsHeaders });
     }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // 1. 수신자 프로필 및 토큰 가져오기
+    const { data: receiverProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('push_token, nickname')
+      .eq('id', receiverId)
+      .single()
+
+    if (profileError || !receiverProfile?.push_token) {
+      console.log("[push-notification] No push token for receiver:", receiverId);
+      return new Response("No token", { status: 200, headers: corsHeaders })
+    }
+
+    // 2. 발신자 닉네임 가져오기
+    const { data: senderProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('nickname')
+      .eq('id', senderId)
+      .single();
+    
+    const senderNickname = senderProfile?.nickname || "누군가";
+    const title = `${senderNickname}님의 메시지`;
+    const body = content;
+
+    // 3. OAuth2 토큰 생성 (FCM v1용)
+    const accessToken = await getAccessToken();
+
+    // 4. FCM v1 전송 페이로드
+    const fcmV1Payload = {
+      message: {
+        token: receiverProfile.push_token,
+        notification: {
+          title: title,
+          body: body
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channel_id: "messages_v3",
+            sound: "default"
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1
+            }
+          }
+        },
+        data: {
+          chatId: String(senderId),
+          type: "message"
+        }
+      }
+    };
+
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FB_SERVICE_ACCOUNT.project_id}/messages:send`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fcmV1Payload)
+    });
+
+    const result = await res.json();
+    console.log("[push-notification] FCM v1 Result:", JSON.stringify(result));
+
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
   } catch (err) {
-    console.error("[FCM v1] Error:", err.message);
+    console.error("[push-notification] Error:", err.message);
     return new Response(err.message, { status: 500, headers: corsHeaders });
   }
 })
