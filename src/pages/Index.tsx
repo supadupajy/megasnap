@@ -25,6 +25,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
+import confetti from 'canvas-confetti';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop&w=800&q=80';
 
@@ -153,6 +154,80 @@ const Index = () => {
       }
     } catch (err) { console.error(err); }
   }, [mapDbToPost]);
+
+  useEffect(() => {
+    if (!authUser) return;
+
+    const channel = supabase
+      .channel('realtime_posts_sync')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        async (payload) => {
+          const newPostRaw = payload.new;
+          if (!newPostRaw || !newPostRaw.latitude || !newPostRaw.longitude) return;
+
+          // 1. 현재 내 지도 범위(Bounds) 안에 있는지 확인
+          const bounds = mapData?.bounds;
+          if (!bounds) return;
+
+          const { sw, ne } = bounds;
+          const isInBounds = 
+            newPostRaw.latitude >= Math.min(sw.lat, ne.lat) &&
+            newPostRaw.latitude <= Math.max(sw.lat, ne.lat) &&
+            newPostRaw.longitude >= Math.min(sw.lng, ne.lng) &&
+            newPostRaw.longitude <= Math.max(sw.lng, ne.lng);
+
+          if (isInBounds && newPostRaw.user_id !== authUser.id) {
+            console.log('[Realtime] New post in bounds detected!', newPostRaw.id);
+            
+            // 2. 가벼운 마커 데이터로 변환
+            const newPost: Post = {
+              id: newPostRaw.id,
+              isAd: false,
+              isGif: false,
+              isInfluencer: false,
+              user: { id: '', name: '...', avatar: '' },
+              content: '',
+              location: '...',
+              lat: newPostRaw.latitude,
+              lng: newPostRaw.longitude,
+              likes: 0,
+              commentsCount: 0,
+              comments: [],
+              image: newPostRaw.image_url,
+              videoUrl: newPostRaw.video_url,
+              youtubeUrl: newPostRaw.youtube_url,
+              category: newPostRaw.category || 'none',
+              isLiked: false,
+              createdAt: new Date(newPostRaw.created_at),
+              borderType: 'none',
+              isNewRealtime: true // 애니메이션 처리를 위한 플래그
+            };
+
+            // 3. 상태 업데이트 (마커 뿅!)
+            setAllPosts(prev => {
+              if (prev.some(p => p.id === newPost.id)) return prev;
+              return [newPost, ...prev];
+            });
+
+            // 4. 폭죽 효과 (과하지 않게 살짝)
+            confetti({
+              particleCount: 40,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#4F46E5', '#818CF8', '#F59E0B'],
+              disableForReducedMotion: true
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUser, mapData?.bounds]);
 
   useEffect(() => { fetchGlobalTrending(); }, [fetchGlobalTrending]);
 

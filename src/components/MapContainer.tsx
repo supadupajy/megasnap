@@ -457,7 +457,15 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        content.className = 'marker-container kakao-overlay animate-marker-appear';
+        content.className = 'marker-container kakao-overlay';
+        
+        // 실시간 새 포스팅인 경우 특수 애니메이션 적용
+        if (post.isNewRealtime) {
+          content.classList.add('animate-realtime-marker-appear');
+        } else {
+          content.classList.add('animate-marker-appear');
+        }
+
         if (isHighlighted) content.classList.add('highlighted');
         content.style.setProperty('--marker-scale', scale.toString());
         content.setAttribute('data-content-state', contentStateKey);

@@ -40,4 +40,5 @@ export interface Post {
   borderType?: 'popular' | 'silver' | 'gold' | 'diamond' | 'none';
   videoUrl?: string;
   youtubeUrl?: string;
+  isNewRealtime?: boolean;
 }
