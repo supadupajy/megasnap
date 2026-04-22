@@ -261,13 +261,11 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
-    // 줌 레벨에 따른 스케일 계산
     let scale = 1.0;
     if (currentLevel === 6) scale = 0.75;
     else if (currentLevel === 7) scale = 0.5;
     else if (currentLevel >= 8) scale = 0;
     
-    // 8단계 이상이면 무조건 모든 오버레이 제거
     if (currentLevel >= 8) {
       overlaysRef.current.forEach((overlay) => overlay.setMap(null));
       return;
@@ -275,29 +273,26 @@ const MapContainer = ({
 
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // 1. 제거될 마커 처리 및 기존 마커 재부착/스케일 조정
     overlaysRef.current.forEach((overlay, id) => {
       const content = overlay.getContent();
       if (!currentPostIds.has(id)) {
         overlay.setMap(null);
         overlaysRef.current.delete(id);
       } else {
-        // 7단계 이하일 때는 다시 지도에 부착
         if (overlay.getMap() === null) {
           overlay.setMap(mapInstance.current);
         }
-        // ✅ [강력 조치] 인라인 스타일로 직접 scale 주입
         if (content instanceof HTMLElement) {
+          // [수정] 줌 변경 시 튕김 현상을 유발하는 transition을 일시적으로 제거하거나 매우 짧게 설정
+          content.style.transition = 'none'; 
           content.style.transformOrigin = 'bottom center';
-          content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
-          // CSS 변수도 업데이트 (필요 시 CSS 파일에서 활용 가능)
-          content.style.setProperty('--marker-scale', scale.toString());
+          // 브라우저가 스타일 변화를 즉시 인지하도록 강제 리플로우 유도 가능 (필요 시)
+          // void content.offsetWidth; 
         }
       }
     });
 
-    // 2. 마커 생성 및 업데이트
     posts.forEach(post => {
       if (!post) return;
       const isViewed = viewedPostIds.has(post.id);
@@ -305,26 +300,20 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      
-      // ✅ currentLevel에 따라 변하는 고유 키 생성
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        if (post.isNewRealtime) {
-          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
-        } else {
-          content.classList.add('animate-marker-appear');
-        }
+        // [수정] 튕김 방지를 위해 등장 애니메이션 클래스를 제거하거나 transform 충돌을 막음
+        // content.classList.add('animate-marker-appear'); // 주석 처리하여 튕김 방지
 
         if (isHighlighted) content.classList.add('highlighted');
         
-        // ✅ [수정] 초기 생성 시 스케일과 transition 설정
         content.style.transformOrigin = 'bottom center';
-        content.style.transform = `scale(${scale})`; // 즉시 적용하여 튕김 방지
-        content.style.transition = 'transform 0.1s ease-out, opacity 0.2s ease-out';
+        content.style.transform = `scale(${scale})`;
+        content.style.transition = 'none'; // 초기 생성 시에는 즉시 크기 고정
         
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -350,12 +339,9 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // ✅ [수정] 기존 마커 갱신 시
-          // 1. transform-origin 고정
+          content.style.transition = 'none'; // 줌 변경 시 튕김 방지를 위해 즉시 적용
           content.style.transformOrigin = 'bottom center';
-          // 2. transform 즉시 갱신 (중복 적용 방지)
           content.style.transform = `scale(${scale})`;
-          
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
@@ -518,10 +504,10 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
     
-    // 내 포스팅(isMine)인 경우에는 애니메이션을 제거
-    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
+    // [수정] 개별 마커 내부의 floating 애니메이션 등을 제거하거나 scale 간섭 최소화
+    const animationClass = isAd ? 'animate-ad-breathing' : '';
 
-    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2px solid #ffffff;`} overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
+    return `<div class="marker-content-wrapper" style="transform-origin: bottom center;"><div class="marker-highlight-ping"></div><div class="${animationClass}" style="transform-origin: bottom center;">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 16px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2px solid #ffffff;`} overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; position: relative;"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 4px; z-index: 5;">${post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 12px; z-index: 1;"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
   };
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
