@@ -26,6 +26,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // [FIX] 데이터 로딩 전 뼈대(Skeleton) UI 표시 지연 방지 및 로딩 상태 처리
+  const isLoading = posts.length === 0;
+
   // 1위~20위 순환 로직 (접혀있을 때만 동작)
   useEffect(() => {
     if (isExpanded || posts.length <= 1) return;
@@ -78,51 +81,62 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
         onClick={onToggle}
       >
-        <span className={cn(
-  "text-indigo-600 font-black text-sm italic shrink-0",
-  currentPost?.rank >= 10 ? "w-6" : "w-4"
-)}>
-  {isExpanded ? "HOT" : currentPost?.rank}
-</span>
-        
-        {!isExpanded ? (
-          <div className="flex flex-1 items-center gap-2 overflow-hidden">
-            <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-              <img
-                src={currentPost?.image}
-                alt=""
-                className="w-full h-full object-cover"
-                onError={handleImageError}
-              />
-            </div>
-            <div className="flex-1 overflow-hidden relative h-5">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={`${currentPost?.id}-${currentIndex}`}
-                  initial={{ y: 15, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -15, opacity: 0 }}
-                  transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
-                  className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
-                >
-                  {currentPost?.content}
-                </motion.p>
-              </AnimatePresence>
-            </div>
+        {isLoading ? (
+          <div className="flex items-center gap-3 w-full animate-pulse">
+            <div className="w-4 h-4 bg-gray-200 rounded shrink-0" />
+            <div className="w-6 h-6 bg-gray-200 rounded-lg shrink-0" />
+            <div className="flex-1 h-3 bg-gray-200 rounded" />
+            <ChevronDown className="w-5 h-5 text-gray-200" />
           </div>
         ) : (
-          <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
-            <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0 fill-orange-500" />
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
-              Real-time HOT (Top 20)
+          <>
+            <span className={cn(
+              "text-indigo-600 font-black text-sm italic shrink-0",
+              currentPost?.rank >= 10 ? "w-6" : "w-4"
+            )}>
+              {isExpanded ? "HOT" : currentPost?.rank}
             </span>
-          </div>
-        )}
-        
-        {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+            
+            {!isExpanded ? (
+              <div className="flex flex-1 items-center gap-2 overflow-hidden">
+                <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                  <img
+                    src={currentPost?.image}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                </div>
+                <div className="flex-1 overflow-hidden relative h-5">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={`${currentPost?.id}-${currentIndex}`}
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -15, opacity: 0 }}
+                      transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
+                      className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
+                    >
+                      {currentPost?.content}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
+                <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0 fill-orange-500" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
+                  Real-time HOT (Top 20)
+                </span>
+              </div>
+            )}
+            
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+            )}
+          </>
         )}
       </div>
 
