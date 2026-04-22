@@ -462,17 +462,11 @@ const MapContainer = ({
 
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ 줌 레벨에 따른 스케일 계산
-      // 1~5단계: 1.0 (100%)
-      // 6단계: 0.75 (75%)
-      // 7단계: 0.5 (50%)
-      // 8단계 이상: 0 (안 보임)
       let scale = 1.0;
       if (currentLevel === 6) scale = 0.75;
       else if (currentLevel === 7) scale = 0.5;
       else if (currentLevel >= 8) scale = 0;
       
-      // 최소 스케일 제한
       scale = Math.max(scale, 0);
 
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${currentLevel}-${!!post.videoUrl}-${!!post.youtubeUrl}`;
@@ -481,17 +475,17 @@ const MapContainer = ({
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay';
         
-        // 실시간 새 포스팅인 경우 특수 애니메이션 및 폭죽 효과 적용
+        // 초기 생성 시 애니메이션 클래스 추가
         if (post.isNewRealtime) {
-          console.log('[MapContainer] Applying REALTIME animation and spark to marker:', post.id);
           content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         } else {
           content.classList.add('animate-marker-appear');
         }
 
         if (isHighlighted) content.classList.add('highlighted');
-        content.style.setProperty('--marker-scale', scale.toString());
-        // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
+        
+        // CSS Transition을 위한 초기 스타일 설정
+        content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
         content.style.transform = `scale(${scale})`;
         content.style.transformOrigin = 'bottom center';
         
@@ -504,8 +498,8 @@ const MapContainer = ({
           if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
         };
 
-        const overlay = new kakao.maps.CustomOverlay({ 
-          position: new kakao.maps.LatLng(post.lat, post.lng), 
+        const overlay = new (window as any).kakao.maps.CustomOverlay({ 
+          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
@@ -519,17 +513,9 @@ const MapContainer = ({
         if (content instanceof HTMLElement) {
           cancelPendingRemoval(post.id, content);
           
-          // 이미 있는 마커가 isNewRealtime으로 다시 들어온 경우 애니메이션 재적용 가능
-          if (post.isNewRealtime && !content.classList.contains('animate-realtime-marker-appear')) {
-            content.classList.remove('animate-marker-appear');
-            content.classList.add('animate-realtime-marker-appear');
-          }
-
-          content.style.setProperty('--marker-scale', scale.toString());
-          // ✅ [수정] scale 직접 적용하여 줌 변경 시 즉시 반영
+          // ✅ 8->7단계 등 다시 나타날 때 부드러운 효과를 위해 transition 추가
+          content.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           content.style.transform = `scale(${scale})`;
-          content.style.transformOrigin = 'bottom center';
-          
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
