@@ -116,14 +116,24 @@ const PostItem = ({
     if (isAd) return [image];
     if (youtubeId) return [image]; 
     
-    // [FIX] images 배열이 비어있거나 깨진 경우 image(기본)를 사용하도록 보강
+    // [FIX] 'Post content 1' 같은 텍스트가 이미지로 들어오는 경우를 포함하여 더 강력한 필터링
+    const isValidUrl = (url: string) => {
+      if (!url) return false;
+      const cleanUrl = url.trim();
+      return cleanUrl.startsWith('http') && 
+             !cleanUrl.includes('Post content') && 
+             cleanUrl !== 'null' && 
+             cleanUrl !== 'undefined';
+    };
+
     const validImages = (images && images.length > 0) 
-      ? images.filter(img => img && img !== 'null' && img.length > 10)
-      : [image];
+      ? images.filter(isValidUrl)
+      : [];
     
-    const finalBaseImages = validImages.length > 0 ? validImages : [image || FALLBACK_IMAGE];
+    // 유효한 이미지가 하나도 없다면 image prop 검사, 그것도 없으면 FALLBACK
+    const baseImage = isValidUrl(image) ? image : FALLBACK_IMAGE;
+    const finalBaseImages = validImages.length > 0 ? validImages : [baseImage];
     
-    // 기존 캐러셀 로직 유지 (중간에 AD 삽입)
     const img1 = finalBaseImages[0];
     const img3 = (finalBaseImages.length > 1) ? finalBaseImages[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
