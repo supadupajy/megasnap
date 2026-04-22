@@ -408,6 +408,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     </div>
   )}
 </div>
+
                   {/* 액션 버튼 및 내용 */}
                   <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-start justify-between mb-2">
