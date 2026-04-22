@@ -99,23 +99,35 @@ const Profile = () => {
     // Reset fetch ref to allow re-fetching when needed
     setIsDataLoading(true);
     try {
-      // 1. Fetch My Posts
+      // 1. Fetch My Posts with LIMIT to prevent timeout
       const { data: myData, error: myPostsError } = await supabase
         .from('posts')
         .select('*')
         .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // [FIX] Limit data to prevent statement timeout
 
       if (myPostsError) {
         console.error('[Profile] My Posts fetch error:', myPostsError);
-        // If 500 persists, it might be due to the order by or specific filter.
-        // Attempt fallback without order if necessary, but here we just log.
+        // Fallback without sorting if sorting is the bottleneck
+        if (myPostsError.code === '57014') {
+          const { data: fallbackData } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', uid)
+            .limit(50);
+          
+          if (fallbackData) {
+            const formattedFallback = await Promise.all(fallbackData.map(mapDbToPost));
+            setMyPosts(formattedFallback);
+          }
+        }
+      } else {
+        const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
+        setMyPosts(formattedMyPosts);
       }
-      
-      const formattedMyPosts = await Promise.all((myData || []).map(mapDbToPost));
-      setMyPosts(formattedMyPosts);
 
-      // 2. Fetch Saved Posts (Joining with posts table)
+      // 2. Fetch Saved Posts with LIMIT
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select(`
@@ -123,7 +135,8 @@ const Profile = () => {
           posts:posts (*)
         `)
         .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // [FIX] Limit saved posts
 
       if (savedError) throw savedError;
 
