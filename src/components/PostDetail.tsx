@@ -13,6 +13,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
@@ -198,41 +203,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return [post.image];
     if (youtubeId) return [post.image]; 
     
-    // ✅ 1. 사용자가 등록한 전체 이미지 목록(images 배열) 가져오기
     let userImages: string[] = [];
-    
-    // post.images가 배열인지, 그리고 내용이 있는지 철저히 검사
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
       userImages = [...post.images];
     } else if (post.image) {
-      // images 배열이 없는 경우를 대비한 Fallback
       userImages = [post.image];
     }
     
-    // 2. 코카콜라 광고 이미지 (두 번째 자리에 고정)
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
-    
-    // 3. 이미지 조합 (1번 이미지 -> 광고 -> 나머지 이미지들)
     const result = [];
     if (userImages.length > 0) {
-      // 첫 번째 이미지 추가
       result.push(userImages[0]);
-      // 두 번째 자리에 광고 추가
       result.push(COCA_COLA_AD);
-      // 세 번째 자리부터 나머지 이미지들 추가
       if (userImages.length > 1) {
         result.push(...userImages.slice(1));
       }
     } else {
-      // 이미지가 아예 없는 경우 (그럴 일은 거의 없지만)
       result.push(FALLBACK_IMAGE, COCA_COLA_AD);
     }
-    
-    console.log('[PostDetail] Final display images count:', result.length, result);
     return result;
   }, [isAd, post.images, post.image, youtubeId]);
 
-  const adIndex = 1;
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
 
   const handleUserClick = (e: React.MouseEvent) => {
@@ -407,7 +398,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                     <div className="relative overflow-hidden bg-black aspect-square rounded-3xl group">
                       <Carousel className="w-full h-full">
                         <CarouselContent>
-                          {allImages.map((img, index) => (
+                          {displayImages.map((img, index) => (
                             <CarouselItem key={index}>
                               <div className="relative aspect-square w-full">
                                 <img
@@ -426,13 +417,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             </CarouselItem>
                           ))}
                         </CarouselContent>
-                        {allImages.length > 1 && (
+                        {displayImages.length > 1 && (
                           <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-10">
-                            {allImages.map((_, i) => (
+                            {displayImages.map((_, i) => (
                               <div
                                 key={i}
                                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                                  currentSlide === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
+                                  currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
                                 }`}
                               />
                             ))}
