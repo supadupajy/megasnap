@@ -405,6 +405,28 @@ const Index = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'posts'
+        },
+        (payload) => {
+          const deletedId = payload.old.id;
+          console.log('[Realtime] Post deleted by someone else:', deletedId);
+          
+          // [FIX] 실시간 삭제 이벤트 수신 시 애니메이션 즉시 실행
+          window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: deletedId } }));
+          
+          // 애니메이션 종료 후 상태 업데이트
+          setTimeout(() => {
+            setAllPosts(prev => prev.filter(p => p.id !== deletedId));
+            setDisplayedMarkers(prev => prev.filter(p => p.id !== deletedId));
+            mapCache.posts = mapCache.posts.filter(p => p.id !== deletedId);
+          }, 400);
+        }
+      )
       .subscribe((status, err) => {
         console.log(`[Realtime] Subscription status: ${status}`);
         if (err) console.error('[Realtime] Subscription error:', err);
