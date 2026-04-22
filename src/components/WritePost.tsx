@@ -628,7 +628,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             </div>
 
             {/* 하단 버튼 */}
-            <div className={cn("py-4 bg-white shrink-0", isKeyboardOpen ? "pb-2" : "pb-[90px]")}>
+            <div className={cn("py-4 bg-white shrink-0", isKeyboardOpen ? "pb-2" : "pb-[110px]")}>
               {currentPage === 1 ? (
                 <Button
                   className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
