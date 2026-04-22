@@ -460,15 +460,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                                       {isThisAdSlide && (
                                         <>
                                           <div 
-                                            onMouseDown={handleAdClick}
-                                            onTouchStart={(e) => {
+                                            onClick={(e) => {
                                               e.preventDefault();
-                                              handleAdClick(e as any);
+                                              e.stopPropagation();
+                                              console.log('[PostDetail] Direct click detected on Ad banner');
+                                              window.open(adLink, '_blank', 'noopener,noreferrer');
                                             }}
-                                            className="absolute inset-0 z-[99999] cursor-pointer bg-transparent active:bg-black/5"
-                                            style={{ pointerEvents: 'auto' }}
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                            }}
+                                            className="absolute inset-0 z-[100] cursor-pointer bg-transparent active:bg-black/5"
+                                            style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
                                           />
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[100000] pointer-events-none">
+                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 opacity-100 shadow-lg border border-white/20 z-[110] pointer-events-none">
                                             <ExternalLink className="w-3.5 h-3.5" />
                                             <span className="font-bold">{adLabel}</span>
                                           </div>
