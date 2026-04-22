@@ -158,30 +158,31 @@ const Chat = () => {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
-      // 2. 입력창 위치 및 여백 조정
+      // 2. 입력창 위치 및 여백 고정 (위치 밀림 원천 차단)
       if (inputRef.current) {
         const bottomOffset = Math.max(0, keyboardHeight);
         
         if (isKeyboardOpen) {
-          // 키보드가 열리면 뷰포트 하단에 딱 붙임
+          // 키보드가 열리면 하단바 무시하고 뷰포트 바닥에 밀착
           inputRef.current.style.bottom = '0px';
           inputRef.current.style.transform = `translateY(-${bottomOffset}px)`;
           inputRef.current.style.paddingBottom = '8px';
         } else {
-          // 키보드가 닫히면 하단 메뉴바 위에 위치 (사용자 피드백에 따라 더 높임)
+          // 키보드가 닫히면 항상 하단 메뉴바(BottomNav) 위(100px)에 고정
+          // fixed로 되어있으므로 하단바 높이만큼 명시적으로 띄워야 함
           inputRef.current.style.bottom = '100px'; 
           inputRef.current.style.transform = 'translateY(0px)';
-          inputRef.current.style.paddingBottom = '16px';
+          inputRef.current.style.paddingBottom = '12px';
         }
       }
 
-      // 3. 스크롤 영역 하단 패딩 동적 계산
+      // 3. 스크롤 영역 하단 패딩 동적 계산 (메시지가 입력창에 가려지지 않게 함)
       if (scrollRef.current) {
-        const inputHeight = inputRef.current?.offsetHeight || 60;
-        const bottomPad = inputHeight + Math.max(0, keyboardHeight) + 16;
-        scrollRef.current.style.paddingBottom = `${bottomPad}px`;
+        const baseBottomPad = isKeyboardOpen ? 100 : 200; // 기본 여백 확보
+        scrollRef.current.style.paddingBottom = `${baseBottomPad + Math.max(0, keyboardHeight)}px`;
       }
 
+      // 전송 직후 등 위치 변경 시 스크롤 보정
       setTimeout(scrollToBottom, 50);
     };
 
@@ -550,10 +551,12 @@ const Chat = () => {
 
       <div
         ref={inputRef}
-        className="fixed left-0 right-0 z-[120] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform transition-all duration-200"
+        className="fixed left-0 right-0 z-[120] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100 will-change-transform"
         style={{
           bottom: '100px', 
-          paddingBottom: '16px'
+          paddingBottom: '12px',
+          // 전송 후 레이아웃이 출렁이며 아래로 내려가는 현상을 막기 위해 transition 제거 또는 최소화
+          transition: 'transform 0.1s ease-out' 
         }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
