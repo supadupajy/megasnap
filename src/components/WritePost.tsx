@@ -62,30 +62,26 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [drawerHeight, setDrawerHeight] = useState('92vh');
 
-  // ✅ isDragging을 ref로 관리 — RAF 클로저 안에서도 항상 최신값 참조
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
-
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
+  // 드래프트 구독
   useEffect(() => {
     const unsubscribe = postDraftStore.subscribe(() => {
       const currentDraft = postDraftStore.get();
       setDraft(currentDraft);
-      
-      // ✅ [중요] 드래프트가 완전히 비워졌을 때만 1페이지로 리셋
-      // 키보드가 올라오면서 발생하는 리렌더링 시에는 페이지를 유지해야 함
       if (!currentDraft.image && !currentDraft.content && mediaFiles.length === 0) {
         setCurrentPage(1);
       }
     });
-    return () => {
-      unsubscribe();
-    };
-  }, [mediaFiles.length]); // mediaFiles 길이 변화 감지 추가
+    return () => unsubscribe();
+  }, [mediaFiles.length]);
 
+  // 캐러셀 API
   useEffect(() => {
     if (!api) return;
     setCurrentSlide(api.selectedScrollSnap());
@@ -94,6 +90,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     });
   }, [api]);
 
+  // 위치 주소 로드
   useEffect(() => {
     if (!isOpen) return;
     if (initialLocation) {
@@ -106,6 +103,24 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       setIsLoadingAddress(false);
     }
   }, [isOpen, initialLocation]);
+
+  // 키보드 높이에 따라 Drawer 높이 조절
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handleResize = () => {
+      const windowHeight = window.innerHeight;
+      const viewportHeight = vv.height;
+      if (windowHeight - viewportHeight > 100) {
+        // 키보드가 올라온 상태 — Drawer 높이를 줄여서 내부 스크롤로 접근 가능하게
+        setDrawerHeight(`${viewportHeight * 0.98}px`);
+      } else {
+        setDrawerHeight('92vh');
+      }
+    };
+    vv.addEventListener('resize', handleResize);
+    return () => vv.removeEventListener('resize', handleResize);
+  }, []);
 
   const getOrientation = (url: string): Promise<'landscape' | 'portrait'> => {
     return new Promise((resolve) => {
@@ -202,7 +217,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     try {
       const uploadedUrls: string[] = [];
       
-      // ✅ 1. 모든 파일 업로드 및 URL 수집 (이미지/비디오 구분 없이 images 배열로 통합)
       for (const media of mediaFiles) {
         const timestamp = new Date().getTime();
         const folder = media.type === 'video' ? 'post-videos' : 'post-images';
@@ -218,21 +232,19 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
-        console.log(`[WritePost] Uploaded: ${publicUrl}`);
       }
 
       const primaryMedia = mediaFiles[0];
       const finalImageUrl = uploadedUrls[0]; 
       let finalVideoUrl = primaryMedia.type === 'video' ? uploadedUrls[0] : null;
 
-      // ✅ 2. DB 저장 - images 컬럼에 명시적으로 배열 전달
       const postData = {
         content: draft.content,
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
         image_url: finalImageUrl,
-        images: uploadedUrls, // PostgreSQL ARRAY 컬럼
+        images: uploadedUrls,
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -242,17 +254,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         created_at: new Date().toISOString()
       };
 
-      console.log('[WritePost] Final Payload:', postData);
-
       const { data: insertData, error: insertError } = await supabase
         .from('posts')
-        .insert(postData) // 배열이 아닌 단일 객체로 삽입
+        .insert(postData)
         .select('*')
         .single();
         
       if (insertError) throw insertError;
 
-      console.log('[WritePost] DB Saved Data:', insertData);
       processNewPost(insertData, finalVideoUrl);
     } catch (err: any) {
       console.error('[WritePost] Critical Error:', err);
@@ -264,8 +273,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
     const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
-    
-    // ✅ 위치가 없는 포스팅은 지도 객체에서 제외하기 위해 null 처리
     const finalLat = initialLocation?.lat || null;
     const finalLng = initialLocation?.lng || null;
     const finalAddress = address || '위치 미지정';
@@ -288,7 +295,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       commentsCount: 0,
       comments: [],
       image: dbPost.image_url, 
-      images: dbPost.images || [dbPost.image_url], // ✅ 등록 직후 상태에도 images 배열 명시적 포함
+      images: dbPost.images || [dbPost.image_url],
       videoUrl: finalVideoUrl,
       isLiked: false,
       createdAt: new Date(),
@@ -329,12 +336,13 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
-style={{ 
-  bottom: 0,
-  transition: 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
-  willChange: 'transform'
-}}
+          className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl rounded-t-[40px]"
+          style={{ 
+            bottom: 0,
+            height: drawerHeight,
+            transition: 'height 0.15s ease-out, transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            willChange: 'transform'
+          }}
         >
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
@@ -343,7 +351,7 @@ style={{
 
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
 
-<div className="px-5 flex flex-col flex-1 min-h-0">
+          <div className="px-5 flex flex-col flex-1 min-h-0">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
@@ -423,7 +431,6 @@ style={{
                       ) : (
                         <Carousel
                           setApi={setApi}
-                          // ✅ isDraggingRef.current으로 Carousel 드래그 제어
                           opts={{ align: "start", containScroll: "trimSnaps", watchDrag: !isDraggingRef.current }}
                           className="w-full"
                           style={{ height: `${PREVIEW_HEIGHT}px` }}
@@ -456,20 +463,17 @@ style={{
                                           transition: isDraggingRef.current ? 'none' : 'transform 0.05s linear',
                                         }}
                                       />
-                                      {/* 드래그 오버레이 */}
                                       <div
                                         className="absolute inset-0 z-10 touch-none"
                                         style={{ cursor: isDraggingRef.current ? 'grabbing' : 'grab' }}
                                         onPointerDown={(e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
-                                          // ✅ ref로 즉시 설정 — 리렌더링 없이 RAF 안에서도 정확히 읽힘
                                           isDraggingRef.current = true;
                                           dragStartRef.current = { x: e.clientX, y: e.clientY };
                                           (e.target as HTMLElement).setPointerCapture(e.pointerId);
                                         }}
                                         onPointerMove={(e) => {
-                                          // ✅ ref로 체크 — 클로저 문제 없음
                                           if (!isDraggingRef.current) return;
                                           if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
@@ -636,12 +640,16 @@ style={{
                       </p>
                       <Textarea 
                         placeholder="이 장소에서의 추억을 기록해보세요..."
-                        className="flex-1 min-h-0 border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                        className="flex-1 min-h-[80px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
                         value={draft.content}
                         onChange={(e) => postDraftStore.set({ content: e.target.value })}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
-                        onFocus={(e) => e.stopPropagation()}
+                        onFocus={(e) => {
+                          e.stopPropagation();
+                          // 브라우저 자동 스크롤을 nearest로 제한해서 튀는 현상 방지
+                          e.target.scrollIntoView({ block: 'nearest' });
+                        }}
                       />
                     </div>
                   </motion.div>
@@ -651,8 +659,6 @@ style={{
 
             {/* 하단 버튼 */}
             <div className="py-4 pb-[120px] bg-white shrink-0">
-
-
               {currentPage === 1 ? (
                 <Button
                   className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
