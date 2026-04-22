@@ -39,6 +39,9 @@ const Popular = () => {
   
   const hasLoaded = useRef(false);
 
+  // loading 변수가 정의되지 않아 에러가 발생하던 부분을 isLoading으로 통합 관리
+  const isLoading = authLoading || (isInitialLoading && posts.length === 0);
+
   useEffect(() => {
     const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
     window.addEventListener('open-write-post', handleOpenWrite);
@@ -124,11 +127,9 @@ const Popular = () => {
 
   const handlePostDelete = useCallback((postId: string) => { setPosts(prev => prev.filter(p => p.id !== postId)); }, []);
 
-  const isLoading = authLoading || (isInitialLoading && posts.length === 0);
-
   return (
     <div className="min-h-screen bg-white pb-32">
-      {/* 고정 상단 헤더 - 불필요한 요소 제거 및 배경 불투명 처리 */}
+      {/* 고정 상단 헤더 */}
       <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
@@ -144,19 +145,19 @@ const Popular = () => {
           </div>
         ) : (
           <div className="flex flex-col">
-            {posts.map((post) => (
-              <div key={post.id} className="border-b border-gray-100 last:border-0">
+            {filteredPosts.map((post) => (
+              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
                 <PostItem 
                   post={post} 
                   onLikeToggle={() => handleLikeToggle(post.id)} 
                   onLocationClick={handleLocationClick} 
                   onDelete={handlePostDelete}
-                  autoPlayVideo={true} // 인기 페이지에서도 자동 재생 활성화
+                  autoPlayVideo={true}
                 />
               </div>
             ))}
-            {posts.length === 0 && (
-              <div className="text-center py-20 text-gray-400 font-medium">
+            {filteredPosts.length === 0 && (
+              <div className="text-center py-20 text-gray-400 font-medium px-10">
                 표시할 인기 포스팅이 없습니다.
               </div>
             )}
