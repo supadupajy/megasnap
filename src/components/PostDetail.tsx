@@ -336,157 +336,125 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const hasMediaBorder = mediaBorderContainerClass !== '';
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
-      <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
-      <div 
-        className="absolute top-8 right-6 z-[1100] transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
-        style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
-      >
-        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all close-popup-btn"><X className="w-6 h-6 stroke-[2.5px]" /></Button>
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-white animate-in slide-in-from-bottom duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-6 h-6" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon">
+            <Share2 className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon">
+            <MoreHorizontal className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
-      <div 
-        className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
-        style={{ 
-          paddingTop: '16px',
-          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
-          transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
-        }}
-      >
-        <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
-          <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
 
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-50 opacity-50" />
-            <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-              <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
-                <div className="flex flex-col">
-                  <div className="flex items-center justify-between px-4 py-4 shrink-0">
-                    <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90"><img src={post.user.avatar} alt={post.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" /></div>
-                      <div>
-                        <div className="flex items-center gap-1.5"><p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{post.user.name}</p>{isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}</div>
-                        <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5"><MapPin className="w-3 h-3" /><span className="text-[10px] font-medium">{post.location}</span></div>
-                      </div>
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
-                            <MoreHorizontal className="w-5 h-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                          {isMine ? (
-                            <DropdownMenuItem 
-                              onClick={(e) => { 
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setIsDeleteDialogOpen(true); 
-                              }} 
-                              className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                              <span className="text-sm font-bold text-red-600">삭제하기</span>
-                            </DropdownMenuItem>
-                          ) : (
-                            <>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                                <AlertCircle className="w-4 h-4 text-gray-600" />
-                                <span className="text-sm font-bold text-gray-700">신고</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(post.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                <Ban className="w-4 h-4 text-red-600" />
-                                <span className="text-sm font-bold text-red-600">차단</span>
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+      <div className="flex-1 overflow-y-auto pb-20">
+        {/* Media Carousel - Forced 1:1 Aspect Ratio */}
+        <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
+          <div 
+            className="flex transition-transform duration-300 ease-out h-full"
+            style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
+          >
+            {allImages.map((img, idx) => (
+              <div key={idx} className="w-full h-full flex-shrink-0 relative">
+                {post.videoUrl && idx === 0 ? (
+                  <video 
+                    src={post.videoUrl} 
+                    className="w-full h-full object-cover"
+                    controls
+                    autoPlay
+                    muted
+                    loop
+                  />
+                ) : post.youtubeUrl && idx === 0 ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${post.youtubeUrl}?autoplay=1&mute=1&loop=1`}
+                    className="w-full h-full"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                  />
+                ) : (
+                  <img 
+                    src={img} 
+                    alt={`Post image ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    style={{ 
+                      // 1:1 비율 내에서 원본 포스팅 시 설정한 위치를 보여주기 위해 object-fit: cover 사용
+                      aspectRatio: '1/1' 
+                    }}
+                  />
+                )}
+                
+                {/* Ad Overlay for injected Coca-Cola ad */}
+                {idx === 1 && post.id !== 'coca-cola-ad' && (
+                  <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded backdrop-blur-sm z-10">
+                    AD
                   </div>
-                  <div className="px-4">
-                    <div ref={videoContainerRef} className={cn("relative aspect-[4/3] w-full rounded-2xl", mediaBorderContainerClass)}>
-                      <div className={cn("w-full h-full overflow-hidden bg-white relative z-10", hasMediaBorder ? "rounded-[14px]" : "rounded-2xl")}>
-
-                        {isPlayingVideo ? (
-                          youtubeId ? (
-                            <div className="relative w-full h-full">
-                              <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
-                              <button onClick={(e) => { e.stopPropagation(); window.open(post.youtubeUrl, '_blank'); }} className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 shadow-lg border border-white/20 active:scale-95 transition-all z-20"><ExternalLink className="w-3 h-3" /> 유튜브에서 보기</button>
-                            </div>
-                          ) : (
-                            <video src={post.videoUrl} className="w-full h-full object-cover" controls={true} autoPlay playsInline loop onClick={(e) => e.stopPropagation()} />
-                          )
-                        ) : (
-                          <div className="relative w-full h-full">
-                            <div ref={imageScrollRef} onScroll={handleImageScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">{displayImages.map((img: string, idx: number) => (<div key={idx} className="w-full h-full shrink-0 snap-center [scroll-snap-stop:always] relative"><img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />{idx === adIndex && !isAd && !youtubeId && <div className="absolute top-4 right-4 z-20 bg-blue-500 text-white px-2.5 h-7 rounded-lg text-[10px] font-black flex items-center justify-center gap-1 shadow-lg border border-white/10">AD</div>}</div>))}</div>
-                            {(post.videoUrl || youtubeId) && (<div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none"><div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center"><Play className="w-6 h-6 text-white fill-white ml-1 opacity-50" /></div></div>)}
-                            {displayImages.length > 1 && !(post.videoUrl || youtubeId) && (<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-30">{displayImages.map((_: any, idx: number) => (<div key={idx} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", currentImageIndex === idx ? "bg-white w-4" : "bg-white/40")} />))}</div>)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="flex items-center gap-3">
-                          {/* 저장 버튼 (북마크) */}
-                          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-                            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-                          </button>
-                          
-                          {/* 카테고리 뱃지 */}
-                          {renderCategoryBadge()}
-                          
-                          {/* 위치보기 버튼 */}
-                          {post.lat !== undefined && post.lng !== undefined && (
-                            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                              <span className="text-[10px] font-black">위치보기</span>
-                            </button>
-                          )}
-                        </div>
-                        {isAd && (
-                          <a 
-                            href="https://s.baemin.com/t3000fBqlbHGL" 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            onClick={(e) => e.stopPropagation()} 
-                            className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
-                          >
-                            <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                            <span className="text-[10px] font-black">주문하기</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}><p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p><div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div></div>
-                    <div className="border-t border-gray-100 pt-4">
-                      <form 
-                        onSubmit={handleAddComment} 
-                        className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
-                      >
-                        <Input 
-                          ref={commentInputRef}
-                          placeholder="댓글 달기..." 
-                          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
-                          value={commentInput} 
-                          onChange={(e) => setCommentInput(e.target.value)} 
-                          disabled={isSubmittingComment} 
-                        />
-                        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
-                      </form>
-                      {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
-      <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
+
+      <div className="p-4 border-t">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(post.id); }}><Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700" /></button><button className="text-gray-700" onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6" /></button></div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              {/* 저장 버튼 (북마크) */}
+              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+              </button>
+              
+              {/* 카테고리 뱃지 */}
+              {renderCategoryBadge()}
+              
+              {/* 위치보기 버튼 */}
+              {post.lat !== undefined && post.lng !== undefined && (
+                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(post.lat, post.lng); }} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                  <span className="text-[10px] font-black">위치보기</span>
+                </button>
+              )}
+            </div>
+            {isAd && (
+              <a 
+                href="https://s.baemin.com/t3000fBqlbHGL" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                <span className="text-[10px] font-black">주문하기</span>
+              </a>
+            )}
+          </div>
+        </div>
+        <div className="space-y-1 mb-4 cursor-pointer" onClick={onClose}><p className="text-sm font-bold text-gray-500">좋아요 {post.likes.toLocaleString()}개</p><div className="flex gap-2 items-start"><span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{post.user.name}</span><p className="text-gray-800 text-sm leading-snug">{post.content}</p></div></div>
+        <div className="border-t border-gray-100 pt-4">
+          <form 
+            onSubmit={handleAddComment} 
+            className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100"
+          >
+            <Input 
+              ref={commentInputRef}
+              placeholder="댓글 달기..." 
+              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" 
+              value={commentInput} 
+              onChange={(e) => setCommentInput(e.target.value)} 
+              disabled={isSubmittingComment} 
+            />
+            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors"><Send className="w-4 h-4" /></button>
+          </form>
+          {lastComment && <div className="flex gap-2 items-start mt-1 mb-2"><span className="font-bold text-sm text-gray-900">{lastComment.user}</span><span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span></div>}<button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="w-full py-1 flex items-center justify-between group"><span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>{showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}</button>
+        </div>
+      </div>
     </div>
   );
 };
