@@ -421,18 +421,25 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                               <CarouselItem key={idx} className="pl-0 basis-full h-[300px]">
                                 <div className="relative w-full h-[300px] rounded-2xl overflow-hidden bg-gray-100 shadow-inner">
                                   {media.type === 'image' ? (
-                                    <div className="absolute inset-0 select-none">
+                                    <div className="w-full h-full relative">
                                       <img 
                                         src={media.url} 
-                                        alt="Preview" 
-                                        draggable={false}
-                                        className="w-full h-full object-cover pointer-events-none"
-                                        // ✅ Fix: zoom 초기값 1 사용 (기존 하드코딩 1.2 제거)
+                                        alt={`Preview ${idx}`} 
+                                        className="absolute transition-none select-none pointer-events-none z-10 max-w-none"
                                         style={{ 
-                                          transform: `translate(${media.crop?.x || 0}px, ${media.crop?.y || 0}px) scale(${media.zoom || 1})`,
-                                          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                                          top: '50%',
+                                          left: '50%',
+                                          height: '100%',
+                                          width: 'auto',
+                                          minWidth: '100%',
+                                          transform: `translate(calc(-50% + ${media.crop?.x || 0}px), calc(-50% + ${media.crop?.y || 0}px)) scale(${media.zoom || 1.2})`,
+                                        }}
+                                        onLoad={(e) => {
+                                          const img = e.target as HTMLImageElement;
+                                          console.log('[WritePost] Image dimensions:', img.naturalWidth, img.naturalHeight);
                                         }}
                                       />
+                                      {/* 드래그 핸들러 */}
                                       <div 
                                         className="absolute inset-0 z-20 cursor-move touch-none"
                                         onPointerDown={(e) => {
