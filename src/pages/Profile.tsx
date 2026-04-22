@@ -55,39 +55,61 @@ const Profile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
-    // [FINAL FIX] 모든 이미지를 Unsplash 고화질 이미지로 강제 전환
-    const getUnsplashUrl = (seed: string) => `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${seed}`;
-    const forcedImage = getUnsplashUrl(p.id);
+    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
-    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: forcedImage, images: [forcedImage] });
+    const isValidUrl = (url: any) => {
+      if (!url || typeof url !== 'string') return false;
+      const clean = url.trim();
+      // [FINAL FIX] 어떤 변형이든 'post content'가 들어있거나 http로 시작하지 않으면 무조건 배제
+      if (/post\s*content/i.test(clean)) return false;
+      if (!clean.startsWith('http')) return false;
+      return true;
+    };
+
+    // [핵심] 원본 데이터(p.image_url, p.images)를 신뢰하지 않고 여기서 즉시 강제 필터링
+    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+    let rawImages = Array.isArray(p.images) && p.images.length > 0 
+      ? p.images.filter(isValidUrl)
+      : [];
+      
+    if (rawImages.length === 0) rawImages = [rawImage];
+
+    // 정제된 데이터를 바탕으로 sanitize 진행
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     const borderType = isAd ? 'none' : getTierFromId(sanitized.id);
     
-    // 유튜브인 경우 썸네일 사용, 그 외는 무조건 Unsplash 강제
-    let finalImage = sanitized.youtube_url ? getYoutubeThumbnail(sanitized.youtube_url) : forcedImage;
-    if (!finalImage) finalImage = forcedImage;
+    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
+    
+    if (finalImage.includes('unsplash.com')) {
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
+    }
+    
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
+      ? sanitized.images.filter(isValidUrl)
+      : [finalImage];
+
+    let isLiked = false;
+    let isSaved = false;
+    
+    if (authUser?.id) {
+      const [{ data: likeData }, { data: saveData }] = await Promise.all([
+        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
+        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
+      ]);
+      isLiked = !!likeData;
+      isSaved = !!saveData;
+    }
 
     return {
-      id: sanitized.id, 
-      isAd, 
-      isGif: false, 
-      isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', 
-      location: sanitized.location_name || '알 수 없는 장소', 
-      lat: sanitized.latitude, 
-      lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), 
-      commentsCount: 0, 
-      comments: [], 
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
       image: finalImage, 
-      images: [finalImage], 
-      youtubeUrl: sanitized.youtube_url, 
-      videoUrl: sanitized.video_url,
-      isLiked: false, 
-      isSaved: false, 
-      createdAt: new Date(sanitized.created_at), 
-      borderType
+      images: finalImages.length > 0 ? finalImages : [finalImage], 
+      youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
+      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType
     };
   };
 
