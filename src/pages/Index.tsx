@@ -149,29 +149,12 @@ const Index = () => {
       const p = await sanitizeYoutubeMedia(preSanitizedRaw);
       const isAd = p.content?.trim().startsWith('[AD]');
       
-      // [FINAL FIX] DB의 실제 'likes' 컬럼 값과 연동하여 티어 결정
+      // [FIX] 좋아요 수와 ID를 기반으로 티어 결정 (Index.tsx의 핵심 로직)
       const finalLikes = Number(p.likes || 0);
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id, finalLikes);
       
-      // 1순위: 좋아요 수 기반 (DB 데이터 기반)
-      let borderType: any = 'none';
-      if (finalLikes >= 10000) borderType = 'diamond';
-      else if (finalLikes >= 5000) borderType = 'gold';
-      else if (finalLikes >= 1000) borderType = 'silver';
-      else if (finalLikes >= 200) borderType = 'popular';
-      
-      // 2순위: 데이터가 부족하거나 신규 포스팅일 경우 해시 기반 강제 할당 (테스트 목적)
-      if (borderType === 'none' && !isAd) {
-        let h = 0;
-        const id = p.id || '';
-        for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-        const val = Math.abs(h % 1000) / 1000;
-        if (val < 0.05) borderType = 'diamond';
-        else if (val < 0.15) borderType = 'gold';
-        else if (val < 0.35) borderType = 'silver';
-        else if (val < 0.55) borderType = 'popular';
-      }
-      
-      if (isAd) borderType = 'none';
+      // DB에 명시된 값이 있다면 우선순위 (수동 설정 대응)
+      if (p.border_type && p.border_type !== 'none') borderType = p.border_type;
 
       let finalImage = p.image_url;
       if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
@@ -215,7 +198,7 @@ const Index = () => {
         category: p.category || 'none',
         isLiked: false,
         createdAt: new Date(p.created_at),
-        borderType
+        borderType // 이 프로퍼티가 MapContainer로 정확히 전달되어야 함
       };
     } catch (err) { return null as any; }
   }, []);

@@ -1,1 +1,0 @@
-SELECT id, latitude, longitude, likes, category FROM posts WHERE latitude IS NOT NULL AND longitude IS NOT NULL LIMIT 5;
