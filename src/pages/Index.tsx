@@ -46,8 +46,8 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  // ✅ 5단계를 명시적으로 디폴트 설정 (기존 캐시 무시하도록 강제 가능)
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -772,7 +772,11 @@ const Index = () => {
               <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}><div className="w-full shrink-0 pointer-events-auto"><TrendingPosts posts={globalTrendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={handleTrendingPostClick} /></div></div>
               <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2"><button onClick={() => setIsCategoryOpen(true)} className={cn("w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500", !selectedCategories.includes('all') && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600")}><Layers className="w-6 h-6" /></button><button onClick={() => setIsSearchOpen(true)} className={cn("w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500", isSearchOpen && "ring-2 ring-white ring-offset-2 ring-offset-indigo-600")}><Search className="w-6 h-6" /></button><button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button></div>
               <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
-                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
+                <button 
+                  onClick={() => setIsSettingsOpen(true)}
+                  disabled={isRefreshing} 
+                  className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"
+                >
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
@@ -811,6 +815,75 @@ const Index = () => {
         )}
       </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
+      
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsSettingsOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110]"
+            />
+            <motion.div 
+              initial={{ y: "100%" }} 
+              animate={{ y: 0 }} 
+              exit={{ y: "100%" }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-[120] p-8 shadow-2xl pb-12"
+            >
+              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8" />
+              <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
+                <RefreshCw className="w-6 h-6 text-indigo-600" />
+                데이터 관리 및 생성
+              </h3>
+              
+              <div className="flex flex-col gap-4">
+                <Button 
+                  onClick={async () => {
+                    const toastId = showLoading('강남 및 주변 데이터를 생성 중...');
+                    try {
+                      await seedGangnamSpecialPosts(authUser?.id || '');
+                      showSuccess('강남 및 주변 지역에 20개의 포스팅이 생성되었습니다!');
+                      dismissToast(toastId);
+                      setIsSettingsOpen(false);
+                      handleRefresh();
+                    } catch (err) {
+                      showError('데이터 생성에 실패했습니다.');
+                      dismissToast(toastId);
+                    }
+                  }}
+                  className="w-full h-16 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-orange-100 active:scale-95 transition-all"
+                >
+                  <Navigation className="w-6 h-6 fill-white" />
+                  강남 및 주변 특별 생성 (20개)
+                </Button>
+
+                <Button 
+                  onClick={async () => {
+                    setIsSettingsOpen(false);
+                    handleRefresh();
+                  }}
+                  variant="outline"
+                  className="w-full h-14 border-2 border-indigo-600 text-indigo-600 rounded-2xl font-bold hover:bg-indigo-50 active:scale-95 transition-all"
+                >
+                  현재 위치 재검색
+                </Button>
+
+                <Button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  variant="ghost"
+                  className="w-full h-12 text-gray-400 font-medium"
+                >
+                  닫기
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
       <PostListOverlay
         isOpen={isPostListOpen}
