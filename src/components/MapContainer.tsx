@@ -344,7 +344,9 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}`;
+      
+      // ✅ [제안 반영] contentStateKey에 borderType과 isAd 추가하여 스타일 변경 즉시 감지
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
