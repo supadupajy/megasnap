@@ -179,11 +179,18 @@
   transform: translateZ(0);
 }
 
+/* [FIX] 인기글 및 인플루언서 마커 전용 위아래 플로팅 애니메이션 */
 @keyframes marker-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-8px) translateZ(0); }
+  100% { transform: translateY(0) translateZ(0); }
 }
-.animate-marker-float { animation: marker-float 3s ease-in-out infinite; }
+
+.animate-marker-float {
+  animation: marker-float 2.5s ease-in-out infinite;
+  will-change: transform;
+  transform: translateZ(0);
+}
 
 /* 마커 등장 애니메이션 (살짝 확대되면서 뿅!) */
 @keyframes markerAppear {
