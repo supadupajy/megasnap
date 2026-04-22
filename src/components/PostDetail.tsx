@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog } from "@/components/ui/dialog";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
@@ -160,6 +161,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   const displayImage = imgErrors[currentPost.id] ? getFallbackImage(currentPost.id) : (currentPost.image || getFallbackImage(currentPost.id));
+
+  // [FIX] displayImages 변수 선언 (기존 코드에서 누락된 부분 복구)
+  const displayImages = useMemo(() => {
+    if (!currentPost) return [];
+    
+    let images = currentPost.images && currentPost.images.length > 0 
+      ? currentPost.images 
+      : [displayImage];
+
+    // 광고의 경우 두 번째 슬라이드에 이미지 추가 로직이 필요할 수 있으나,
+    // 현재는 타입 에러 해결을 위해 기본 배열을 보장함
+    if (isAd && images.length === 1) {
+      images = [images[0], images[0]]; // 예시: 광고는 2개의 슬라이드를 가짐
+    }
+    
+    return images;
+  }, [currentPost, displayImage, isAd]);
 
   const adLink = useMemo(() => {
     if (!currentPost) return "https://www.coca-cola.co.kr/";
