@@ -652,7 +652,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             {/* 하단 버튼 — 키보드가 올라오면 키보드 바로 위에 붙도록 */}
             <div
               className="py-4 bg-white shrink-0 transition-all duration-150"
-              style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : '120px' }}
+              style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '120px' }}
             >
               {currentPage === 1 ? (
                 <Button
