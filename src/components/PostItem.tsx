@@ -116,10 +116,18 @@ const PostItem = ({
     if (isAd) return [image];
     if (youtubeId) return [image]; 
     
-    const img1 = images.length > 0 ? images[0] : image;
-    const img3 = (images.length > 1 && images[1] !== AD_IMAGE) ? images[1] : THIRD_PLACEHOLDER;
+    // [FIX] images 배열이 비어있거나 깨진 경우 image(기본)를 사용하도록 보강
+    const validImages = (images && images.length > 0) 
+      ? images.filter(img => img && img !== 'null' && img.length > 10)
+      : [image];
+    
+    const finalBaseImages = validImages.length > 0 ? validImages : [image || FALLBACK_IMAGE];
+    
+    // 기존 캐러셀 로직 유지 (중간에 AD 삽입)
+    const img1 = finalBaseImages[0];
+    const img3 = (finalBaseImages.length > 1) ? finalBaseImages[1] : THIRD_PLACEHOLDER;
     return [img1, AD_IMAGE, img3];
-  }, [isAd, images, image, youtubeId]);
+  }, [isAd, images, image, youtubeId, id]);
 
   const adIndex = 1;
   const isMine = authUser && (user.id === authUser.id || user.id === 'me');
@@ -139,9 +147,9 @@ const PostItem = ({
     if (onImageError) {
       onImageError(id);
     } else {
-      // Prevent infinite error loops by checking if we already tried the fallback
-      if (!target.src.includes('unsplash.com')) {
-        target.src = FALLBACK_IMAGE;
+      // Prevent infinite error loops
+      if (!target.src.includes('sig=')) {
+        target.src = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${id}`;
       }
     }
   };
