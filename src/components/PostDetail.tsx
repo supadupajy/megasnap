@@ -198,11 +198,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     if (isAd) return [post.image];
     if (youtubeId) return [post.image]; 
     
-    // 사용자가 등록한 이미지들 가져오기
-    const userImages = post.images && post.images.length > 0 ? post.images : [post.image];
+    // ✅ 사용자가 등록한 전체 이미지 목록(images 배열) 가져오기
+    // DB에서 가져온 데이터가 images 컬럼에 배열로 저장되어 있는지 확인
+    let userImages: string[] = [];
+    
+    if (Array.isArray(post.images) && post.images.length > 0) {
+      userImages = [...post.images];
+    } else if (post.image) {
+      userImages = [post.image];
+    }
+    
+    // 유효한 이미지가 없는 경우 대비
+    if (userImages.length === 0) return [FALLBACK_IMAGE];
     
     // 두 번째 자리에 코카콜라 광고 삽입 로직
-    // 코카콜라 광고 이미지 URL (스크린샷 기반 AD_IMAGE 유지 또는 교체 가능)
     const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
     
     const combined = [...userImages];

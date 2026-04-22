@@ -198,9 +198,9 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     const finalAddress = address || '위치 미지정';
 
     try {
-      // ✅ 모든 이미지/비디오 순차적 또는 병렬 업로드 및 URL 수집
-      const uploadedUrls = [];
+      const uploadedUrls: string[] = [];
       
+      // ✅ 1. 모든 파일 업로드 및 URL 수집 (이미지/비디오 구분 없이 images 배열로 통합)
       for (const media of mediaFiles) {
         const timestamp = new Date().getTime();
         const folder = media.type === 'video' ? 'post-videos' : 'post-images';
@@ -212,29 +212,25 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
           .from(folder)
           .upload(filePath, media.file);
 
-        if (uploadError) {
-          console.error(`[WritePost] Upload error for ${media.file.name}:`, uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
-        console.log(`[WritePost] Successfully uploaded: ${publicUrl}`);
+        console.log(`[WritePost] Uploaded: ${publicUrl}`);
       }
 
-      if (uploadedUrls.length === 0) throw new Error('파일 업로드에 실패했습니다.');
-
       const primaryMedia = mediaFiles[0];
-      const finalImageUrl = uploadedUrls[0]; // 첫 번째 이미지를 대표 썸네일로
+      const finalImageUrl = uploadedUrls[0]; 
       let finalVideoUrl = primaryMedia.type === 'video' ? uploadedUrls[0] : null;
 
+      // ✅ 2. DB 저장 - images 컬럼에 명시적으로 배열 전달
       const postData = {
         content: draft.content,
         location_name: finalAddress,
         latitude: finalLat,
         longitude: finalLng,
         image_url: finalImageUrl,
-        images: uploadedUrls, // ✅ PostgreSQL ARRAY 형태로 모든 URL 저장
+        images: uploadedUrls, // PostgreSQL ARRAY 컬럼
         user_id: authUser.id,
         user_name: displayName,
         user_avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser.id}`,
@@ -244,23 +240,20 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         created_at: new Date().toISOString()
       };
 
-      console.log('[WritePost] Final Post Data to DB:', postData);
+      console.log('[WritePost] Final Payload:', postData);
 
       const { data: insertData, error: insertError } = await supabase
         .from('posts')
-        .insert([postData])
-        .select()
+        .insert(postData) // 배열이 아닌 단일 객체로 삽입
+        .select('*')
         .single();
         
-      if (insertError) {
-        console.error('[WritePost] DB Insert Error:', insertError);
-        throw insertError;
-      }
+      if (insertError) throw insertError;
 
-      console.log('[WritePost] Post successfully saved to DB:', insertData);
+      console.log('[WritePost] DB Saved Data:', insertData);
       processNewPost(insertData, finalVideoUrl);
     } catch (err: any) {
-      console.error('[WritePost] Full Error Trace:', err);
+      console.error('[WritePost] Critical Error:', err);
       showError(err.message || '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
