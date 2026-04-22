@@ -145,8 +145,29 @@ const Index = () => {
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
+
+      // [FIX] 고장난 Unsplash URL 차단 및 자동 교체 블랙리스트
+      const BROKEN_URL_PART = "photo-1548199973-03cbf5292374";
+      const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
+
+      const sanitizeUrl = (url: any) => {
+        if (!url || typeof url !== 'string' || url.includes(BROKEN_URL_PART)) {
+          return HIGH_RES_FALLBACK + "&sig=" + p.id;
+        }
+        // Unsplash인 경우 무조건 고해상도 파라미터 강제
+        if (url.includes('unsplash.com')) {
+          return url.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+        }
+        return url;
+      };
+
+      let finalImage = sanitizeUrl(p.image_url);
       
-      // [FINAL FIX] borderType 결정 시 isAd 조건보다 likesCount 조건을 우선하거나 병합 검토
+      const validImages = Array.isArray(p.images) && p.images.length > 0
+        ? p.images.map(img => sanitizeUrl(img))
+        : [finalImage];
+
+      // [FIX] borderType 결정 시 isAd 조건보다 likesCount 조건을 우선하거나 병합 검토
       // 광고이면서 인기글일 수는 없으므로, 광고가 아닐 때만 티어/인기 체크
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       
@@ -209,25 +230,25 @@ const Index = () => {
       const contentText3 = p2.content || '';
       const isAd3 = contentText3.trim().startsWith('[AD]');
       
-      let finalImage = p2.image_url;
-      if (isValidUrl(finalImage) && finalImage.includes('unsplash.com')) {
-        finalImage = finalImage.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
+      let finalImage2 = p2.image_url;
+      if (isValidUrl(finalImage2) && finalImage2.includes('unsplash.com')) {
+        finalImage2 = finalImage2.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
       }
 
       if (p2.youtube_url) {
-        finalImage = getYoutubeThumbnail(p2.youtube_url) || finalImage;
+        finalImage2 = getYoutubeThumbnail(p2.youtube_url) || finalImage2;
       }
       
-      if (!isValidUrl(finalImage)) finalImage = SAFE_FALLBACK;
+      if (!isValidUrl(finalImage2)) finalImage2 = SAFE_FALLBACK;
 
-      const validImages = Array.isArray(p2.images) && p2.images.length > 0
+      const validImages2 = Array.isArray(p2.images) && p2.images.length > 0
         ? p2.images.map(img => {
             if (isValidUrl(img) && img.includes('unsplash.com')) {
               return img.split('?')[0] + "?auto=format&fit=crop&w=1200&q=90";
             }
             return isValidUrl(img) ? img : SAFE_FALLBACK;
           })
-        : [finalImage];
+        : [finalImage2];
 
       return {
         id: p.id,
@@ -243,11 +264,11 @@ const Index = () => {
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
-        likes: Number(p.likes || 0),
+        likes: likesCount,
         commentsCount: 0,
         comments: [],
-        image: finalImage,
-        images: validImages,
+        image: finalImage2,
+        images: validImages2,
         youtubeUrl: p2.youtube_url,
         videoUrl: p2.video_url,
         category: p.category || 'none',
