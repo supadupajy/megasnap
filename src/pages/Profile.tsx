@@ -75,7 +75,19 @@ const Profile = () => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=100";
 
     let finalImage = sanitized.image_url;
-    
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
+      ? sanitized.images.map(img => {
+          if (isValidUrl(img)) {
+            let cleanImg = img;
+            if (cleanImg.includes('unsplash.com')) {
+              cleanImg = cleanImg.replace(/w=\d+/, 'w=1200').replace(/q=\d+/, 'q=100');
+            }
+            return cleanImg;
+          }
+          return SAFE_FALLBACK;
+        })
+      : [finalImage];
+
     if (finalImage.includes('unsplash.com')) {
       // [FIX] Unsplash URL 파라미터 보정 (초고화질 및 원본 비율 신뢰)
       if (finalImage.includes('w=800') || finalImage.includes('w=1080')) {
@@ -86,7 +98,7 @@ const Profile = () => {
     }
     
     // 3. 이미지 배열 전수 검사
-    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
       ? sanitized.images.map(img => {
           if (isValidUrl(img)) {
             let cleanImg = img;
