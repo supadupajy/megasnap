@@ -11,7 +11,6 @@ import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X, Loader2 } from 'lucide-react';
-import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
@@ -63,36 +62,18 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
 
-  // [수정] PostListOverlay 상태를 App.tsx에 전달 (navigate 대신 직접 state 수정 시도)
-  // navigate replace를 사용하면 스크린 깜빡임(Re-mount)이 발생하므로
-  // transition 효과를 위해 state 관리를 최적화합니다.
-  useEffect(() => {
-    // navigate replace는 페이지 전체를 리렌더링하게 하여 깜빡임을 유발할 수 있음
-    // history.replaceState를 사용하여 URL이나 히스토리 구조는 유지하면서 데이터만 조용히 업데이트
-    const currentState = window.history.state || {};
-    if (currentState.isPostListOpen !== isPostListOpen) {
-      window.history.replaceState({ 
-        ...currentState, 
-        isPostListOpen,
-        usr: { ...currentState.usr, isPostListOpen } // React Router v6 내부 구조 대응
-      }, '');
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
     }
-  }, [isPostListOpen]);
+  }, [navigate]);
 
-  // ✅ [FIX] isPostListOpen 변경 시 window 플래그에 즉시 동기적으로 반영
-  // navigate()를 통한 location.state 업데이트는 비동기라 App.tsx backButton 리스너에서
-  // 타이밍 이슈가 발생하므로, window 플래그로 교체하여 즉시 반영 보장
-  useEffect(() => {
-    (window as any).__isPostListOpen = isPostListOpen;
-    console.log('[Index] window.__isPostListOpen set to:', isPostListOpen);
-  }, [isPostListOpen]);
-
-  // [수정] 네이티브 뒤로가기 버튼 이벤트 리스너 (App.tsx와 연동)
   useEffect(() => {
     const handleCloseOverlay = () => {
       console.log('[Index] Received close signal from native back button');
-      // window.history.state를 직접 참조하여 더 정확하게 판단
-      if (isPostListOpen || window.history.state?.isPostListOpen) {
+      if (isPostListOpen) {
         setIsPostListOpen(false);
       }
     };
@@ -100,24 +81,21 @@ const Index = () => {
     return () => window.removeEventListener('close-post-list-overlay', handleCloseOverlay);
   }, [isPostListOpen]);
 
-  // ✅ [REMOVED] location.state를 통한 isPostListOpen 동기화 useEffect 제거
-  // 이 방식은 navigate()의 비동기 특성으로 인해 App.tsx backButton 리스너에서
-  // 항상 이전 값을 읽는 타이밍 레이스 컨디션을 유발했음
-  //
-  // useEffect(() => {
-  //   if ((location.state as any)?.isPostListOpen !== isPostListOpen) {
-  //     navigate(location.pathname, { 
-  //       replace: true, 
-  //       state: { ...location.state, isPostListOpen } 
-  //     });
-  //   }
-  // }, [isPostListOpen, location.pathname, navigate]);
-
-  // ✅ [ADD] 컴포넌트 언마운트 시 플래그 초기화
   useEffect(() => {
-    return () => {
-      (window as any).__isPostListOpen = false;
-    };
+    const currentState = window.history.state || {};
+    if (currentState.isPostListOpen !== isPostListOpen) {
+      window.history.replaceState({ 
+        ...currentState, 
+        isPostListOpen,
+        usr: { ...currentState.usr, isPostListOpen }
+      }, '');
+    }
+  }, [isPostListOpen]);
+
+  useEffect(() => {
+    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
+    window.addEventListener('open-write-post', handleOpenWrite);
+    return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
   const getTierFromId = (id: string) => {
@@ -131,35 +109,23 @@ const Index = () => {
     return 'none';
   };
 
-  const mapDbToPost = async (rawPost: any): Promise<Post> => {
-    if (!rawPost || !rawPost.id) {
-      console.warn('⚠️ [mapDbToPost] Invalid raw post data:', rawPost);
-      return null as any;
-    }
-
+  const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
+    if (!rawPost || !rawPost.id) return null as any;
     try {
       const p = await sanitizeYoutubeMedia(rawPost);
       const isAd = p.content?.trim().startsWith('[AD]');
       const borderType = isAd ? 'none' : getTierFromId(p.id);
-
-      // 이미지 URL 최적화 로직
       let finalImage = null;
-      
-      if (p.youtube_url) {
-        finalImage = getYoutubeThumbnail(p.youtube_url);
-      } else if (p.image_url && (p.image_url.startsWith('http') || p.image_url.startsWith('data:'))) {
-        // 이미 유효한 URL(Unsplash 등)이 있는 경우 그대로 사용
-        finalImage = p.image_url;
-      }
-
+      if (p.youtube_url) finalImage = getYoutubeThumbnail(p.youtube_url);
+      else if (p.image_url && (p.image_url.startsWith('http') || p.image_url.startsWith('data:'))) finalImage = p.image_url;
       return {
         id: p.id,
         isAd,
         isGif: false,
         isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-        user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+        user: { id: p.user_id || '', name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
         content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-        location: p.location_name,
+        location: p.location_name || '알 수 없는 장소',
         lat: p.latitude,
         lng: p.longitude,
         likes: Number(p.likes || 0),
@@ -173,193 +139,118 @@ const Index = () => {
         createdAt: new Date(p.created_at),
         borderType
       };
-    } catch (err) {
-      console.error('❌ [mapDbToPost] Error processing post:', err);
-      return null as any;
-    }
-  };
+    } catch (err) { return null as any; }
+  }, []);
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('likes', { ascending: false })
-        .limit(50);
-      
+      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).limit(50);
       if (!error && data) {
         const mapped = await Promise.all(data.map(mapDbToPost));
         const filtered = mapped.filter(p => p && !p.isAd).slice(0, 20);
-        const ranked = filtered.map((p, idx) => ({
-          ...p,
-          rank: idx + 1
-        }));
+        const ranked = filtered.map((p, idx) => ({ ...p, rank: idx + 1 }));
         setGlobalTrendingPosts(ranked);
       }
+    } catch (err) { console.error(err); }
+  }, [mapDbToPost]);
 
-    } catch (err) {
-      console.error('[Trending] Fetch Error:', err);
-    }
-  }, []);
+  useEffect(() => { fetchGlobalTrending(); }, [fetchGlobalTrending]);
 
-  useEffect(() => {
-    fetchGlobalTrending();
-  }, [fetchGlobalTrending]);
-
-  const handleMapChange = useCallback((data: any) => {
-    // 지도를 직접 조작해서 움직인 경우(isSelectingLocation이 아닐 때) 위치 선택 정보 초기화
-    if (!isSelectingLocation) {
-      setFinalSelectedLocation(null);
-      postDraftStore.clear();
-    }
-
-    const zoomChanged = data.level !== undefined && data.level !== currentZoom;
-
-    if (zoomChanged) {
-      if (throttleTimer.current) {
-        clearTimeout(throttleTimer.current);
-        throttleTimer.current = null;
-      }
-      
-      setMapData(data);
-      setCurrentZoom(data.level);
-      
-      mapCache.lastCenter = data.center;
-      mapCache.lastZoom = data.level;
-      
-      if (isSelectingLocation) setTempSelectedLocation(data.center);
-      setFinalSelectedLocation(null);
-      
-      setTimeout(() => {
-        syncPostsWithSupabase(data.bounds, data.level);
-      }, 50); // 줌 변경 시 즉시 로드
-      return;
-    }
-    
-    // 이동 시에는 실시간성을 높이기 위해 0.1초로 단축하여 마커가 바로바로 나타나게 함
-    if (throttleTimer.current) return;
-    throttleTimer.current = setTimeout(() => {
-      setMapData(data);
-      mapCache.lastCenter = data.center;
-      if (data.level !== undefined) {
-        setCurrentZoom(data.level);
-        mapCache.lastZoom = data.level;
-      }
-      if (isSelectingLocation) setTempSelectedLocation(data.center);
-      throttleTimer.current = null;
-    }, 100); 
-  }, [isSelectingLocation, currentZoom]);
-
-  // ✅ [데이터 다이어트 최적화] 화면 영역 안의 마커는 무조건 최우선 로드
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds) return;
-    
     if (isSyncing.current && !forceBounds) return;
-    
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
-
     try {
-      // 1. 현재 화면 영역(Bounding Box)에 대한 쿼리 실행
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
-      
-      const mappedPosts = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
-      const validMappedPosts = mappedPosts.filter(p => p !== null);
-
+      const mappedPosts: Post[] = dbPosts.map(p => ({
+        id: p.id,
+        isAd: false,
+        isGif: false,
+        isInfluencer: false,
+        user: { id: '', name: '...', avatar: '' },
+        content: '',
+        location: '...',
+        lat: p.latitude,
+        lng: p.longitude,
+        likes: Number(p.likes || 0),
+        commentsCount: 0,
+        comments: [],
+        image: p.image_url,
+        videoUrl: p.video_url,
+        youtubeUrl: p.youtube_url,
+        category: p.category || 'none',
+        isLiked: false,
+        createdAt: new Date(p.created_at),
+        borderType: 'none',
+      }));
       setAllPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
-        // 현재 화면에서 새로 발견된 포스트들
-        const newInView = validMappedPosts.filter(p => !existingIds.has(p.id));
-        
-        if (newInView.length === 0 && !forceBounds) return prev;
-
-        // 화면 중앙에서 가까운 순으로 정렬하여 사용자에게 중요한 데이터를 먼저 보여줌
-        if (center) {
-          validMappedPosts.sort((a, b) => {
-            const distA = Math.hypot(a.lat - center.lat, a.lng - center.lng);
-            const distB = Math.hypot(b.lat - center.lat, b.lng - center.lng);
-            return distA - distB;
-          });
-        }
-
-        // 전체 마커 리스트 업데이트 (새로 발견된 것 + 기존 것)
-        const combined = [...validMappedPosts, ...prev].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i).slice(0, 3000);
+        const newUnique = mappedPosts.filter(p => !existingIds.has(p.id));
+        if (newUnique.length === 0 && !forceBounds) return prev;
+        const combined = [...newUnique, ...prev].slice(0, 3000);
         mapCache.posts = combined;
         return combined;
       });
-    } catch (err) { 
-      console.error('❌ [Sync] Critical Error during sync:', err); 
-    } finally { 
-      isSyncing.current = false; 
-    }
+    } catch (err) { console.error(err); } finally { isSyncing.current = false; }
   }, [mapData, currentZoom]);
+
+  const handleMapChange = useCallback((data: any) => {
+    if (!isSelectingLocation) { setFinalSelectedLocation(null); postDraftStore.clear(); }
+    const zoomChanged = data.level !== undefined && data.level !== currentZoom;
+    if (zoomChanged) {
+      if (throttleTimer.current) clearTimeout(throttleTimer.current);
+      setMapData(data);
+      setCurrentZoom(data.level);
+      mapCache.lastCenter = data.center;
+      mapCache.lastZoom = data.level;
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      setFinalSelectedLocation(null);
+      setTimeout(() => { syncPostsWithSupabase(data.bounds, data.level); }, 50);
+      return;
+    }
+    if (throttleTimer.current) return;
+    throttleTimer.current = setTimeout(() => {
+      setMapData(data);
+      mapCache.lastCenter = data.center;
+      if (data.level !== undefined) { setCurrentZoom(data.level); mapCache.lastZoom = data.level; }
+      if (isSelectingLocation) setTempSelectedLocation(data.center);
+      throttleTimer.current = null;
+    }, 100); 
+  }, [isSelectingLocation, currentZoom, syncPostsWithSupabase]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
   useEffect(() => {
-    if (!mapData?.bounds) {
-      return;
-    }
-    
-    // ✅ 9단계 이상일 때는 모든 마커를 숨김
-    if (currentZoom >= 9) { 
-      if (displayedMarkers.length > 0) setDisplayedMarkers([]); 
-      return; 
-    }
-
+    if (!mapData?.bounds) return;
+    if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     const { sw, ne } = mapData.bounds;
-    
-    // ✅ [확장] 상하좌우 렌더링 범위를 비대칭으로 조정
-    // 좌우(lng) 범위를 상하(lat)보다 더 넓게(100% 확장) 설정하여 
-    // 스마트폰 가로 슬라이드 시 마커가 잘리는 현상을 완벽히 해결합니다.
-    const latPadding = Math.abs(ne.lat - sw.lat) * 0.6; // 상하 60%
-    const lngPadding = Math.abs(ne.lng - sw.lng) * 1.2; // 좌우 120% (충분히 넓게)
-    
+    const latPadding = Math.abs(ne.lat - sw.lat) * 0.6;
+    const lngPadding = Math.abs(ne.lng - sw.lng) * 1.2;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-    
     const inBoundsCandidates = allPosts.filter(post => {
-      if (!post) return false;
-      if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return false;
+      if (!post || post.lat === null || post.lng === null) return false;
       if (blockedIds.has(post.user.id)) return false;
-
-      const isInExtendedBounds = 
-        post.lat >= (Math.min(sw.lat, ne.lat) - latPadding) && 
-        post.lat <= (Math.max(sw.lat, ne.lat) + latPadding) && 
-        post.lng >= (Math.min(sw.lng, ne.lng) - lngPadding) && 
-        post.lng <= (Math.max(sw.lng, ne.lng) + lngPadding);
-
+      const isInExtendedBounds = post.lat >= (Math.min(sw.lat, ne.lat) - latPadding) && post.lat <= (Math.max(sw.lat, ne.lat) + latPadding) && post.lng >= (Math.min(sw.lng, ne.lng) - lngPadding) && post.lng <= (Math.max(sw.lng, ne.lng) + lngPadding);
       if (!isInExtendedBounds) return false;
       if (post.isAd) return true;
-      
-      if (timeValue < 100) {
-        if ((now - post.createdAt.getTime()) > timeLimitMs) return false;
-      }
-      
-      let matchesCategory = false;
-      if (selectedCategories.includes('mine')) matchesCategory = authUser && post.user.id === authUser.id;
-      else if (selectedCategories.includes('all')) matchesCategory = true;
-      else matchesCategory = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
-      
-      return matchesCategory;
+      if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      let matches = false;
+      if (selectedCategories.includes('mine')) matches = authUser && post.user.id === authUser.id;
+      else if (selectedCategories.includes('all')) matches = true;
+      else matches = selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && post.isInfluencer);
+      return matches;
     });
-    
     const uniquePosts = Array.from(new Map(inBoundsCandidates.map(p => [p.id, p])).values());
-    
     setDisplayedMarkers(prev => {
-      const prevIds = prev.map(p => p.id).sort().join(',');
-      const nextIds = uniquePosts.map(p => p.id).sort().join(',');
-      
-      if (prevIds === nextIds) {
-        return prev;
-      }
-      
+      if (prev.length === uniquePosts.length && prev.every((p, i) => p.id === uniquePosts[i].id)) return prev;
       return uniquePosts;
     });
-  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom, displayedMarkers.length]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     setAllPosts(prev => prev.map(post => {
@@ -381,57 +272,38 @@ const Index = () => {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await fetchGlobalTrending(); 
-    
     if (mapData?.bounds) {
       const { sw, ne } = mapData.bounds;
       try {
         const dbPosts = await fetchPostsInBounds(sw, ne);
+        const mapped = await Promise.all(dbPosts.map(mapDbToPost));
         setAllPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
-          const newUnique = dbPosts.filter(p => !existingIds.has(p.id));
-          const combined = [...prev, ...newUnique];
+          const newUnique = mapped.filter(p => p && !existingIds.has(p.id));
+          const combined = [...newUnique, ...prev];
           mapCache.posts = combined;
           return combined;
         });
-      } catch (err) {
-        console.error('[Refresh] Sync Error:', err);
-      }
-    } else {
-      const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(1000);
-      if (data) {
-        const mapped = await Promise.all(data.map(mapDbToPost));
-        setAllPosts(mapped);
-        mapCache.posts = mapped;
-      }
+      } catch (err) { console.error(err); }
     }
-
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
-  }, [fetchGlobalTrending, mapData]);
+  }, [fetchGlobalTrending, mapData, mapDbToPost]);
 
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-    if (post.lat === null || post.lng === null || post.lat === undefined || post.lng === undefined) return;
-
+    if (post.lat === null || post.lng === null) return;
     setAllPosts((prev) => {
       if (prev.some((item) => item.id === post.id)) return prev;
       const combined = [post, ...prev];
       mapCache.posts = combined;
       return combined;
     });
-
     setSelectedPostId(null);
     setSearchResultLocation(null);
     setMapCenter(center || { lat: post.lat, lng: post.lng });
-
-    if (highlightTimeoutRef.current) {
-      window.clearTimeout(highlightTimeoutRef.current);
-    }
-
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
     setHighlightedPostId(post.id);
-    highlightTimeoutRef.current = window.setTimeout(() => {
-      setHighlightedPostId(null);
-      highlightTimeoutRef.current = null;
-    }, 4000);
+    highlightTimeoutRef.current = window.setTimeout(() => { setHighlightedPostId(null); highlightTimeoutRef.current = null; }, 4000);
   }, []);
 
   const handleCurrentLocation = async () => {
@@ -442,102 +314,58 @@ const Index = () => {
       setMapCenter({ lat: latitude, lng: longitude });
       dismissToast(toastId);
       showSuccess('현재 위치로 이동했습니다.');
-    } catch (err: any) { 
-      dismissToast(toastId); 
-      showError('위치 정보를 가져올 수 없습니다.'); 
-    }
+    } catch (err: any) { dismissToast(toastId); showError('위치 정보를 가져올 수 없습니다.'); }
   };
 
   useEffect(() => {
-    return () => {
-      if (highlightTimeoutRef.current) {
-        window.clearTimeout(highlightTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const routeState = location.state as { 
-      center?: { lat: number; lng: number }; 
-      post?: Post;
-      filterUserId?: string;
-    } | null;
-    
+    const routeState = location.state as { center?: { lat: number; lng: number }; post?: Post; filterUserId?: string; } | null;
     if (!routeState) return;
-
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['mine']);
-      
-      setTimeout(() => {
-        setCurrentZoom(10);
-      }, 500);
-
-      if (routeState.post) {
-        focusPostOnMap(routeState.post, routeState.center);
-      } else if (routeState.center) {
-        setMapCenter(routeState.center);
-      } else {
-        handleCurrentLocation();
-      }
+      setTimeout(() => { setCurrentZoom(10); }, 500);
+      if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
+      else if (routeState.center) setMapCenter(routeState.center);
+      else handleCurrentLocation();
     }
-    else if (routeState.post) {
-      focusPostOnMap(routeState.post, routeState.center);
-    } 
-    else if (routeState.center) {
-      setSelectedPostId(null);
-      setSearchResultLocation(null);
-      setMapCenter(routeState.center);
-    }
-
+    else if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
+    else if (routeState.center) { setSelectedPostId(null); setSearchResultLocation(null); setMapCenter(routeState.center); }
     navigate(location.pathname, { replace: true, state: null });
   }, [focusPostOnMap, location.pathname, location.state, navigate]);
 
-  const handleTrendingPostClick = useCallback((post: Post) => {
-    setIsTrendingExpanded(false);
-    focusPostOnMap(post);
-  }, [focusPostOnMap]);
-
+  const handleTrendingPostClick = useCallback((post: Post) => { setIsTrendingExpanded(false); focusPostOnMap(post); }, [focusPostOnMap]);
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
   const handleMapClick = () => { if (searchResultLocation) setSearchResultLocation(null); };
-  
-  const handleViewAllClick = () => { 
+
+  const handleViewAllClick = useCallback(async () => { 
     if (displayedMarkers.length > 0 && currentZoom < 9) {
-      console.log('[Index] Opening PostListOverlay');
       setIsPostListOpen(true);
+      const currentIds = displayedMarkers.map(p => p.id);
+      try {
+        const { data, error } = await supabase.from('posts').select('*').in('id', currentIds);
+        if (!error && data) {
+          const mapped = await Promise.all(data.map(mapDbToPost));
+          const validMapped = mapped.filter(p => p !== null);
+          setAllPosts(prev => {
+            const existingMap = new Map(prev.map(p => [p.id, p]));
+            validMapped.forEach(p => existingMap.set(p.id, p));
+            return Array.from(existingMap.values());
+          });
+        }
+      } catch (err) { console.error(err); }
     } 
-  };
+  }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
-    console.log('[Index] New post created, adding to state:', newPost);
-    
     setAllPosts(prev => [newPost, ...prev]);
     setDisplayedMarkers(prev => [newPost, ...prev]);
-    
-    if (newPost.lat && newPost.lng) {
-      setMapCenter({ lat: newPost.lat, lng: newPost.lng });
-      setCurrentZoom(6);
-    }
-
+    if (newPost.lat && newPost.lng) { setMapCenter({ lat: newPost.lat, lng: newPost.lng }); setCurrentZoom(6); }
     setIsWriteOpen(false);
   };
 
   const handlePostDeleted = useCallback((id: string) => {
-    console.log('[Index] Handling post deletion for id:', id);
-    
-    setAllPosts(prev => {
-      const filtered = prev.filter(p => p.id !== id);
-      console.log('[Index] allPosts updated, new count:', filtered.length);
-      return filtered;
-    });
-    
-    setDisplayedMarkers(prev => {
-      const filtered = prev.filter(p => p.id !== id);
-      console.log('[Index] displayedMarkers updated, new count:', filtered.length);
-      return filtered;
-    });
-    
+    setAllPosts(prev => prev.filter(p => p.id !== id));
+    setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
     mapCache.posts = mapCache.posts.filter(p => p.id !== id);
-    
     setSelectedPostId(null);
   }, []);
 
@@ -549,17 +377,7 @@ const Index = () => {
     <>
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer 
-            posts={displayedMarkers} 
-            viewedPostIds={viewedIds} 
-            highlightedPostId={highlightedPostId} 
-            onMarkerClick={(p) => setSelectedPostId(p.id)} 
-            onMapChange={handleMapChange} 
-            onMapClick={handleMapClick} 
-            center={mapCenter} 
-            level={currentZoom}
-            searchResultLocation={searchResultLocation} 
-          />
+          <MapContainer posts={displayedMarkers} viewedPostIds={viewedIds} highlightedPostId={highlightedPostId} onMarkerClick={(p) => setSelectedPostId(p.id)} onMapChange={handleMapChange} onMapClick={handleMapClick} center={mapCenter} level={currentZoom} searchResultLocation={searchResultLocation} />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
@@ -582,34 +400,16 @@ const Index = () => {
                   {displayedMarkers.length > 0 && currentZoom < 9 && (
                     <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />
                   )}
-                  <button
-                    onClick={handleViewAllClick}
-                    disabled={displayedMarkers.length === 0 || currentZoom >= 9}
-                    className={cn(
-                      "w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative",
-                      (displayedMarkers.length === 0 || currentZoom >= 9) && "opacity-50 grayscale cursor-not-allowed bg-slate-800/40 border-white/10 shadow-none"
-                    )}
-                  >
+                  <button onClick={handleViewAllClick} disabled={displayedMarkers.length === 0 || currentZoom >= 9} className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 group overflow-hidden relative", (displayedMarkers.length === 0 || currentZoom >= 9) && "opacity-50 grayscale cursor-not-allowed bg-slate-800/40 border-white/10 shadow-none")}>
                     <LayoutGrid className={cn("w-7 h-7 stroke-[3px] relative z-10", (displayedMarkers.length === 0 || currentZoom >= 9) && "text-white/40")} />
                     <span className={cn("text-[10px] font-black mt-1 relative z-10", (displayedMarkers.length === 0 || currentZoom >= 9) && "text-white/40")}>여기 보기</span>
                   </button>
-
                   {displayedMarkers.length > 0 && currentZoom < 9 && (
-                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                      {displayedMarkers.length}
-                    </div>
+                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>
                   )}
                 </div>
               </div>
-              
-              <div 
-                className={cn(
-                  "absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out",
-                  (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto"
-                )}
-              >
-                <TimeSlider value={timeValue} onChange={setTimeValue} />
-              </div>
+              <div className={cn("absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
             </>
           )}
         </div>
@@ -619,8 +419,8 @@ const Index = () => {
         {selectedPostId && (
           <PostDetail
             key="post-detail-modal"
-            posts={displayedMarkers}
-            initialIndex={displayedMarkers.findIndex(p => p.id === selectedPostId)}
+            posts={allPosts}
+            initialIndex={allPosts.findIndex(p => p.id === selectedPostId)}
             isOpen={true}
             onClose={() => setSelectedPostId(null)}
             onDelete={handlePostDeleted}
@@ -630,28 +430,9 @@ const Index = () => {
           />
         )}
       </AnimatePresence>
-
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
-      <WritePost
-        isOpen={isWriteOpen}
-        onClose={() => setIsWriteOpen(false)}
-        initialLocation={finalSelectedLocation}
-        onPostCreated={handlePostCreated}
-        onStartLocationSelection={startLocationSelection}
-        onLocationReset={() => setFinalSelectedLocation(null)}
-      />
-
-      <PostListOverlay
-        isOpen={isPostListOpen}
-        onClose={() => setIsPostListOpen(false)}
-        initialPosts={displayedMarkers}
-        mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
-        currentBounds={mapData?.bounds}
-        selectedCategories={selectedCategories}
-        timeValueHours={timeValue}
-        authUserId={authUser?.id}
-        onDeletePost={handlePostDeleted}
-      />
+      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
+      <PostListOverlay isOpen={isPostListOpen} onClose={() => setIsPostListOpen(false)} initialPosts={allPosts.filter(p => displayedMarkers.some(m => m.id === p.id))} mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} currentBounds={mapData?.bounds} selectedCategories={selectedCategories} timeValueHours={timeValue} authUserId={authUser?.id} onDeletePost={handlePostDeleted} />
     </>
   );
 };
