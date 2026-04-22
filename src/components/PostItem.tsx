@@ -68,7 +68,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
+  useEffect(() => {
+    if (autoPlayVideo) {
+      const timer = setTimeout(() => {
+        setIsReadyToPlay(true);
+      }, 500); // 오버레이 애니메이션이 끝나는 시점에 맞춰 활성화
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlayVideo]);
 
   const { user, content, isAd } = post;
   const isMine = authUser?.id === user.id;
@@ -94,10 +105,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        // 첫 번째 항목은 초기 상태에서 즉시 감지되도록 함
         setIsVisible(entry.isIntersecting);
       },
       {
-        threshold: 0.6, // 60% of the item must be visible to play
+        threshold: 0.3, // 30%만 보여도 재생 시도 (첫 항목 대응 및 더 민감한 반응)
+        rootMargin: '0px'
       }
     );
 
@@ -254,7 +267,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         {videoId ? (
           <div className="w-full h-full">
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=${(autoPlayVideo && isVisible) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=${(autoPlayVideo && isVisible && isReadyToPlay) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`}
               className="w-full h-full object-cover"
               allow="autoplay; encrypted-media"
               allowFullScreen
