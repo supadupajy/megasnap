@@ -56,32 +56,22 @@
 }
 
 /* [ADD] 인플루언서 티어별 애니메이션 테두리 효과 */
+/* 배경색이 덮어씌워지지 않도록 !important 제거 및 구조 최적화 */
 .diamond-border-container {
-  background: conic-gradient(from 0deg, #22d3ee, #a5f3fc, #22d3ee) !important;
   animation: rotate-border 3s linear infinite;
 }
 
 .gold-border-container {
-  background: conic-gradient(from 0deg, #fbbf24, #fef3c7, #fbbf24) !important;
   animation: rotate-border 4s linear infinite;
 }
 
 .silver-border-container {
-  background: conic-gradient(from 0deg, #94a3b8, #f1f5f9, #94a3b8) !important;
   animation: rotate-border 5s linear infinite;
 }
 
-.popular-border-container {
-  background: #ef4444 !important;
-}
-
-.my-post-border-container {
-  background: #4f46e5 !important;
-}
-
 @keyframes rotate-border {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
 }
 
 .marker-container img {
