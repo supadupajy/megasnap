@@ -262,6 +262,12 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
   const processNewPost = (dbPost: any, finalVideoUrl: string | null) => {
     const displayName = profile?.nickname || authUser?.email?.split('@')[0] || '탐험가';
+    
+    // ✅ 위치가 없는 포스팅은 지도 객체에서 제외하기 위해 null 처리
+    const finalLat = initialLocation?.lat || null;
+    const finalLng = initialLocation?.lng || null;
+    const finalAddress = address || '위치 미지정';
+
     const newPost = {
       id: dbPost.id,
       isAd: false,
@@ -273,14 +279,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         avatar: profile?.avatar_url || `https://i.pravatar.cc/150?u=${authUser!.id}`
       },
       content: draft.content,
-      location: address || '위치 미지정',
-      lat: initialLocation?.lat || null,
-      lng: initialLocation?.lng || null,
+      location: finalAddress,
+      lat: finalLat as any,
+      lng: finalLng as any,
       likes: 0,
       commentsCount: 0,
       comments: [],
-      image: dbPost.image_url,
-      images: dbPost.images || [dbPost.image_url],
+      image: dbPost.image_url, 
+      images: dbPost.images || [dbPost.image_url], // ✅ 등록 직후 상태에도 images 배열 명시적 포함
       videoUrl: finalVideoUrl,
       isLiked: false,
       createdAt: new Date(),

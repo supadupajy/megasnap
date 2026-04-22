@@ -100,6 +100,9 @@ const Index = () => {
   }, []);
 
   const getTierFromId = (id: string) => {
+    // 실시간으로 생성된 ID(isNewRealtime)인 경우 기본적으로 'none' 반환하여 의도치 않은 테두리 방지
+    if (!id || id.length < 5) return 'none';
+    
     let h = 0;
     for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
     const val = Math.abs(h % 1000) / 1000;
@@ -115,7 +118,14 @@ const Index = () => {
     try {
       const p = await sanitizeYoutubeMedia(rawPost);
       const isAd = p.content?.trim().startsWith('[AD]');
-      const borderType = isAd ? 'none' : getTierFromId(p.id);
+      
+      // ✅ [수정] 강제로 특정 테두리가 생기지 않도록 보정
+      let borderType: any = isAd ? 'none' : getTierFromId(p.id);
+      
+      // 만약 의도치 않게 실버 테두리가 너무 많이 보인다면 기준을 더 엄격하게 조정 가능
+      // 여기서는 일단 기존 로직을 유지하되, rawPost에 명시적인 티어 정보가 있다면 그것을 우선하도록 함
+      if (p.border_type) borderType = p.border_type;
+
       let finalImage = null;
       if (p.youtube_url) finalImage = getYoutubeThumbnail(p.youtube_url);
       else if (p.image_url && (p.image_url.startsWith('http') || p.image_url.startsWith('data:'))) finalImage = p.image_url;
@@ -133,6 +143,7 @@ const Index = () => {
         commentsCount: 0,
         comments: [],
         image: finalImage,
+        images: p.images || (finalImage ? [finalImage] : []), // ✅ [중요] 상세 페이지용 images 배열 명시적 매핑
         youtubeUrl: p.youtube_url,
         videoUrl: p.video_url,
         category: p.category || 'none',
@@ -501,28 +512,27 @@ const Index = () => {
     if (displayedMarkers.length > 0 && currentZoom < 9) {
       console.log('[Index] Opening PostListOverlay and fetching full data');
       
-      // 현재 보이는 마커들의 ID 목록 추출
       const currentIds = displayedMarkers.map(p => p.id);
       
       try {
-        // 1. 먼저 오버레이를 열어 로딩 상태 진입 (이때는 아직 ... 일 수 있음)
         setIsPostListOpen(true);
 
-        // 2. 전체 데이터를 Supabase에서 다시 가져옴
         const { data, error } = await supabase
           .from('posts')
           .select('*')
           .in('id', currentIds);
 
         if (!error && data) {
-          console.log(`[Index] Fetched ${data.length} full posts for list`);
           const mapped = await Promise.all(data.map(p => mapDbToPost(p)));
           const validMapped = mapped.filter(p => p !== null);
           
-          // 3. allPosts 상태를 먼저 업데이트
           setAllPosts(prev => {
             const postMap = new Map(prev.map(p => [p.id, p]));
-            validMapped.forEach(p => postMap.set(p.id, p));
+            validMapped.forEach(p => {
+              // ✅ 기존 데이터와 병합할 때 images 정보가 누락되지 않도록 함
+              const existing = postMap.get(p.id);
+              postMap.set(p.id, { ...existing, ...p });
+            });
             const newList = Array.from(postMap.values());
             mapCache.posts = newList;
             return newList;
