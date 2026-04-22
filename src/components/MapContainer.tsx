@@ -550,6 +550,17 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 7px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1;">${labelText}</div>` : '';
     
+    // [FIX] 지도 마커 이미지 깨짐 방지: Profile.tsx에서 사용한 것과 동일한 검증 로직 적용
+    const isBrokenUrl = (url: string) => {
+      if (!url || url === 'null' || url === 'undefined') return true;
+      return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
+    };
+
+    let displayImage = post.image;
+    if (isBrokenUrl(displayImage)) {
+      displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${post.id}`;
+    }
+
     // ✅ 내부 floating 애니메이션 복구
     const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
 
