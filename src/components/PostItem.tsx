@@ -18,7 +18,11 @@ import {
   AlertCircle,
   Ban,
   MapPin,
-  ShoppingBag
+  ShoppingBag,
+  Utensils,
+  Car,
+  TreePine,
+  PawPrint
 } from 'lucide-react';
 import { cn, getYoutubeId } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -217,13 +221,46 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const renderCategoryBadge = () => {
     const category = post.category || 'none';
-    const badges: Record<string, JSX.Element> = {
-      food: <div className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6"><ShoppingBag className="w-3 h-3" /> 맛집</div>,
-      place: <div className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6"><MapPin className="w-3 h-3" /> 장소</div>,
-      animal: <div className="bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 leading-none h-6">🐾 반려동물</div>,
-      none: <></>
-    };
-    return badges[category] || badges.none;
+    if (category === 'none') return null;
+    
+    let Icon = null;
+    let bgColor = "";
+    let label = "";
+
+    switch (category) {
+      case 'food':
+        Icon = Utensils;
+        bgColor = "bg-orange-500";
+        label = "맛집";
+        break;
+      case 'accident':
+        Icon = Car;
+        bgColor = "bg-red-600";
+        label = "사고";
+        break;
+      case 'place':
+        Icon = TreePine;
+        bgColor = "bg-green-600";
+        label = "명소";
+        break;
+      case 'animal':
+        Icon = PawPrint;
+        bgColor = "bg-purple-600";
+        label = "동물";
+        break;
+    }
+
+    if (!Icon) return null;
+
+    return (
+      <div className={cn(
+        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10 shrink-0 whitespace-nowrap leading-none h-auto",
+        bgColor
+      )}>
+        <Icon className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-black">{label}</span>
+      </div>
+    );
   };
 
   return (
@@ -294,41 +331,50 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       </div>
 
       <div className="px-4 pt-3 pb-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-4 pt-1.5"><button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}><Heart className={cn("w-6 h-6 transition-colors stroke-[2px]", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} /></button><button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}><MessageCircle className="w-6 h-6 text-gray-700 stroke-[2px]" /></button><button onClick={(e) => e.stopPropagation()}><Share2 className="w-6 h-6 text-gray-700 stroke-[2px]" /></button></div>
+        <div className="flex items-start justify-between mb-3 px-1">
+          <div className="flex items-center gap-4 pt-1">
+            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
+              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="active:scale-110 transition-transform">
+              <MessageCircle className="w-6 h-6 text-gray-700" />
+            </button>
+            <button onClick={(e) => e.stopPropagation()} className="active:scale-110 transition-transform">
+              <Share2 className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
+
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-3">
-              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-                <Bookmark className={cn("w-6 h-6 transition-colors stroke-[2px]", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+              <button className="transition-transform active:scale-125 pt-1" onClick={handleSaveToggle}>
+                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
               </button>
               
-              <div className="ml-1 h-4 w-[1px] bg-gray-200" />
-              
               {renderCategoryBadge()}
-              
+
+              {/* 위치보기 버튼 */}
               {lat !== undefined && lng !== undefined && (
-                <button onClick={(e) => onLocationClick(e, lat, lng)} className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-90 transition-all border border-indigo-100">
+                <button 
+                  onClick={(e) => onLocationClick(e, lat, lng)} 
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100 shrink-0 whitespace-nowrap"
+                >
                   <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
                   <span className="text-[10px] font-black">위치보기</span>
                 </button>
               )}
             </div>
+            
             {isAd && (
-              <a 
-                href="https://s.baemin.com/t3000fBqlbHGL" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                onClick={(e) => e.stopPropagation()} 
-                className="flex items-center justify-center gap-1.5 w-[82px] py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20"
-              >
+              <a href="https://s.baemin.com/t3000fBqlbHGL" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-sm border border-[#2AC1BC]/20">
                 <ShoppingBag className="w-3.5 h-3.5 fill-white" />
                 <span className="text-[10px] font-black">주문하기</span>
               </a>
             )}
           </div>
         </div>
-        <div className="space-y-1.5">
-          <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
+
+        <div className="space-y-1 px-1">
+          <p className="text-sm font-bold text-gray-500">좋아요 {likesCount.toLocaleString()}개</p>
           <div className="flex gap-2 items-start">
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
