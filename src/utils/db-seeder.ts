@@ -306,38 +306,38 @@ export const cleanupInvalidYoutubePosts = async () => {
 };
 
 /**
- * [SPECIAL] 강남 지역(강남역, 신사, 압구정 등)에 골고루 20개의 포스팅을 생성합니다.
+ * [SPECIAL] 강남 지역 및 그 주변(서초, 잠실 등)에 골고루 20개의 포스팅을 생성합니다.
  */
 export const seedGangnamSpecialPosts = async (currentUserId: string) => {
-  console.log("📍 [Seeder] 강남 지역 특별 데이터 생성을 시작합니다...");
+  console.log("📍 [Seeder] 강남 및 주변 지역 특별 데이터 생성을 시작합니다...");
 
   try {
     await initializeYoutubePool();
     const { data: profiles } = await supabase.from('profiles').select('id').limit(10);
     const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId }];
 
-    // 강남 주요 거점 좌표
+    // 강남 및 그 주변(반포, 잠실, 한남 등) 확장 좌표
     const gangnamSpots = [
       { name: "강남역", lat: 37.4979, lng: 127.0276 },
-      { name: "신논현역", lat: 37.5045, lng: 127.0255 },
-      { name: "논현역", lat: 37.5111, lng: 127.0214 },
-      { name: "신사역", lat: 37.5163, lng: 127.0201 },
-      { name: "압구정역", lat: 37.5271, lng: 127.0285 },
-      { name: "학동역", lat: 37.5143, lng: 127.0317 },
-      { name: "언주역", lat: 37.5073, lng: 127.0339 },
-      { name: "역삼역", lat: 37.5006, lng: 127.0365 },
-      { name: "선릉역", lat: 37.5045, lng: 127.0482 },
-      { name: "삼성역", lat: 37.5088, lng: 127.0631 },
-      { name: "청담역", lat: 37.5191, lng: 127.0519 },
-      { name: "강남구청역", lat: 37.5172, lng: 127.0413 },
-      { name: "선정릉역", lat: 37.5110, lng: 127.0436 },
-      { name: "한티역", lat: 37.4962, lng: 127.0529 },
-      { name: "도곡역", lat: 37.4909, lng: 127.0555 },
-      { name: "대치역", lat: 37.4945, lng: 127.0588 },
-      { name: "매봉역", lat: 37.4868, lng: 127.0436 },
-      { name: "양재역", lat: 37.4841, lng: 127.0346 },
-      { name: "교대역", lat: 37.4934, lng: 127.0141 },
-      { name: "서초역", lat: 37.4918, lng: 127.0076 }
+      { name: "압구정 로데오", lat: 37.5273, lng: 127.0391 },
+      { name: "가로수길", lat: 37.5208, lng: 127.0227 },
+      { name: "반포 한강공원", lat: 37.5115, lng: 126.9961 },
+      { name: "잠실 롯데타워", lat: 37.5126, lng: 127.1025 },
+      { name: "석촌호수", lat: 37.5090, lng: 127.1000 },
+      { name: "한남동 카페거리", lat: 37.5365, lng: 127.0010 },
+      { name: "삼성동 코엑스", lat: 37.5115, lng: 127.0595 },
+      { name: "양재 시민의숲", lat: 37.4711, lng: 127.0354 },
+      { name: "서래마을", lat: 37.4984, lng: 126.9972 },
+      { name: "방배역", lat: 37.4814, lng: 126.9975 },
+      { name: "선릉 산책로", lat: 37.5050, lng: 127.0480 },
+      { name: "청담동 명품거리", lat: 37.5250, lng: 127.0450 },
+      { name: "신사역 5번출구", lat: 37.5160, lng: 127.0190 },
+      { name: "학동역 가구거리", lat: 37.5140, lng: 127.0320 },
+      { name: "언주역 언덕", lat: 37.5070, lng: 127.0340 },
+      { name: "성수동 카페거리", lat: 37.5445, lng: 127.0560 }, // 인근 지역 확장
+      { name: "매봉 산책길", lat: 37.4860, lng: 127.0420 },
+      { name: "교대 법조타운", lat: 37.4930, lng: 127.0140 },
+      { name: "대치 학원가", lat: 37.4940, lng: 127.0590 }
     ];
 
     const insertData = gangnamSpots.map((spot, i) => {
