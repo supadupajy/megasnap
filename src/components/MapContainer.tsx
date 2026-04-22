@@ -532,41 +532,115 @@ const MapContainer = ({
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    const isAd = post.isAd;
-    const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
-    const borderType = post.borderType || 'none';
-    const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    
-    // [FIX] 지도 마커 이미지 깨짐 방지: Profile.tsx에서 사용한 것과 동일한 검증 로직 적용
-    const isBrokenUrl = (url: string) => {
-      if (!url || url === 'null' || url === 'undefined') return true;
-      return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
-    };
+  const isAd = post.isAd;
+  const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+  const borderType = post.borderType || 'none';
+  const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 
-    let displayImage = post.image;
-    if (isBrokenUrl(displayImage)) {
-      displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${post.id}`;
-    }
-
-    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white'; let borderClass = '';
-    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; borderClass = 'my-post-border-container'; }
-    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; borderClass = 'ad-border-container'; }
-    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; borderClass = 'popular-border-container'; }
-    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; borderClass = 'diamond-border-container'; }
-    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; borderClass = 'gold-border-container'; }
-    else if (borderType === 'silver') { pinColor = '#94a3b8'; labelText = 'SILVER'; labelBg = '#94a3b8'; borderClass = 'silver-border-container'; }
-
-    const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
-    
-    // 라벨 디자인 개선: 그림자 및 폰트 강조
-    const labelHtml = labelText ? `<div style="width: 56px; background: ${labelBg}; color: ${labelColor}; font-size: 8px; font-weight: 900; padding: 2px 0 14px 0; border-radius: 12px 12px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -14px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>` : '';
-    
-    // 내부 floating 애니메이션
-    const animationClass = isAd ? 'animate-ad-breathing' : ((borderType !== 'none' || isMine) && !isMine ? 'animate-marker-float' : '');
-
-    // 마커 박스 그림자 및 둥근 모서리 강조
-    return `<div class="marker-content-wrapper"><div class="marker-highlight-ping"></div><div class="${animationClass}">${labelHtml}<div class="${borderClass || ''}" style="width: 56px; height: 56px; border-radius: 18px; position: relative; z-index: 2; ${borderClass ? '' : `border: 2.5px solid #ffffff;`} overflow: visible; box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1); background-color: white;"><div style="width: 100%; height: 100%; border-radius: 14px; overflow: hidden; position: relative;" class="shine-overlay"><img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(0.8) brightness(0.7);' : ''}" /><div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-blur: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2);">${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</div>${videoIconHtml}</div></div>${pinColor ? `<div style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 14px; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>` : ''}</div></div>`;
+  const isBrokenUrl = (url: string) => {
+    if (!url || url === 'null' || url === 'undefined') return true;
+    return url.includes('images.unsplash.com') && (url.includes('source.unsplash.com') || url.length < 50);
   };
+
+  let displayImage = post.image;
+  if (isBrokenUrl(displayImage)) {
+    displayImage = `https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80&sig=${post.id}`;
+  }
+
+  // ✅ 테두리 스타일을 인라인으로 직접 정의
+  let borderStyle = 'border: 2.5px solid #ffffff;';
+  let boxShadowStyle = '0 8px 16px -2px rgba(0,0,0,0.15), 0 4px 8px -2px rgba(0,0,0,0.1)';
+  let labelText = '';
+  let labelBg = '';
+  let labelColor = 'white';
+  let pinColor = '';
+  let animationClass = '';
+
+  if (isMine) {
+    pinColor = '#4f46e5';
+    labelText = 'MY';
+    labelBg = '#4f46e5';
+    // 내 글: 인디고 그라데이션 테두리
+    borderStyle = 'border: 3px solid #4f46e5;';
+    boxShadowStyle = '0 8px 20px -2px rgba(79,70,229,0.5), 0 0 0 4px rgba(79,70,229,0.15)';
+  } else if (isAd) {
+    pinColor = '#3b82f6';
+    labelText = 'AD';
+    labelBg = '#3b82f6';
+    borderStyle = 'border: 3px solid #3b82f6;';
+    boxShadowStyle = '0 8px 20px -2px rgba(59,130,246,0.4), 0 0 0 4px rgba(59,130,246,0.12)';
+    animationClass = 'animate-ad-breathing';
+  } else if (borderType === 'popular') {
+    pinColor = '#ef4444';
+    labelText = 'HOT';
+    labelBg = '#ef4444';
+    // HOT: 빨간 글로우 테두리
+    borderStyle = 'border: 3px solid #ef4444;';
+    boxShadowStyle = '0 8px 20px -2px rgba(239,68,68,0.5), 0 0 0 5px rgba(239,68,68,0.15), 0 0 15px rgba(239,68,68,0.3)';
+    animationClass = 'animate-marker-float';
+  } else if (borderType === 'diamond') {
+    pinColor = '#22d3ee';
+    labelText = '💎';
+    labelBg = 'linear-gradient(135deg, #22d3ee, #a78bfa)';
+    labelColor = 'white';
+    // DIAMOND: 시안+퍼플 그라데이션 테두리 (outline 2중으로 표현)
+    borderStyle = 'border: 3px solid #22d3ee; outline: 2px solid #a78bfa; outline-offset: 2px;';
+    boxShadowStyle = '0 8px 24px -2px rgba(34,211,238,0.6), 0 0 0 5px rgba(167,139,250,0.2), 0 0 20px rgba(34,211,238,0.4)';
+    animationClass = 'animate-marker-float';
+  } else if (borderType === 'gold') {
+    pinColor = '#f59e0b';
+    labelText = '🥇';
+    labelBg = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
+    labelColor = 'black';
+    // GOLD: 황금 글로우 테두리
+    borderStyle = 'border: 3px solid #f59e0b;';
+    boxShadowStyle = '0 8px 24px -2px rgba(245,158,11,0.6), 0 0 0 5px rgba(251,191,36,0.2), 0 0 18px rgba(245,158,11,0.4)';
+    animationClass = 'animate-marker-float';
+  } else if (borderType === 'silver') {
+    pinColor = '#94a3b8';
+    labelText = '🥈';
+    labelBg = 'linear-gradient(135deg, #cbd5e1, #94a3b8)';
+    // SILVER: 은빛 테두리
+    borderStyle = 'border: 3px solid #94a3b8;';
+    boxShadowStyle = '0 8px 20px -2px rgba(148,163,184,0.5), 0 0 0 4px rgba(203,213,225,0.2), 0 0 12px rgba(148,163,184,0.3)';
+    animationClass = 'animate-marker-float';
+  }
+
+  const videoIconHtml = hasVideo
+    ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;background:rgba(255,255,255,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:15;box-shadow:0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
+    : '';
+
+  const labelHtml = labelText
+    ? `<div style="width:56px;background:${labelBg};color:${labelColor};font-size:9px;font-weight:900;padding:3px 0 16px 0;border-radius:12px 12px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-14px;position:relative;z-index:1;box-shadow:0 -2px 10px rgba(0,0,0,0.1);">${labelText}</div>`
+    : '';
+
+  const pinHtml = pinColor
+    ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:18px;height:14px;z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));"><svg width="18" height="14" viewBox="0 0 16 12" fill="none"><path d="M8 12L0 0H16L8 12Z" fill="${pinColor}"/></svg></div>`
+    : '';
+
+  return `
+    <div class="marker-content-wrapper">
+      <div class="marker-highlight-ping"></div>
+      <div class="${animationClass}">
+        ${labelHtml}
+        <div style="width:56px;height:56px;border-radius:18px;position:relative;z-index:2;${borderStyle}box-shadow:${boxShadowStyle};background-color:white;overflow:visible;">
+          <div style="width:100%;height:100%;border-radius:14px;overflow:hidden;position:relative;" class="shine-overlay">
+            <img 
+              src="${displayImage}" 
+              onerror="this.src='${FALLBACK_IMAGE}'" 
+              style="width:100%;height:100%;object-fit:cover;${isViewed ? 'filter:grayscale(0.8) brightness(0.7);' : ''}" 
+            />
+            <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);">
+              ${post.likes >= 1000 ? (post.likes / 1000).toFixed(1) + 'k' : post.likes}
+            </div>
+            ${videoIconHtml}
+          </div>
+          ${pinHtml}
+        </div>
+      </div>
+    </div>
+  `;
+};
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
     const timeoutId = removalTimeoutsRef.current.get(id);
