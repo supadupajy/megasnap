@@ -53,6 +53,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   const [currentPage, setCurrentPage] = useState<1 | 2>(1);
   const [draft, setDraft] = useState(postDraftStore.get());
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [api, setApi] = useState<any>();
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
@@ -77,6 +79,14 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrentSlide(api.selectedScrollSnap());
+    api.on("select", () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    });
+  }, [api]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -354,16 +364,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           onClick={() => mediaInputRef.current?.click()}
                           className={cn(
                             "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all duration-300",
-                            mediaFiles.length > 0 
-                              ? "h-20 border-indigo-600/50 bg-indigo-50/50" // 사진 있을 때 대폭 축소
-                              : "h-64 border-gray-200 bg-gray-50 hover:bg-gray-100" // 사진 없을 때 크게 유지
+                            "h-[120px]", // 스크린샷 사이즈에 맞춰 고정
+                            mediaFiles.length > 0 ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <ImageIcon className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-8 h-8 text-gray-400")} />
-                            <Video className={cn(mediaFiles.length > 0 ? "w-5 h-5 text-indigo-600" : "w-8 h-8 text-gray-400")} />
+                            <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
+                            <Video className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-400")} />
                           </div>
-                          <span className={cn("font-bold", mediaFiles.length > 0 ? "text-[11px] text-indigo-600" : "text-sm text-gray-500")}>
+                          <span className={cn("text-xs font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
                             {mediaFiles.length > 0 ? `${mediaFiles.length}개의 미디어 선택됨 (추가 가능)` : '사진/동영상 선택 (다중 선택 가능)'}
                           </span>
                         </button>
@@ -383,7 +392,15 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
                     {mediaFiles.length > 0 && (
                       <div className="relative group">
-                        <Carousel className="w-full" opts={{ align: "start", containScroll: "trimSnaps" }}>
+                        <Carousel 
+                          setApi={setApi}
+                          className="w-full" 
+                          opts={{ 
+                            align: "start", 
+                            containScroll: "trimSnaps",
+                            watchDrag: true
+                          }}
+                        >
                           <CarouselContent>
                             {mediaFiles.map((media, idx) => (
                               <CarouselItem key={idx}>
@@ -406,7 +423,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                                   )}
                                   <button
                                     onClick={() => removeMedia(idx)}
-                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-30"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -416,11 +433,26 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                           </CarouselContent>
                           {mediaFiles.length > 1 && (
                             <>
-                              <CarouselPrevious className="left-2 bg-white/80 border-none hover:bg-white" />
-                              <CarouselNext className="right-2 bg-white/80 border-none hover:bg-white" />
+                              <CarouselPrevious className="left-2 bg-white/80 border-none hover:bg-white z-20" />
+                              <CarouselNext className="right-2 bg-white/80 border-none hover:bg-white z-20" />
                             </>
                           )}
                         </Carousel>
+                        
+                        {/* 스크롤 인디케이터 (점) */}
+                        {mediaFiles.length > 1 && (
+                          <div className="flex justify-center gap-1.5 mt-4">
+                            {mediaFiles.map((_, i) => (
+                              <div 
+                                key={i} 
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                  currentSlide === i ? "bg-indigo-600 w-3" : "bg-gray-300"
+                                )} 
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </motion.div>
