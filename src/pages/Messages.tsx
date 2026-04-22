@@ -74,7 +74,26 @@ const Messages = () => {
   useEffect(() => {
     fetchConversations();
     if (!authUser) return;
-    const channel = supabase.channel('messages_list_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchConversations).subscribe();
+    
+    // 메시지 실시간 업데이트 (INSERT, UPDATE, DELETE 모두 감시)
+    const channel = supabase.channel('messages_list_updates')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'messages' }, 
+        (payload) => {
+          console.log('[Messages] Realtime message change detected:', payload.event);
+          fetchConversations();
+        }
+      )
+      .subscribe();
+
+    // Header에서 발생하는 'refresh-messages-list' 이벤트 리스너 추가 (내가 보낸 메시지 동기화 보강)
+    const handleRefreshEvent = () => {
+      console.log('[Messages] Refreshing list from custom event');
+      fetchConversations();
+    };
+    window.addEventListener('refresh-messages-list', handleRefreshEvent);
+
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
     // Profiles real-time subscription for online status
@@ -89,6 +108,7 @@ const Messages = () => {
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(profileChannel);
+      window.removeEventListener('refresh-messages-list', handleRefreshEvent);
       unsubscribeChatStore();
     };
   }, [authUser]);

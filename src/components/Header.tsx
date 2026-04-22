@@ -124,23 +124,32 @@ const Header = () => {
           setHasNewNotifications(true);
         }
       )
-      // 2. 메시지 실시간 감지 (INSERT만 감시)
+      // 2. 메시지 실시간 감지 (내가 보낸 것과 받은 것 모두 감시하여 동기화)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('[Header] New message detected');
-          // 메시지 수신 시 즉시 카운트 증가
-          setUnreadMsgCount(prev => prev + 1);
+          const newMsg = payload.new;
+          const isRelated = newMsg.receiver_id === user.id || newMsg.sender_id === user.id;
           
-          if (!window.location.pathname.startsWith('/chat/')) {
-            playSound();
+          if (!isRelated) return;
+
+          console.log('[Header] Message activity detected');
+          
+          // 수신자일 때만 안읽은 카운트 증가 및 사운드 재생
+          if (newMsg.receiver_id === user.id) {
+            setUnreadMsgCount(prev => prev + 1);
+            if (!window.location.pathname.startsWith('/chat/')) {
+              playSound();
+            }
           }
+          
+          // 메시지 목록 페이지(Messages.tsx)에 있다면 목록 갱신을 트리거하기 위한 커스텀 이벤트
+          window.dispatchEvent(new CustomEvent('refresh-messages-list'));
         }
       )
       // 3. 읽음 처리 감지 (UPDATE 감시)
