@@ -17,7 +17,7 @@ interface MapContainerProps {
   searchResultLocation?: { lat: number; lng: number } | null;
 }
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
 
 // [FIX] 알려진 깨진 Unsplash ID 블랙리스트 관리
 const BROKEN_UNSPLASH_IDS = new Set([
