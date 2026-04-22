@@ -392,8 +392,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             
             {/* 페이지 콘텐츠 */}
             <div 
-              className="flex-1 min-h-0 overflow-y-auto pb-40 no-scrollbar"
-            >
+  className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
+  style={{
+    paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 80}px` : '160px'
+  }}
+>
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
