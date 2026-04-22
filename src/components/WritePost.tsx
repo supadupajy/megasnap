@@ -353,10 +353,11 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
-          className="flex flex-col outline-none bg-white z-[1200] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
+          className="flex flex-col outline-none bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px] border-none"
           style={{ 
             position: 'fixed',
-            bottom: 0,
+            // [FIX] 하단 네비게이션 바(80px) 위에서부터 시작하도록 설정
+            bottom: '80px',
             left: 0,
             right: 0,
             transform: 'none',
@@ -370,7 +371,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
 
           <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0 pointer-events-none" />
 
-          <div className="px-5 flex flex-col flex-1 min-h-0">
+          <div className="px-5 flex flex-col flex-1 min-h-0 relative">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-2">
@@ -392,10 +393,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             
             {/* 페이지 콘텐츠 */}
             <div 
-              className="flex-1 min-h-0 overflow-y-auto no-scrollbar"
-              style={{
-                paddingBottom: '16px'
-              }}
+              className="flex-1 min-h-0 overflow-y-auto pb-32 no-scrollbar"
             >
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
@@ -673,6 +671,35 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+            
+            {/* [FIX] 버튼이 DrawerContent 내부의 최하단에 위치하도록 하고, 
+                키보드가 있을 때만 동적으로 위치 조절 */}
+            <div
+              className="absolute bottom-0 left-0 right-0 px-5 pt-3 bg-white z-[1002] border-t border-gray-100"
+              style={{ 
+                // 하단 바 위에서 시작하므로 평소에는 20px 정도의 여백만 부여
+                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '32px',
+                boxShadow: '0 -15px 30px -5px rgba(0, 0, 0, 0.05)'
+              }}
+            >
+              {currentPage === 1 ? (
+                <Button
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+                  onClick={handleNextPage}
+                  disabled={mediaFiles.length === 0}
+                >
+                  다음
+                </Button>
+              ) : (
+                <Button
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+                  onClick={handlePost}
+                  disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
+                >
+                  {isSubmitting ? '저장 중...' : '등록하기'}
+                </Button>
+              )}
             </div>
           </div>
         </DrawerContent>
