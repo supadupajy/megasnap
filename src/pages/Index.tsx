@@ -565,20 +565,21 @@ const Index = () => {
 
   // 현재 지도 화면 안에 있는 포스트들만 필터링
   const visiblePosts = useMemo(() => {
-    // rawPosts가 아직 없으면 빈 배열 반환
-    if (!rawPosts) return [];
-    // mapData가 없으면 전체 rawPosts 반환 (비활성화 방지)
-    if (!mapData) return rawPosts; 
+    // 초기 로딩 시에는 전체 포스트를 기준으로 하거나 빈 배열을 반환하지 않도록 처리
+    if (!posts) return [];
+    if (!mapData) return posts; // mapData가 없으면 전체 posts 반환 (비활성화 방지)
     
     const { sw, ne } = mapData.bounds;
-    return rawPosts.filter(post => 
+    return posts.filter(post => 
       post.latitude >= sw.lat && 
       post.latitude <= ne.lat && 
       post.longitude >= sw.lng && 
       post.longitude <= ne.lng
     );
-  }, [mapData, rawPosts]);
+  }, [mapData, posts]);
 
+  // ✅ [FIX] mapCenter가 정의되지 않은 위치를 찾아서 mapData.center 등으로 교체하거나
+  // 관련 누락된 변수 정의를 확인하여 수정
   const mapCenter = mapData?.center || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
 
   return (
