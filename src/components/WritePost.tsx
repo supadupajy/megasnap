@@ -104,21 +104,26 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
-  // 키보드 높이 감지 — 버튼을 키보드 바로 위에 붙이기 위해
+  // 키보드 높이 감지
   useEffect(() => {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const handleResize = () => {
-    const keyboardH = window.innerHeight - vv.height;
-    setKeyboardHeight(keyboardH > 100 ? keyboardH : 0);
-  };
-  vv.addEventListener('resize', handleResize);
-  vv.addEventListener('scroll', handleResize);
-  return () => {
-    vv.removeEventListener('resize', handleResize);
-    vv.removeEventListener('scroll', handleResize);
-  };
-}, []);
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handleResize = () => {
+      const keyboardH = window.innerHeight - vv.height;
+      setKeyboardHeight(keyboardH > 100 ? keyboardH : 0);
+    };
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+    };
+  }, []);
+
+  // Drawer 닫힐 때 키보드 높이 초기화
+  useEffect(() => {
+    if (!isOpen) setKeyboardHeight(0);
+  }, [isOpen]);
 
   const getOrientation = (url: string): Promise<'landscape' | 'portrait'> => {
     return new Promise((resolve) => {
@@ -332,6 +337,32 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
         )}
       </AnimatePresence>
 
+      {/* 하단 버튼 — fixed로 키보드 바로 위에 항상 고정 */}
+      {isOpen && (
+        <div
+          className="fixed left-0 right-0 px-5 pt-3 pb-4 bg-white z-[1002] transition-all duration-150"
+          style={{ bottom: `${keyboardHeight}px` }}
+        >
+          {currentPage === 1 ? (
+            <Button
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+              onClick={handleNextPage}
+              disabled={mediaFiles.length === 0}
+            >
+              다음
+            </Button>
+          ) : (
+            <Button
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
+              onClick={handlePost}
+              disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
+            >
+              {isSubmitting ? '저장 중...' : '등록하기'}
+            </Button>
+          )}
+        </div>
+      )}
+
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         <DrawerContent
           className="flex flex-col outline-none overflow-hidden bg-white z-[1001] shadow-2xl h-[92vh] rounded-t-[40px]"
@@ -368,8 +399,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </Button>
             </div>
 
-            {/* 페이지 콘텐츠 */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* 페이지 콘텐츠 — 하단 버튼(fixed) 높이만큼 pb 확보 */}
+            <div className="flex-1 min-h-0 overflow-y-auto pb-24">
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
@@ -648,30 +679,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
-            {/* 하단 버튼 — 키보드가 올라오면 키보드 바로 위에 붙도록 */}
-            <div
-              className="py-4 bg-white shrink-0 transition-all duration-150"
-              style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '120px' }}
-            >
-              {currentPage === 1 ? (
-                <Button
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
-                  onClick={handleNextPage}
-                  disabled={mediaFiles.length === 0}
-                >
-                  다음
-                </Button>
-              ) : (
-                <Button
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50"
-                  onClick={handlePost}
-                  disabled={!draft.content || mediaFiles.length === 0 || isLoadingAddress || isSubmitting || !selectedCategory}
-                >
-                  {isSubmitting ? '저장 중...' : '등록하기'}
-                </Button>
-              )}
             </div>
           </div>
         </DrawerContent>
