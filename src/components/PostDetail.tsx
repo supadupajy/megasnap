@@ -32,6 +32,7 @@ interface PostDetailProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeToggle, onLocationClick, onDelete }: PostDetailProps) => {
   const navigate = useNavigate();
@@ -45,18 +46,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [adOverlayRect, setAdOverlayRect] = useState<DOMRect | null>(null);
-  
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const imageAreaRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // 키보드 대응 뷰포트 핸들러
+  // 키보드 대응
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
@@ -73,23 +72,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     };
   }, []);
 
-  // 이미지 영역 위치 추적 — 광고 오버레이 위치 계산용
-  useEffect(() => {
-    if (!isOpen) return;
-    const updateRect = () => {
-      if (imageAreaRef.current) {
-        setAdOverlayRect(imageAreaRef.current.getBoundingClientRect());
-      }
-    };
-    updateRect();
-    window.addEventListener('resize', updateRect);
-    window.addEventListener('scroll', updateRect);
-    return () => {
-      window.removeEventListener('resize', updateRect);
-      window.removeEventListener('scroll', updateRect);
-    };
-  }, [isOpen, currentIndex]);
-
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [currentIndex, isOpen]);
@@ -101,12 +83,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setShowComments(false);
       setCurrentImageIndex(0);
       const post = posts[initialIndex];
-      if (post) { 
-        setLocalComments(post.comments || []); 
-        setIsSaved(post.isSaved || false); 
+      if (post) {
+        setLocalComments(post.comments || []);
+        setIsSaved(post.isSaved || false);
       }
     }
-    if (!isOpen) { setHasInitialized(false); setIsPlayingVideo(false); }
+    if (!isOpen) { setHasInitialized(false); }
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
@@ -151,66 +133,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
   useEffect(() => {
     const currentPost = posts[currentIndex];
     if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
-    const observer = new IntersectionObserver(([entry]) => { setIsPlayingVideo(entry.isIntersecting); }, { threshold: 0.6 });
+    const observer = new IntersectionObserver(([entry]) => { }, { threshold: 0.6 });
     if (videoContainerRef.current) observer.observe(videoContainerRef.current);
     return () => observer.disconnect();
   }, [currentIndex, isOpen, posts]);
 
-  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentImageIndex) {
-      setCurrentImageIndex(index);
-      // 슬라이드 변경 시 rect 업데이트
-      setTimeout(() => {
-        if (imageAreaRef.current) {
-          setAdOverlayRect(imageAreaRef.current.getBoundingClientRect());
-        }
-      }, 50);
-    }
-  };
-
-  const handleAddComment = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!commentInput.trim() || !authUser) return;
-    setIsSubmittingComment(true);
-    const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-    try {
-      const savedComment = await insertComment({
-        postId: post.id,
-        userId: authUser.id,
-        userName: displayName,
-        userAvatar: profile?.avatar_url,
-        content: newCommentText,
-      });
-      setLocalComments((prev) => [...prev, savedComment]);
-      setCommentInput('');
-      showSuccess('댓글이 등록되었습니다.');
-    } catch (err: any) {
-      showError(err.message || '댓글 등록에 실패했습니다.');
-    } finally { setIsSubmittingComment(false); }
-  };
-
-  if (!isOpen || posts.length === 0) return null;
+  // ✅ 모든 훅을 조건부 return 이전에 선언
   const post = posts[currentIndex];
-  if (!post) return null;
 
-  const isAd = post.isAd;
-  const youtubeId = getYoutubeId(post.youtubeUrl || '');
-  
   const displayImages = useMemo(() => {
+    if (!post) return [];
+    const isAd = post.isAd;
+    const youtubeId = getYoutubeId(post.youtubeUrl || '');
     if (isAd) return [post.image];
-    if (youtubeId) return [post.image]; 
-    
+    if (youtubeId) return [post.image];
+
     let userImages: string[] = [];
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
       userImages = [...post.images];
     } else if (post.image) {
       userImages = [post.image];
     }
-    
-    const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
+
     const result = [];
     if (userImages.length > 0) {
       result.push(userImages[0]);
@@ -220,15 +164,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       result.push(FALLBACK_IMAGE, COCA_COLA_AD);
     }
     return result;
-  }, [isAd, post.images, post.image, youtubeId]);
+  }, [post]);
 
   const adLink = useMemo(() => {
+    if (!post) return "https://www.coca-cola.co.kr/";
     if (post.content?.includes('나이키') || post.image?.includes('nike'))
       return "https://www.nike.com/kr/";
     return "https://www.coca-cola.co.kr/";
   }, [post]);
 
+  // ✅ 조건부 return은 모든 훅 선언 이후에
+  if (!isOpen || posts.length === 0 || !post) return null;
+
+  const isAd = post.isAd;
+  const youtubeId = getYoutubeId(post.youtubeUrl || '');
   const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+
+  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentImageIndex) setCurrentImageIndex(index);
+  };
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -266,10 +223,32 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
       setIsDeleteDialogOpen(false);
       if (onDelete) onDelete(post.id);
       onClose();
-    } catch (err: any) { 
-      showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`); 
+    } catch (err: any) {
+      showError(`삭제 실패: ${err.message || '권한이 없거나 오류가 발생했습니다.'}`);
       setIsDeleteDialogOpen(false);
     }
+  };
+
+  const handleAddComment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!commentInput.trim() || !authUser) return;
+    setIsSubmittingComment(true);
+    const newCommentText = commentInput.trim();
+    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    try {
+      const savedComment = await insertComment({
+        postId: post.id,
+        userId: authUser.id,
+        userName: displayName,
+        userAvatar: profile?.avatar_url,
+        content: newCommentText,
+      });
+      setLocalComments((prev) => [...prev, savedComment]);
+      setCommentInput('');
+      showSuccess('댓글이 등록되었습니다.');
+    } catch (err: any) {
+      showError(err.message || '댓글 등록에 실패했습니다.');
+    } finally { setIsSubmittingComment(false); }
   };
 
   const renderCategoryBadge = () => {
@@ -291,14 +270,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
     );
   };
 
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
-  const showAdOverlay = currentImageIndex === 1 && !youtubeId && !post.videoUrl && adOverlayRect;
-
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden outline-none">
       <div className="absolute inset-0 bg-black/60 z-0 cursor-pointer" onClick={onClose} />
-      
-      <div 
+
+      <div
         className="absolute top-8 right-6 z-[1100] transition-all duration-500"
         style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
       >
@@ -307,32 +283,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
         </Button>
       </div>
 
-      {/* 광고 클릭 오버레이 — fixed로 DOM 최상위에 독립 배치, 모든 이벤트 충돌 회피 */}
-      {showAdOverlay && (
-        <div
-          className="fixed z-[1050] cursor-pointer"
-          style={{
-            top: adOverlayRect.top,
-            left: adOverlayRect.left,
-            width: adOverlayRect.width,
-            height: adOverlayRect.height,
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            window.open(adLink, '_blank', 'noopener,noreferrer');
-          }}
-        >
-          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 pointer-events-none">
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span className="font-bold">AD</span>
-          </div>
-        </div>
-      )}
-
-      <div 
+      <div
         className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
-        style={{ 
+        style={{
           paddingTop: '16px',
           paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
           transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
@@ -393,7 +346,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
 
                   {/* 미디어 영역 */}
                   <div className="px-4">
-                    <div ref={imageAreaRef} className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+                    <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                       {youtubeId ? (
                         <iframe
                           className="w-full h-full"
@@ -413,20 +366,62 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                             className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
                             onScroll={handleImageScroll}
                           >
-                            {displayImages.map((img, index) => (
-                              <div
-                                key={index}
-                                className="w-full h-full shrink-0 snap-center relative"
-                                style={{ scrollSnapStop: 'always' }}
-                              >
-                                <img
-                                  src={img}
-                                  alt={`Post content ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                  draggable={false}
-                                />
-                              </div>
-                            ))}
+                            {displayImages.map((img, index) => {
+                              const isAdSlide = index === 1;
+                              if (isAdSlide) {
+                                return (
+                                  // ✅ 광고 슬라이드: touchstart/touchend로 탭 vs 스와이프 직접 판별
+                                  // onClick 300ms 딜레이 없이 즉시 반응
+                                  <div
+                                    key={index}
+                                    className="w-full h-full shrink-0 snap-center relative"
+                                    style={{ scrollSnapStop: 'always' }}
+                                    onTouchStart={(e) => {
+                                      touchStartRef.current = {
+                                        x: e.touches[0].clientX,
+                                        y: e.touches[0].clientY,
+                                      };
+                                    }}
+                                    onTouchEnd={(e) => {
+                                      if (!touchStartRef.current) return;
+                                      const dx = Math.abs(e.changedTouches[0].clientX - touchStartRef.current.x);
+                                      const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
+                                      touchStartRef.current = null;
+                                      // 10px 미만 이동 = 탭으로 판정 → 링크 열기
+                                      if (dx < 10 && dy < 10) {
+                                        e.stopPropagation();
+                                        window.open(adLink, '_blank', 'noopener,noreferrer');
+                                      }
+                                    }}
+                                  >
+                                    <img
+                                      src={img}
+                                      alt="Advertisement"
+                                      className="w-full h-full object-cover"
+                                      draggable={false}
+                                    />
+                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      <span className="font-bold">AD</span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div
+                                  key={index}
+                                  className="w-full h-full shrink-0 snap-center relative"
+                                  style={{ scrollSnapStop: 'always' }}
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`Post content ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    draggable={false}
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
 
                           {/* 인디케이터 */}
@@ -435,9 +430,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onViewPost, onLikeTo
                               {displayImages.map((_, i) => (
                                 <div
                                   key={i}
-                                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                                    currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"
-                                  }`}
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
                                 />
                               ))}
                             </div>
