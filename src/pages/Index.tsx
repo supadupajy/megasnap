@@ -565,15 +565,18 @@ const Index = () => {
 
   // 현재 지도 화면 안에 있는 포스트들만 필터링
   const visiblePosts = useMemo(() => {
-    if (!mapData || !allPosts) return [];
+    // 초기 로딩 시에는 전체 포스트를 기준으로 하거나 빈 배열을 반환하지 않도록 처리
+    if (!posts) return [];
+    if (!mapData) return posts; // mapData가 없으면 전체 posts 반환 (비활성화 방지)
+    
     const { sw, ne } = mapData.bounds;
-    return allPosts.filter(post => 
+    return posts.filter(post => 
       post.latitude >= sw.lat && 
       post.latitude <= ne.lat && 
       post.longitude >= sw.lng && 
       post.longitude <= ne.lng
     );
-  }, [mapData, allPosts]);
+  }, [mapData, posts]);
 
   // ✅ [FIX] mapCenter가 정의되지 않은 위치를 찾아서 mapData.center 등으로 교체하거나
   // 관련 누락된 변수 정의를 확인하여 수정
@@ -624,6 +627,24 @@ const Index = () => {
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{visiblePosts.length}</div>
                   )}
                 </div>
+              </div>
+              <div className="absolute bottom-24 right-4 z-20">
+                <button 
+                  onClick={() => setIsPostListOpen(true)}
+                  disabled={visiblePosts.length === 0}
+                  className={cn(
+                    "group relative flex flex-col items-center justify-center w-16 h-16 rounded-3xl shadow-[0_8px_30px_rgb(79,70,229,0.4)] active:scale-90 transition-all border border-white/20 overflow-visible",
+                    visiblePosts.length > 0 ? "bg-indigo-600 opacity-100" : "bg-gray-400 opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <LayoutGrid className="w-7 h-7 text-white" />
+                  <span className="text-[10px] font-black text-white mt-1">여기 보기</span>
+                  {visiblePosts.length > 0 && (
+                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
+                      {visiblePosts.length}
+                    </div>
+                  )}
+                </button>
               </div>
               <div className={cn("absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
             </>
