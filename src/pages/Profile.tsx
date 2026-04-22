@@ -133,12 +133,13 @@ const Profile = () => {
   const loadProfileData = useCallback(async (uid: string) => {
     setIsDataLoading(true);
     try {
-      // 1. Fetch My Posts with forced refresh (no limit to ensure all are seen)
+      // 1. Fetch My Posts (Optimize: limit query scope and use simple select)
       const { data: myData, error: myPostsError } = await supabase
         .from('posts')
-        .select('*')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id')
         .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Add safety limit for initial load
 
       if (myPostsError) {
         console.error('[Profile] My Posts fetch error:', myPostsError);
@@ -147,15 +148,15 @@ const Profile = () => {
         setMyPosts(formattedMyPosts);
       }
 
-      // 2. Fetch Saved Posts with full join
+      // 2. Fetch Saved Posts with optimized join
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select(`
           post_id,
-          posts (*)
+          posts (id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id)
         `)
         .eq('user_id', uid)
-        .limit(30);
+        .limit(20);
 
       if (savedError) {
         console.error('[Profile] Saved Posts fetch error:', savedError);
