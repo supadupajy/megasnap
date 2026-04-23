@@ -189,15 +189,22 @@ const MapContainer = ({
         try {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
           
           updateZoomClass(); // 줌 클래스 갱신
 
+          const boundsData = { 
+            sw: { lat: sw.getLat(), lng: sw.getLng() }, 
+            ne: { lat: ne.getLat(), lng: ne.getLng() } 
+          };
+
+          // [FIX] 관리자 도구를 위해 현재 화면 범위(Bounds)를 로컬 스토리지에 즉시 저장
+          localStorage.setItem('map_bounds', JSON.stringify(boundsData));
+
           onMapChangeRef.current({
-            bounds: { 
-              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
-              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
-            },
+            bounds: boundsData,
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
             level: mapLevel,
           });
