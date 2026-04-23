@@ -114,7 +114,8 @@ const PostListOverlay = ({
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !currentBounds) return;
+    // isLoadingMore만 체크하고 hasMore 체크는 제거하여 무한 시도 가능하게 함
+    if (isLoadingMore) return;
     
     setIsLoadingMore(true);
     
@@ -129,7 +130,6 @@ const PostListOverlay = ({
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      // ✅ [FIX] 쿼리 당 limit을 30개로 대폭 확대
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -139,7 +139,7 @@ const PostListOverlay = ({
         .lte('longitude', lngMax)
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(20);
 
       if (error) throw error;
 
@@ -190,21 +190,19 @@ const PostListOverlay = ({
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
           return [...prev, ...filteredNew];
         });
-        
-        // ✅ [FIX] 30개를 다 못 가져왔을 때만 hasMore를 끔 (충분히 많은 데이터를 훑게 함)
-        if (data.length < 30) {
-          setHasMore(false);
-        }
-      } else {
-        setHasMore(false);
       }
+      
+      // ✅ [핵심] 데이터가 없어도 hasMore를 false로 만들지 않음
+      // 사용자는 언제든지 다시 위로 올려서 로딩 시도를 할 수 있음
+      setHasMore(true); 
+
     } catch (err) {
       console.error('[PostListOverlay] Load more error:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore, currentBounds]);
+  }, [posts, isLoadingMore, currentBounds]); // ✅ hasMore 의존성 제거
 
   // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
@@ -320,38 +318,30 @@ const PostListOverlay = ({
               </div>
             ))}
             
-            {/* Pull Up Loading Area */}
-            {hasMore && (
-              <div 
-  className="pt-2 pb-0 flex flex-col items-center justify-start transition-all duration-200"
-  style={{ height: `${Math.max(40, pullUpDistance + 20)}px` }}
->
-  <div className="flex flex-col items-center gap-1">
-                  {isLoadingMore ? (
-                    <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                  ) : (
-                    <>
-                      <motion.div
-                        animate={{ y: pullUpDistance > 80 ? -5 : 0 }}
-                        className={pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}
-                      >
-                        <ChevronUp className="w-6 h-6" />
-                      </motion.div>
-                      <p className={`text-xs font-black uppercase tracking-tighter ${pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}`}>
-                        {pullUpDistance > 80 ? "놓아서 추가 포스팅 로드" : "위로 올려 더 많은 포스팅 보기"}
-                      </p>
-                    </>
-                  )}
-                </div>
+            {/* Pull Up Loading Area - 항상 로딩 시도가 가능하도록 노출 */}
+            <div 
+              className="py-16 flex flex-col items-center justify-center transition-all duration-200"
+              style={{ height: `${Math.max(120, pullUpDistance + 60)}px` }}
+            >
+              <div className="flex flex-col items-center gap-2 mb-10">
+                {isLoadingMore ? (
+                  <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                ) : (
+                  <>
+                    <motion.div
+                      animate={{ y: pullUpDistance > 80 ? -5 : 0 }}
+                      className={pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}
+                    >
+                      <ChevronUp className="w-6 h-6" />
+                    </motion.div>
+                    <p className={`text-xs font-black uppercase tracking-tighter ${pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}`}>
+                      {pullUpDistance > 80 ? "놓아서 추가 포스팅 로드" : "위로 올려 더 많은 포스팅 보기"}
+                    </p>
+                  </>
+                )}
               </div>
-            )}
+            </div>
             
-            {!hasMore && (
-              <div className="py-12 flex flex-col items-center justify-center text-gray-300">
-                <div className="w-1 h-1 bg-gray-200 rounded-full mb-2" />
-                <p className="text-[10px] font-black uppercase tracking-widest">End of Map Results</p>
-              </div>
-            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
