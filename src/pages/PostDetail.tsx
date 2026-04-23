@@ -131,7 +131,7 @@ const PostDetail = () => {
       {/* Title Header - Matching Popular Page Style */}
       <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">상세 포스팅</h2>
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Post View</p>
         </div>
         <button onClick={() => navigate(-1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
