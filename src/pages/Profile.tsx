@@ -197,35 +197,10 @@ const Profile = () => {
 
   useEffect(() => { 
     if (!authLoading && authUser?.id) {
+      // ✅ 페이지가 마운트되거나 auth 상태가 변경될 때 즉시 데이터 로드
       loadProfileData(authUser.id); 
     } 
   }, [authLoading, authUser?.id, loadProfileData]);
-
-  // ✅ [FIX] 프로필 화면 실시간 구독 추가
-  useEffect(() => {
-    if (!authUser?.id) return;
-
-    const channel = supabase
-      .channel(`profile-posts-${authUser.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE 모두 감지
-          schema: 'public',
-          table: 'posts',
-          filter: `user_id=eq.${authUser.id}`
-        },
-        () => {
-          console.log('[Profile] Realtime update detected, refreshing data...');
-          loadProfileData(authUser.id);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [authUser?.id, loadProfileData]);
 
   const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
     const updatePost = (prev: Post[]) => prev.map(post => 
