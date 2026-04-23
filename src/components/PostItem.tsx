@@ -346,6 +346,105 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     );
   };
 
+  const renderMedia = () => {
+    // 1. 유튜브 영상 처리
+    if (videoId) {
+      return (
+        <div className="w-full h-full relative">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${(autoPlayVideo && isVisible && isReadyToPlay) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            className="w-full h-full object-cover"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            onLoad={() => setVideoLoaded(true)}
+          />
+          {(!videoLoaded || !isVisible) && (
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+            />
+          )}
+        </div>
+      );
+    }
+
+    // 2. 일반 업로드 동영상 처리
+    if (post.videoUrl) {
+      return (
+        <div className="w-full h-full relative">
+          <video
+            src={post.videoUrl}
+            className="w-full h-full object-cover"
+            autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
+            muted
+            loop
+            playsInline
+            onLoadedData={() => setVideoLoaded(true)}
+          />
+          {/* ✅ 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출, 재생 중에는 썸네일 완전 제거 */}
+          {(!videoLoaded || !isVisible || !isReadyToPlay) && (
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+              onError={handleImageError}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // 3. 일반 이미지 슬라이더 처리
+    return (
+      <div className="relative w-full h-full">
+        <div
+          ref={imageScrollRef}
+          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+          onScroll={handleImageScroll}
+        >
+          {displayImages.map((img, index) => (
+            <div 
+              key={index} 
+              className="w-full h-full shrink-0 snap-center relative"
+              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
+            >
+              <img
+                src={img}
+                alt={`Content ${index}`}
+                className={cn(
+                  "w-full h-full object-cover",
+                  img === COCA_COLA_AD && "cursor-pointer"
+                )}
+                onError={handleImageError}
+              />
+              {img === COCA_COLA_AD && (
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
+                  AD
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 페이지 인디케이터 (구분자) */}
+        {displayImages.length > 1 && (
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+            {displayImages.map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -383,72 +482,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       {/* Media Section */}
       <div 
         className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-        onClick={() => !videoId && onLocationClick?.({} as any, lat!, lng!)}
+        onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
       >
-        {videoId ? (
-          <div className="w-full h-full">
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${(autoPlayVideo && isVisible && isReadyToPlay) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
-              className="w-full h-full object-cover"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              onLoad={() => setVideoLoaded(true)}
-            />
-            {(!videoLoaded || !isVisible) && (
-              <img 
-                src={currentImage} 
-                alt="" 
-                className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-              />
-            )}
-          </div>
-        ) : (
-          <div className="relative w-full h-full">
-            <div
-              ref={imageScrollRef}
-              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-              onScroll={handleImageScroll}
-            >
-              {displayImages.map((img, index) => (
-                <div 
-                  key={index} 
-                  className="w-full h-full shrink-0 snap-center relative"
-                  onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-                >
-                  <img
-                    src={img}
-                    alt={`Content ${index}`}
-                    className={cn(
-                      "w-full h-full object-cover",
-                      img === COCA_COLA_AD && "cursor-pointer"
-                    )}
-                    onError={handleImageError}
-                  />
-                  {img === COCA_COLA_AD && (
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
-                      AD
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* 페이지 인디케이터 (구분자) */}
-            {displayImages.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                {displayImages.map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-300",
-                      currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {renderMedia()}
       </div>
 
       {renderInteractionButtons()}
