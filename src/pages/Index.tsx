@@ -353,7 +353,7 @@ const Index = () => {
   useEffect(() => {
     if (!authUser) return;
 
-    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정
+    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
     const channel = supabase
       .channel('public:posts-realtime')
       .on(
@@ -370,31 +370,43 @@ const Index = () => {
           const mappedPost = await mapDbToPost(newRawPost);
           if (!mappedPost) return;
 
-          // ✅ 다른 사용자가 올린 글인 경우 폭죽 효과 트리거
           if (mappedPost.user.id !== authUser.id) {
             triggerConfetti();
           }
 
           setAllPosts(prev => {
             if (prev.some(p => p.id === mappedPost.id)) return prev;
-            // ✅ isNewRealtime 플래그를 추가하여 MapContainer에서 애니메이션 처리가 가능하게 함
             const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
             mapCache.posts = combined;
             return combined;
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'posts'
+        },
+        (payload) => {
+          const deletedId = payload.old.id;
+          console.log('[Realtime] Post deleted:', deletedId);
 
-          // 새로운 포스트가 영역 내에 있다면 즉시 표시를 위해 displayedMarkers 업데이트 트리거
-          if (mapData?.bounds) {
-            const { sw, ne } = mapData.bounds;
-            const inBounds = mappedPost.lat >= Math.min(sw.lat, ne.lat) && 
-                             mappedPost.lat <= Math.max(sw.lat, ne.lat) && 
-                             mappedPost.lng >= Math.min(sw.lng, ne.lng) && 
-                             mappedPost.lng <= Math.max(sw.lng, ne.lng);
-            
-            if (inBounds) {
-              // trigger setDisplayedMarkers via allPosts change
-            }
-          }
+          // ✅ [FADE OUT] 마커 삭제 애니메이션 트리거 (MapContainer에서 처리)
+          window.dispatchEvent(new CustomEvent('animate-marker-delete', { 
+            detail: { id: deletedId } 
+          }));
+
+          // 애니메이션 시간(약 400~500ms) 후 상태에서 실제 제거
+          setTimeout(() => {
+            setAllPosts(prev => {
+              const filtered = prev.filter(p => p.id !== deletedId);
+              mapCache.posts = filtered;
+              return filtered;
+            });
+            setDisplayedMarkers(prev => prev.filter(p => p.id !== deletedId));
+          }, 450);
         }
       )
       .subscribe();
@@ -402,7 +414,7 @@ const Index = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [authUser, mapData, mapDbToPost]);
+  }, [authUser, mapData, mapDbToPost, triggerConfetti]);
 
   useEffect(() => {
     const handleFocusPost = (e: any) => {
