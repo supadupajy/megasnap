@@ -71,22 +71,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded, posts.length, handleScroll]);
 
   return (
-    <motion.div 
-      initial={false}
-      animate={{ 
-        height: isExpanded ? "auto" : 56,
-        maxHeight: isExpanded ? "85vh" : 56
-      }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30,
-        mass: 0.8
-      }}
+    <div 
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl overflow-hidden border-2 border-indigo-600/20 w-full"
+        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-2 border-indigo-600/20",
+        isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
       )}
-      style={{ willChange: "height" }}
+      style={{ willChange: "max-height" }}
     >
       <div 
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
@@ -153,7 +143,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
       <div 
         className={cn(
-          "flex flex-col relative transition-opacity duration-200",
+          "flex flex-col relative transition-opacity duration-300",
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
@@ -310,7 +300,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
