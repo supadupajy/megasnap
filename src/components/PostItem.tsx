@@ -123,7 +123,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   },
   {
     threshold: 0.5,
-    rootMargin: '0px'
+    rootMargin: '-50px'
   }
 );
 
