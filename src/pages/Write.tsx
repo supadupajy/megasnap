@@ -30,7 +30,6 @@ const CATEGORIES = [
   { key: 'animal', label: '동물', Icon: PawPrint },
 ] as const;
 
-// ✅ 커스텀 미디어 슬라이더
 const MediaSlider = ({
   mediaFiles,
   onRemove,
@@ -45,15 +44,12 @@ const MediaSlider = ({
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
   const cropRef = useRef<{ x: number; y: number }[]>([]);
 
-  // ✅ stale closure 방지: 모든 동적 값을 ref로 유지
   const currentIdxRef = useRef(0);
   const mediaFilesRef = useRef<MediaFile[]>([]);
   const onCropChangeRef = useRef(onCropChange);
-  const onRemoveRef = useRef(onRemove);
 
   useEffect(() => { currentIdxRef.current = currentIdx; }, [currentIdx]);
   useEffect(() => { onCropChangeRef.current = onCropChange; }, [onCropChange]);
-  useEffect(() => { onRemoveRef.current = onRemove; }, [onRemove]);
 
   useEffect(() => {
     mediaFilesRef.current = mediaFiles;
@@ -63,77 +59,72 @@ const MediaSlider = ({
     }
   }, [mediaFiles]);
 
-  // ✅ 의존성 [] — 단 한 번만 등록, 최신값은 모두 ref로 참조
   useEffect(() => {
     const el = sliderRef.current;
     if (!el) return;
 
     let touchStartX = 0;
-    let touchStartY = 0;
     let lastX = 0;
     let lastY = 0;
     let isDragging = false;
 
     const onTouchStart = (e: TouchEvent) => {
       touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
       lastX = touchStartX;
-      lastY = touchStartY;
+      lastY = e.touches[0].clientY;
       isDragging = false;
     };
 
     const onTouchMove = (e: TouchEvent) => {
-  const idx = currentIdxRef.current;
-  const media = mediaFilesRef.current[idx];
-  if (!media) return;
+      const idx = currentIdxRef.current;
+      const media = mediaFilesRef.current[idx];
+      if (!media || media.type !== 'image') return;
 
-  // touch-none이 있으므로 항상 preventDefault 불필요 (브라우저가 이미 차단)
-  // 이미지일 때만 crop 처리
-  if (media.type !== 'image') return;
+      // ✅ 핵심: touch-none CSS + preventDefault 둘 다 필요 (iOS Safari)
+      e.preventDefault();
+      isDragging = true;
 
-  isDragging = true;
+      const dx = e.touches[0].clientX - lastX;
+      const dy = e.touches[0].clientY - lastY;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
 
-  const dx = e.touches[0].clientX - lastX;
-  const dy = e.touches[0].clientY - lastY;
-  lastX = e.touches[0].clientX;
-  lastY = e.touches[0].clientY;
+      const isPortrait = media.orientation === 'portrait';
+      const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
+      const sensitivity = 0.5;
 
-  const isPortrait = media.orientation === 'portrait';
-  const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
-  const sensitivity = 0.5;
+      const newX = isPortrait
+        ? cur.x
+        : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
+      const newY = isPortrait
+        ? Math.max(0, Math.min(100, cur.y - dy * sensitivity))
+        : cur.y;
 
-  const newX = isPortrait ? cur.x : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
-  const newY = isPortrait ? Math.max(0, Math.min(100, cur.y - dy * sensitivity)) : cur.y;
+      cropRef.current[idx] = { x: newX, y: newY };
 
-  cropRef.current[idx] = { x: newX, y: newY };
-
-  const imgEl = imgRefs.current[idx];
-  if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
-};
+      const imgEl = imgRefs.current[idx];
+      if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
+    };
 
     const onTouchEnd = (e: TouchEvent) => {
       const idx = currentIdxRef.current;
       const files = mediaFilesRef.current;
 
       if (isDragging) {
-        // crop 저장
         const { x, y } = cropRef.current[idx] ?? { x: 50, y: 50 };
         onCropChangeRef.current(idx, x, y);
       } else {
-        // 스와이프로 슬라이드 전환
         const totalDx = e.changedTouches[0].clientX - touchStartX;
-        if (totalDx < -40 && idx < files.length - 1) {
-          setCurrentIdx(i => i + 1);
-        } else if (totalDx > 40 && idx > 0) {
-          setCurrentIdx(i => i - 1);
-        }
+        if (totalDx < -40 && idx < files.length - 1) setCurrentIdx(i => i + 1);
+        else if (totalDx > 40 && idx > 0) setCurrentIdx(i => i - 1);
       }
 
       isDragging = false;
     };
 
+    // ✅ touchstart는 passive:true (스크롤 힌트용), touchmove는 passive:false (preventDefault용)
     el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: false }); // passive:false 필수
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
     el.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
@@ -141,16 +132,17 @@ const MediaSlider = ({
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
     };
-  }, []); // ✅ 빈 배열 — 절대 재등록 없음
+  }, []); // ✅ 빈 배열 — 단 한 번만 등록
 
   if (mediaFiles.length === 0) return null;
 
   return (
+    // ✅ touch-none: CSS 레벨에서 브라우저 기본 터치 동작 차단
+    // ✅ e.preventDefault(): JS 레벨에서 추가 차단 (iOS Safari 대응)
     <div
-  ref={sliderRef}
-  className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none touch-none"
->
-      {/* ✅ opacity 전환 방식 — 이미지 깨짐 없음 */}
+      ref={sliderRef}
+      className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none touch-none"
+    >
       <div className="relative w-full h-full">
         {mediaFiles.map((media, idx) => (
           <div
@@ -181,7 +173,6 @@ const MediaSlider = ({
         ))}
       </div>
 
-      {/* 삭제 버튼 */}
       <button
         onTouchEnd={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
         onClick={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
@@ -190,7 +181,6 @@ const MediaSlider = ({
         <X className="w-4 h-4" />
       </button>
 
-      {/* 인디케이터 */}
       {mediaFiles.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
           {mediaFiles.map((_, i) => (
@@ -208,7 +198,6 @@ const MediaSlider = ({
   );
 };
 
-// ====== 메인 Write 컴포넌트 ======
 const Write = () => {
   const navigate = useNavigate();
   const location = useLocation();
