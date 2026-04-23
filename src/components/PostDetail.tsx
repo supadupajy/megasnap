@@ -501,27 +501,71 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
 
                           {youtubeId ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
-                              <iframe
-                                key={`detail-yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                                className="w-full h-full border-0"
-                                allow="autoplay; encrypted-media"
-                                allowFullScreen
-                              />
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <iframe
+                                    ref={iframeRef}
+                                    key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                    className="w-full h-full border-0"
+                                    src={youtubeSrc}
+                                    title="YouTube video player"
+                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                  {/* 🔇 음소거 토글 버튼 */}
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                  {/* 🔍 [DEBUG] 화면에도 상태 표시 */}
+                                  <span className="text-white/40 text-[10px]">youtubeId: {youtubeId ?? 'null'}</span>
+                                </div>
+                              )}
                             </div>
-                          ) : vUrl ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
-                              <video 
-                                key={`detail-vid-${currentPost.id}-${vUrl}`}
-                                src={vUrl} 
-                                className="w-full h-full object-cover" 
-                                autoPlay 
-                                loop 
-                                playsInline 
-                                controls 
-                              />
+
+                          ) : videoUrl ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <video
+                                    ref={videoRef}
+                                    key={`detail-vid-${currentPost.id}-${videoUrl}`}
+                                    src={videoUrl}
+                                    className="w-full h-full object-cover"
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                    muted={isMuted}
+                                    controls={false}
+                                  />
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                  <span className="text-white/40 text-[10px]">video 로딩 중...</span>
+                                </div>
+                              )}
                             </div>
+
                           ) : (
                             <div className="relative w-full h-full z-10 bg-gray-100">
                               <div
