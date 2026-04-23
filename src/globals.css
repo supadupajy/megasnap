@@ -53,12 +53,12 @@
   width: 60px;
 }
 
-/* 줌 레벨에 따른 스케일 조정 */
-#kakao-map.zoom-6 .marker-container:not(.highlighted) {
+/* 줌 레벨에 따른 스케일 조정 - .highlighted 조건 제거하여 항상 적용 */
+#kakao-map.zoom-6 .marker-container {
   transform: scale(0.7) !important;
 }
 
-#kakao-map.zoom-7 .marker-container:not(.highlighted) {
+#kakao-map.zoom-7 .marker-container {
   transform: scale(0.45) !important;
 }
 
@@ -88,7 +88,7 @@
 .marker-container.highlighted .marker-content-wrapper,
 .marker-container.highlighted .marker-scaling-target {
   animation: none !important;
-  transform: scale(1) !important;
+  /* transform: scale(1) 제거하여 부모(.marker-container)의 줌 스케일을 그대로 상속받음 */
 }
 
 @keyframes marker-fade-in {
