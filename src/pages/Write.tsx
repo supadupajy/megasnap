@@ -441,7 +441,7 @@ const Write = () => {
                 />
               ) : (
                 <div className="aspect-square w-full rounded-[32px] bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
-                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">미리보기 영역</span>
+                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
                 </div>
               )}
 
