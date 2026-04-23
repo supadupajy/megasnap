@@ -223,7 +223,7 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                 <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
               </div>
 
-              {mediaFiles.length > 0 && (
+              {mediaFiles.length > 0 ? (
                 <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
                   <Carousel setApi={setApi} className="w-full h-full">
                     <CarouselContent className="ml-0 h-full">
@@ -256,6 +256,10 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                       ))}
                     </div>
                   )}
+                </div>
+              ) : (
+                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
+                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">미리보기 영역</span>
                 </div>
               )}
               
