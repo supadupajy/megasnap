@@ -122,8 +122,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setIsVisible(entry.isIntersecting);
   },
   {
-    threshold: 0.3,
-    rootMargin: '0px'
+    threshold: 0.1,
+    rootMargin: '-20% 0px -20% 0px'
   }
 );
 
