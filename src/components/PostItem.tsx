@@ -94,6 +94,11 @@ const PostItem = ({
   const { user, content, isAd } = post;
   const isMine = authUser?.id === user.id;
 
+  const handleAdClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(COCA_COLA_URL, '_blank');
+  }, []);
+
   // ✅ 비디오 자동 재생 및 소리 설정 로직 개선
   useEffect(() => {
     if (autoPlayVideo && videoRef.current) {
