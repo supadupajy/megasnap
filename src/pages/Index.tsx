@@ -25,6 +25,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import confetti from 'canvas-confetti';
+
+// [CRITICAL FIX] 전역 변수로 confetti 함수를 안전하게 확보
+const fireConfetti = (options: any) => {
+  try {
+    const f = (window as any).confetti || confetti;
+    if (f) f(options);
+  } catch (e) {
+    console.error('[Confetti] Fire error:', e);
+  }
+};
+
 import { 
   seedGlobalPosts, 
   randomizeExistingLikes, 
@@ -46,56 +57,47 @@ const Index = () => {
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
   const triggerConfetti = useCallback(() => {
-    // [FIX] 타인이 생성했을 때의 폭죽 로직을 참고하여, 내가 생성했을 때도 
-    // 동일한 방식(화면 좌표 기반의 confetti 호출)으로 폭죽을 터뜨림
-    try {
-      console.log('[Confetti] Firing confetti using same logic as realtime posts');
+    // 1. 타인이 생성했을 때 나타나는 방식과 동일한 옵션 적용
+    const duration = 2.5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999, scalar: 1.2 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    // 즉시 실행
+    fireConfetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      zIndex: 999999,
+      colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee']
+    });
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 40 * (timeLeft / duration);
       
-      // 1. 타인이 생성했을 때 나타나는 방식과 동일한 옵션 적용
-      const duration = 2 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999, scalar: 1.2 };
-
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-      const interval: any = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        // 화면 좌우 상단에서 타인 포스팅 감지 시와 유사하게 입자를 뿌림
-        confetti({ 
-          ...defaults, 
-          particleCount, 
-          origin: { x: randomInRange(0.1, 0.4), y: Math.random() - 0.2 },
-          colors: ['#4F46E5', '#F59E0B'] 
-        });
-        confetti({ 
-          ...defaults, 
-          particleCount, 
-          origin: { x: randomInRange(0.6, 0.9), y: Math.random() - 0.2 },
-          colors: ['#10B981', '#EF4444'] 
-        });
-      }, 250);
-
-      // 2. 추가로 화면 중앙 대형 폭죽 (강력한 가시성)
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        zIndex: 999999,
-        colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee']
+      fireConfetti({ 
+        ...defaults, 
+        particleCount, 
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#4F46E5', '#F59E0B'] 
       });
+      fireConfetti({ 
+        ...defaults, 
+        particleCount, 
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#10B981', '#EF4444'] 
+      });
+    }, 200);
 
-    } catch (e) {
-      console.error('[Confetti] Confetti error:', e);
-    }
-
-    // [BACKUP] CSS 폭죽은 여전히 유지하여 확실하게 표시
-    const pieces = Array.from({ length: 50 }).map((_, i) => ({
+    // 2. 백업 CSS 폭죽 실행
+    const pieces = Array.from({ length: 60 }).map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 2}s`,
@@ -103,6 +105,10 @@ const Index = () => {
     }));
     setConfettiPieces(pieces);
     setShowCssConfetti(true);
+    
+    // 타인이 생성했을 때처럼 브라우저 기본 알림음과 유사한 효과를 위해 로그 출력
+    console.log('[Confetti] SUCCESS: Firing all layers of celebratory effects');
+    
     setTimeout(() => setShowCssConfetti(false), 5000);
   }, []);
 
