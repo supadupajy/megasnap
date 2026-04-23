@@ -191,10 +191,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
     
-    let baseImages = currentPost.images && currentPost.images.length > 0 
-      ? currentPost.images.filter((img: string) => !isDummyUrl(img))
-      : [];
-
+    // [FIX] currentPost.images가 존재하면 그것을 우선 사용하되, 
+    // 문자열 배열인지 확인하고 더미 URL을 필터링합니다.
+    let baseImages: string[] = [];
+    
+    if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
+      baseImages = currentPost.images.filter((img: any) => typeof img === 'string' && !isDummyUrl(img));
+    }
+    
+    // 만약 images 배열이 비어있다면 단일 image 필드를 사용합니다.
+    if (baseImages.length === 0 && currentPost.image && !isDummyUrl(currentPost.image)) {
+      baseImages = [currentPost.image];
+    }
+    
+    // 그래도 비어있다면 폴백 이미지를 사용합니다.
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
