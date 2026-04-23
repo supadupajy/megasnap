@@ -45,24 +45,10 @@ const Write = () => {
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
   
-  // [FIX] 컴포넌트 마운트 시 body 스크롤 고정 (인기 탭 등 다른 페이지와 동일한 동작)
-  useEffect(() => {
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
-    
-    return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
-  }, []);
-
-  const [currentPage, setCurrentPage] = useState<1 | 2>(1);
+  // [FIX] 위치를 선택하고 돌아오거나, 지도로 나갔다가 취소하고 돌아온 경우 2페이지(상세 정보 입력)가 보이도록 설정
+  const [currentPage, setCurrentPage] = useState<1 | 2>(
+    location.state?.location || location.state?.fromLocationSelection ? 2 : 1
+  );
   const [draft, setDraft] = useState(postDraftStore.get());
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [api, setApi] = useState<any>();

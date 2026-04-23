@@ -861,15 +861,22 @@ const Index = () => {
     if (tempSelectedLocation) { 
       setFinalSelectedLocation(tempSelectedLocation); 
       setIsSelectingLocation(false); 
-      // [FIX] Navigate to new Write page with location data
-      setTimeout(() => navigate('/write', { state: { location: tempSelectedLocation } }), 100); 
+      // [FIX] Navigate to new Write page with location data and return flag
+      setTimeout(() => navigate('/write', { 
+        state: { 
+          location: tempSelectedLocation,
+          fromLocationSelection: true 
+        } 
+      }), 100); 
     } 
   };
   const cancelLocationSelection = () => { 
     setIsSelectingLocation(false); 
     setTempSelectedLocation(null); 
-    // [FIX] Navigate back to Write page when canceled
-    setTimeout(() => navigate('/write'), 100); 
+    // [FIX] Navigate back to Write page with return flag even when canceled
+    setTimeout(() => navigate('/write', { 
+      state: { fromLocationSelection: true } 
+    }), 100); 
   };
   const startLocationSelection = () => { 
     setIsPostListOpen(false); 
