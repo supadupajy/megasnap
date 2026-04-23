@@ -317,6 +317,7 @@ const MapContainer = ({
 useEffect(() => {
   const handleHighlight = (e: any) => {
     const postId = e.detail?.id;
+    const duration = e.detail?.duration || 6000;
 
     // 모든 마커에서 highlighted 제거
     overlaysRef.current.forEach((overlay, id) => {
@@ -324,6 +325,7 @@ useEffect(() => {
       if (!content) return;
       if (content.classList.contains('highlighted')) {
         content.classList.remove('highlighted');
+        // ZIndex 원복
         const post = posts.find(p => p.id === id);
         overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
       }
@@ -338,6 +340,15 @@ useEffect(() => {
       if (content) {
         content.classList.add('highlighted');
         overlay.setZIndex(10000);
+
+        // 일정 시간 후 자동으로 클래스 제거
+        setTimeout(() => {
+          if (content.classList.contains('highlighted')) {
+            content.classList.remove('highlighted');
+            const post = posts.find(p => p.id === postId);
+            overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
+          }
+        }, duration);
       }
     }
   };

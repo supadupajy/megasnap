@@ -129,18 +129,18 @@ const Index = () => {
   setSearchResultLocation(null);
   if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-  // ✅ 하이라이트 제거 후 지도 이동, 하이라이트는 window 이벤트로 MapContainer에 직접 전달
+  // ✅ 하이라이트 초기화 및 지도 이동 시작
   setHighlightedPostId(null);
   setMapCenter(center || { lat: post.lat, lng: post.lng });
 
+  // ✅ 지도 이동 시간(약 1300ms)을 고려하여 하이라이트 이벤트 발송
   highlightTimeoutRef.current = window.setTimeout(() => {
-    // ✅ 직접 이벤트로 MapContainer에 전달 (React 리렌더링 우회)
-    window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id } }));
-    highlightTimeoutRef.current = window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: null } }));
-      highlightTimeoutRef.current = null;
-    }, 6000);
-  }, 1300);
+    // ✅ CustomEvent를 통해 MapContainer 내부의 마커 DOM을 직접 제어
+    window.dispatchEvent(new CustomEvent('highlight-marker', { 
+      detail: { id: post.id, duration: 6000 } 
+    }));
+    highlightTimeoutRef.current = null;
+  }, 1100); // 1.3초 이동 완료 직전에 애니메이션 시작 준비
 }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
