@@ -139,107 +139,49 @@ const Write = () => {
     setMediaFiles(newMedia);
   }, [mediaFiles, setMediaFiles]);
 
-  const imgNaturalSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
-const containerSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
-const containerRef = useRef<HTMLDivElement>(null);
+  const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+    const media = mediaFiles[idx];
+    if (!media || media.type !== 'image') return;
+    
+    const isPortrait = media.orientation === 'portrait';
+    
+    let clientX: number;
+    let clientY: number;
 
-const clampCrop = (x: number, y: number, media: MediaFile): { x: number; y: number } => {
-  // objectPosition %는 0~100 사이여야 이미지가 경계를 벗어나지 않음
-  // 단, 이미지가 컨테이너보다 작으면 이동 불가
-  const isPortrait = media.orientation === 'portrait';
-  const { w: natW, h: natH } = imgNaturalSizeRef.current;
-  const { w: conW, h: conH } = containerSizeRef.current;
-  if (!natW || !natH || !conW || !conH) return { x, y };
-
-  // cover 모드에서 실제 렌더된 이미지 크기 계산
-  const scaleW = conW / natW;
-  const scaleH = conH / natH;
-  const scale = Math.max(scaleW, scaleH);
-  const renderedW = natW * scale;
-  const renderedH = natH * scale;
-
-  // 이동 가능한 픽셀 범위
-  const maxOffsetX = Math.max(0, (renderedW - conW) / 2);
-  const maxOffsetY = Math.max(0, (renderedH - conH) / 2);
-
-  // objectPosition % → 픽셀 오프셋 (50% = 중앙)
-  const offsetX = ((x - 50) / 100) * (renderedW - conW);
-  const offsetY = ((y - 50) / 100) * (renderedH - conH);
-
-  const clampedOffsetX = isPortrait ? 0 : Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
-  const clampedOffsetY = isPortrait ? Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY)) : 0;
-
-  // 픽셀 오프셋 → % 변환
-  const clampedX = renderedW === conW ? 50 : 50 + (clampedOffsetX / (renderedW - conW)) * 100;
-  const clampedY = renderedH === conH ? 50 : 50 + (clampedOffsetY / (renderedH - conH)) * 100;
-
-  return { x: clampedX, y: clampedY };
-};
-
-const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
-  const media = mediaFiles[idx];
-  if (!media || media.type !== 'image') return;
-
-  const isPortrait = media.orientation === 'portrait';
-
-  let clientX: number;
-  let clientY: number;
-
-  if ('touches' in e) {
-    clientX = e.touches[0].clientX;
-    clientY = e.touches[0].clientY;
-  } else {
-    clientX = (e as React.MouseEvent).clientX;
-    clientY = (e as React.MouseEvent).clientY;
-  }
-
-  if (dragActiveIdx !== idx) {
-    // 드래그 시작 시 이미지/컨테이너 크기 측정
-    if (containerRef.current) {
-      containerSizeRef.current = {
-        w: containerRef.current.offsetWidth,
-        h: containerRef.current.offsetHeight,
-      };
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
     }
-    const imgEl = containerRef.current?.querySelector('img');
-    if (imgEl) {
-      imgNaturalSizeRef.current = { w: imgEl.naturalWidth, h: imgEl.naturalHeight };
+
+    if (dragActiveIdx !== idx) {
+      setDragActiveIdx(idx);
+      dragStartRef.current = { x: clientX, y: clientY };
+      return;
     }
-    setDragActiveIdx(idx);
+
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+    
     dragStartRef.current = { x: clientX, y: clientY };
-    return;
-  }
 
-  const deltaX = clientX - dragStartRef.current.x;
-  const deltaY = clientY - dragStartRef.current.y;
-  dragStartRef.current = { x: clientX, y: clientY };
+    // 민감도: % 단위이므로 화면 크기에 맞춰 조정 (0.2 ~ 0.5 권장)
+    const sensitivity = 0.35;
+    
+    const currentX = media.crop?.x ?? 50;
+    const currentY = media.crop?.y ?? 50;
 
-  const sensitivity = 0.15;
-  const currentX = media.crop?.x ?? 50;
-  const currentY = media.crop?.y ?? 50;
+    const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
+    const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
 
-  const rawX = isPortrait ? 50 : currentX - deltaX * sensitivity;
-  const rawY = isPortrait ? currentY - deltaY * sensitivity : 50;
+    updateMediaCrop(idx, newX, newY);
+  };
 
-  // ✅ 경계 클램핑
-  const clamped = clampCrop(rawX, rawY, media);
-  updateMediaCrop(idx, clamped.x, clamped.y);
-};
-
-const stopDragging = () => {
-  const idx = dragActiveIdx;
-  if (idx === null) return;
-
-  // ✅ 손을 뗄 때 경계 넘어간 경우 스프링으로 복귀
-  const media = mediaFiles[idx];
-  if (media) {
-    const clamped = clampCrop(media.crop?.x ?? 50, media.crop?.y ?? 50, media);
-    if (clamped.x !== (media.crop?.x ?? 50) || clamped.y !== (media.crop?.y ?? 50)) {
-      updateMediaCrop(idx, clamped.x, clamped.y);
-    }
-  }
-  setDragActiveIdx(null);
-};
+  const stopDragging = () => {
+    setDragActiveIdx(null);
+  };
 
   const updateMediaCrop = (idx: number, x: number, y: number) => {
     const newMedia = [...mediaFiles];
