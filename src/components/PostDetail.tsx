@@ -40,6 +40,13 @@ const getFallbackImage = (postId: string) => {
   return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
 };
 
+const getYouTubeIdLocal = (url: any) => {
+  if (!url || typeof url !== 'string') return null;
+  const clean = url.trim();
+  if (clean.includes('supabase.co/storage')) return null;
+  return getYoutubeId(clean);
+};
+
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
@@ -56,36 +63,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const youtubeId = useMemo(() => {
     if (!currentPost) return null;
-
-    // 🔍 [DEBUG] 포스트 원본 데이터 전체 출력
-    console.log('[PostDetail][DEBUG] currentPost raw data:', JSON.stringify({
-      id: currentPost.id,
-      youtubeUrl: currentPost.youtubeUrl,
-      youtube_url: currentPost.youtube_url,
-      youtube_id: currentPost.youtube_id,
-      youtubeId: currentPost.youtubeId,
-      videoUrl: currentPost.videoUrl,
-      video_url: currentPost.video_url,
-      video_path: currentPost.video_path,
-    }, null, 2));
-
+    // null이 명시적으로 들어올 경우를 대비해 posts 배열의 원본 데이터도 참조 시도
     const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
-    const parsed = getYoutubeId(url || '');
-
-    // 🔍 [DEBUG] 파싱 결과 출력
-    console.log('[PostDetail][DEBUG] youtubeId parse result:', { rawUrl: url, parsedId: parsed });
-
-    return parsed;
+    return getYouTubeIdLocal(url);
   }, [currentPost]);
 
-  const videoUrl = useMemo(() => {
+  const vUrl = useMemo(() => {
     if (!currentPost) return null;
-    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
-
-    // 🔍 [DEBUG] video URL 출력
-    console.log('[PostDetail][DEBUG] videoUrl:', url);
-
-    return url;
+    // null이 명시적으로 들어올 경우를 대비
+    return currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -121,7 +107,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       console.log('[PostDetail][DEBUG] isOpen=false → iframe 마운트 안 함');
       return;
     }
-    if (!youtubeId && !videoUrl) {
+    if (!youtubeId && !vUrl) {
       console.log('[PostDetail][DEBUG] youtubeId와 videoUrl 모두 없음 → iframe 마운트 안 함');
       return;
     }
@@ -133,7 +119,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [isOpen, youtubeId, videoUrl, currentPostIndex]);
+  }, [isOpen, youtubeId, vUrl, currentPostIndex]);
 
   // 음소거 토글 핸들러
   const handleMuteToggle = useCallback((e: React.MouseEvent) => {
@@ -533,14 +519,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               )}
                             </div>
 
-                          ) : videoUrl ? (
+                          ) : vUrl ? (
                             <div className="absolute inset-0 w-full h-full z-[999] bg-black">
                               {iframeReady ? (
                                 <>
                                   <video
                                     ref={videoRef}
-                                    key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                    src={videoUrl}
+                                    key={`detail-vid-${currentPost.id}-${vUrl}`}
+                                    src={vUrl}
                                     className="w-full h-full object-cover"
                                     autoPlay
                                     loop
