@@ -18,7 +18,7 @@ export const usePushNotifications = () => {
         // 1. 커스텀 사운드를 위한 알림 채널 생성 (Android 8.0+)
         // 캐시를 무효화하고 새 사운드를 강제 적용하기 위해 ID를 'messages_v3'로 업그레이드
         await PushNotifications.createChannel({
-          id: 'messages_v3',
+          id: 'messages_v4',
           name: 'Chat Messages',
           description: '채팅 메시지 알림',
           sound: 'message_pop', // res/raw/message_pop.mp3 (스샷에서 강조된 파일로 변경 시도)
