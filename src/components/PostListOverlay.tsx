@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -93,6 +93,9 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [pullUpDistance, setPullUpDistance] = useState(0);
+  const isPullingRef = useRef(false);
+  const startYRef = useRef(0);
   
   // Update local posts when initialPosts change (map movement)
   useEffect(() => {
@@ -100,74 +103,102 @@ const PostListOverlay = ({
     setHasMore(true);
   }, [initialPosts]);
 
-  // Infinite Scroll Handler
-  const handleScroll = useCallback(async () => {
-    if (!scrollContainerRef.current || isLoadingMore || !hasMore) return;
+  // Infinite Scroll Handler - 기존의 자동 로딩 로직은 제거하거나 pull-up에 통합
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    
+    try {
+      const lastPostDate = posts.length > 0 
+        ? new Date(posts[posts.length - 1].createdAt).toISOString()
+        : new Date().toISOString();
 
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 300) {
-      setIsLoadingMore(true);
-      
-      try {
-        const lastPostDate = posts.length > 0 
-          ? new Date(posts[posts.length - 1].createdAt).toISOString()
-          : new Date().toISOString();
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .lt('created_at', lastPostDate)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .lt('created_at', lastPostDate)
-          .order('created_at', { ascending: false })
-          .limit(10);
+      if (error) throw error;
 
-        if (error) throw error;
+      if (data && data.length > 0) {
+        const newPosts: Post[] = await Promise.all(data.map(async (p) => {
+          const isAd = p.content?.trim().startsWith('[AD]');
+          const likesCount = Number(p.likes || 0);
+          
+          let finalImage = p.image_url;
+          if (finalImage?.includes('unsplash.com')) {
+            finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+          }
+          
+          return {
+            id: p.id,
+            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+            location: p.location_name || '알 수 없는 장소',
+            lat: p.latitude,
+            lng: p.longitude,
+            likes: likesCount,
+            image: finalImage,
+            images: p.images || [finalImage],
+            videoUrl: p.video_url,
+            youtubeUrl: p.youtube_url,
+            createdAt: new Date(p.created_at),
+            category: p.category || 'none',
+            commentsCount: 0,
+            comments: [],
+            isLiked: false,
+            isAd,
+            isGif: false,
+            borderType: likesCount >= 9000 ? 'popular' : 'none'
+          };
+        }));
 
-        if (data && data.length > 0) {
-          const newPosts: Post[] = await Promise.all(data.map(async (p) => {
-            const isAd = p.content?.trim().startsWith('[AD]');
-            const likesCount = Number(p.likes || 0);
-            
-            // 이미지 최적화 및 샌니타이징
-            let finalImage = p.image_url;
-            if (finalImage?.includes('unsplash.com')) {
-              finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
-            }
-            
-            return {
-              id: p.id,
-              user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
-              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-              location: p.location_name || '알 수 없는 장소',
-              lat: p.latitude,
-              lng: p.longitude,
-              likes: likesCount,
-              image: finalImage,
-              images: p.images || [finalImage],
-              videoUrl: p.video_url,
-              youtubeUrl: p.youtube_url,
-              createdAt: new Date(p.created_at),
-              category: p.category || 'none',
-              commentsCount: 0,
-              comments: [],
-              isLiked: false,
-              isAd,
-              isGif: false,
-              borderType: likesCount >= 9000 ? 'popular' : 'none'
-            };
-          }));
-
-          setPosts(prev => [...prev, ...newPosts]);
-          if (data.length < 10) setHasMore(false);
-        } else {
-          setHasMore(false);
-        }
-      } catch (err) {
-        console.error('Failed to load more posts:', err);
-      } finally {
-        setIsLoadingMore(false);
+        setPosts(prev => [...prev, ...newPosts]);
+        if (data.length < 10) setHasMore(false);
+      } else {
+        setHasMore(false);
       }
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+    } finally {
+      setIsLoadingMore(false);
+      setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore, initialPosts]);
+  }, [posts, isLoadingMore, hasMore]);
+
+  // Pull Up 제스처 핸들러
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    // 바닥에 닿아있을 때만 풀업 시작
+    if (scrollTop + clientHeight >= scrollHeight - 5) {
+      isPullingRef.current = true;
+      startYRef.current = e.touches[0].pageY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPullingRef.current) return;
+    const currentY = e.touches[0].pageY;
+    const diff = startYRef.current - currentY;
+    
+    if (diff > 0) { // 위로 올리는 중
+      setPullUpDistance(Math.min(diff * 0.5, 120)); // 저항감 부여
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPullingRef.current) return;
+    isPullingRef.current = false;
+    
+    if (pullUpDistance > 80) { // 80px 이상 올렸을 때 로딩
+      loadMorePosts();
+    } else {
+      setPullUpDistance(0);
+    }
+  };
 
   // window 객체에 상태 기록
   useEffect(() => {
@@ -208,7 +239,9 @@ const PostListOverlay = ({
       {/* List Content */}
       <div 
         ref={scrollContainerRef}
-        onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-20 custom-scrollbar"
       >
         {posts.length > 0 ? (
@@ -226,9 +259,37 @@ const PostListOverlay = ({
                 />
               </div>
             ))}
-            {isLoadingMore && (
-              <div className="py-10 flex justify-center">
-                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+            
+            {/* Pull Up Loading Area */}
+            {hasMore && (
+              <div 
+                className="py-12 flex flex-col items-center justify-center transition-all duration-200"
+                style={{ height: `${Math.max(80, pullUpDistance)}px` }}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  {isLoadingMore ? (
+                    <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                  ) : (
+                    <>
+                      <motion.div
+                        animate={{ y: pullUpDistance > 80 ? -5 : 0 }}
+                        className={pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}
+                      >
+                        <ChevronUp className="w-6 h-6" />
+                      </motion.div>
+                      <p className={`text-xs font-black uppercase tracking-tighter ${pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}`}>
+                        {pullUpDistance > 80 ? "놓아서 추가 포스팅 로드" : "위로 올려 더 많은 포스팅 보기"}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {!hasMore && (
+              <div className="py-12 flex flex-col items-center justify-center text-gray-300">
+                <div className="w-1 h-1 bg-gray-200 rounded-full mb-2" />
+                <p className="text-[10px] font-black uppercase tracking-widest">End of Map Results</p>
               </div>
             )}
           </div>
