@@ -173,27 +173,16 @@ const PostDetail = () => {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* Header Space for Banner */}
-      <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
-
-      {/* Fixed Title Header - Now outside of scrollable main */}
-      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+    <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
   <button
-    onClick={handleBack}
+    onClick={() => navigate(-1)}
     className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
   >
     <ChevronLeft className="w-6 h-6" />
   </button>
   <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+    <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
   </div>
-  <button
-    onClick={() => navigate('/friends')}
-    className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
-  >
-    <Edit className="w-6 h-6 text-indigo-600" />
-  </button>
 </div>
 
       {/* Scrollable Content Area */}
