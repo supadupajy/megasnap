@@ -168,16 +168,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             allowFullScreen
             onLoad={() => setVideoLoaded(true)}
           />
-          {(!videoLoaded || !isVisible) && (
-            <img 
-              src={currentImage} 
-              alt="" 
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-            />
-          )}
-        </div>
-      );
-    }
+          {!videoLoaded && (
+  <img 
+    src={currentImage} 
+    alt="" 
+    className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+  />
+)}
 
     // 2. 일반 업로드 동영상 처리
     if (post.videoUrl) {
