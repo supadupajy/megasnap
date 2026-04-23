@@ -298,10 +298,10 @@ const Write = () => {
 
               {mediaFiles.length > 0 ? (
                 <div
-                  ref={containerRef}
-                  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
+  ref={containerRef}
+  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
+  style={{ aspectRatio: '1 / 1', backgroundColor: 'red' }}
+>
                   {currentMedia?.type === 'image' ? (
                     <img
                       ref={imgRef}
