@@ -179,17 +179,33 @@ const Index = () => {
         if (thumb) finalImage = thumb;
       }
       
-      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(img => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
+      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map((img: string) => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
+      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      if (Number(likesCount) >= 9000) borderType = 'popular';
+      else if (!isAd) {
+        let h = 0;
+        const idStr = p.id.toString();
+        for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+        const val = Math.abs(h % 1000) / 1000;
+        if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
+      }
       
+      let userName = p.user_name || '탐험가';
+      let userAvatar = p.user_avatar || '';
+      if (p.user_id) {
+        const { data: profileData } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', p.user_id).maybeSingle();
+        if (profileData) { userName = profileData.nickname || userName; userAvatar = profileData.avatar_url || userAvatar; }
+      }
+
       return {
         id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
         user: { id: p.user_id || '', name: userName, avatar: userAvatar },
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude, lng: p.longitude, likes: likesCount, commentsCount: 0, comments: [],
-        image: finalImage, images: validImages, 
-        youtubeUrl: p.youtube_url || rawPost.youtubeUrl || rawPost.youtube_url, // [FIX] null 방지
-        videoUrl: p.video_url || rawPost.videoUrl || rawPost.video_url, // [FIX] null 방지
+        image: finalImage, images: validImages,
+        youtubeUrl: p.youtube_url,   // ✅ DB 컬럼 youtube_url → youtubeUrl 매핑
+        videoUrl: p.video_url,       // ✅ DB 컬럼 video_url → videoUrl 매핑
         category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType
       };
     } catch (err) { return null as any; }
