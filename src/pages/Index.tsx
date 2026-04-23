@@ -112,8 +112,6 @@ const Index = () => {
     setTimeout(() => setShowCssConfetti(false), 5000);
   }, []);
 
-  // [FINAL FIX] 외부 이벤트를 통한 폭죽 강제 트리거 리스너 등록
-
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
