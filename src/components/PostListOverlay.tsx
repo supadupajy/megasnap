@@ -35,7 +35,7 @@ const ObservedPostItem = ({
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
-  const [isNearVisible, setIsNearVisible] = useState(false); 
+  const [isNearVisible, setIsNearVisible] = useState(false); // ✅ 화면 근처 도달 상태 추가
   const [fullPost, setFullPost] = useState<Post>(post);
 
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
@@ -99,15 +99,10 @@ const ObservedPostItem = ({
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
-        // 화면의 절반 이상이 보일 때 재생 대상으로 알림, 화면을 벗어나면 정지 신호
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          onPlayingChange(post.id, true);
-        } else if (!entry.isIntersecting) {
-          onPlayingChange(post.id, false);
-        }
+        onPlayingChange(post.id, entry.isIntersecting);
       },
       { 
-        threshold: [0, 0.5], // 0(화면 밖)과 0.5(절반 노출) 임계값 감시
+        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
         rootMargin: '0px'
       }
     );
@@ -146,8 +141,7 @@ const ObservedPostItem = ({
         onLikeToggle={onLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
-        autoPlayVideo={isCurrentlyVisible} // autoPlayVideo가 false가 되면 영상이 멈춤
-        isPlaying={isPlaying && isCurrentlyVisible} // isPlaying 상태여도 화면 밖이면 중지
+        autoPlayVideo={isCurrentlyVisible}
       />
     </div>
   );
