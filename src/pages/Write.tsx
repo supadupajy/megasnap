@@ -36,7 +36,7 @@ const Write = () => {
   const { user: authUser, profile } = useAuth();
 
   const { content, setContent, category, setCategory, clear } = useWriteStore();
-const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
 
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
@@ -47,6 +47,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // ✅ 이미지 로드 완료 여부를 state로 관리
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +98,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
 
   useEffect(() => {
     cropPixelRef.current = { x: 0, y: 0 };
+    // ✅ 슬라이드 변경 시 로드 상태 초기화
+    setImgLoaded(false);
   }, [currentSlide]);
 
   const getMaxOffset = () => {
@@ -202,7 +206,6 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
           const img = new Image();
           img.onload = () => {
             orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-            console.log('📸 orientation:', orientation, img.naturalWidth, 'x', img.naturalHeight);
             resolve();
           };
           img.onerror = () => resolve();
@@ -213,8 +216,6 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     }));
 
     setMediaFiles(prev => [...prev, ...newItems]);
-      console.log('✅ setMediaFiles 호출됨, 길이:', next.length, next[0]?.url?.substring(0, 50));
-
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
@@ -267,12 +268,6 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   };
 
   const currentMedia = mediaFiles[currentSlide];
-  console.log('🎯 currentMedia:', JSON.stringify({
-  type: currentMedia?.type,
-  url: currentMedia?.url?.substring(0, 80),
-  orientation: currentMedia?.orientation,
-  crop: currentMedia?.crop,
-}));
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
@@ -306,44 +301,55 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
 
               {mediaFiles.length > 0 ? (
                 <div
-  ref={containerRef}
-  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-  style={{ aspectRatio: '1 / 1', backgroundColor: 'red' }}
->
-                  {/* ✅ type 조건 제거 — 무조건 img로 렌더링하여 원인 파악 */}
-<img
-  ref={imgRef}
-  src={currentMedia?.url}
-  className="pointer-events-none"
-  onLoad={(e) => {
-    const img = e.currentTarget;
-    console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
-    console.log('type:', currentMedia?.type, typeof currentMedia?.type);
-    const container = containerRef.current;
-    if (!container) return;
-    const conW = container.offsetWidth;
-    const conH = container.offsetHeight;
-    const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
-    const renderedW = img.naturalWidth * scale;
-    const renderedH = img.naturalHeight * scale;
-    const cropX = currentMedia?.crop?.x ?? 50;
-    const cropY = currentMedia?.crop?.y ?? 50;
-    cropPixelRef.current = {
-      x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-      y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-    };
-  }}
-  style={{
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    objectPosition: `${currentMedia?.crop?.x ?? 50}% ${currentMedia?.crop?.y ?? 50}%`,
-    transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-  }}
-/>
+                  ref={containerRef}
+                  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
+                  style={{ aspectRatio: '1 / 1' }}
+                >
+                  {currentMedia?.type === 'image' ? (
+                    <img
+                      ref={imgRef}
+                      src={currentMedia.url}
+                      className="pointer-events-none"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        const container = containerRef.current;
+                        if (!container) return;
+                        const conW = container.offsetWidth;
+                        const conH = container.offsetHeight;
+                        const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+                        const renderedW = img.naturalWidth * scale;
+                        const renderedH = img.naturalHeight * scale;
+                        const cropX = currentMedia.crop?.x ?? 50;
+                        const cropY = currentMedia.crop?.y ?? 50;
+                        cropPixelRef.current = {
+                          x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+                          y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+                        };
+                        // ✅ 로드 완료 → 렌더링 트리거
+                        setImgLoaded(true);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                        // ✅ 로드 전엔 invisible, 로드 후 보임
+                        opacity: imgLoaded ? 1 : 0,
+                        transition: isDragging
+                          ? 'none'
+                          : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
+                      }}
+                    />
+                  ) : (
+                    <video
+                      src={currentMedia?.url}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                      autoPlay muted loop playsInline
+                    />
+                  )}
 
                   {/* 드래그 오버레이 */}
                   <div
