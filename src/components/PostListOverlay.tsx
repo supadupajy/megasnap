@@ -132,14 +132,6 @@ const PostListOverlay = ({
         if (error) throw error;
 
         if (data && data.length > 0) {
-          // mapDbToPost 함수가 로컬에 정의되어 있지 않으므로 
-          // PostListOverlay에서 사용할 수 있는 형식으로 변환이 필요할 수 있습니다.
-          // 하지만 여기서는 기본 posts 데이터를 posts 배열에 추가하는 방향으로 갑니다.
-          // (PostItem이 타입을 잘 처리한다고 가정)
-          
-          // 실무에서는 여기서 mapDbToPost와 같은 변환 로직이 필요합니다.
-          // PostListOverlay가 받는 initialPosts는 이미 변환된 상태일 것이므로
-          // 간단한 매핑을 시도합니다.
           const newPosts: Post[] = data.map(p => ({
             id: p.id,
             user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
@@ -153,7 +145,12 @@ const PostListOverlay = ({
             videoUrl: p.video_url,
             youtubeUrl: p.youtube_url,
             createdAt: new Date(p.created_at),
-            category: p.category || 'none'
+            category: p.category || 'none',
+            commentsCount: 0,
+            comments: [],
+            isLiked: false,
+            isAd: false,
+            isGif: false
           }));
 
           setPosts(prev => [...prev, ...newPosts]);
