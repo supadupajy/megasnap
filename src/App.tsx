@@ -59,8 +59,8 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFriendsPage = location.pathname === "/friends" || location.pathname === "/profile/friends";
-  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow", "/friends", "/profile/friends"].includes(location.pathname);
+  const isFriendsPage = location.pathname === "/friends" || location.pathname === "/profile/friends" || location.pathname === "/search";
+  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow", "/friends", "/profile/friends", "/search"].includes(location.pathname);
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
   const isMainTab = ["/", "/popular", "/search", "/messages", "/profile", "/write"].includes(location.pathname);
