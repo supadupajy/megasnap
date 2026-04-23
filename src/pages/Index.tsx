@@ -239,7 +239,6 @@ const Index = () => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         const likesCountNum = Number(p.likes || 0);
         
-        // [FIX] 마커용 간이 매핑에서도 borderType을 확실히 계산하여 포함
         let borderType: any = 'none';
         if (likesCountNum >= 9000) {
           borderType = 'popular';
@@ -263,8 +262,8 @@ const Index = () => {
           likes: likesCountNum,
           image: p.image_url || '',
           image_url: p.image_url || '',
-          youtubeUrl: p.youtube_url,
-          videoUrl: p.video_url,
+          youtubeUrl: p.youtube_url, // [FIX] youtube_url을 youtubeUrl로 매핑
+          videoUrl: p.video_url,     // [FIX] video_url을 videoUrl로 매핑
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
           borderType,

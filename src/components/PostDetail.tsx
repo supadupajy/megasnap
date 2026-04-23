@@ -40,6 +40,16 @@ const getFallbackImage = (postId: string) => {
   return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
 };
 
+const getYouTubeIdLocal = (url: string) => {
+  if (!url) return null;
+  const clean = url.trim();
+  if (clean.includes('youtube.com') || clean.includes('youtu.be')) {
+    const match = clean.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)\/)?|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+  }
+  return null;
+};
+
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
@@ -54,38 +64,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
 
-  const youtubeId = useMemo(() => {
+  const videoId = useMemo(() => {
     if (!currentPost) return null;
-
-    // 🔍 [DEBUG] 포스트 원본 데이터 전체 출력
-    console.log('[PostDetail][DEBUG] currentPost raw data:', JSON.stringify({
-      id: currentPost.id,
-      youtubeUrl: currentPost.youtubeUrl,
-      youtube_url: currentPost.youtube_url,
-      youtube_id: currentPost.youtube_id,
-      youtubeId: currentPost.youtubeId,
-      videoUrl: currentPost.videoUrl,
-      video_url: currentPost.video_url,
-      video_path: currentPost.video_path,
-    }, null, 2));
-
-    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
-    const parsed = getYoutubeId(url || '');
-
-    // 🔍 [DEBUG] 파싱 결과 출력
-    console.log('[PostDetail][DEBUG] youtubeId parse result:', { rawUrl: url, parsedId: parsed });
-
-    return parsed;
+    // [FINAL CHECK] 가능한 모든 필드에서 유튜브 ID 추출 시도
+    const rawUrl = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtubeId || currentPost.youtube_id;
+    return getYouTubeIdLocal(rawUrl);
   }, [currentPost]);
 
-  const videoUrl = useMemo(() => {
+  const vUrl = useMemo(() => {
     if (!currentPost) return null;
-    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
-
-    // 🔍 [DEBUG] video URL 출력
-    console.log('[PostDetail][DEBUG] videoUrl:', url);
-
-    return url;
+    return currentPost.videoUrl || currentPost.video_url;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -109,8 +97,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     // 🔍 [DEBUG] iframeReady 트리거 조건 출력
     console.log('[PostDetail][DEBUG] iframeReady useEffect fired:', {
       isOpen,
-      youtubeId,
-      videoUrl,
+      videoId,
+      vUrl,
       currentPostIndex,
     });
 
@@ -121,8 +109,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       console.log('[PostDetail][DEBUG] isOpen=false → iframe 마운트 안 함');
       return;
     }
-    if (!youtubeId && !videoUrl) {
-      console.log('[PostDetail][DEBUG] youtubeId와 videoUrl 모두 없음 → iframe 마운트 안 함');
+    if (!videoId && !vUrl) {
+      console.log('[PostDetail][DEBUG] videoId와 vUrl 모두 없음 → iframe 마운트 안 함');
       return;
     }
 
@@ -133,12 +121,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [isOpen, youtubeId, videoUrl, currentPostIndex]);
+  }, [isOpen, videoId, vUrl, currentPostIndex]);
 
   // 음소거 토글 핸들러
   const handleMuteToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (youtubeId && iframeRef.current) {
+    if (videoId && iframeRef.current) {
       const command = isMuted ? 'unMute' : 'mute';
       console.log('[PostDetail][DEBUG] postMessage:', command);
       iframeRef.current.contentWindow?.postMessage(
@@ -150,7 +138,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
     }
-  }, [isMuted, youtubeId]);
+  }, [isMuted, videoId]);
 
   // 키보드 대응
   useEffect(() => {
@@ -402,14 +390,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   // ✅ mute=1 — Android Chrome autoplay 정책 준수
   // enablejsapi=1 — postMessage unMute 명령에 필수
-  const youtubeSrc = youtubeId
-    ? `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`
+  const youtubeSrc = videoId
+    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${videoId}&enablejsapi=1&origin=${window.location.origin}`
     : '';
 
   // 🔍 [DEBUG] 최종 렌더 직전 상태 출력
   console.log('[PostDetail][DEBUG] render state:', {
-    youtubeId,
-    videoUrl,
+    videoId,
+    vUrl,
     iframeReady,
     isMuted,
     youtubeSrc,
@@ -496,78 +484,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 */}
+                      {/* 미디어 영역 - 영상이 있으면 이미지는 아예 렌더링하지 않음 */}
                       <div className="px-4 mt-2">
-                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-
-                          {youtubeId ? (
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <>
-                                  <iframe
-                                    ref={iframeRef}
-                                    key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                    className="w-full h-full border-0"
-                                    src={youtubeSrc}
-                                    title="YouTube video player"
-                                    allow="autoplay; encrypted-media; picture-in-picture"
-                                    allowFullScreen
-                                  />
-                                  {/* 🔇 음소거 토글 버튼 */}
-                                  <button
-                                    onClick={handleMuteToggle}
-                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
-                                  >
-                                    {isMuted
-                                      ? <VolumeX className="w-5 h-5 text-white" />
-                                      : <Volume2 className="w-5 h-5 text-white" />
-                                    }
-                                  </button>
-                                </>
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                  {/* 🔍 [DEBUG] 화면에도 상태 표시 */}
-                                  <span className="text-white/40 text-[10px]">youtubeId: {youtubeId ?? 'null'}</span>
-                                </div>
-                              )}
+                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+                          {videoId ? (
+                            <div className="absolute inset-0 w-full h-full z-50">
+                              <iframe
+                                key={`yt-detail-${currentPost.id}-${videoId}`}
+                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                className="w-full h-full border-0"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                              />
                             </div>
-
-                          ) : videoUrl ? (
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <>
-                                  <video
-                                    ref={videoRef}
-                                    key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                    src={videoUrl}
-                                    className="w-full h-full object-cover"
-                                    autoPlay
-                                    loop
-                                    playsInline
-                                    muted={isMuted}
-                                    controls={false}
-                                  />
-                                  <button
-                                    onClick={handleMuteToggle}
-                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
-                                  >
-                                    {isMuted
-                                      ? <VolumeX className="w-5 h-5 text-white" />
-                                      : <Volume2 className="w-5 h-5 text-white" />
-                                    }
-                                  </button>
-                                </>
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                  <span className="text-white/40 text-[10px]">video 로딩 중...</span>
-                                </div>
-                              )}
+                          ) : vUrl ? (
+                            <div className="absolute inset-0 w-full h-full z-50">
+                              <video 
+                                key={`vid-detail-${currentPost.id}-${vUrl}`}
+                                src={vUrl} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                loop 
+                                playsInline 
+                                controls 
+                              />
                             </div>
-
                           ) : (
-                            <div className="relative w-full h-full z-10 bg-gray-100">
+                            <div className="relative w-full h-full z-10">
+                              {/* 이미지 슬라이더 (영상이 없을 때만 렌더링) */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
