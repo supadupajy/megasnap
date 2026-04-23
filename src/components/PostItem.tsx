@@ -156,12 +156,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     // 1. 유튜브 영상 처리
     if (videoId) {
       const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-      // ✅ [FIX] mute=0 설정을 통해 소리가 나오도록 변경
-      // 오토플레이 정책상 사용자가 페이지와 한 번이라도 상호작용한 후에는 소리가 있는 자동재생이 허용됩니다.
+      // ✅ [FIX] 스마트폰 환경(Mobile)에서의 오토플레이를 위해 'mute=1'을 기본값으로 사용
+      // 브라우저 정책상 음소거 상태여야만 사용자 개입 없이 오토플레이가 가능합니다.
       return (
         <div className="w-full h-full relative">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
             className="w-full h-full object-cover"
             allow="autoplay; encrypted-media"
             allowFullScreen
@@ -186,7 +186,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             src={post.videoUrl}
             className="w-full h-full object-cover"
             autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
-            // ✅ [FIX] muted 속성 제거하여 소리 나오게 함
+            // ✅ [FIX] 스마트폰 오토플레이를 위해 muted 속성 추가
+            muted
             loop
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
