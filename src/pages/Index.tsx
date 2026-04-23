@@ -119,27 +119,28 @@ const Index = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
 
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-    if (post.lat === null || post.lng === null) return;
-    setAllPosts((prev) => {
-      if (prev.some((item) => item.id === post.id)) return prev;
-      const combined = [post, ...prev];
-      mapCache.posts = combined;
-      return combined;
-    });
-    setSelectedPostId(null);
-    setSearchResultLocation(null);
-    setMapCenter(center || { lat: post.lat, lng: post.lng });
-    
-    // [FIX] 하이라이트 애니메이션이 무한 반복되지 않도록 조정
-    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+  if (post.lat === null || post.lng === null) return;
+  setAllPosts((prev) => {
+    if (prev.some((item) => item.id === post.id)) return prev;
+    const combined = [post, ...prev];
+    mapCache.posts = combined;
+    return combined;
+  });
+  setSelectedPostId(null);
+  setSearchResultLocation(null);
+  setMapCenter(center || { lat: post.lat, lng: post.lng });
+  
+  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+  // ✅ 하이라이트를 지도 이동 완료 후에 설정 (smoothMoveTo 최대 1200ms + 여유)
+  setHighlightedPostId(null); // 기존 하이라이트 즉시 제거
+  setTimeout(() => {
     setHighlightedPostId(post.id);
-    
-    // 3회 반복 시간에 해당하는 6초(2s * 3) 후 하이라이트 제거
     highlightTimeoutRef.current = window.setTimeout(() => { 
       setHighlightedPostId(null); 
       highlightTimeoutRef.current = null; 
     }, 6000);
-  }, []);
+  }, 1300);
+}, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
