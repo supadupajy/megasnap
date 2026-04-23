@@ -361,11 +361,9 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]); // ✅ 로컬 sta
       };
     }}
     style={{
-      objectPosition: currentMedia.orientation === 'portrait'
-        ? `50% ${currentMedia.crop?.y ?? 50}%`
-        : `${currentMedia.crop?.x ?? 50}% 50%`,
-      transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-    }}
+  objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+  transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+}}
   />
                   ) : (
                     <video
