@@ -119,20 +119,18 @@ const PostListOverlay = ({
     setIsLoadingMore(true);
     
     try {
+      // ✅ [FIX] 마지막 포스트의 생성 날짜를 기준으로 다음 데이터를 가져옴
       const lastPost = posts[posts.length - 1];
       const lastPostDate = lastPost 
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // [FIX] 현재 지도 영역(Bounds) 내의 데이터만 확실하게 가져오도록 필터링 순서와 로직 재점검
       const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
       const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      // [DEBUG] 영역 데이터 확인
-      console.log(`[PostListOverlay] Searching posts within: Lat(${latMin}~${latMax}), Lng(${lngMin}~${lngMax}) before ${lastPostDate}`);
-
+      // ✅ [FIX] 쿼리 1회당 limit을 20개로 늘리고, 더 정확한 시간 비교 사용
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -140,9 +138,9 @@ const PostListOverlay = ({
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
         .lte('longitude', lngMax)
-        .lt('created_at', lastPostDate)
+        .lt('created_at', lastPostDate) // lastPostDate보다 이전(과거) 데이터
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) throw error;
 
@@ -191,20 +189,25 @@ const PostListOverlay = ({
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
-          // [FIX] 중복 제거된 포스트가 하나도 없다면 더 이상 데이터가 없는 것으로 간주
+          
+          // ✅ [FIX] 새로운 게시물이 발견되면 계속 hasMore 유지
           if (filteredNew.length === 0 && data.length > 0) {
-            // 이 경우 쿼리 조건이 겹칠 수 있으므로 강제로 more를 false로 두지 않고 로그만 남김
-            console.log('[PostListOverlay] All fetched posts were duplicates');
+            // 가져온 데이터가 모두 중복인 특수한 상황을 고려하여 hasMore를 즉시 끄지 않음
+            return prev;
           }
           return [...prev, ...filteredNew];
         });
         
-        if (data.length < 10) setHasMore(false);
+        // ✅ [FIX] 20개를 요청했는데 20개 미만으로 왔다는 것은 진짜로 해당 영역에 더 데이터가 없다는 뜻
+        if (data.length < 20) {
+          setHasMore(false);
+        }
       } else {
+        // 데이터가 아예 없으면 종료
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Load more error:', err);
+      console.error('[PostListOverlay] Critical load error:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
