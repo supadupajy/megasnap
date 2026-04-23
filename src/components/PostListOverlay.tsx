@@ -211,15 +211,16 @@ const PostListOverlay = ({
     startYRef.current = pageY;
     startScrollTopRef.current = scrollContainerRef.current.scrollTop;
     
+    // ✅ 바닥 체크 로직 개선: 더 넓은 임계값(30px) 적용
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 30;
     
-    // 바닥에 닿아있을 때만 풀업(추가 로드) 모드 진입
-    if (scrollTop + clientHeight >= scrollHeight - 15) {
+    if (isAtBottom) {
       isPullingRef.current = true;
-    } else {
-      // 바닥이 아니면 일반 마우스 드래그 스크롤 모드 진입
-      isDraggingListRef.current = true;
     }
+    
+    // ✅ 바닥이든 아니든 마우스 드래그 스크롤은 항상 가능하도록 설정
+    isDraggingListRef.current = !('touches' in e);
   };
 
   const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
@@ -227,15 +228,18 @@ const PostListOverlay = ({
     const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
     const diff = startYRef.current - pageY;
 
-    // 1. 추가 로딩 풀업 모드
-    if (isPullingRef.current && diff > 0) {
-      setPullUpDistance(Math.min(diff * 0.5, 120));
-      return;
-    }
-
-    // 2. 일반 마우스 드래그 스크롤 모드 (웹 테스트용)
+    // 1. 일반 마우스 드래그 스크롤 (바닥 여부 상관없이 작동)
     if (isDraggingListRef.current) {
       scrollContainerRef.current.scrollTop = startScrollTopRef.current + diff;
+    }
+
+    // 2. 추가 로딩 풀업 모드 (바닥 근처에서 위로 올릴 때만 거리 계산)
+    if (isPullingRef.current && diff > 0) {
+      // 스크롤이 끝까지 내려간 상태에서만 풀업 거리가 쌓이도록 함
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        setPullUpDistance(Math.min(diff * 0.5, 120));
+      }
     }
   };
 
