@@ -118,18 +118,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     if (!autoPlayVideo) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      {
-        // [FIX] 감지 수치 최적화
-        // threshold를 0.5로 낮추어 절반만 보여도 재생을 시도하되,
-        // rootMargin을 통해 화면 중앙 근처(상하단 25% 제외)에서만 활성화되도록 하여 
-        // 겹침 방지와 재생 반응성 사이의 균형을 맞춤
-        threshold: 0.5, 
-        rootMargin: '-25% 0px -25% 0px' 
-      }
-    );
+  ([entry]) => {
+    setIsVisible(entry.isIntersecting);
+  },
+  {
+    threshold: 0.3,
+    rootMargin: '0px'
+  }
+);
 
     if (containerRef.current) {
       observer.observe(containerRef.current);
