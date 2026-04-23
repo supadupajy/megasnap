@@ -204,7 +204,7 @@ const Notifications = () => {
         >
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
+        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알</h1>
       </div>
 
       <div className="flex flex-col">
