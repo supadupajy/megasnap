@@ -264,7 +264,7 @@ const PostListOverlay = ({
             {hasMore && (
               <div 
   className="pt-2 pb-0 flex flex-col items-center justify-start transition-all duration-200"
-  style={{ height: `${Math.max(60, pullUpDistance + 60)}px` }}
+  style={{ height: `${Math.max(10, pullUpDistance + 60)}px` }}
 >
   <div className="flex flex-col items-center gap-1">
                   {isLoadingMore ? (
