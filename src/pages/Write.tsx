@@ -301,6 +301,7 @@ const Write = () => {
   };
 
   const currentMedia = mediaFiles[currentSlide];
+console.log('mediaFiles:', mediaFiles, 'currentSlide:', currentSlide, 'currentMedia:', currentMedia);
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
