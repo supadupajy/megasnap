@@ -319,11 +319,15 @@ const MapContainer = ({
   // ✅ highlighted 클래스 토글
   if (isHighlighted) {
   if (!content.classList.contains('highlighted')) {
-    // ✅ 지도 이동 완료 후(smoothMoveTo 기준 최대 1.2s) 애니메이션 시작
+    // ✅ content를 로컬 변수로 캡처 후 setTimeout에 전달
+    const targetContent = content;
+    const targetOverlay = existingOverlay;
     setTimeout(() => {
-      content.classList.add('highlighted');
-      existingOverlay.setZIndex(10000);
-    }, 1300); // 지도 이동 duration(최대 1200ms) + 여유 100ms
+      if (targetContent && targetContent.isConnected) {
+        targetContent.classList.add('highlighted');
+        targetOverlay.setZIndex(10000);
+      }
+    }, 1300);
   }
 } else {
     if (content.classList.contains('highlighted')) {
