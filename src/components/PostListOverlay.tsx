@@ -124,42 +124,37 @@ const PostListOverlay = ({
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
+      // 현재 영역(Bounds) 기준으로 확장 검색 시도
       const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
       const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      // [DEBUG] 로딩 시도 로그
-      console.log(`[PostListOverlay] Fetching posts before ${lastPostDate} within bounds...`);
+      // 현재 영역의 크기(너비/높이) 계산
+      const latDiff = latMax - latMin;
+      const lngDiff = lngMax - lngMin;
 
-      // 1. 우선 현재 영역(Bounds) 내에서 과거 데이터를 찾음
+      // ✅ [동일 지역 확장 로직] 현재 보고 있는 영역을 기준으로 약 2~3배 넓은 '동일 생활권' 범위까지만 탐색
+      // 서울이면 서울 근교, 대전이면 대전 근교를 벗어나지 않도록 함
+      const expandedLatMin = latMin - latDiff;
+      const expandedLatMax = latMax + latDiff;
+      const expandedLngMin = lngMin - lngDiff;
+      const expandedLngMax = lngMax + lngDiff;
+
+      console.log(`[PostListOverlay] Regional adaptive fetch before ${lastPostDate}...`);
+
       let { data, error } = await supabase
         .from('posts')
         .select('*')
-        .gte('latitude', latMin)
-        .lte('latitude', latMax)
-        .gte('longitude', lngMin)
-        .lte('longitude', lngMax)
+        .gte('latitude', expandedLatMin)
+        .lte('latitude', expandedLatMax)
+        .gte('longitude', expandedLngMin)
+        .lte('longitude', expandedLngMax)
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(12);
 
       if (error) throw error;
-
-      // 2. 만약 해당 영역에 데이터가 부족하거나 없다면, 전체 DB에서 최신 데이터를 가져옴 (데이터가 끊기지 않게 함)
-      if (!data || data.length === 0) {
-        console.log('[PostListOverlay] No posts in strict bounds, fetching from global DB...');
-        const globalRes = await supabase
-          .from('posts')
-          .select('*')
-          .lt('created_at', lastPostDate)
-          .order('created_at', { ascending: false })
-          .limit(12);
-        
-        if (!globalRes.error && globalRes.data) {
-          data = globalRes.data;
-        }
-      }
 
       if (data && data.length > 0) {
         const newPosts: Post[] = await Promise.all(data.map(async (p) => {
@@ -209,18 +204,13 @@ const PostListOverlay = ({
           return [...prev, ...filteredNew];
         });
       }
-      
-      // ✅ [핵심] 데이터가 없어도 hasMore를 false로 만들지 않음
-      // 사용자는 언제든지 다시 위로 올려서 로딩 시도를 할 수 있음
-      setHasMore(true); 
-
     } catch (err) {
-      console.error('[PostListOverlay] Fallback fetch failed:', err);
+      console.error('[PostListOverlay] Regional fetch failed:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, currentBounds]); // ✅ hasMore 의존성 제거
+  }, [posts, isLoadingMore, currentBounds]);
 
   // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
