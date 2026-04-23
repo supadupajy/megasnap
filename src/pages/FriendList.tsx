@@ -64,13 +64,7 @@ const FriendList = () => {
       }}
     >
       <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-100">
-        <button 
-          onClick={handleBack} 
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">새 메시지</h1>
+        <h1 className="flex-1 text-center font-black text-lg text-gray-900">새 메시지</h1>
       </div>
 
       <div className="flex flex-col">
@@ -103,7 +97,7 @@ const FriendList = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-12 bg-white border-2 border-indigo-600 rounded-xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
+              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
