@@ -429,10 +429,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <iframe
                               key={`detail-yt-${youtubeId}`}
                               className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1`}
                               title="YouTube video player"
                               frameBorder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allow="autoplay; encrypted-media; picture-in-picture"
                               allowFullScreen
                             />
                           ) : currentPost.videoUrl ? (

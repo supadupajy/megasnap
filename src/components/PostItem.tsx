@@ -171,7 +171,7 @@ const PostItem = ({
         <div className="w-full h-full relative">
           <iframe
             key={`yt-${videoId}-${shouldPlay}`}
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0&modestbranding=1`}
             className="w-full h-full object-cover"
             allow="autoplay; encrypted-media"
             allowFullScreen
