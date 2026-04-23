@@ -95,44 +95,43 @@ const PostListOverlay = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [pullUpDistance, setPullUpDistance] = useState(0);
   const isPullingRef = useRef(false);
-  const isDraggingListRef = useRef(false); // ✅ 마우스 드래그 스크롤용 변수
+  const isDraggingListRef = useRef(false);
   const startYRef = useRef(0);
-  const startScrollTopRef = useRef(0); // ✅ 시작 시 스크롤 위치 기록
+  const startScrollTopRef = useRef(0);
   
-  // Update local posts when initialPosts change (map movement)
+  // ✅ [FIX] 지도가 이동할 때마다 initialPosts가 바뀌므로, 이때 hasMore를 다시 true로 리셋해줘야 합니다.
   useEffect(() => {
     setPosts(initialPosts || []);
-    setHasMore(true);
+    setHasMore(true); 
+    setIsLoadingMore(false);
+    setPullUpDistance(0);
   }, [initialPosts]);
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
-    // isLoadingMore 체크를 강화하여 중복 호출 방지
     if (isLoadingMore || !hasMore) return;
     
-    console.log('[PostListOverlay] Loading more posts...', { lastIndex: posts.length });
     setIsLoadingMore(true);
     
     try {
-      // 마지막 포스트의 생성 날짜를 기준으로 다음 10개를 가져옴
       const lastPostDate = posts.length > 0 
         ? new Date(posts[posts.length - 1].createdAt).toISOString()
         : new Date().toISOString();
 
+      // ✅ [FIX] Bounds 필터링을 더 유연하게 적용
       let query = supabase
         .from('posts')
         .select('*')
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(15); // 15개씩 여유있게 로드
 
-      // currentBounds가 있다면 해당 영역 내에서 검색
       if (currentBounds) {
         query = query
-          .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
-          .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat))
-          .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng))
-          .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng));
+          .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat) - 0.01) // 조금 더 넓은 반경 허용
+          .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat) + 0.01)
+          .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng) - 0.01)
+          .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng) + 0.01);
       }
 
       const { data, error } = await query;
@@ -196,18 +195,17 @@ const PostListOverlay = ({
           return [...prev, ...filteredNew];
         });
         
-        // 10개를 꽉 채워서 가져오지 못했다면 더 이상 데이터가 없는 것으로 판단
-        if (data.length < 10) {
+        // 데이터가 아예 안오거나 15개 미만이면 끝으로 간주
+        if (data.length < 15) {
           setHasMore(false);
         }
       } else {
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Error loading more:', err);
+      console.error('[PostListOverlay] Critical error:', err);
     } finally {
       setIsLoadingMore(false);
-      // 풀업 거리 초기화를 확실하게 처리
       setPullUpDistance(0);
     }
   }, [posts, isLoadingMore, hasMore, currentBounds]);
