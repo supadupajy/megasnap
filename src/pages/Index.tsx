@@ -46,7 +46,6 @@ const Index = () => {
 
   const triggerConfetti = useCallback(() => {
     try {
-      console.log('[Confetti] Firing refined celebratory effects');
       fireConfetti({
         particleCount: 80,
         spread: 60,
@@ -117,30 +116,41 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
+  // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
+  const pendingHighlightRef = useRef<string | null>(null);
 
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-  if (post.lat === null || post.lng === null) return;
-  setAllPosts((prev) => {
-    if (prev.some((item) => item.id === post.id)) return prev;
-    const combined = [post, ...prev];
-    mapCache.posts = combined;
-    return combined;
-  });
-  setSelectedPostId(null);
-  setSearchResultLocation(null);
-  setMapCenter(center || { lat: post.lat, lng: post.lng });
-  
-  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
-  // ✅ 하이라이트를 지도 이동 완료 후에 설정 (smoothMoveTo 최대 1200ms + 여유)
-  setHighlightedPostId(null); // 기존 하이라이트 즉시 제거
-  setTimeout(() => {
-    setHighlightedPostId(post.id);
-    highlightTimeoutRef.current = window.setTimeout(() => { 
-      setHighlightedPostId(null); 
-      highlightTimeoutRef.current = null; 
-    }, 6000);
-  }, 1300);
-}, []);
+    if (post.lat === null || post.lng === null) return;
+    setAllPosts((prev) => {
+      if (prev.some((item) => item.id === post.id)) return prev;
+      const combined = [post, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
+    setSelectedPostId(null);
+    setSearchResultLocation(null);
+
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+
+    // ✅ 기존 하이라이트 즉시 제거, 이동 완료 후 적용할 id 예약
+    setHighlightedPostId(null);
+    pendingHighlightRef.current = post.id;
+
+    setMapCenter(center || { lat: post.lat, lng: post.lng });
+  }, []);
+
+  // ✅ 지도 이동 완료 시 호출 — MapContainer에서 smoothMoveTo 완료 후 실행
+  const handleMoveComplete = useCallback(() => {
+    if (pendingHighlightRef.current) {
+      const postId = pendingHighlightRef.current;
+      pendingHighlightRef.current = null;
+      setHighlightedPostId(postId);
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedPostId(null);
+        highlightTimeoutRef.current = null;
+      }, 6000);
+    }
+  }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
@@ -377,7 +387,18 @@ const Index = () => {
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer posts={displayedMarkers} viewedPostIds={viewedIds} highlightedPostId={highlightedPostId} onMarkerClick={handleMarkerClick} onMapChange={handleMapChange} center={mapCenter} level={currentZoom} searchResultLocation={searchResultLocation} onMapClick={() => setSearchResultLocation(null)} />
+          <MapContainer
+            posts={displayedMarkers}
+            viewedPostIds={viewedIds}
+            highlightedPostId={highlightedPostId}
+            onMarkerClick={handleMarkerClick}
+            onMapChange={handleMapChange}
+            center={mapCenter}
+            level={currentZoom}
+            searchResultLocation={searchResultLocation}
+            onMapClick={() => setSearchResultLocation(null)}
+            onMoveComplete={handleMoveComplete}
+          />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
