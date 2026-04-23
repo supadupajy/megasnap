@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
-import WritePost from '@/components/WritePost';
 import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
@@ -844,9 +843,27 @@ const Index = () => {
     }, 400);
   }, []);
 
-  const confirmLocationSelection = () => { if (tempSelectedLocation) { setFinalSelectedLocation(tempSelectedLocation); setIsSelectingLocation(false); setTimeout(() => setIsWriteOpen(true), 100); } };
-  const cancelLocationSelection = () => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => setIsWriteOpen(true), 100); };
-  const startLocationSelection = () => { setIsWriteOpen(false); setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); };
+  const confirmLocationSelection = () => { 
+    if (tempSelectedLocation) { 
+      setFinalSelectedLocation(tempSelectedLocation); 
+      setIsSelectingLocation(false); 
+      // [FIX] Navigate to new Write page with location data
+      setTimeout(() => navigate('/write', { state: { location: tempSelectedLocation } }), 100); 
+    } 
+  };
+  const cancelLocationSelection = () => { 
+    setIsSelectingLocation(false); 
+    setTempSelectedLocation(null); 
+    // [FIX] Navigate back to Write page (or just close selection)
+    setTimeout(() => navigate('/write'), 100); 
+  };
+  const startLocationSelection = () => { 
+    setIsPostListOpen(false); 
+    setTimeout(() => { 
+      setIsSelectingLocation(true); 
+      setTempSelectedLocation(mapData?.center || mapCache.lastCenter); 
+    }, 500); 
+  };
 
   return (
     <>
@@ -1006,8 +1023,6 @@ const Index = () => {
           </>
         )}
       </AnimatePresence>
-
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} initialLocation={finalSelectedLocation} onPostCreated={handlePostCreated} onStartLocationSelection={startLocationSelection} onLocationReset={() => setFinalSelectedLocation(null)} />
     </>
   );
 };

@@ -5,22 +5,21 @@ import { Map, Flame, Plus, Search, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { useAuth } from './AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isKeyboardOpen } = useKeyboard();
+
+  const handleWriteClick = () => {
+    navigate('/write');
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleWriteClick = () => {
-    window.dispatchEvent(new CustomEvent('open-write-post'));
-  };
-
-  if (isKeyboardOpen) return null;
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[106px] bg-white/95 backdrop-blur-xl rounded-t-[24px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] border-t border-white/20 grid grid-cols-5 items-center z-[1002] pb-8">
+    <nav className="fixed bottom-0 left-0 right-0 h-[100px] bg-white border-t border-gray-100 flex items-center justify-around px-2 z-[1000] pb-6">
       <button 
         onClick={() => navigate('/')}
         className={cn(
@@ -43,17 +42,15 @@ const BottomNav = () => {
         <span className="text-[10px] font-bold tracking-tight">인기</span>
       </button>
       
-      <div className="relative flex flex-col items-center w-full">
-        <div className="absolute -top-12">
-          <button 
-            onClick={handleWriteClick}
-            className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[0_10px_20px_rgba(79,70,229,0.25)] active:scale-90 active:rotate-90 transition-all duration-300"
-          >
-            <Plus className="w-7 h-7 stroke-[3px]" />
-          </button>
-          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-indigo-600 font-black whitespace-nowrap tracking-tighter">글쓰기</span>
+      <button 
+        onClick={handleWriteClick}
+        className="flex flex-col items-center gap-1 group -mt-10"
+      >
+        <div className="w-16 h-16 bg-indigo-600 rounded-[24px] flex items-center justify-center shadow-[0_15px_35px_-5px_rgba(79,70,229,0.5)] group-active:scale-90 transition-all border-4 border-white">
+          <Plus className="w-8 h-8 text-white stroke-[3px]" />
         </div>
-      </div>
+        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">글쓰기</span>
+      </button>
 
       <button 
         onClick={() => navigate('/search')}

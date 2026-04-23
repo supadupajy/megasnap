@@ -15,6 +15,7 @@ import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
+import WritePage from "./pages/Write";
 import FriendList from "./pages/FriendList";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
@@ -174,9 +175,14 @@ const AnimatedRoutes = () => {
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-              <Route path="/profile/follow/:userId" element={<ProtectedRoute><Follow /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/profile/follow/:userId" element={<Follow />} />
+              <Route path="/profile/friends" element={<FriendList />} />
+              <Route path="/profile/:userId" element={<UserProfile />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/messages/:chatId" element={<Chat />} />
+              <Route path="/write" element={<WritePage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </motion.div>

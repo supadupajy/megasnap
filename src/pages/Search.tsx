@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search as SearchIcon, UserPlus, Check, Loader2, Users, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import WritePost from '@/components/WritePost';
 import SearchAdBanner from '@/components/SearchAdBanner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ const Search = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
 
   // 스크롤 시 상단 헤더 밀림 방지를 위한 핵심 로직
   useEffect(() => {
@@ -167,7 +165,6 @@ const Search = () => {
           </div>
         </div>
       </div>
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
     </div>
   );
 };

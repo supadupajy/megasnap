@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import WritePost from '@/components/WritePost';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post, Comment as PostComment } from '@/types';
@@ -41,7 +40,6 @@ const Profile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   
@@ -326,7 +324,6 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      <WritePost isOpen={isWriteOpen} onClose={() => setIsWriteOpen(false)} />
       <ProfileEditDrawer isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onUpdate={refreshProfile} />
     </div>
   );
