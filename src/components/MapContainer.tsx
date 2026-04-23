@@ -338,8 +338,12 @@ useEffect(() => {
     if (overlay) {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
+        // 기존 애니메이션 초기화를 위해 강제 리플로우
+        content.classList.remove('highlighted');
+        void content.offsetWidth;
+        
         content.classList.add('highlighted');
-        overlay.setZIndex(10000);
+        overlay.setZIndex(11000);
 
         // 일정 시간 후 자동으로 클래스 제거
         setTimeout(() => {
