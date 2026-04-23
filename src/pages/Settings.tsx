@@ -67,6 +67,25 @@ const Settings = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // [NEW] 관리자 권한 확인
+  React.useEffect(() => {
+    if (user) {
+      const checkAdmin = async () => {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && data.role === 'admin') {
+          setIsAdmin(true);
+        }
+      };
+      checkAdmin();
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -221,112 +240,114 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <button 
-              onClick={handleGenerateInView}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
-                  <MapPin className="w-5 h-5" />
+        {isAdmin && (
+          <div className="px-4 py-4">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+              <button 
+                onClick={handleGenerateInView}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-bold text-indigo-600">현재 화면 내 포스팅 생성</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 새로운 포스팅을 즉시 생성합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-sm font-bold text-indigo-600">현재 화면 내 포스팅 생성</span>
-                  <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 새로운 포스팅을 즉시 생성합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
 
-            <button 
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-100 text-rose-600">
-                  <RefreshCw className="w-5 h-5" />
+              <button 
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-100 text-rose-600">
+                    <RefreshCw className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-bold text-rose-600">현재 화면 내 포스팅 일괄 삭제</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-sm font-bold text-rose-600">현재 화면 내 포스팅 일괄 삭제</span>
-                  <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
 
-            <button 
-              onClick={handleSeedData}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
-                  <Database className="w-5 h-5" />
+              <button 
+                onClick={handleSeedData}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-bold text-gray-700">전국 데이터 대량 생성</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-sm font-bold text-gray-700">전국 데이터 대량 생성</span>
-                  <span className="text-[10px] text-gray-400 font-medium leading-tight">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
 
-            <button 
-              onClick={handleRandomizeLikes}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
-                  <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+              <button 
+                onClick={handleRandomizeLikes}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
+                    <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
+                    <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
-                  <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
 
-            <button 
-              onClick={handleEnrichLocations}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-emerald-50 active:bg-emerald-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
-                  <MapPin className="w-5 h-5" />
+              <button 
+                onClick={handleEnrichLocations}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-emerald-50 active:bg-emerald-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-bold text-emerald-600">기존 지역명 상세 보정</span>
+                    <span className="text-[10px] text-gray-400 font-medium">서울/부산처럼 짧게 저장된 포스팅을 서울시 강동구 형식으로 보정합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-bold text-emerald-600">기존 지역명 상세 보정</span>
-                  <span className="text-[10px] text-gray-400 font-medium">서울/부산처럼 짧게 저장된 포스팅을 서울시 강동구 형식으로 보정합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
 
-            <button 
-              onClick={handleCleanupYoutubePosts}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-between p-4 hover:bg-red-50 active:bg-red-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600">
-                  <Loader2 className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+              <button 
+                onClick={handleCleanupYoutubePosts}
+                disabled={isProcessing}
+                className="w-full flex items-center justify-between p-4 hover:bg-red-50 active:bg-red-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600">
+                    <Loader2 className={cn("w-5 h-5", isProcessing && "animate-spin")} />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-bold text-red-600">재생 불가 유튜브 링크 정리</span>
+                    <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 유튜브 URL을 검수해 재생 불가 링크를 제거합니다.</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-bold text-red-600">재생 불가 유튜브 링크 정리</span>
-                  <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 유튜브 URL을 검수해 재생 불가 링크를 제거합니다.</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="px-4 py-8">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
