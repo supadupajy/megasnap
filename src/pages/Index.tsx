@@ -274,9 +274,13 @@ const Index = () => {
   useEffect(() => {
     if (!mapData?.bounds) return;
     if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
+    
     const { sw, ne } = mapData.bounds;
+    const center = mapData.center; // ✅ 지도의 중심점
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
+
+    // ✅ [거리 기반 가중치 정렬] 현재 지도의 중심과 각 포스트의 거리를 계산하여 가까운 순으로 표시
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
@@ -286,9 +290,21 @@ const Index = () => {
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       if (selectedCategories.includes('all')) return true;
       return selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
-    }).map(p => [p.id, p])).values());
-    setDisplayedMarkers(prev => (prev.length === uniquePosts.length && prev.every((p, i) => p.id === uniquePosts[i].id)) ? prev : uniquePosts);
-  }, [mapData?.bounds, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+    }).map(p => {
+      // ✅ 거리 계산 (간이 유클리드 거리)
+      const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
+      return [p.id, { ...p, _dist: dist }];
+    })).values());
+
+    // ✅ 가까운 거리 순으로 정렬하여 displayedMarkers 업데이트
+    // 이렇게 하면 '여기 보기' 클릭 시 중심점 기준 가까운 포스팅이 먼저 나타납니다.
+    const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
+    
+    setDisplayedMarkers(prev => {
+      if (prev.length === sortedPosts.length && prev.every((p, i) => p.id === sortedPosts[i].id)) return prev;
+      return sortedPosts;
+    });
+  }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;

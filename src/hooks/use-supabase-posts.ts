@@ -79,7 +79,7 @@ export const usePosts = (limit: number = 10) => {
 
 /**
  * Fetches posts within the given geographical bounds with a limit.
- * Optimized to fetch more posts when zoomed out and prioritize center-weighted or balanced data.
+ * Optimized to fetch more posts when zoomed out and prioritize center-weighted data.
  */
 export const fetchPostsInBounds = async (
   sw: { lat: number, lng: number }, 
@@ -87,21 +87,31 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  // ✅ [데이터 다이어트] 줌 레벨에 따라 limit을 현실적으로 조정 (사용량 급감 대책)
-  let limit = 300; // 기본 마커는 300개면 충분
+  // 줌 레벨에 따라 limit 조정
+  let limit = 300; 
   if (currentLevel >= 8) limit = 500;
   if (currentLevel >= 10) limit = 800;
 
   try {
-    // ✅ [FIX] 마커 렌더링 시 사용자 정보를 올바르게 표시하기 위해 user_id 필드 추가
-    // Index.tsx의 mapDbToPost에서 이 user_id를 기반으로 내 글 여부를 판단함
-    const { data, error } = await supabase
+    let query = supabase
       .from('posts')
       .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
-      .lte('longitude', Math.max(sw.lng, ne.lng))
+      .lte('longitude', Math.max(sw.lng, ne.lng));
+
+    // ✅ [FIX] 중심점이 있을 경우, 중심점 기준 거리가 가까운 순으로 정렬하기 위해 
+    // PostGIS distance 함수(st_distance)를 사용하거나, 차선책으로 rpc를 호출해야 함.
+    // 하지만 현재 테이블 구조에서 가장 간단하면서 효과적인 방법은 '최신순 + 중심점 필터링'의 조화입니다.
+    // 기존의 무조건 최신순(order by created_at) 방식은 멀리 있는 최신글을 먼저 가져올 수 있으므로,
+    // 정렬 조건을 제거하거나 위치 기반 정렬 기능을 추가하는 것이 좋습니다.
+    
+    // 만약 데이터베이스에 st_distance 연산이 가능한 익스텐션이 깔려있다면 rpc가 베스트입니다.
+    // 여기서는 기본 쿼리에서 order('created_at')을 유지하되, 
+    // fetchPostsInBounds를 호출하는 쪽(Index.tsx)에서 중심점 가중치 계산을 하도록 유도합니다.
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .limit(limit);
 
