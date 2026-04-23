@@ -198,19 +198,14 @@ const Notifications = () => {
     >
       {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
       <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-        <div className="relative flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
-  <button 
-    onClick={onClose}
-    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-  >
-    <ChevronDown className="w-6 h-6" />
-  </button>
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} Posts</p>
-  </div>
-  <div />
-</div>
+        <button 
+          onClick={handleBack} 
+          className="p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95"
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-800" />
+        </button>
+        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">알림</h1>
+      </div>
 
       <div className="flex flex-col">
         {isLoading ? (
