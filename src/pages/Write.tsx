@@ -222,50 +222,67 @@ const Write = () => {
   const handlePost = async () => {
     if (!authUser) return;
     setIsSubmitting(true);
+    console.log("[Write] Starting post process", { mediaCount: mediaFiles.length });
+
     try {
       const uploadedUrls: string[] = [];
-      const mediaToUpload = [...mediaFiles]; // 고정된 리스트 사용
+      const mediaToUpload = [...mediaFiles];
 
-      for (const media of mediaToUpload) {
+      for (const [index, media] of mediaToUpload.entries()) {
         const timestamp = new Date().getTime();
         const folder = media.type === 'video' ? 'post-videos' : 'post-images';
         const fileExt = media.file.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
+        console.log(`[Write] Uploading file ${index + 1}/${mediaToUpload.length}`, { fileName, folder });
+
         const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file);
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error(`[Write] Upload error for file ${index + 1}`, uploadError);
+          throw uploadError;
+        }
         
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
+        console.log(`[Write] File ${index + 1} uploaded successfully`, { publicUrl });
         uploadedUrls.push(publicUrl);
       }
 
-      const { error: insertError } = await supabase
+      console.log("[Write] All files uploaded. Inserting into database...", { uploadedUrls });
+
+      const postData = {
+        content,
+        location_name: address || '위치 미지정',
+        latitude: initialLocation?.lat || null,
+        longitude: initialLocation?.lng || null,
+        image_url: uploadedUrls[0] || null,
+        images: uploadedUrls,
+        user_id: authUser.id,
+        user_name: profile?.nickname || '탐험가',
+        user_avatar: profile?.avatar_url,
+        category,
+        video_url: mediaToUpload[0]?.type === 'video' ? uploadedUrls[0] : null,
+      };
+
+      const { data, error: insertError } = await supabase
         .from('posts')
-        .insert({
-          content,
-          location_name: address || '위치 미지정',
-          latitude: initialLocation?.lat || null,
-          longitude: initialLocation?.lng || null,
-          image_url: uploadedUrls[0],
-          images: uploadedUrls,
-          user_id: authUser.id,
-          user_name: profile?.nickname || '탐험가',
-          user_avatar: profile?.avatar_url,
-          category,
-          video_url: mediaToUpload[0]?.type === 'video' ? uploadedUrls[0] : null,
-        })
+        .insert(postData)
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("[Write] Database insert error", insertError);
+        throw insertError;
+      }
 
+      console.log("[Write] Post created successfully", data);
       showSuccess('게시물이 등록되었습니다! ✨');
       clear();
       postDraftStore.clear();
       navigate('/', { state: { triggerConfetti: true } });
     } catch (err: any) {
-      showError('저장 중 오류가 발생했습니다.');
+      console.error("[Write] Final error catch", err);
+      showError('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'));
     } finally {
       setIsSubmitting(false);
     }
