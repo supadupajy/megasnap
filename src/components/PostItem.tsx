@@ -47,17 +47,29 @@ const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
 
 interface PostItemProps {
   post: Post;
-  onLikeToggle: (id: string) => void;
-  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
-  onDelete?: (id: string) => void;
-  onSaveToggle?: (id: string, isSaved: boolean) => void;
   isViewed?: boolean;
+  onLikeToggle: (id: string) => void;
+  onSaveToggle?: (id: string, isSaved: boolean) => void;
+  onLocationClick?: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete?: (id: string) => void;
   disablePulse?: boolean;
   autoPlayVideo?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
+const PostItem = ({ 
+  post, 
+  isViewed = false, 
+  onLikeToggle, 
+  onSaveToggle,
+  onLocationClick,
+  onDelete,
+  disablePulse = false,
+  autoPlayVideo = true // ✅ 기본값을 true로 설정
+}: PostItemProps) => {
   const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [showComments, setShowComments] = useState(false);
   const { user: authUser, session } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
@@ -65,7 +77,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(post.comments || []);
-  const [showComments, setShowComments] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
@@ -83,10 +94,24 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const { user, content, isAd } = post;
   const isMine = authUser?.id === user.id;
 
-  const handleAdClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
-  };
+  // ✅ 비디오 자동 재생 및 소리 설정 로직 개선
+  useEffect(() => {
+    if (autoPlayVideo && videoRef.current) {
+      const video = videoRef.current;
+      video.muted = false; // ✅ 소리 켜기
+      video.volume = 0.5;  // 볼륨 적정 수준 설정
+      
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          // 브라우저 정책상 첫 상호작용 전에는 소리 있는 재생이 막힐 수 있음
+          console.log('[PostItem] Autoplay with sound blocked, trying muted...');
+          video.muted = true;
+          video.play();
+        });
+      }
+    }
+  }, [autoPlayVideo, currentSlide]); // 슬라이드 변경 시에도 체크
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -347,12 +372,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className={cn(
-        "bg-white transition-none",
-        !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
-      )}
+    <div className={cn(
+      "bg-white transition-all duration-500",
+      !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
+    )}
     >
       {/* Header Section */}
       <div className="flex items-center justify-between p-4 pb-3">
