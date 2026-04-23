@@ -97,7 +97,7 @@ const Search = () => {
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden pt-[88px]">
       {/* 고정 영역: 검색창 + 광고 배너 */}
       <div className="shrink-0 bg-white z-40">
-        <div className="px-4 py-4">
+        <div className="px-4 pt-4 pb-2">
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input 
@@ -118,11 +118,11 @@ const Search = () => {
         </div>
       </div>
       
-      {/* 추천 리스트 영역 */}
+      {/* 실제 스크롤 리스트 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="px-4 pb-32">
           <div className="space-y-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 pt-2">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 pt-4">
               {searchQuery ? '검색 결과' : '추천 사용자'}
             </p>
             <div className="space-y-1">

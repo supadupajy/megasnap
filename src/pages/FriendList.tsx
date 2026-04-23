@@ -48,11 +48,11 @@ const FriendList = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24 no-scrollbar pt-[88px]">
-      <div className="flex flex-col">
-        {/* 닉네임 검색 창 - 상단 헤더 바로 아래 위치, 배너 넓이와 동일 */}
-        <div className="px-4 py-4">
-          <div className="relative w-full">
+    <div className="fixed inset-0 bg-white flex flex-col pt-[88px] overflow-hidden">
+      {/* 고정 영역: 검색창 + 광고 배너 */}
+      <div className="shrink-0 bg-white z-40">
+        <div className="px-4 pt-4 pb-2">
+          <div className="relative mb-4">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
@@ -66,10 +66,8 @@ const FriendList = () => {
               </div>
             )}
           </div>
-        </div>
 
-        {/* THE NORTH FACE 광고 배너 */}
-        <div className="px-4 py-2">
+          {/* THE NORTH FACE 광고 배너 */}
           <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
             <img 
               src="/assets/northface-ad-banner.png" 
@@ -91,45 +89,46 @@ const FriendList = () => {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6 px-4">
-          <div className="space-y-4 mt-4">
-            <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
-              {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
-            </h2>
-            <div className="space-y-1">
-              {users.map((user) => (
-                <div 
-                  key={user.id} 
-                  onClick={() => handleStartChat(user)} 
-                  className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
-                    <Avatar className="w-full h-full border-2 border-white">
-                      <AvatarImage src={user.avatar_url} />
-                      <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
-                        {user.nickname?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
-                    <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
-                  </div>
+      {/* 스크롤 리스트 영역 */}
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+        <div className="px-4 pt-4">
+          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1 mb-4">
+            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
+          </h2>
+          <div className="space-y-1">
+            {users.map((user) => (
+              <div 
+                key={user.id} 
+                onClick={() => handleStartChat(user)} 
+                className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
+              >
+                <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
+                  <Avatar className="w-full h-full border-2 border-white">
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">
+                      {user.nickname?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-              ))}
-            </div>
-            {!isLoading && searchQuery.trim() && users.length === 0 && (
-              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <Users className="w-8 h-8 text-gray-200" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
                 </div>
-                <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                  해당 닉네임을 가진 사용자가 없습니다.
-                </p>
               </div>
-            )}
+            ))}
           </div>
+          {!isLoading && searchQuery.trim() && users.length === 0 && (
+            <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-gray-200" />
+              </div>
+              <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                해당 닉네임을 가진 사용자가 없습니다.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
