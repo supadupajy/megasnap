@@ -436,7 +436,7 @@ const Write = () => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-6 pb-20">
+            <div className="space-y-5 pb-20">
               <div className="space-y-3">
                 <div className="flex items-center gap-1.5 px-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
