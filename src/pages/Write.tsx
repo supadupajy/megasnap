@@ -310,15 +310,17 @@ const Write = () => {
                             onTouchEnd={stopDragging}
                           >
                             {media.type === 'image' ? (
-                              <img 
-                                key={`img-${media.url}`}
-                                src={media.url} 
-                                className="w-full h-full object-cover pointer-events-none select-none"
-                                style={{
-                                  objectPosition: media.orientation === 'portrait' 
-                                    ? `center ${media.crop?.y ?? 50}%` 
-                                    : `${media.crop?.x ?? 50}% center`
-                                }}
+  <img 
+    key={`img-${media.url}`}
+    src={media.url} 
+    className="w-full h-full pointer-events-none select-none"
+    style={{
+      objectFit: 'cover',
+      objectPosition: media.orientation === 'portrait'
+        ? `50% ${media.crop?.y ?? 50}%`
+        : `${media.crop?.x ?? 50}% 50%`,
+    }}
+  />
                               />
                             ) : (
                               <video 
