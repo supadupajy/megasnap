@@ -47,7 +47,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
-  const currentPost = posts[currentPostIndex];
+  // [FIX] currentPostIndex가 바뀔 때마다 최신 포스트 데이터를 안전하게 참조
+  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -167,16 +168,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
-    // 텍스트가 섞인 비정상 URL 또는 더미 텍스트 감지 로직 강화
+    
+    // [FIX] 내가 직접 올린 이미지는 절대 더미로 판단하지 않음
+    if (clean.includes('supabase.co/storage')) return false;
+
+    // 텍스트가 섞인 비정상 URL 또는 더미 텍스트 감지
     return clean.length < 10 || 
            clean.toLowerCase().includes('post') || 
            clean.toLowerCase().includes('content') || 
            !clean.startsWith('http');
   };
 
-  const displayImage = (imgErrors[currentPost.id] || isDummyUrl(currentPost.image)) 
-    ? getFallbackImage(currentPost.id) 
-    : currentPost.image;
+  const displayImage = useMemo(() => {
+    if (!currentPost) return getFallbackImage('default');
+    if (imgErrors[currentPost.id]) return getFallbackImage(currentPost.id);
+    
+    // [FIX] post.image_url 필드도 체크
+    const rawUrl = currentPost.image || currentPost.image_url;
+    return isDummyUrl(rawUrl) ? getFallbackImage(currentPost.id) : rawUrl;
+  }, [currentPost, imgErrors]);
 
   const isAd = currentPost?.isAd || false;
   const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
@@ -191,25 +201,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
     
-    // [FIX] currentPost.images가 존재하면 그것을 우선 사용하되, 
-    // 문자열 배열인지 확인하고 더미 URL을 필터링합니다.
     let baseImages: string[] = [];
     
+    // 1. images 배열 확인
     if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
-      baseImages = currentPost.images.filter((img: any) => typeof img === 'string' && !isDummyUrl(img));
+      baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
     }
     
-    // 만약 images 배열이 비어있다면 단일 image 필드를 사용합니다.
-    if (baseImages.length === 0 && currentPost.image && !isDummyUrl(currentPost.image)) {
-      baseImages = [currentPost.image];
+    // 2. image_url 또는 image 단일 필드 확인
+    const singleImg = currentPost.image_url || currentPost.image;
+    if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
+      baseImages = [singleImg];
     }
     
-    // 그래도 비어있다면 폴백 이미지를 사용합니다.
+    // 3. 그래도 없으면 계산된 displayImage 사용
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
     
-    // 코카콜라 광고 삽입 로직 (두 번째 장)
+    // 코카콜라 광고 삽입 로직
     const imagesWithAd = [...baseImages];
     if (imagesWithAd.length > 0) {
       imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);

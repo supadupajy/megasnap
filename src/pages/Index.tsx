@@ -291,14 +291,20 @@ const Index = () => {
 
       let finalImage = sanitizeUrl(p.image_url);
       
-      // [FIX] 유튜브 링크가 있는데 이미지가 일반 이미지이거나 없는 경우 썸네일로 강제 보정
-      if (p.youtube_url && (!finalImage || finalImage.includes('pexels.com') || finalImage.includes('pixabay.com'))) {
+      // [FIX] Supabase Storage URL(내 사진)인 경우 필터링을 건너뜁니다.
+      if (p.image_url && p.image_url.includes('supabase.co/storage')) {
+        finalImage = p.image_url;
+      } else if (p.youtube_url && (!finalImage || finalImage.includes('pexels.com') || finalImage.includes('pixabay.com'))) {
+        // 유튜브 링크가 있는데 이미지가 일반 이미지이거나 없는 경우 썸네일로 강제 보정
         const ytThumb = getYoutubeThumbnail(p.youtube_url);
         if (ytThumb) finalImage = ytThumb;
       }
       
       const validImages = Array.isArray(p.images) && p.images.length > 0
-        ? p.images.map(img => sanitizeUrl(img))
+        ? p.images.map(img => {
+            if (typeof img === 'string' && img.includes('supabase.co/storage')) return img;
+            return sanitizeUrl(img);
+          })
         : [finalImage];
 
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
