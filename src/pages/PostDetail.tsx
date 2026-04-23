@@ -88,6 +88,11 @@ const PostDetail = () => {
       finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
     }
 
+    // [FIX] sanitized.images가 없거나 단일 URL인 경우를 대비하여 rawImages 필터링 결과 활용
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
+      ? sanitized.images.filter(isValidUrl)
+      : [finalImage];
+
     let isLiked = false;
     let isSaved = false;
     if (authUser?.id) {
@@ -99,8 +104,6 @@ const PostDetail = () => {
       isSaved = !!saveData;
     }
 
-    const finalImages = rawImages.filter(isValidUrl);
-    
     return {
       id: sanitized.id,
       isAd,
@@ -108,8 +111,8 @@ const PostDetail = () => {
       isInfluencer: false,
       user: { 
         id: sanitized.user_id, 
-        name: sanitized.user_id === authUser?.id ? displayName : (sanitized.user_name || '탐험가'), 
-        avatar: sanitized.user_id === authUser?.id ? avatarUrl : (sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`)
+        name: sanitized.user_name || '탐험가', 
+        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` 
       },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
       location: sanitized.location_name || '알 수 없는 장소',
@@ -119,7 +122,7 @@ const PostDetail = () => {
       commentsCount: 0,
       comments: [],
       image: finalImage,
-      images: finalImages,
+      images: finalImages, // [FIX] 정제된 finalImages 사용
       youtubeUrl: sanitized.youtube_url,
       videoUrl: sanitized.video_url,
       isLiked,
