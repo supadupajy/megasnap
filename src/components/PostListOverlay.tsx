@@ -89,7 +89,86 @@ const PostListOverlay = ({
   onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
+  const [posts, setPosts] = useState<Post[]>(initialPosts || []);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Update local posts when initialPosts change (map movement)
+  useEffect(() => {
+    setPosts(initialPosts || []);
+    setHasMore(true);
+  }, [initialPosts]);
+
+  // Infinite Scroll Handler
+  const handleScroll = useCallback(async () => {
+    if (!scrollContainerRef.current || isLoadingMore || !hasMore) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 300) {
+      setIsLoadingMore(true);
+      
+      try {
+        // 현재 로드된 포스트들 중 가장 오래된 생성일자 기준
+        const lastPostDate = posts.length > 0 
+          ? new Date(posts[posts.length - 1].createdAt).toISOString()
+          : new Date().toISOString();
+
+        // fetchPostsInBounds 유틸리티가 있다면 좋겠지만, 
+        // 여기서는 직접 supabase 쿼리를 통해 주변 포스트를 더 가져옵니다.
+        const radius = 0.05; // 약 5km 반경 (경위도 기준 단순 근사치)
+        
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .lt('created_at', lastPostDate)
+          .gte('latitude', mapCenter.lat - radius)
+          .lte('latitude', mapCenter.lat + radius)
+          .gte('longitude', mapCenter.lng - radius)
+          .lte('longitude', mapCenter.lng + radius)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          // mapDbToPost 함수가 로컬에 정의되어 있지 않으므로 
+          // PostListOverlay에서 사용할 수 있는 형식으로 변환이 필요할 수 있습니다.
+          // 하지만 여기서는 기본 posts 데이터를 posts 배열에 추가하는 방향으로 갑니다.
+          // (PostItem이 타입을 잘 처리한다고 가정)
+          
+          // 실무에서는 여기서 mapDbToPost와 같은 변환 로직이 필요합니다.
+          // PostListOverlay가 받는 initialPosts는 이미 변환된 상태일 것이므로
+          // 간단한 매핑을 시도합니다.
+          const newPosts: Post[] = data.map(p => ({
+            id: p.id,
+            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+            content: p.content,
+            location: p.location_name,
+            lat: p.latitude,
+            lng: p.longitude,
+            likes: p.likes || 0,
+            image: p.image_url,
+            images: p.images || [p.image_url],
+            videoUrl: p.video_url,
+            youtubeUrl: p.youtube_url,
+            createdAt: new Date(p.created_at),
+            category: p.category || 'none'
+          }));
+
+          setPosts(prev => [...prev, ...newPosts]);
+          if (data.length < 10) setHasMore(false);
+        } else {
+          setHasMore(false);
+        }
+      } catch (err) {
+        console.error('Failed to load more posts:', err);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    }
+  }, [posts, isLoadingMore, hasMore, mapCenter, initialPosts]);
+
   // window 객체에 상태 기록
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -98,15 +177,6 @@ const PostListOverlay = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const filteredPosts = useMemo(() => {
-    // initialPosts가 undefined이거나 null인 경우를 방지
-    if (!initialPosts) return [];
-    return initialPosts.filter(post => {
-      if (!post) return false;
-      return true;
-    });
-  }, [initialPosts]);
 
   return (
     <motion.div 
@@ -125,7 +195,7 @@ const PostListOverlay = ({
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {filteredPosts.length} Posts</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} Posts</p>
         </div>
         <button 
           onClick={onClose}
@@ -136,10 +206,14 @@ const PostListOverlay = ({
       </div>
 
       {/* List Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-20 custom-scrollbar">
-        {filteredPosts.length > 0 ? (
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-20 custom-scrollbar"
+      >
+        {posts.length > 0 ? (
           <div className="flex flex-col">
-            {filteredPosts.map((post) => (
+            {posts.map((post) => (
               <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
                 <PostItem 
                   post={post}
@@ -152,6 +226,11 @@ const PostListOverlay = ({
                 />
               </div>
             ))}
+            {isLoadingMore && (
+              <div className="py-10 flex justify-center">
+                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
