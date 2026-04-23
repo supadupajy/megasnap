@@ -176,14 +176,22 @@ const Index = () => {
       }
       
       const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(img => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
+      
+      // [FIX] 인플루언서 및 인기 등급 판정 로직 강화 (Index.tsx)
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      if (Number(likesCount) >= 9000) borderType = 'popular';
-      else if (!isAd) {
+      const likesCountNum = Number(likesCount);
+      
+      if (likesCountNum >= 9000) {
+        borderType = 'popular';
+      } else if (!isAd) {
+        // ID 해시 기반으로 인플루언서 등급 부여 (전체 포스트의 약 8%를 골드/다이아몬드로 설정)
         let h = 0;
         const idStr = p.id.toString();
         for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
         const val = Math.abs(h % 1000) / 1000;
-        if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
+        
+        if (val < 0.03) borderType = 'diamond'; 
+        else if (val < 0.11) borderType = 'gold'; // 8% 추가 (총 11%)
       }
       
       let userName = p.user_name || '탐험가';
@@ -229,11 +237,22 @@ const Index = () => {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
+      // [FIX] 지도 마커 동기화 시 인플루언서 등급 판정 로직 누락 수정
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
+        const likesCountNum = Number(p.likes || 0);
+        
         let borderType: any = 'none';
-        if (Number(p.likes) >= 9000) borderType = 'popular';
+        if (likesCountNum >= 9000) {
+          borderType = 'popular';
+        } else if (!isAd) {
+          let h = 0;
+          const idStr = p.id.toString();
+          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+          const val = Math.abs(h % 1000) / 1000;
+          if (val < 0.03) borderType = 'diamond';
+          else if (val < 0.11) borderType = 'gold';
+        }
         
         return {
           id: p.id,
