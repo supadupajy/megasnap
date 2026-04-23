@@ -114,7 +114,6 @@ const PostListOverlay = ({
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
-    // isLoadingMore만 체크하고 hasMore 체크는 제거하여 무한 시도 가능하게 함
     if (isLoadingMore) return;
     
     setIsLoadingMore(true);
@@ -130,7 +129,11 @@ const PostListOverlay = ({
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      const { data, error } = await supabase
+      // [DEBUG] 로딩 시도 로그
+      console.log(`[PostListOverlay] Fetching posts before ${lastPostDate} within bounds...`);
+
+      // 1. 우선 현재 영역(Bounds) 내에서 과거 데이터를 찾음
+      let { data, error } = await supabase
         .from('posts')
         .select('*')
         .gte('latitude', latMin)
@@ -139,9 +142,24 @@ const PostListOverlay = ({
         .lte('longitude', lngMax)
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(12);
 
       if (error) throw error;
+
+      // 2. 만약 해당 영역에 데이터가 부족하거나 없다면, 전체 DB에서 최신 데이터를 가져옴 (데이터가 끊기지 않게 함)
+      if (!data || data.length === 0) {
+        console.log('[PostListOverlay] No posts in strict bounds, fetching from global DB...');
+        const globalRes = await supabase
+          .from('posts')
+          .select('*')
+          .lt('created_at', lastPostDate)
+          .order('created_at', { ascending: false })
+          .limit(12);
+        
+        if (!globalRes.error && globalRes.data) {
+          data = globalRes.data;
+        }
+      }
 
       if (data && data.length > 0) {
         const newPosts: Post[] = await Promise.all(data.map(async (p) => {
@@ -197,7 +215,7 @@ const PostListOverlay = ({
       setHasMore(true); 
 
     } catch (err) {
-      console.error('[PostListOverlay] Load more error:', err);
+      console.error('[PostListOverlay] Fallback fetch failed:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
