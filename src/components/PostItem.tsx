@@ -170,7 +170,7 @@ const PostItem = ({
       return (
         <div className="w-full h-full relative">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
             className="w-full h-full object-cover"
             allow="autoplay; encrypted-media"
             allowFullScreen
@@ -196,7 +196,6 @@ const PostItem = ({
             src={post.videoUrl}
             className="w-full h-full object-cover"
             autoPlay={shouldPlay}
-            muted // 자동재생을 위해 muted 강제 (브라우저 정책)
             loop
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
