@@ -366,7 +366,7 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
             </div>
             
             {/* ✅ 스크롤 컨테이너: overflow-y-auto 유지, 불필요한 keyboardHeight padding 제거 */}
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+<div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar">
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
