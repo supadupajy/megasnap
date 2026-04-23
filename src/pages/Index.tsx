@@ -911,6 +911,7 @@ const Index = () => {
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
+    // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가
     const postWithEffect = { ...newPost, isNewRealtime: true };
     
     setAllPosts(prev => [postWithEffect, ...prev]);
@@ -920,10 +921,12 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 통합 폭죽 트리거 호출
+      // [FIX] 포스팅 마커가 "뿅" 하고 나타나는 애니메이션 시점(약 1.2초 후)에 맞춰 폭죽 트리거
+      // 지도 이동 시간 + 마커 등장 애니메이션 시간을 고려하여 지연 시간 조정
       setTimeout(() => {
+        console.log('[Confetti] Synchronized confetti with marker appearance');
         triggerConfetti();
-      }, 600);
+      }, 1200);
     }
     setIsWriteOpen(false);
   };

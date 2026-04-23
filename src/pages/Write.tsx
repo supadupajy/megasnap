@@ -169,27 +169,11 @@ const Write = () => {
 
       showSuccess('게시물이 등록되었습니다! ✨');
       
-      // [CRITICAL FIX] 등록 성공 직후 Write 페이지가 닫히기 전에 즉시 폭죽 발사
-      // Index 페이지로 넘어가기 전에 여기서 먼저 터뜨려야 사용자가 즉시 인지할 수 있습니다.
-      try {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          zIndex: 9999999,
-          colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee']
-        });
-      } catch (e) {
-        console.error('[Write] Confetti error:', e);
-      }
-
       clear(); // [FIX] useWriteStore 초기화
       postDraftStore.clear();
       
-      // 약간의 지연 후 이동하여 폭죽을 볼 시간을 확보
-      setTimeout(() => {
-        navigate('/');
-      }, 500);
+      // 메인 페이지로 즉시 이동 (이제 Index 페이지에서 마커 등장 시점에 맞춰 폭죽을 터뜨림)
+      navigate('/');
     } catch (err: any) {
       showError('저장 중 오류가 발생했습니다.');
     } finally {
