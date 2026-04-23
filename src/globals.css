@@ -368,17 +368,18 @@
 }
 
 .marker-content-wrapper {
-  transform: scale(var(--marker-scale));
-  transform-origin: bottom center;
+  /* [FIX] 상태 변화 시 부드럽게 크기가 변하도록 트랜지션 추가 */
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
   width: 100%;
   height: 100%;
   position: relative;
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  /* [FIX] 하이라이트 시 1.5배 확대 효과도 동일하게 부드럽게 돌아오도록 설정 */
-  --marker-scale: 1.5 !important;
+  /* [FIX] 하이라이트 시 1.5배 확대 효과 */
+  transform: scale(1.5) !important;
+  z-index: 50;
 }
 
 .search-result-marker-container {
