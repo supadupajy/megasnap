@@ -47,8 +47,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
-  // [FIX] currentPostIndex가 바뀔 때마다 최신 포스트 데이터를 안전하게 참조
+  // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  
+  // [FIX] 영상 정보를 더 우선적으로 감지
+  const youtubeId = useMemo(() => {
+    if (!currentPost) return null;
+    const url = currentPost.youtubeUrl || currentPost.youtube_url; // 필드명 호환성 추가
+    return getYoutubeId(url || '');
+  }, [currentPost]);
+
+  const videoUrl = useMemo(() => {
+    if (!currentPost) return null;
+    return currentPost.videoUrl || currentPost.video_url;
+  }, [currentPost]);
+
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -240,11 +253,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // ✅ 조건부 return은 모든 훅 선언 이후에
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
-  const youtubeId = useMemo(() => {
-    if (!currentPost) return null;
-    return getYoutubeId(currentPost.youtubeUrl || '');
-  }, [currentPost]);
-
   const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
@@ -429,33 +437,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-                          {youtubeId ? (
-                            <div className="absolute inset-0 w-full h-full z-20">
-                              <iframe
-                                key={`detail-yt-${currentPost.id}-${isOpen}`}
-                                className="w-full h-full border-0"
-                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                                title="YouTube video player"
-                                allow="autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          ) : currentPost.videoUrl ? (
-                            <div className="absolute inset-0 w-full h-full z-20 bg-black">
-                              <video 
-                                key={`detail-vid-${currentPost.id}-${isOpen}`} 
-                                src={currentPost.videoUrl} 
-                                className="w-full h-full object-cover" 
-                                autoPlay 
-                                loop 
-                                playsInline 
-                                controls 
-                              />
+                          {/* 영상이 있다면 무조건 영상을 최우선으로 렌더링 */}
+                          {(youtubeId || videoUrl) ? (
+                            <div className="absolute inset-0 w-full h-full z-30 bg-black">
+                              {youtubeId ? (
+                                <iframe
+                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                  className="w-full h-full border-0"
+                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                                  title="YouTube video player"
+                                  allow="autoplay; encrypted-media; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                <video 
+                                  key={`detail-vid-${currentPost.id}-${videoUrl}`} 
+                                  src={videoUrl} 
+                                  className="w-full h-full object-cover" 
+                                  autoPlay 
+                                  loop 
+                                  playsInline 
+                                  controls 
+                                />
+                              )}
                             </div>
                           ) : null}
 
-                          {/* 비디오/유튜브가 없을 때만 이미지 슬라이더 렌더링 */}
-                          {!youtubeId && !currentPost.videoUrl && (
+                          {/* 영상 정보가 확실히 없을 때만 이미지 슬라이더 노출 */}
+                          {!youtubeId && !videoUrl && (
                             <div className="relative w-full h-full z-10">
                               {/* 네이티브 스크롤 슬라이더 */}
                               <div
