@@ -90,6 +90,11 @@ const Index = () => {
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  // ✅ [핵심 FIX] allPosts 배열 인덱스 탐색 대신, 선택된 포스트를 직접 보관
+  // React 상태 업데이트 비동기 문제로 allPosts.findIndex가 stale 데이터를 참조하는 버그 해결
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -116,31 +121,30 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
-  // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
+
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-  if (post.lat === null || post.lng === null) return;
-  setAllPosts((prev) => {
-    if (prev.some((item) => item.id === post.id)) return prev;
-    const combined = [post, ...prev];
-    mapCache.posts = combined;
-    return combined;
-  });
-  setSelectedPostId(null);
-  setSearchResultLocation(null);
-  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+    if (post.lat === null || post.lng === null) return;
+    setAllPosts((prev) => {
+      if (prev.some((item) => item.id === post.id)) return prev;
+      const combined = [post, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
+    setSelectedPostId(null);
+    setSelectedPost(null);
+    setSearchResultLocation(null);
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-  // ✅ 하이라이트 초기화 및 지도 이동 시작
-  setHighlightedPostId(null);
-  setMapCenter(center || { lat: post.lat, lng: post.lng });
+    setHighlightedPostId(null);
+    setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-  // ✅ 하이라이트 이벤트 발송 시간 조정
-  highlightTimeoutRef.current = window.setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('highlight-marker', { 
-      detail: { id: post.id, duration: 2500 } 
-    }));
-    highlightTimeoutRef.current = null;
-  }, 1100);
-}, []);
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('highlight-marker', { 
+        detail: { id: post.id, duration: 2500 } 
+      }));
+      highlightTimeoutRef.current = null;
+    }, 1100);
+  }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
@@ -175,23 +179,15 @@ const Index = () => {
         if (thumb) finalImage = thumb;
       }
       
-      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(img => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
-      
-      // [FIX] 인플루언서 및 인기 등급 판정 로직 강화 (Index.tsx)
+      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map((img: string) => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      const likesCountNum = Number(likesCount);
-      
-      if (likesCountNum >= 9000) {
-        borderType = 'popular';
-      } else if (!isAd) {
-        // ID 해시 기반으로 인플루언서 등급 부여 (전체 포스트의 약 8%를 골드/다이아몬드로 설정)
+      if (Number(likesCount) >= 9000) borderType = 'popular';
+      else if (!isAd) {
         let h = 0;
         const idStr = p.id.toString();
         for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
         const val = Math.abs(h % 1000) / 1000;
-        
-        if (val < 0.03) borderType = 'diamond'; 
-        else if (val < 0.11) borderType = 'gold'; // 8% 추가 (총 11%)
+        if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
       }
       
       let userName = p.user_name || '탐험가';
@@ -207,7 +203,9 @@ const Index = () => {
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude, lng: p.longitude, likes: likesCount, commentsCount: 0, comments: [],
-        image: finalImage, images: validImages, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+        image: finalImage, images: validImages,
+        youtubeUrl: p.youtube_url,   // ✅ DB 컬럼 youtube_url → youtubeUrl 매핑
+        videoUrl: p.video_url,       // ✅ DB 컬럼 video_url → videoUrl 매핑
         category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType
       };
     } catch (err) { return null as any; }
@@ -237,22 +235,10 @@ const Index = () => {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // [FIX] 지도 마커 동기화 시 인플루언서 등급 판정 로직 누락 수정
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
-        const likesCountNum = Number(p.likes || 0);
-        
         let borderType: any = 'none';
-        if (likesCountNum >= 9000) {
-          borderType = 'popular';
-        } else if (!isAd) {
-          let h = 0;
-          const idStr = p.id.toString();
-          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-          const val = Math.abs(h % 1000) / 1000;
-          if (val < 0.03) borderType = 'diamond';
-          else if (val < 0.11) borderType = 'gold';
-        }
+        if (Number(p.likes) >= 9000) borderType = 'popular';
         
         return {
           id: p.id,
@@ -265,12 +251,12 @@ const Index = () => {
           likes: Number(p.likes || 0),
           image: p.image_url || '',
           image_url: p.image_url || '',
-          youtubeUrl: p.youtube_url,
-          videoUrl: p.video_url,
+          youtubeUrl: p.youtube_url,   // ✅ 정규화
+          videoUrl: p.video_url,       // ✅ 정규화
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
           borderType,
-          user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
+          user: { id: p.user_id, name: '...', avatar: '' },
           content: p.content || '',
           location: p.location_name || '',
           images: p.image_url ? [p.image_url] : [],
@@ -327,11 +313,10 @@ const Index = () => {
     if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     
     const { sw, ne } = mapData.bounds;
-    const center = mapData.center; // ✅ 지도의 중심점
+    const center = mapData.center;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // ✅ [거리 기반 가중치 정렬] 현재 지도의 중심과 각 포스트의 거리를 계산하여 가까운 순으로 표시
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
@@ -342,13 +327,10 @@ const Index = () => {
       if (selectedCategories.includes('all')) return true;
       return selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
     }).map(p => {
-      // ✅ 거리 계산 (간이 유클리드 거리)
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
       return [p.id, { ...p, _dist: dist }];
     })).values());
 
-    // ✅ 가까운 거리 순으로 정렬하여 displayedMarkers 업데이트
-    // 이렇게 하면 '여기 보기' 클릭 시 중심점 기준 가까운 포스팅이 먼저 나타납니다.
     const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
     
     setDisplayedMarkers(prev => {
@@ -361,6 +343,8 @@ const Index = () => {
     const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
+    // ✅ selectedPost도 동기화
+    setSelectedPost(prev => prev?.id === postId ? updater(prev) : prev);
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -377,24 +361,37 @@ const Index = () => {
     setIsRefreshing(false); showSuccess('데이터를 새로고침했습니다.');
   }, [fetchGlobalTrending, mapData, mapDbToPost]);
 
+  // ✅ [핵심 FIX] 마커 클릭 시 full 데이터를 fetch 후 selectedPost에 직접 저장
+  // allPosts.findIndex 방식은 React 상태 비동기 문제로 stale 데이터 참조 — 완전히 제거
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
-  if (lightPost.user.name !== '...') {
-    setSelectedPostId(lightPost.id);
-    return;
-  }
-  try {
-    const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
-    if (!error && data) {
-      const full = await mapDbToPost(data);
-      if (full) {
-        setAllPosts(prev => prev.map(p => p.id === full.id ? full : p));
-        setDisplayedMarkers(prev => prev.map(p => p.id === full.id ? full : p));
-      }
+    // 이미 full 데이터가 있으면 바로 열기
+    if (lightPost.user.name !== '...') {
+      setSelectedPost(lightPost);
+      setSelectedPostId(lightPost.id);
+      return;
     }
-  } catch (err) { console.error(err); }
-  // ✅ DB fetch 완료 후 모달 열기 (youtubeUrl이 allPosts에 반영된 후)
-  setSelectedPostId(lightPost.id);
-}, [mapDbToPost]);
+
+    // light 데이터(마커용)인 경우 DB에서 full 데이터 fetch
+    try {
+      const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
+      if (!error && data) {
+        const full = await mapDbToPost(data);
+        if (full) {
+          // allPosts 업데이트 (마커 데이터 갱신용)
+          setAllPosts(prev => prev.map(p => p.id === full.id ? full : p));
+          setDisplayedMarkers(prev => prev.map(p => p.id === full.id ? full : p));
+          // ✅ selectedPost에 직접 저장 — 상태 업데이트 타이밍 문제 없음
+          setSelectedPost(full);
+          setSelectedPostId(full.id);
+          return;
+        }
+      }
+    } catch (err) { console.error(err); }
+
+    // fetch 실패 시 lightPost라도 열기
+    setSelectedPost(lightPost);
+    setSelectedPostId(lightPost.id);
+  }, [mapDbToPost]);
 
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 찾는 중...');
@@ -408,27 +405,14 @@ const Index = () => {
   useEffect(() => {
     if (!authUser) return;
 
-    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
     const channel = supabase
       .channel('public:posts-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'posts'
-        },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' },
         async (payload) => {
           console.log('[Realtime] New post detected:', payload.new);
-          const newRawPost = payload.new;
-          
-          const mappedPost = await mapDbToPost(newRawPost);
+          const mappedPost = await mapDbToPost(payload.new);
           if (!mappedPost) return;
-
-          if (mappedPost.user.id !== authUser.id) {
-            triggerConfetti();
-          }
-
+          if (mappedPost.user.id !== authUser.id) triggerConfetti();
           setAllPosts(prev => {
             if (prev.some(p => p.id === mappedPost.id)) return prev;
             const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
@@ -437,45 +421,31 @@ const Index = () => {
           });
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'posts'
-        },
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' },
         (payload) => {
           const deletedId = payload.old.id;
           console.log('[Realtime] Post deleted:', deletedId);
-
-          // ✅ [FADE OUT] 마커 삭제 애니메이션 트리거 (MapContainer에서 처리)
-          window.dispatchEvent(new CustomEvent('animate-marker-delete', { 
-            detail: { id: deletedId } 
-          }));
-
-          // 애니메이션 시간(약 400~500ms) 후 상태에서 실제 제거
+          window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: deletedId } }));
           setTimeout(() => {
-            setAllPosts(prev => {
-              const filtered = prev.filter(p => p.id !== deletedId);
-              mapCache.posts = filtered;
-              return filtered;
-            });
+            setAllPosts(prev => { const filtered = prev.filter(p => p.id !== deletedId); mapCache.posts = filtered; return filtered; });
             setDisplayedMarkers(prev => prev.filter(p => p.id !== deletedId));
           }, 450);
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [authUser, mapData, mapDbToPost, triggerConfetti]);
 
   useEffect(() => {
     const handleFocusPost = (e: any) => {
       const { post, lat, lng } = e.detail;
-      setIsPostListOpen(false); focusPostOnMap(post, { lat, lng });
-      setTimeout(() => setSelectedPostId(post.id), 300);
+      setIsPostListOpen(false);
+      focusPostOnMap(post, { lat, lng });
+      setTimeout(() => {
+        setSelectedPost(post);
+        setSelectedPostId(post.id);
+      }, 300);
     };
     window.addEventListener('focus-post', handleFocusPost);
     return () => window.removeEventListener('focus-post', handleFocusPost);
@@ -492,26 +462,19 @@ const Index = () => {
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
     
-    // ✅ [FIX] 포스팅 후 설정: 전체보기 모드 유지 + 줌 레벨 5로 고정
     if (routeState.filterUserId === 'me') {
-      // 내 포스팅 필터를 적용하지 않고 'all'로 설정하여 전체보기 모드 유지
       setSelectedCategories(['all']); 
-      // 지도의 줌 레벨을 디폴트인 5로 설정
       setTimeout(() => setCurrentZoom(5), 500);
-      
       if (routeState.post) {
-        // 등록된 포스트의 좌표로 이동
         focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
       } else {
         handleCurrentLocation();
       }
-    } 
-    // 그 외 일반적인 포스트 포커스 처리
-    else if (routeState.post) {
+    } else if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
-    }
-    else if (routeState.center) { 
-      setSelectedPostId(null); 
+    } else if (routeState.center) { 
+      setSelectedPostId(null);
+      setSelectedPost(null);
       setMapCenter(routeState.center); 
     }
     
@@ -527,6 +490,7 @@ const Index = () => {
 
   const handlePostDeleted = useCallback((id: string) => {
     setSelectedPostId(null);
+    setSelectedPost(null);
     window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
     setTimeout(() => {
       setAllPosts(prev => { const f = prev.filter(p => p.id !== id); mapCache.posts = f; return f; });
@@ -534,22 +498,29 @@ const Index = () => {
     }, 400);
   }, []);
 
+  // ✅ PostDetail에 넘길 posts 배열 — selectedPost를 항상 index 0에 보장
+  const postDetailPosts = useMemo(() => {
+    if (!selectedPost) return [];
+    const others = allPosts.filter(p => p.id !== selectedPost.id);
+    return [selectedPost, ...others];
+  }, [selectedPost, allPosts]);
+
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
           <MapContainer
-  posts={displayedMarkers}
-  viewedPostIds={viewedIds}
-  highlightedPostId={highlightedPostId}
-  onMarkerClick={handleMarkerClick}
-  onMapChange={handleMapChange}
-  center={mapCenter}
-  level={currentZoom}
-  searchResultLocation={searchResultLocation}
-  onMapClick={() => setSearchResultLocation(null)}
-/>
+            posts={displayedMarkers}
+            viewedPostIds={viewedIds}
+            highlightedPostId={highlightedPostId}
+            onMarkerClick={handleMarkerClick}
+            onMapChange={handleMapChange}
+            center={mapCenter}
+            level={currentZoom}
+            searchResultLocation={searchResultLocation}
+            onMapClick={() => setSearchResultLocation(null)}
+          />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
@@ -561,20 +532,22 @@ const Index = () => {
           {!isSelectingLocation && (
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
-              <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}><div className="w-full shrink-0 pointer-events-auto"><TrendingPosts posts={globalTrendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={async (p) => {
-  setIsTrendingExpanded(false);
-
-  // allPosts에 없으면 추가 (youtube_url 포함된 full 데이터)
-  setAllPosts(prev => {
-    if (prev.some(post => post.id === p.id)) return prev;
-    return [p, ...prev];
-  });
-
-  focusPostOnMap(p);
-
-  // 지도 이동 후 모달 열기
-  setTimeout(() => setSelectedPostId(p.id), 400);
-}} /></div></div>
+              <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+                <div className="w-full shrink-0 pointer-events-auto">
+                  <TrendingPosts
+                    posts={globalTrendingPosts}
+                    isExpanded={isTrendingExpanded}
+                    onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+                    onPostClick={async (p) => {
+                      setIsTrendingExpanded(false);
+                      // ✅ selectedPost에 직접 저장 후 모달 열기
+                      setSelectedPost(p);
+                      setSelectedPostId(p.id);
+                      focusPostOnMap(p);
+                    }}
+                  />
+                </div>
+              </div>
               <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2"><button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button><button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button><button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button></div>
               <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"><RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} /><span className="text-[9px] font-black mt-1">재검색</span></button>
@@ -600,10 +573,7 @@ const Index = () => {
             onClose={() => setIsPostListOpen(false)} 
             initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
-            currentBounds={mapData?.bounds || { 
-              sw: { lat: 33, lng: 124 }, 
-              ne: { lat: 39, lng: 132 } 
-            }}
+            currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
             selectedCategories={selectedCategories} 
             timeValueHours={timeValue} 
             authUserId={authUser?.id} 
@@ -611,7 +581,25 @@ const Index = () => {
           />
         )}
       </AnimatePresence>
-      <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={allPosts} initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onDelete={handlePostDeleted} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
+
+      {/* ✅ [핵심 FIX] posts에 postDetailPosts 사용 — selectedPost가 항상 index 0에 위치 */}
+      {/* allPosts.findIndex 방식 완전 제거 — React 비동기 상태 문제 원천 차단 */}
+      <AnimatePresence>
+        {selectedPost && (
+          <PostDetail
+            key="post-detail-modal"
+            posts={postDetailPosts}
+            initialIndex={0}
+            isOpen={true}
+            onClose={() => { setSelectedPostId(null); setSelectedPost(null); }}
+            onDelete={handlePostDeleted}
+            onViewPost={markAsViewed}
+            onLikeToggle={handleLikeToggle}
+            onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); setSelectedPost(null); }}
+          />
+        )}
+      </AnimatePresence>
+
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }} />
     </>
   );
