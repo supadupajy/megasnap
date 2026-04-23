@@ -359,19 +359,23 @@ const Index = () => {
   }, [fetchGlobalTrending, mapData, mapDbToPost]);
 
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
+  if (lightPost.user.name !== '...') {
     setSelectedPostId(lightPost.id);
-    if (lightPost.user.name !== '...') return;
-    try {
-      const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
-      if (!error && data) {
-        const full = await mapDbToPost(data);
-        if (full) {
-          setAllPosts(prev => prev.map(p => p.id === full.id ? full : p));
-          setDisplayedMarkers(prev => prev.map(p => p.id === full.id ? full : p));
-        }
+    return;
+  }
+  try {
+    const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
+    if (!error && data) {
+      const full = await mapDbToPost(data);
+      if (full) {
+        setAllPosts(prev => prev.map(p => p.id === full.id ? full : p));
+        setDisplayedMarkers(prev => prev.map(p => p.id === full.id ? full : p));
       }
-    } catch (err) { console.error(err); }
-  }, [mapDbToPost]);
+    }
+  } catch (err) { console.error(err); }
+  // ✅ DB fetch 완료 후 모달 열기 (youtubeUrl이 allPosts에 반영된 후)
+  setSelectedPostId(lightPost.id);
+}, [mapDbToPost]);
 
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 찾는 중...');
