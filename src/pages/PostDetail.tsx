@@ -13,9 +13,13 @@ import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
+  const { user: authUser, profile } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const userId = authUser?.id;
+  const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
   useEffect(() => {
     const fetchAllPosts = async () => {
@@ -54,8 +58,11 @@ const PostDetail = () => {
     }
   }, [id, allPosts]);
 
-  const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
-  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
+  const handleLikeToggle = (postId: string) => {
+    setAllPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post
+    ));
+  };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
@@ -164,6 +171,7 @@ const PostDetail = () => {
                 post={p} 
                 disablePulse={true}
                 autoPlayVideo={true}
+                onLikeToggle={() => handleLikeToggle(p.id)}
                 onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
               />
             </div>
