@@ -405,8 +405,8 @@ const Write = () => {
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
-            <div className="space-y-6">
-              <div className="space-y-3">
+            <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center gap-1.5 px-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
