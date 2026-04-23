@@ -396,9 +396,7 @@ const MapContainer = ({
       } else {
         isProgrammaticMove.current = false;
         animationFrameRef.current = null;
-        // ✅ 이동 완료 콜백 실행
-        onComplete?.();
-        try {
+                try {
           const bounds = map.getBounds();
           const mapLevel = map.getLevel();
           onMapChangeRef.current({
