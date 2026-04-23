@@ -160,6 +160,7 @@ const PostDetail = () => {
               <PostItem 
                 post={p} 
                 disablePulse={true}
+                autoPlayVideo={true}
                 onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
               />
             </div>
