@@ -263,8 +263,14 @@ const MapContainer = ({
       const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
+      
+      // [FIX] 인플루언서 등급 명시적 확인
+      const borderType = post.borderType || 'none';
+      const isInfluencer = ['gold', 'diamond'].includes(borderType);
+      const isPopular = borderType === 'popular';
+      
       const existingOverlay = overlaysRef.current.get(post.id);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}`;
+      const contentStateKey = `${isViewed}-${borderType}-${post.isAd}-${isNew}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -282,7 +288,7 @@ const MapContainer = ({
           position: position,
           content: content,
           yAnchor: 1,
-          zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
+          zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (isInfluencer || isPopular ? 600 : 300))
         });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
