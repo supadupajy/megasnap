@@ -361,10 +361,16 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
       };
     }}
     style={{
-  objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-  transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-}}
-  />
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+    transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+  }}
+/>
                   ) : (
                     <video
                       src={currentMedia?.url}
