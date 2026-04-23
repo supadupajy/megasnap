@@ -242,6 +242,8 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
           img.src = url;
         });
       }
+      console.log('📸 새 미디어:', { type, url, orientation, naturalW: url });
+
       return { file, url, type, crop: { x: 50, y: 50 }, orientation } as MediaFile;
     }));
 
