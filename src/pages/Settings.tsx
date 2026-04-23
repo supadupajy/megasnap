@@ -23,7 +23,15 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { seedGlobalPosts, randomizeExistingLikes, cleanupInvalidYoutubePosts, enrichExistingPostLocations, seedInBoundsPosts, deletePostsInBounds } from '@/utils/db-seeder';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  seedGlobalPosts, 
+  randomizeExistingLikes, 
+  cleanupInvalidYoutubePosts, 
+  enrichExistingPostLocations, 
+  seedInBoundsPosts, 
+  deletePostsInBounds 
+} from '@/utils/db-seeder';
 import {
   AlertDialog,
   AlertDialogAction,
