@@ -158,13 +158,9 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]); // ✅ 로컬 sta
     const isPortrait = media.orientation === 'portrait';
     const { maxX, maxY } = getMaxOffset();
 
-    if (isPortrait) {
-  // 세로형: Y축만 이동 (부호 반전)
-  cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
-} else {
-  // 가로형: X축만 이동 (부호 반전)
-  cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
-}
+    // orientation 구분 없이 이동 가능한 축만 자동으로 클램핑
+cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
+cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
 
     // DOM 직접 업데이트 (re-render 없이 즉각 반응)
     if (imgRef.current) {
