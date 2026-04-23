@@ -361,21 +361,23 @@ const MapContainer = ({
 
   // [NEW] 스케일링 전용 이펙트: GPU 가속을 활용해 한 번에 처리
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const level = currentLevel;
-    let scale = 1.0;
-    if (level === 6) scale = 0.7;
-    else if (level === 7) scale = 0.45;
-    else if (level >= 8) scale = 0;
+  if (!mapInstance.current) return;
+  const level = currentLevel;
+  let scale = 1.0;
+  if (level === 6) scale = 0.7;
+  else if (level === 7) scale = 0.45;
+  else if (level >= 8) scale = 0;
 
-    overlaysRef.current.forEach((overlay) => {
-      const content = overlay.getContent() as HTMLElement;
-      if (content) {
-        content.style.transition = 'transform 0.2s ease-out';
-        content.style.transform = `scale(${scale})`;
-      }
-    });
-  }, [currentLevel]);
+  overlaysRef.current.forEach((overlay) => {
+    const content = overlay.getContent() as HTMLElement;
+    if (content) {
+      // ✅ highlighted 마커는 CSS 애니메이션이 담당하므로 인라인 transform 적용 제외
+      if (content.classList.contains('highlighted')) return;
+      content.style.transition = 'transform 0.2s ease-out';
+      content.style.transform = `scale(${scale})`;
+    }
+  });
+}, [currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
