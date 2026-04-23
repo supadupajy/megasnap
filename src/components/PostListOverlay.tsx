@@ -35,7 +35,7 @@ const ObservedPostItem = ({
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
-  const [isNearVisible, setIsNearVisible] = useState(false); // ✅ 화면 근처 도달 상태 추가
+  const [isNearVisible, setIsNearVisible] = useState(false); 
   const [fullPost, setFullPost] = useState<Post>(post);
 
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
@@ -99,11 +99,18 @@ const ObservedPostItem = ({
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
-        onPlayingChange(post.id, entry.isIntersecting);
+        
+        // 화면에서 50% 이상 사라지거나 나타날 때 재생 상태 업데이트
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          onPlayingChange(post.id, true);
+        } else if (!entry.isIntersecting || entry.intersectionRatio < 0.5) {
+          // 화면 밖으로 나가거나 50% 미만으로 보이면 재생 중지 요청
+          onPlayingChange(post.id, false);
+        }
       },
       { 
-        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
-        rootMargin: '0px'
+        threshold: [0, 0.5, 1.0], 
+        rootMargin: '-10% 0px -10% 0px'
       }
     );
 
@@ -176,7 +183,20 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
-  
+
+  // 재생 중인 포스트 관리 콜백
+  const handlePlayingChange = useCallback((id: string, isIntersecting: boolean) => {
+    setPlayingPostId(current => {
+      if (isIntersecting) {
+        // 새로 화면 중심에 들어온 녀석을 재생 대상으로 설정
+        return id;
+      } else {
+        // 화면 밖으로 나가는 녀석이 현재 재생 중이던 녀석이면 재생 중지
+        return current === id ? null : current;
+      }
+    });
+  }, []);
+
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
     if (viewedIds.size > 0) {
@@ -361,14 +381,6 @@ const PostListOverlay = ({
       (window as any).__isPostListOpen = isOpen;
     }
   }, [isOpen]);
-
-  const handlePlayingChange = (id: string, isIntersecting: boolean) => {
-    if (isIntersecting) {
-      setPlayingPostId(id);
-    } else {
-      setPlayingPostId(null);
-    }
-  };
 
   if (!isOpen) return null;
 
