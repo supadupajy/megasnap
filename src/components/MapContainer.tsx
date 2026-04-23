@@ -372,11 +372,12 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // ✅ [FIX] 모든 마커에 기본 애니메이션 클래스 적용
-        content.className = 'marker-container kakao-overlay marker-appear-animation';
+        // ✅ [FIX] 클래스 명칭 통일 및 애니메이션 즉시 적용
+        content.className = 'marker-container kakao-overlay animate-marker-appear';
         
+        // ✅ [FIX] 인라인 스타일로 애니메이션 트리거 보강
         content.style.opacity = '0';
-        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
+        content.style.transition = 'opacity 0.3s ease-out';
         content.style.transformOrigin = 'bottom center';
         content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
         content.style.setProperty('transform', `scale(${scale})`, 'important');
@@ -421,12 +422,14 @@ const MapContainer = ({
 
           // ✅ [FIX] isNewRealtime인 경우 애니메이션 강제 트리거
           if (isNewRealtime) {
-            content.classList.remove('marker-appear-animation');
+            content.classList.remove('animate-marker-appear');
+            content.classList.remove('animate-realtime-marker-appear');
             // reflow 강제 발생시켜 애니메이션 초기화
             void content.offsetWidth; 
-            content.classList.add('marker-appear-animation');
+            content.classList.add('animate-realtime-marker-appear');
+            content.classList.add('realtime-spark');
             
-            // 실시간 효과 소모 처리 (한 번만 실행되도록)
+            // 실시간 효과 소모 처리
             post.isNewRealtime = false;
           }
 
