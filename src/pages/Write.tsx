@@ -193,13 +193,9 @@ const Write = () => {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Leave your trace</p>
         </div>
         <div className="flex items-center gap-2">
-          {currentPage === 2 ? (
+          {currentPage === 2 && (
             <button onClick={() => setCurrentPage(1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
               <ChevronLeft className="w-6 h-6" />
-            </button>
-          ) : (
-            <button onClick={() => navigate(-1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
-              <X className="w-6 h-6" />
             </button>
           )}
         </div>
