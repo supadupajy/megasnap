@@ -205,7 +205,7 @@ const Messages = () => {
     <ChevronLeft className="w-6 h-6" />
   </button>
   <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+    <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
   </div>
   <button
     onClick={() => navigate('/friends')}
