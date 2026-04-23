@@ -520,14 +520,26 @@ const Write = () => {
                 />
               </div>
 
-              <Button
-                className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
-                onClick={handlePost}
-                disabled={isSubmitting || !content.trim()}
-              >
-                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
-                게시물 등록하기
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
+                  onClick={handlePost}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
+                  게시물 등록하기
+                </Button>
+                {!content.trim() && (
+                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                    내용을 입력해주세요
+                  </p>
+                )}
+                {mediaFiles.length === 0 && (
+                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                    사진이나 동영상을 선택해주세요
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
