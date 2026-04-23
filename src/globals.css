@@ -146,14 +146,18 @@
 }
 
 @keyframes marker-highlight-sequence {
-  0% { transform: scale(1); }
-  10% { transform: scale(1.6); }
-  90% { transform: scale(1.6); }
+  0%   { transform: scale(1); }
+  /* ✅ 부드럽게 커짐 (0% ~ 15%) */
+  15%  { transform: scale(1.6); }
+  /* ✅ 핑 효과 동안 크기 유지 (15% ~ 85%) */
+  85%  { transform: scale(1.6); }
+  /* ✅ 부드럽게 작아짐 (85% ~ 100%) */
   100% { transform: scale(1); }
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  animation: marker-highlight-sequence 6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  animation: marker-highlight-sequence 6s ease-in-out forwards !important;
+  transition: none !important;
   z-index: 50;
 }
 
