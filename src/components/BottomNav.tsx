@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Map, Flame, Plus, Search, User } from 'lucide-react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { useAuth } from './AuthProvider';
