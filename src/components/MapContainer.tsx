@@ -537,11 +537,18 @@ useEffect(() => {
       return false;
     };
 
+    // ✅ [FIX] 동영상 포스트인 경우, 썸네일 대신 실제 비디오 URL을 사용하여 브라우저가 첫 프레임을 보여줄 수 있게 함
     let displayImage = post.image;
-    if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
+    const isVideo = !!post.videoUrl || !!post.youtubeUrl;
+
+    if (isVideo && post.videoUrl) {
+      // 일반 비디오 파일인 경우 비디오 URL 자체를 사용하여 <img> 태그의 에러를 방지하고 처리
+      displayImage = post.videoUrl;
+    } else if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
       displayImage = getFallbackImage(String(post.id));
     }
-    if (isBrokenUrl(displayImage)) {
+    
+    if (isBrokenUrl(displayImage) && !isVideo) {
       displayImage = getFallbackImage(String(post.id));
     }
 
@@ -581,7 +588,10 @@ useEffect(() => {
         ${labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="${shineClass}">
-            <img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}" />
+            ${isVideo && post.videoUrl ? 
+              `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}"></video>` : 
+              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}" />`
+            }
             <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1; ${isViewed ? 'background: rgba(40,40,40,0.9); color: rgba(255,255,255,0.5);' : ''}">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>

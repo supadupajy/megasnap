@@ -338,12 +338,26 @@ const Profile = () => {
                         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
                         onClick={() => navigate(`/post/${post.id}`)}
                       >
-                        <img
-                          src={post.image_url || post.image}
-                          alt=""
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                          onError={() => handleImageError(post.id)}
-                        />
+                        {post.videoUrl ? (
+                          <video
+                            src={`${post.videoUrl}#t=0.5`}
+                            className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                            muted
+                            playsInline
+                          />
+                        ) : (
+                          <img
+                            src={post.image_url || post.image}
+                            alt=""
+                            className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                            onError={() => handleImageError(post.id)}
+                          />
+                        )}
+                        {(post.videoUrl || post.youtubeUrl) && (
+                          <div className="absolute top-2 right-2 z-10">
+                            <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
+                          </div>
+                        )}
                       </div>
                     ))}
                     {myPosts.length === 0 && !isDataLoading && (

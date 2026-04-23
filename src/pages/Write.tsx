@@ -232,46 +232,38 @@ const Write = () => {
       const uploadedUrls: string[] = [];
       const mediaToUpload = [...mediaFiles];
 
-      // ✅ [FIX] 동영상 업로드 시 storage 폴더 경로 및 파일 확장자 처리 강화
       for (const [index, media] of mediaToUpload.entries()) {
         const timestamp = new Date().getTime();
-        // 동영상은 post-videos, 이미지는 post-images 버킷 사용
         const bucketName = media.type === 'video' ? 'post-videos' : 'post-images';
         const fileExt = media.file.name.split('.').pop() || (media.type === 'video' ? 'mp4' : 'jpg');
         const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        console.log(`[Write] Uploading ${media.type}:`, filePath);
-
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, media.file, {
           cacheControl: '3600',
           upsert: false,
-          // ✅ 동영상인 경우 contentType 명시 (브라우저/OS 호환성)
           contentType: media.file.type || (media.type === 'video' ? 'video/mp4' : 'image/jpeg')
         });
 
-        if (uploadError) {
-          console.error(`[Write] ${media.type} upload error:`, uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
         
         const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
 
-      if (uploadedUrls.length === 0) {
-        throw new Error('업로드된 파일 URL이 없습니다.');
-      }
+      // ✅ [FIX] 위치 정보(latitude, longitude)를 initialLocation에서 정확히 가져오도록 보장
+      // location.state에서 전달된 좌표를 최우선으로 사용
+      const postLat = initialLocation?.lat || null;
+      const postLng = initialLocation?.lng || null;
 
-      // ✅ [FIX] video_url 컬렉션 처리: 첫 번째 미디어가 동영상인 경우 video_url에 할당
       const isFirstMediaVideo = mediaToUpload[0]?.type === 'video';
       
       const postData = {
         content: content.trim(),
         location_name: address || '위치 미지정',
-        latitude: initialLocation?.lat || null,
-        longitude: initialLocation?.lng || null,
-        image_url: uploadedUrls[0], // 썸네일 대용 (동영상의 경우 동영상 URL)
+        latitude: postLat, // ✅ 확실한 변수 사용
+        longitude: postLng, // ✅ 확실한 변수 사용
+        image_url: uploadedUrls[0], 
         images: uploadedUrls,
         user_id: authUser.id,
         user_name: profile?.nickname || '탐험가',
@@ -280,18 +272,13 @@ const Write = () => {
         video_url: isFirstMediaVideo ? uploadedUrls[0] : null,
       };
 
-      console.log('[Write] Submitting post data:', postData);
-
       const { data, error: insertError } = await supabase
         .from('posts')
         .insert(postData)
         .select()
         .single();
 
-      if (insertError) {
-        console.error('[Write] Post insert error:', insertError);
-        throw insertError;
-      }
+      if (insertError) throw insertError;
 
       showSuccess('게시물이 등록되었습니다! ✨');
       clear();
