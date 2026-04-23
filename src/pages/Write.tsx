@@ -275,15 +275,16 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
 >
                             {media.type === 'image' ? (
                               <img 
-                                key={`img-${media.url}`}
-                                src={media.url} 
-                                className="w-full h-full object-cover pointer-events-none select-none"
-                                style={{
-                                  objectPosition: media.orientation === 'portrait' 
-                                    ? `50% ${media.crop?.y ?? 50}%` 
-                                    : `${media.crop?.x ?? 50}% 50%`
-                                }}
-                              />
+  key={`img-${media.url}`}
+  ref={el => { imgRefs.current[idx] = el; }}
+  src={media.url} 
+  className="w-full h-full object-cover pointer-events-none select-none"
+  style={{
+    objectPosition: media.orientation === 'portrait' 
+      ? `50% ${media.crop?.y ?? 50}%` 
+      : `${media.crop?.x ?? 50}% 50%`
+  }}
+/>
                             ) : (
                               <video 
                                 key={`video-${media.url}`}
