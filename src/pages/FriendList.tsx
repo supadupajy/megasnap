@@ -49,7 +49,7 @@ const FriendList = () => {
 
   return (
     <div className="min-h-screen bg-white pb-24 no-scrollbar">
-      <div className="flex flex-col pt-4">
+      <div className="flex flex-col pt-6">
         {/* THE NORTH FACE 광고 배너 */}
         <div className="px-4 py-2">
           <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
@@ -74,13 +74,13 @@ const FriendList = () => {
           </div>
         </div>
 
-        {/* 닉네임 검색 창 - 배너 넓이와 동일하게 설정 */}
-        <div className="px-4 py-3">
+        {/* 닉네임 검색 창 - 광고 배너 넓이와 일치 */}
+        <div className="px-4 py-4">
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100"
+              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
