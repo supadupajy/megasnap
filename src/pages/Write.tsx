@@ -274,7 +274,8 @@ const Write = () => {
               </div>
 
               {mediaFiles.length > 0 ? (
-                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
+                <div className="w-full rounded-[32px] overflow-hidden shadow-2xl relative" style={{ height: '300px' }}>
+
                   <Carousel 
                     setApi={setApi} 
                     className="w-full h-full"
