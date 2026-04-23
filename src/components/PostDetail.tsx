@@ -482,35 +482,78 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
+                      {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
-                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {/* [FINAL FIX] 영상 정보가 하나라도 있으면 이미지 섹션은 아예 생성하지 않음 */}
-                          {(videoId || vUrl) ? (
-                            <div className="absolute inset-0 w-full h-full z-[100] bg-black">
-                              {videoId ? (
-                                <iframe
-                                  key={`yt-${currentPost.id}-${videoId}`}
-                                  src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                                  className="absolute inset-0 w-full h-full border-0"
-                                  allow="autoplay; encrypted-media"
-                                  allowFullScreen
-                                />
+                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+
+                          {youtubeId ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <iframe
+                                    ref={iframeRef}
+                                    key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                    className="w-full h-full border-0"
+                                    src={youtubeSrc}
+                                    title="YouTube video player"
+                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                  {/* 🔇 음소거 토글 버튼 */}
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
                               ) : (
-                                <video 
-                                  key={`vid-${currentPost.id}-${vUrl}`}
-                                  src={vUrl} 
-                                  className="absolute inset-0 w-full h-full object-cover" 
-                                  autoPlay 
-                                  loop 
-                                  playsInline 
-                                  controls 
-                                />
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                  {/* 🔍 [DEBUG] 화면에도 상태 표시 */}
+                                  <span className="text-white/40 text-[10px]">youtubeId: {youtubeId ?? 'null'}</span>
+                                </div>
                               )}
                             </div>
+
+                          ) : vUrl ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <video
+                                    ref={videoRef}
+                                    key={`detail-vid-${currentPost.id}-${vUrl}`}
+                                    src={vUrl}
+                                    className="w-full h-full object-cover"
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                    muted={isMuted}
+                                    controls={false}
+                                  />
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-black gap-2">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                  <span className="text-white/40 text-[10px]">video 로딩 중...</span>
+                                </div>
+                              )}
+                            </div>
+
                           ) : (
-                            <div className="relative w-full h-full z-10">
-                              {/* 이미지 슬라이더 (영상이 절대 없을 때만 실행) */}
+                            <div className="relative w-full h-full z-10 bg-gray-100">
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
