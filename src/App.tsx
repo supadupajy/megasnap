@@ -143,9 +143,9 @@ const AnimatedRoutes = () => {
       <main className={`relative ${isChatPage ? "h-full" : ""}`}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
-            key={location.pathname}
-            initial={{ 
-              opacity: 0, 
+            key={location.pathname === '/write' ? '/' : location.pathname}
+            initial={{
+              opacity: 0,
               x: isMainTab ? 0 : (isBackAction ? -100 : 100),
               scale: isMainTab ? 0.98 : 1
             }}
@@ -167,7 +167,6 @@ const AnimatedRoutes = () => {
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
@@ -178,13 +177,8 @@ const AnimatedRoutes = () => {
               <Route path="/profile/follow/:userId" element={<Follow />} />
               <Route path="/profile/friends" element={<FriendList />} />
               <Route path="/profile/:userId" element={<UserProfile />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/messages/:chatId" element={<Chat />} />
-              {/* [FIX] /write 경로는 Index 내부에서 처리하므로 여기서 제거하거나 유지하되 Index가 우선권 가짐 */}
-              <Route path="/write" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+              {/* [FIX] 메인 탭과 작성 페이지를 동일한 라우트 구조 하에 두어 언마운트 방지 */}
+              <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
           </motion.div>
         </AnimatePresence>

@@ -180,19 +180,19 @@ const Write = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="fixed inset-0 bg-white flex flex-col z-[100] overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col pointer-events-none"
     >
       {/* 1. 상단 헤더 공간 (88px) - 투명하게 설정하여 뒤의 HeaderAdBanner가 보이도록 함 */}
-      <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
+      <div className="h-[88px] w-full shrink-0" />
 
       {/* 2. 고정 영역: 페이지 타이틀 */}
-      <div className="shrink-0 bg-white z-40 border-b border-gray-50">
-        <div className="px-4 py-4 flex items-center gap-3 bg-white">
+      <div className="shrink-0 bg-white z-40 border-b border-gray-50 pointer-events-auto rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+        <div className="px-4 py-4 flex items-center gap-3 bg-white rounded-t-3xl">
           {currentPage === 2 ? (
             <button onClick={() => setCurrentPage(1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
               <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -209,7 +209,7 @@ const Write = () => {
       </div>
 
       {/* 3. 실제 스크롤이 일어나는 콘텐츠 영역 */}
-      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white pointer-events-auto">
         <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
             <div className="space-y-6">

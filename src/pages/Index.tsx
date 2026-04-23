@@ -957,10 +957,9 @@ const Index = () => {
       </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       
-      {/* [FIX] /write 경로일 때만 WritePage를 렌더링하여 애니메이션 및 상단 배너 가시성 확보 */}
-      <Routes>
-        <Route path="write" element={<WritePage />} />
-      </Routes>
+      <AnimatePresence>
+        {location.pathname === '/write' && <WritePage />}
+      </AnimatePresence>
     </>
   );
 };
