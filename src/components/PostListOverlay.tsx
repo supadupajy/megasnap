@@ -107,7 +107,7 @@ const PostListOverlay = ({
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !currentBounds) return;
+    if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     
     try {
@@ -115,14 +115,20 @@ const PostListOverlay = ({
         ? new Date(posts[posts.length - 1].createdAt).toISOString()
         : new Date().toISOString();
 
-      // [FIX] 현재 보고 있는 지도의 영역(bounds) 내에서만 추가 포스팅을 불러오도록 쿼리 수정
-      const { data, error } = await supabase
+      // [FIX] currentBounds가 없을 경우 전역에서 불러오도록 폴백 처리
+      let query = supabase
         .from('posts')
-        .select('*')
-        .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
-        .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat))
-        .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng))
-        .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng))
+        .select('*');
+
+      if (currentBounds) {
+        query = query
+          .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
+          .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat))
+          .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng))
+          .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng));
+      }
+
+      const { data, error } = await query
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -191,6 +197,7 @@ const PostListOverlay = ({
           return [...prev, ...filteredNew];
         });
         
+        // 10개를 요청했는데 10개 미만으로 오면 더 이상 데이터가 없는 것임
         if (data.length < 10) setHasMore(false);
       } else {
         setHasMore(false);
