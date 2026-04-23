@@ -411,18 +411,7 @@ const Write = () => {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 </div>
-                <button
-                  onClick={() => mediaInputRef.current?.click()}
-                  className={cn(
-                    "w-full h-20 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all",
-                    mediaFiles.length > 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-gray-50"
-                  )}
-                >
-                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                  <span className={cn("font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
-                    {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
-                  </span>
-                </button>
+                
                 <input
                   type="file"
                   ref={mediaInputRef}
