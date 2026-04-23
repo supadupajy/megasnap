@@ -115,10 +115,53 @@ const Write = () => {
         orientation = img.width >= img.height ? 'landscape' : 'portrait';
       }
 
-      return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1, orientation } as MediaFile;
+      return { file, url, type, thumbnail, crop: { x: 50, y: 50 }, zoom: 1, orientation } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newMediaItems]);
+  };
+
+  const updateMediaCrop = (idx: number, x: number, y: number) => {
+    const newMedia = [...mediaFiles];
+    newMedia[idx] = { 
+      ...newMedia[idx], 
+      crop: { 
+        x: Math.max(0, Math.min(100, x)), 
+        y: Math.max(0, Math.min(100, y)) 
+      } 
+    };
+    setMediaFiles(newMedia);
+  };
+
+  const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+    if (mediaFiles[idx].type !== 'image') return;
+    
+    const media = mediaFiles[idx];
+    const isPortrait = media.orientation === 'portrait';
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+    if (!isDraggingRef.current) {
+      isDraggingRef.current = true;
+      dragStartRef.current = { x: clientX, y: clientY };
+      return;
+    }
+
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+    
+    dragStartRef.current = { x: clientX, y: clientY };
+
+    const sensitivity = 0.2;
+    const newX = isPortrait ? media.crop!.x : media.crop!.x - (deltaX * sensitivity);
+    const newY = isPortrait ? media.crop!.y - (deltaY * sensitivity) : media.crop!.y;
+
+    updateMediaCrop(idx, newX, newY);
+  };
+
+  const stopDragging = () => {
+    isDraggingRef.current = false;
   };
 
   const captureVideoThumbnail = (url: string): Promise<string> => {
@@ -238,12 +281,35 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                   <Carousel setApi={setApi} className="w-full h-full">
                     <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
-                        <CarouselItem key={idx} className="pl-0 h-full relative">
-                          {media.type === 'image' ? (
-                            <img src={media.url} className="w-full h-full object-cover" />
-                          ) : (
-                            <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                          )}
+                        <CarouselItem key={idx} className="pl-0 h-full relative select-none">
+                          <div 
+                            className="w-full h-full relative overflow-hidden touch-none"
+                            onMouseDown={(e) => handleDrag(e, idx)}
+                            onMouseMove={(e) => isDraggingRef.current && handleDrag(e, idx)}
+                            onMouseUp={stopDragging}
+                            onMouseLeave={stopDragging}
+                            onTouchStart={(e) => handleDrag(e, idx)}
+                            onTouchMove={(e) => handleDrag(e, idx)}
+                            onTouchEnd={stopDragging}
+                          >
+                            {media.type === 'image' ? (
+                              <img 
+                                src={media.url} 
+                                className="absolute max-w-none transition-none pointer-events-none"
+                                style={{
+                                  width: media.orientation === 'portrait' ? '100%' : 'auto',
+                                  height: media.orientation === 'portrait' ? 'auto' : '100%',
+                                  left: media.orientation === 'portrait' ? '0' : `${50 - (media.crop?.x || 50)}%`,
+                                  top: media.orientation === 'portrait' ? `${50 - (media.crop?.y || 50)}%` : '0',
+                                  transform: media.orientation === 'portrait' ? 'translateY(0)' : 'translateX(0)',
+                                  minWidth: '100%',
+                                  minHeight: '100%',
+                                }}
+                              />
+                            ) : (
+                              <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                            )}
+                          </div>
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
