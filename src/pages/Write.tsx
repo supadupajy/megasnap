@@ -302,31 +302,34 @@ const Write = () => {
     try {
       const uploadedUrls: string[] = [];
       for (const media of mediaFiles) {
-        const timestamp = Date.now();
+        const timestamp = new Date().getTime();
         const folder = media.type === 'video' ? 'post-videos' : 'post-images';
         const fileExt = media.file.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
+
         const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file);
         if (uploadError) throw uploadError;
+
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
 
-      const { error: insertError } = await supabase
+      // [FIX] images 컬럼에 업로드된 모든 URL 배열을 저장
+      const { data: insertData, error: insertError } = await supabase
         .from('posts')
         .insert({
-          content,
+          content: content,
           location_name: address || '위치 미지정',
           latitude: initialLocation?.lat || null,
           longitude: initialLocation?.lng || null,
-          image_url: uploadedUrls[0],
-          images: uploadedUrls,
+          image_url: uploadedUrls[0], // 대표 이미지 (첫 번째)
+          images: uploadedUrls,      // [핵심] 전체 이미지 배열 저장
           user_id: authUser.id,
           user_name: profile?.nickname || '탐험가',
           user_avatar: profile?.avatar_url,
-          category,
-          video_url: mediaFiles[0]?.type === 'video' ? uploadedUrls[0] : null,
+          category: category,
+          video_url: mediaFiles[0].type === 'video' ? uploadedUrls[0] : null,
         })
         .select()
         .single();
