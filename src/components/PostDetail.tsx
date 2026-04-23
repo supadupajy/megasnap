@@ -56,24 +56,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [dbPostData, setDbPostData] = useState<any>(null);
 
-  const [iframeReady, setIframeReady] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // [CRITICAL FIX] "여기보기"의 PostItem.tsx와 동일하게 youtubeUrl, videoUrl 필드 강제 보정
+  const currentPost = useMemo(() => {
+    const basePost = posts[currentPostIndex];
+    if (!basePost) return null;
+    
+    // DB에서 직접 가져온 필드들(youtube_url 등)을 basePost의 속성으로 병합
+    const raw = dbPostData && dbPostData.id === basePost.id ? dbPostData : basePost;
+    
+    // Index.tsx의 mapDbToPost 로직을 그대로 가져와서 필드 복원
+    return {
+      ...basePost,
+      ...raw,
+      youtubeUrl: raw.youtube_url || raw.youtubeUrl || raw.youtube_id,
+      videoUrl: raw.video_url || raw.videoUrl
+    };
+  }, [posts, currentPostIndex, dbPostData]);
 
-  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  // [CRITICAL FIX] getYouTubeId 함수를 내부에서 명시적으로 정의하여 외부 유틸리티 의존성 제거
+  const getYouTubeIdLocal = (url?: string) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+    return match ? match[1] : null;
+  };
 
   const videoId = useMemo(() => {
     if (!currentPost) return null;
-    // [FINAL CHECK] 가능한 모든 필드에서 유튜브 ID 추출 시도
-    const rawUrl = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtubeId || currentPost.youtube_id;
-    return getYouTubeIdLocal(rawUrl);
+    return getYouTubeIdLocal(currentPost.youtubeUrl);
   }, [currentPost]);
 
   const vUrl = useMemo(() => {
     if (!currentPost) return null;
-    return currentPost.videoUrl || currentPost.video_url;
+    return currentPost.videoUrl;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -484,13 +500,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - 영상이 있으면 이미지는 아예 렌더링하지 않음 */}
+                      {/* 미디어 영역 - "여기보기"와 100% 동일한 구조로 복제 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
                           {videoId ? (
                             <div className="absolute inset-0 w-full h-full z-50">
                               <iframe
-                                key={`yt-detail-${currentPost.id}-${videoId}`}
+                                key={`yt-${currentPost.id}-${videoId}`}
                                 src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
                                 className="w-full h-full border-0"
                                 allow="autoplay; encrypted-media"
@@ -500,7 +516,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           ) : vUrl ? (
                             <div className="absolute inset-0 w-full h-full z-50">
                               <video 
-                                key={`vid-detail-${currentPost.id}-${vUrl}`}
+                                key={`vid-${currentPost.id}-${vUrl}`}
                                 src={vUrl} 
                                 className="w-full h-full object-cover" 
                                 autoPlay 
