@@ -169,7 +169,7 @@ const Index = () => {
       
       const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(img => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      if (Number(likesCount) >= 8000) borderType = 'popular';
+      if (Number(likesCount) >= 9000) borderType = 'popular';
       else if (!isAd) {
         let h = 0;
         const idStr = p.id.toString();
