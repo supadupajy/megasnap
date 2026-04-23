@@ -278,6 +278,8 @@ const MapContainer = ({
       const position = new kakao.maps.LatLng(post.lat, post.lng);
       if (!bounds.contain(position)) return;
 
+      // viewedPostIds(props)와 internalViewedIds(event) 합치기
+      const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
       const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
@@ -319,16 +321,15 @@ const MapContainer = ({
             existingOverlay.setZIndex(10000);
           }
         } else {
-  const content = existingOverlay.getContent() as HTMLElement;
-  if (existingOverlay.getMap() === null) {
-    existingOverlay.setMap(mapInstance.current);
-  }
-  if (content.getAttribute('data-content-state') !== contentStateKey) {
-    content.innerHTML = getMarkerInnerHtml(post, isViewed);
-    content.setAttribute('data-content-state', contentStateKey);
-  }
-  // ✅ highlighted 토글 제거 — 아래 이벤트 리스너가 담당
-}
+          const content = existingOverlay.getContent() as HTMLElement;
+          if (existingOverlay.getMap() === null) {
+            existingOverlay.setMap(mapInstance.current);
+          }
+          if (content.getAttribute('data-content-state') !== contentStateKey) {
+            content.innerHTML = getMarkerInnerHtml(post, isViewed);
+            content.setAttribute('data-content-state', contentStateKey);
+          }
+        }
       }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
