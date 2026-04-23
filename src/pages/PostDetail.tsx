@@ -190,7 +190,7 @@ const PostDetail = () => {
     {/* Scrollable Content Area */}
     <main className="pb-28">
       {allPosts.map((p) => (
-        <div key={p.id} id={`post-${p.id}`}>
+        <div key={p.id} id={`post-${p.id}`} className="scroll-mt-[144px]">
           <PostItem 
             post={p} 
             disablePulse={true}

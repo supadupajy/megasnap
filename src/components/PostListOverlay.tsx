@@ -134,7 +134,7 @@ const ObservedPostItem = ({
   }, [post.id, onVisible, onPlayingChange]);
 
   return (
-    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[40px]">
+    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-0">
       <PostItem 
         post={fullPost}
         isViewed={isViewed} 
