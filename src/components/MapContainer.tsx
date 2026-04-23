@@ -318,11 +318,14 @@ const MapContainer = ({
 
   // ✅ highlighted 클래스 토글
   if (isHighlighted) {
-    if (!content.classList.contains('highlighted')) {
+  if (!content.classList.contains('highlighted')) {
+    // ✅ 지도 이동 완료 후(smoothMoveTo 기준 최대 1.2s) 애니메이션 시작
+    setTimeout(() => {
       content.classList.add('highlighted');
       existingOverlay.setZIndex(10000);
-    }
-  } else {
+    }, 1300); // 지도 이동 duration(최대 1200ms) + 여유 100ms
+  }
+} else {
     if (content.classList.contains('highlighted')) {
       content.classList.remove('highlighted');
       existingOverlay.setZIndex(post.isAd ? 500 : post.borderType !== 'none' ? 400 : 300);
