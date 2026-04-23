@@ -76,6 +76,16 @@ const Write = () => {
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!api) return;
+
+    setCurrentSlide(api.selectedScrollSnap());
+
+    api.on("select", () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    });
+  }, [api]);
+
+  useEffect(() => {
     if (initialLocation) {
       setIsLoadingAddress(true);
       const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
