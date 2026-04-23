@@ -129,15 +129,15 @@ const Index = () => {
   setSearchResultLocation(null);
   if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-  // ✅ 하이라이트 먼저 null로 초기화
+  // ✅ 하이라이트 제거 후 지도 이동, 하이라이트는 window 이벤트로 MapContainer에 직접 전달
   setHighlightedPostId(null);
-
-  // ✅ 지도 이동 시간(최대 1200ms) + 여유 후에 하이라이트 적용
   setMapCenter(center || { lat: post.lat, lng: post.lng });
+
   highlightTimeoutRef.current = window.setTimeout(() => {
-    setHighlightedPostId(post.id);
+    // ✅ 직접 이벤트로 MapContainer에 전달 (React 리렌더링 우회)
+    window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id } }));
     highlightTimeoutRef.current = window.setTimeout(() => {
-      setHighlightedPostId(null);
+      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: null } }));
       highlightTimeoutRef.current = null;
     }, 6000);
   }, 1300);
