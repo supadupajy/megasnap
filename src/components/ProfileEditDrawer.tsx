@@ -89,8 +89,10 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       {/* z-index를 150으로 높여 BottomNav(100)보다 위에 오도록 설정 */}
       <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[90]">
-        {/* Handle Bar */}
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+  {/* 상단 여백으로 창을 아래로 밀기 */}
+  <div className="h-16 shrink-0" />
+  {/* Handle Bar */}
+  <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
         <div className="flex flex-col flex-1 min-h-0">
           {/* Header */}
