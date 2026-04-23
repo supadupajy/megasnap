@@ -312,10 +312,6 @@ const PostListOverlay = ({
     >
       {/* Header */}
 <div className="relative flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} Posts</p>
-  </div>
   <div />
   <button 
     onClick={onClose}
@@ -324,6 +320,11 @@ const PostListOverlay = ({
     <ChevronDown className="w-6 h-6" />
   </button>
 </div>
+  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+    <h2 className="text-lg font-black text-gray-900 tracking-tight">주변 포스트</h2>
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} Posts</p>
+  </div>
+  
 
       {/* List Content */}
       <div 
