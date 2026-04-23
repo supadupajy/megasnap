@@ -32,10 +32,12 @@ const ObservedPostItem = ({
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // ✅ 사용자가 게시물을 충분히 봤는지 감지 (60% 이상 노출 시 읽음 처리)
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
           onVisible(post.id);
+          // 한 번 읽었으면 더 이상 감시하지 않음
           observer.unobserve(entry.target);
         }
       },
@@ -89,6 +91,7 @@ const PostListOverlay = ({
   onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
+  const { viewedIds, markAsViewed } = useViewedPosts(); // ✅ 읽음 처리 훅 연결
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -313,17 +316,17 @@ const PostListOverlay = ({
         {posts.length > 0 ? (
           <div className="flex flex-col">
             {posts.map((post) => (
-              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <PostItem 
-                  post={post}
-                  onLikeToggle={() => {}}
-                  onLocationClick={(e, lat, lng) => {
-                    window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
-                  }}
-                  onDelete={(id) => onDeletePost?.(id)}
-                  autoPlayVideo={true}
-                />
-              </div>
+              <ObservedPostItem 
+                key={post.id}
+                post={post}
+                isViewed={viewedIds.has(post.id)}
+                onVisible={(id) => markAsViewed(id)} // ✅ 화면에 보이면 읽음 처리 실행
+                onLikeToggle={() => {}}
+                onLocationClick={(e, lat, lng) => {
+                  window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
+                }}
+                onDelete={(id) => onDeletePost?.(id)}
+              />
             ))}
             
             {/* Pull Up Loading Area - 항상 로딩 시도가 가능하도록 노출 */}
