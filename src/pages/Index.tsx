@@ -433,7 +433,22 @@ const Index = () => {
         </div>
       </motion.div>
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
-      <AnimatePresence>{isPostListOpen && <PostListOverlay key="post-list-overlay" isOpen={isPostListOpen} onClose={() => setIsPostListOpen(false)} initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} selectedCategories={selectedCategories} timeValueHours={timeValue} authUserId={authUser?.id} onDeletePost={handlePostDeleted} />}</AnimatePresence>
+      <AnimatePresence>
+        {isPostListOpen && (
+          <PostListOverlay 
+            key="post-list-overlay" 
+            isOpen={isPostListOpen} 
+            onClose={() => setIsPostListOpen(false)} 
+            initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
+            mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
+            currentBounds={mapData?.bounds} 
+            selectedCategories={selectedCategories} 
+            timeValueHours={timeValue} 
+            authUserId={authUser?.id} 
+            onDeletePost={handlePostDeleted} 
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={allPosts} initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onDelete={handlePostDeleted} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }} />
     </>

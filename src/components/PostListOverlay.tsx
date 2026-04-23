@@ -103,9 +103,9 @@ const PostListOverlay = ({
     setHasMore(true);
   }, [initialPosts]);
 
-  // Infinite Scroll Handler - 기존의 자동 로딩 로직은 제거하거나 pull-up에 통합
+  // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMore || !hasMore || !currentBounds) return;
     setIsLoadingMore(true);
     
     try {
@@ -113,9 +113,14 @@ const PostListOverlay = ({
         ? new Date(posts[posts.length - 1].createdAt).toISOString()
         : new Date().toISOString();
 
+      // [FIX] 현재 보고 있는 지도의 영역(bounds) 내에서만 추가 포스팅을 불러오도록 쿼리 수정
       const { data, error } = await supabase
         .from('posts')
         .select('*')
+        .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
+        .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat))
+        .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng))
+        .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng))
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -127,6 +132,23 @@ const PostListOverlay = ({
           const isAd = p.content?.trim().startsWith('[AD]');
           const likesCount = Number(p.likes || 0);
           
+          // [FIX] 프로필 정보(닉네임, 아바타)를 올바르게 불러오기 위한 추가 쿼리
+          let userName = p.user_name || '탐험가';
+          let userAvatar = p.user_avatar || '';
+          
+          if (p.user_id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('nickname, avatar_url')
+              .eq('id', p.user_id)
+              .maybeSingle();
+            
+            if (profileData) {
+              userName = profileData.nickname || userName;
+              userAvatar = profileData.avatar_url || userAvatar;
+            }
+          }
+
           let finalImage = p.image_url;
           if (finalImage?.includes('unsplash.com')) {
             finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
@@ -134,7 +156,11 @@ const PostListOverlay = ({
           
           return {
             id: p.id,
-            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+            user: { 
+              id: p.user_id, 
+              name: userName, 
+              avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` 
+            },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '',
             location: p.location_name || '알 수 없는 장소',
             lat: p.latitude,
@@ -155,7 +181,14 @@ const PostListOverlay = ({
           };
         }));
 
-        setPosts(prev => [...prev, ...newPosts]);
+        // 거리순 정렬 유지를 위해 기존 posts와 합친 후 거리 계산을 할 수도 있으나,
+        // 여기서는 일단 영역 내의 시간순 추가 데이터를 붙여줍니다.
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
+          return [...prev, ...filteredNew];
+        });
+        
         if (data.length < 10) setHasMore(false);
       } else {
         setHasMore(false);
@@ -166,7 +199,7 @@ const PostListOverlay = ({
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore]);
+  }, [posts, isLoadingMore, hasMore, currentBounds]);
 
   // Pull Up 제스처 핸들러
   const handleTouchStart = (e: React.TouchEvent) => {
