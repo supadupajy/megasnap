@@ -14,16 +14,16 @@ interface MapContainerProps {
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
   center?: { lat: number; lng: number };
-  level?: number; 
+  level?: number;
   searchResultLocation?: { lat: number; lng: number } | null;
+  onMoveComplete?: () => void; // ✅ 추가
 }
 
 const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
 
-// [FIX] 알려진 깨진 Unsplash ID 블랙리스트 관리
 const BROKEN_UNSPLASH_IDS = new Set([
   "photo-1548199973-03cbf5292374",
-  "photo-1501785888041-af3ef285b470", // [CRITICAL] 노란 꽃 호수 ID 추가
+  "photo-1501785888041-af3ef285b470",
 ]);
 
 const MapContainer = ({ 
@@ -35,7 +35,8 @@ const MapContainer = ({
   onMapClick,
   center,
   level = 5,
-  searchResultLocation
+  searchResultLocation,
+  onMoveComplete, // ✅ 추가
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -55,8 +56,10 @@ const MapContainer = ({
 
   const centerRef = useRef(center);
   const levelRef = useRef(5);
+  const onMoveCompleteRef = useRef(onMoveComplete);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
+  useEffect(() => { onMoveCompleteRef.current = onMoveComplete; }, [onMoveComplete]);
 
   const { user: authUser } = useAuth();
 
@@ -76,21 +79,15 @@ const MapContainer = ({
     const handleAnimateDelete = (e: any) => {
       const postId = e.detail?.id;
       if (!postId) return;
-      
       try {
         const overlay = overlaysRef.current.get(postId);
         if (overlay) {
           const content = overlay.getContent();
           if (content instanceof HTMLElement) {
-            // [FIX] 클래스 조작 시 발생할 수 있는 잠재적 에러 방지
             content.classList.remove('marker-appear-animation');
             content.classList.add('marker-disappear-animation');
-            
-            // 물리적으로 DOM에서 제거되기 전까지 상호작용 차단
             content.style.pointerEvents = 'none';
           }
-          
-          // 일정 시간 후 오버레이 인스턴스 자체를 안전하게 제거
           setTimeout(() => {
             if (overlaysRef.current.has(postId)) {
               const targetOverlay = overlaysRef.current.get(postId);
@@ -164,7 +161,6 @@ const MapContainer = ({
     try {
       const kakao = (window as any).kakao;
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
-
       if (mapInstance.current) return true;
 
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
@@ -175,7 +171,6 @@ const MapContainer = ({
       map.setMaxLevel(11);
       mapInstance.current = map;
 
-      // [NEW] 줌 레벨에 따라 컨테이너 클래스 업데이트 (CSS 스케일링용)
       const updateZoomClass = () => {
         const lvl = map.getLevel();
         const el = containerRef.current;
@@ -192,17 +187,12 @@ const MapContainer = ({
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
-          
-          updateZoomClass(); // 줌 클래스 갱신
-
+          updateZoomClass();
           const boundsData = { 
             sw: { lat: sw.getLat(), lng: sw.getLng() }, 
             ne: { lat: ne.getLat(), lng: ne.getLng() } 
           };
-
-          // [FIX] 관리자 도구를 위해 현재 화면 범위(Bounds)를 로컬 스토리지에 즉시 저장
           localStorage.setItem('map_bounds', JSON.stringify(boundsData));
-
           onMapChangeRef.current({
             bounds: boundsData,
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
@@ -261,7 +251,6 @@ const MapContainer = ({
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // [FIX] 화면 밖 마커 효율적 정리
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id) || !bounds.contain(overlay.getPosition())) {
         overlay.setMap(null);
@@ -277,18 +266,14 @@ const MapContainer = ({
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const existingOverlay = overlaysRef.current.get(post.id);
-      
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay marker-appear-animation';
-        
-        // [FIX] 초기 줌 레벨에 맞는 클래스를 즉시 반영하여 생성 시 튀는 현상 방지
         if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        
         content.onclick = (e) => { 
           e.stopPropagation(); 
           if (isDragging.current) return; 
@@ -301,84 +286,75 @@ const MapContainer = ({
           yAnchor: 1, 
           zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
         });
-        
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-  const content = existingOverlay.getContent() as HTMLElement;
-  
-  if (existingOverlay.getMap() === null) {
-    existingOverlay.setMap(mapInstance.current);
-  }
-
-  if (content.getAttribute('data-content-state') !== contentStateKey) {
-    content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-    content.setAttribute('data-content-state', contentStateKey); 
-  }
-
-  // ✅ highlighted 클래스 토글
-  if (isHighlighted) {
-  if (!content.classList.contains('highlighted')) {
-    content.classList.add('highlighted');
-    existingOverlay.setZIndex(10000);
-  }
-} else {
-    if (content.classList.contains('highlighted')) {
-      content.classList.remove('highlighted');
-      existingOverlay.setZIndex(post.isAd ? 500 : post.borderType !== 'none' ? 400 : 300);
-    }
-  }
-}
+        const content = existingOverlay.getContent() as HTMLElement;
+        if (existingOverlay.getMap() === null) {
+          existingOverlay.setMap(mapInstance.current);
+        }
+        if (content.getAttribute('data-content-state') !== contentStateKey) {
+          content.innerHTML = getMarkerInnerHtml(post, isViewed); 
+          content.setAttribute('data-content-state', contentStateKey); 
+        }
+        // ✅ highlighted 클래스 토글
+        if (isHighlighted) {
+          if (!content.classList.contains('highlighted')) {
+            content.classList.add('highlighted');
+            existingOverlay.setZIndex(10000);
+          }
+        } else {
+          if (content.classList.contains('highlighted')) {
+            content.classList.remove('highlighted');
+            existingOverlay.setZIndex(post.isAd ? 500 : post.borderType !== 'none' ? 400 : 300);
+          }
+        }
+      }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
-  // [FIX] 줌 레벨 변경 핸들러 최적화 (카카오맵 이벤트를 직접 구독)
   useEffect(() => {
     if (!mapInstance.current || !isMapReady) return;
-    
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
 
     const handleZoom = () => {
-  const level = map.getLevel();
-  let scale = 1.0;
-  if (level === 6) scale = 0.7;
-  else if (level === 7) scale = 0.45;
-  else if (level >= 8) scale = 0;
+      const level = map.getLevel();
+      let scale = 1.0;
+      if (level === 6) scale = 0.7;
+      else if (level === 7) scale = 0.45;
+      else if (level >= 8) scale = 0;
 
-  overlaysRef.current.forEach((overlay) => {
-    const content = overlay.getContent() as HTMLElement;
-    if (content) {
-      // ✅ highlighted 마커는 CSS 애니메이션이 담당
-      if (content.classList.contains('highlighted')) return;
-      content.style.transform = `scale(${scale})`;
-    }
-  });
-};
+      overlaysRef.current.forEach((overlay) => {
+        const content = overlay.getContent() as HTMLElement;
+        if (content) {
+          if (content.classList.contains('highlighted')) return;
+          content.style.transform = `scale(${scale})`;
+        }
+      });
+    };
 
     kakao.maps.event.addListener(map, 'zoom_changed', handleZoom);
     return () => kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
   }, [isMapReady]);
 
-  // [NEW] 스케일링 전용 이펙트: GPU 가속을 활용해 한 번에 처리
   useEffect(() => {
-  if (!mapInstance.current) return;
-  const level = currentLevel;
-  let scale = 1.0;
-  if (level === 6) scale = 0.7;
-  else if (level === 7) scale = 0.45;
-  else if (level >= 8) scale = 0;
+    if (!mapInstance.current) return;
+    const level = currentLevel;
+    let scale = 1.0;
+    if (level === 6) scale = 0.7;
+    else if (level === 7) scale = 0.45;
+    else if (level >= 8) scale = 0;
 
-  overlaysRef.current.forEach((overlay) => {
-    const content = overlay.getContent() as HTMLElement;
-    if (content) {
-      // ✅ highlighted 마커는 CSS 애니메이션이 담당하므로 인라인 transform 적용 제외
-      if (content.classList.contains('highlighted')) return;
-      content.style.transition = 'transform 0.2s ease-out';
-      content.style.transform = `scale(${scale})`;
-    }
-  });
-}, [currentLevel]);
+    overlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        if (content.classList.contains('highlighted')) return;
+        content.style.transition = 'transform 0.2s ease-out';
+        content.style.transform = `scale(${scale})`;
+      }
+    });
+  }, [currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
@@ -404,21 +380,18 @@ const MapContainer = ({
     return () => clearTimeout(timer);
   }, [level, isMapReady]);
 
-  const smoothMoveTo = (targetLat: number, targetLng: number) => {
+  // ✅ onMoveComplete 콜백을 받는 smoothMoveTo
+  const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
     if (!map || !kakao || !kakao.maps?.LatLng) return;
 
-    if (window.getSelection) {
-      window.getSelection()?.removeAllRanges();
-    }
-
+    if (window.getSelection) window.getSelection()?.removeAllRanges();
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
     const startCenter = map.getCenter();
     const startLat = startCenter.getLat();
     const startLng = startCenter.getLng();
-    
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
     const duration = Math.min(Math.max(dist * 800, 600), 1200);
     const startTime = performance.now();
@@ -444,6 +417,8 @@ const MapContainer = ({
       } else {
         isProgrammaticMove.current = false;
         animationFrameRef.current = null;
+        // ✅ 이동 완료 콜백 실행
+        onComplete?.();
         try {
           const bounds = map.getBounds();
           const mapLevel = map.getLevel();
@@ -467,7 +442,15 @@ const MapContainer = ({
       const currentCenter = mapInstance.current.getCenter();
       const latDiff = Math.abs(currentCenter.getLat() - center.lat);
       const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
-      if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
+      if (latDiff > 0.00001 || lngDiff > 0.00001) {
+        // ✅ 이동 완료 후 onMoveComplete 호출
+        smoothMoveTo(center.lat, center.lng, () => {
+          onMoveCompleteRef.current?.();
+        });
+      } else {
+        // ✅ 이동 불필요 시 즉시 콜백
+        onMoveCompleteRef.current?.();
+      }
     }
   }, [center, isMapReady]);
 
@@ -492,14 +475,12 @@ const MapContainer = ({
           </div>
         </div>
       `;
-
       const overlay = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
         content: content,
         yAnchor: 1,
         zIndex: 11000 
       });
-
       overlay.setMap(mapInstance.current);
       searchOverlayRef.current = overlay;
     }
@@ -510,12 +491,9 @@ const MapContainer = ({
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
     
-    // [FIX] 블랙리스트 체크가 포함된 강화된 이미지 검증 로직
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
       if (url.includes('source.unsplash.com') || url.length < 50) return true;
-      
-      // 블랙리스트 ID 포함 여부 전수 조사
       for (const id of BROKEN_UNSPLASH_IDS) {
         if (url.includes(id)) return true;
       }
@@ -523,18 +501,14 @@ const MapContainer = ({
     };
 
     let displayImage = post.image;
-
-    // [DEBUG/FIX] Unsplash 링크가 발견되면 즉시 Pexels 대체 이미지로 전환
     if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
-      console.log(`[MapContainer] Unsplash detected! ID: ${post.id}`);
       displayImage = getFallbackImage(String(post.id));
     }
-
     if (isBrokenUrl(displayImage)) {
       displayImage = getFallbackImage(String(post.id));
     }
 
-    let borderType = post.borderType || 'none'; // Move this declaration UP
+    let borderType = post.borderType || 'none';
     let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white';
     if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; }
     else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; }
@@ -545,45 +519,24 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
     
-    // [FIX] 광고는 숨쉬기(breathing), 인기글/인플루언서는 위아래(float) 애니메이션 적용
     const isInfluencer = ['gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
-    
     let animationClass = '';
-    if (isAd) {
-      animationClass = 'animate-ad-breathing';
-    } else if (isInfluencer || isPopular) {
-      animationClass = 'animate-marker-float';
-    }
+    if (isAd) animationClass = 'animate-ad-breathing';
+    else if (isInfluencer || isPopular) animationClass = 'animate-marker-float';
 
-    // [FIX] 일반 포스팅을 제외한 특수 포스팅(내 글, 광고, 인기글, 인플루언서)에만 shine-overlay 클래스 적용
     const isSpecialPost = isMine || isAd || borderType !== 'none';
     const shineClass = isSpecialPost ? 'shine-overlay' : '';
 
-    // 모든 마커에 일괄적으로 3px 화이트 테두리 적용
     let inlineBorderStyle = "border: 3px solid #ffffff;"; 
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
     let influencerClass = "";
 
-    if (isMine) {
-      inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
-      inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)";
-    } else if (isAd) {
-      inlineBorderStyle = "border: 4.5px solid #3b82f6;"; 
-      inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)";
-    } else if (borderType === 'popular') {
-      // [FIX] 유튜브/이미지 구분 없이 좋아요 1만개 이상인 모든 포스팅에 빨간색 테두리 적용
-      inlineBorderStyle = "border: 4.5px solid #ef4444;"; 
-      inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)";
-    } else if (borderType === 'diamond') {
-      inlineBorderStyle = "border: 4.5px solid #22d3ee;";
-      inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)";
-      influencerClass = "influencer-glow";
-    } else if (borderType === 'gold') {
-      inlineBorderStyle = "border: 4.5px solid #fbbf24;";
-      inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)";
-      influencerClass = "influencer-glow";
-    } 
+    if (isMine) { inlineBorderStyle = "border: 4.5px solid #4f46e5;"; inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; }
+    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #3b82f6;"; inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)"; }
+    else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
+    else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
+    else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
@@ -628,7 +581,6 @@ const MapContainer = ({
         WebkitTouchCallout: 'none',
         ...({ WebkitUserDrag: 'none' } as any)
       }}
-
       onContextMenu={(e) => e.preventDefault()}
     >
       {isLoading && (
