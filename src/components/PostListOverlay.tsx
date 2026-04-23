@@ -92,14 +92,13 @@ const ObservedPostItem = ({
     );
 
     // 2. 동영상 재생용 실시간 가시성 옵저버 (인스타그램 방식)
-    // ✅ [FIX] 인식 영역을 좁게 설정하여 두 영상이 동시에 재생되는 현상 방지
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
       },
       { 
-        threshold: 0.8, // ✅ 80% 이상 노출되어야 재생 시작
-        rootMargin: '-25% 0px -25% 0px' // ✅ 화면 상하 25%씩 제외한 중앙 영역에서만 활성화
+        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
+        rootMargin: '0px'
       }
     );
 
