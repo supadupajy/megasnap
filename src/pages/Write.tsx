@@ -64,81 +64,14 @@ const Write = () => {
   // ✅ 드래그 관련 ref
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
-const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-// ✅ 핵심: passive: false로 네이티브 터치 이벤트 등록 → preventDefault 가능
-useEffect(() => {
-  const containers = containerRefs.current;
-
-  const onTouchStart = (e: TouchEvent, idx: number) => {
-    const media = mediaFiles[idx];
-    if (!media || media.type !== 'image') return;
-    dragActiveIdxRef.current = idx;
-    isDraggingActiveRef.current = true;
-    dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-
-  const onTouchMove = (e: TouchEvent, idx: number) => {
-    if (!isDraggingActiveRef.current || dragActiveIdxRef.current !== idx) return;
-    e.preventDefault(); // ✅ passive: false여야 작동
-    const media = mediaFiles[idx];
-    if (!media || media.type !== 'image') return;
-
-    const clientX = e.touches[0].clientX;
-    const clientY = e.touches[0].clientY;
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
-    dragStartRef.current = { x: clientX, y: clientY };
-
-    const sensitivity = 0.35;
-    const isPortrait = media.orientation === 'portrait';
-    const current = cropPositionsRef.current[idx] ?? { x: 50, y: 50 };
-
-    const newX = isPortrait ? 50 : Math.max(0, Math.min(100, current.x - deltaX * sensitivity));
-    const newY = isPortrait ? Math.max(0, Math.min(100, current.y - deltaY * sensitivity)) : 50;
-
-    cropPositionsRef.current[idx] = { x: newX, y: newY };
-    const imgEl = imgRefs.current[idx];
-    if (imgEl) {
-      imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
-    }
-  };
-
-  const onTouchEnd = () => {
-    if (!isDraggingActiveRef.current) return;
-    isDraggingActiveRef.current = false;
-    const idx = dragActiveIdxRef.current;
-    dragActiveIdxRef.current = null;
-    if (idx !== null && cropPositionsRef.current[idx]) {
-      const { x, y } = cropPositionsRef.current[idx];
-      updateMediaCrop(idx, x, y);
-    }
-  };
-
-  const handlers: Array<{ el: HTMLDivElement; ts: (e: TouchEvent) => void; tm: (e: TouchEvent) => void; te: () => void }> = [];
-
-  containers.forEach((el, idx) => {
-    if (!el) return;
-    const ts = (e: TouchEvent) => onTouchStart(e, idx);
-    const tm = (e: TouchEvent) => onTouchMove(e, idx);
-    const te = onTouchEnd;
-    el.addEventListener('touchstart', ts, { passive: false });
-    el.addEventListener('touchmove', tm, { passive: false });
-    el.addEventListener('touchend', te);
-    handlers.push({ el, ts, tm, te });
-  });
-
-  return () => {
-    handlers.forEach(({ el, ts, tm, te }) => {
-      el.removeEventListener('touchstart', ts);
-      el.removeEventListener('touchmove', tm);
-      el.removeEventListener('touchend', te);
-    });
-  };
-}, [mediaFiles]); // mediaFiles 바뀔 때 재등록
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const cropPositionsRef = useRef<{ x: number; y: number }[]>([]);
   const dragActiveIdxRef = useRef<number | null>(null);
   const isDraggingActiveRef = useRef(false);
+  const currentSlideRef = useRef(0);
+
+  // currentSlide 변경 시 ref도 동기화
+  useEffect(() => { currentSlideRef.current = currentSlide; }, [currentSlide]);
 
   useEffect(() => {
     if (!api) return;
@@ -164,6 +97,66 @@ useEffect(() => {
       y: m.crop?.y ?? 50,
     }));
   }, [mediaFiles.length]);
+
+  // ✅ wrapper 하나에만 passive:false 리스너 등록 — 타이밍 문제 없음
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const idx = currentSlideRef.current;
+      const media = mediaFiles[idx];
+      if (!media || media.type !== 'image') return;
+      isDraggingActiveRef.current = true;
+      dragActiveIdxRef.current = idx;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDraggingActiveRef.current) return;
+      const idx = dragActiveIdxRef.current!;
+      const media = mediaFiles[idx];
+      if (!media || media.type !== 'image') return;
+      e.preventDefault(); // ✅ passive:false라 가능
+
+      const clientX = e.touches[0].clientX;
+      const clientY = e.touches[0].clientY;
+      const deltaX = clientX - dragStartRef.current.x;
+      const deltaY = clientY - dragStartRef.current.y;
+      dragStartRef.current = { x: clientX, y: clientY };
+
+      const sensitivity = 0.35;
+      const isPortrait = media.orientation === 'portrait';
+      const current = cropPositionsRef.current[idx] ?? { x: 50, y: 50 };
+      const newX = isPortrait ? 50 : Math.max(0, Math.min(100, current.x - deltaX * sensitivity));
+      const newY = isPortrait ? Math.max(0, Math.min(100, current.y - deltaY * sensitivity)) : 50;
+
+      cropPositionsRef.current[idx] = { x: newX, y: newY };
+      const imgEl = imgRefs.current[idx];
+      if (imgEl) imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
+    };
+
+    const onTouchEnd = () => {
+      if (!isDraggingActiveRef.current) return;
+      isDraggingActiveRef.current = false;
+      const idx = dragActiveIdxRef.current;
+      dragActiveIdxRef.current = null;
+      if (idx !== null && cropPositionsRef.current[idx]) {
+        const { x, y } = cropPositionsRef.current[idx];
+        updateMediaCrop(idx, x, y);
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [mediaFiles]); // mediaFiles 바뀔 때만 재등록
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -202,50 +195,42 @@ useEffect(() => {
     setMediaFiles(newMedia);
   };
 
-  // ✅ 드래그 핸들러 (ref 기반 - stale closure 없음)
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+  // ✅ 마우스 드래그 핸들러 (데스크탑용)
+  const handleMouseDown = (e: React.MouseEvent, idx: number) => {
     const media = mediaFiles[idx];
     if (!media || media.type !== 'image') return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    dragActiveIdxRef.current = idx;
+    e.stopPropagation();
     isDraggingActiveRef.current = true;
-    dragStartRef.current = { x: clientX, y: clientY };
+    dragActiveIdxRef.current = idx;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleDragMove = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+  const handleMouseMove = (e: React.MouseEvent, idx: number) => {
     if (!isDraggingActiveRef.current || dragActiveIdxRef.current !== idx) return;
+    e.stopPropagation();
     const media = mediaFiles[idx];
     if (!media || media.type !== 'image') return;
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
-    dragStartRef.current = { x: clientX, y: clientY };
+    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaY = e.clientY - dragStartRef.current.y;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
 
     const sensitivity = 0.35;
     const isPortrait = media.orientation === 'portrait';
     const current = cropPositionsRef.current[idx] ?? { x: 50, y: 50 };
-
     const newX = isPortrait ? 50 : Math.max(0, Math.min(100, current.x - deltaX * sensitivity));
     const newY = isPortrait ? Math.max(0, Math.min(100, current.y - deltaY * sensitivity)) : 50;
 
-    // ✅ DOM 직접 업데이트 (React re-render 없이 즉각 반응)
     cropPositionsRef.current[idx] = { x: newX, y: newY };
     const imgEl = imgRefs.current[idx];
-    if (imgEl) {
-      imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
-    }
+    if (imgEl) imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
   };
 
-  const stopDragging = () => {
+  const stopMouseDragging = (idx: number) => {
     if (!isDraggingActiveRef.current) return;
     isDraggingActiveRef.current = false;
-    const idx = dragActiveIdxRef.current;
     dragActiveIdxRef.current = null;
-    // ✅ 드래그 끝날 때만 store에 저장
-    if (idx !== null && cropPositionsRef.current[idx]) {
+    if (cropPositionsRef.current[idx]) {
       const { x, y } = cropPositionsRef.current[idx];
       updateMediaCrop(idx, x, y);
     }
@@ -331,7 +316,10 @@ useEffect(() => {
         </div>
         <div className="flex items-center gap-2">
           {currentPage === 2 && (
-            <button onClick={() => setCurrentPage(1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
+            <button
+              onClick={() => setCurrentPage(1)}
+              className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800"
+            >
               <ChevronLeft className="w-6 h-6" />
             </button>
           )}
@@ -342,6 +330,7 @@ useEffect(() => {
         <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
             <div className="space-y-6">
+              {/* 미디어 첨부 버튼 */}
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
                 <button
@@ -366,25 +355,27 @@ useEffect(() => {
                 />
               </div>
 
+              {/* 미리보기 */}
               {mediaFiles.length > 0 ? (
-                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
-                  {/* ✅ watchDrag: isDraggingActiveRef.current가 true면 캐러셀 스와이프 비활성화 */}
+                <div
+                  ref={wrapperRef}
+                  className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative"
+                >
                   <Carousel
                     setApi={setApi}
                     className="w-full h-full"
-                    opts={{ watchDrag: true }}
+                    opts={{ watchDrag: !isDraggingActiveRef.current }}
                   >
                     <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div
-  ref={el => { containerRefs.current[idx] = el; }}
-  className="w-full h-full relative overflow-hidden"
-  onMouseDown={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
-  onMouseMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
-  onMouseUp={stopDragging}
-  onMouseLeave={stopDragging}
->
+                            className="w-full h-full relative overflow-hidden"
+                            onMouseDown={(e) => handleMouseDown(e, idx)}
+                            onMouseMove={(e) => handleMouseMove(e, idx)}
+                            onMouseUp={() => stopMouseDragging(idx)}
+                            onMouseLeave={() => stopMouseDragging(idx)}
+                          >
                             {media.type === 'image' ? (
                               <img
                                 ref={el => { imgRefs.current[idx] = el; }}
@@ -422,7 +413,10 @@ useEffect(() => {
                   {mediaFiles.length > 1 && (
                     <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
                       {mediaFiles.map((_, i) => (
-                        <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                        <div
+                          key={i}
+                          className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")}
+                        />
                       ))}
                     </div>
                   )}
@@ -443,6 +437,7 @@ useEffect(() => {
             </div>
           ) : (
             <div className="space-y-8 pb-20">
+              {/* 장소 정보 */}
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
                 <div
@@ -458,6 +453,7 @@ useEffect(() => {
                 </div>
               </div>
 
+              {/* 카테고리 */}
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
                 <div className="grid grid-cols-5 gap-2">
@@ -471,12 +467,15 @@ useEffect(() => {
                       )}
                     >
                       <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
+                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
+                        {cat.label}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* 내용 입력 */}
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
                 <Textarea
