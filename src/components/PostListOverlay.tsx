@@ -107,19 +107,26 @@ const PostListOverlay = ({
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
+    // isLoadingMore 체크를 강화하여 중복 호출 방지
     if (isLoadingMore || !hasMore) return;
+    
+    console.log('[PostListOverlay] Loading more posts...', { lastIndex: posts.length });
     setIsLoadingMore(true);
     
     try {
+      // 마지막 포스트의 생성 날짜를 기준으로 다음 10개를 가져옴
       const lastPostDate = posts.length > 0 
         ? new Date(posts[posts.length - 1].createdAt).toISOString()
         : new Date().toISOString();
 
-      // [FIX] currentBounds가 없을 경우 전역에서 불러오도록 폴백 처리
       let query = supabase
         .from('posts')
-        .select('*');
+        .select('*')
+        .lt('created_at', lastPostDate)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
+      // currentBounds가 있다면 해당 영역 내에서 검색
       if (currentBounds) {
         query = query
           .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
@@ -128,18 +135,12 @@ const PostListOverlay = ({
           .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng));
       }
 
-      const { data, error } = await query
-        .lt('created_at', lastPostDate)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data, error } = await query;
 
       if (error) throw error;
 
       if (data && data.length > 0) {
         const newPosts: Post[] = await Promise.all(data.map(async (p) => {
-          const isAd = p.content?.trim().startsWith('[AD]');
-          const likesCount = Number(p.likes || 0);
-          
           // [FIX] 프로필 정보(닉네임, 아바타)를 올바르게 불러오기 위한 추가 쿼리
           let userName = p.user_name || '탐험가';
           let userAvatar = p.user_avatar || '';
@@ -173,7 +174,7 @@ const PostListOverlay = ({
             location: p.location_name || '알 수 없는 장소',
             lat: p.latitude,
             lng: p.longitude,
-            likes: likesCount,
+            likes: Number(p.likes || 0),
             image: finalImage,
             images: p.images || [finalImage],
             videoUrl: p.video_url,
@@ -183,50 +184,48 @@ const PostListOverlay = ({
             commentsCount: 0,
             comments: [],
             isLiked: false,
-            isAd,
+            isAd: p.content?.trim().startsWith('[AD]'),
             isGif: false,
-            borderType: likesCount >= 9000 ? 'popular' : 'none'
+            borderType: Number(p.likes || 0) >= 9000 ? 'popular' : 'none'
           };
         }));
 
-        // 거리순 정렬 유지를 위해 기존 posts와 합친 후 거리 계산을 할 수도 있으나,
-        // 여기서는 일단 영역 내의 시간순 추가 데이터를 붙여줍니다.
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
           return [...prev, ...filteredNew];
         });
         
-        // 10개를 요청했는데 10개 미만으로 오면 더 이상 데이터가 없는 것임
-        if (data.length < 10) setHasMore(false);
+        // 10개를 꽉 채워서 가져오지 못했다면 더 이상 데이터가 없는 것으로 판단
+        if (data.length < 10) {
+          setHasMore(false);
+        }
       } else {
         setHasMore(false);
       }
     } catch (err) {
-      console.error('Failed to load more posts:', err);
+      console.error('[PostListOverlay] Error loading more:', err);
     } finally {
       setIsLoadingMore(false);
+      // 풀업 거리 초기화를 확실하게 처리
       setPullUpDistance(0);
     }
   }, [posts, isLoadingMore, hasMore, currentBounds]);
 
-  // 통합 핸들러 (터치/마우스)
+  // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!scrollContainerRef.current) return;
+    if (!scrollContainerRef.current || isLoadingMore) return;
     
     const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
     startYRef.current = pageY;
     startScrollTopRef.current = scrollContainerRef.current.scrollTop;
     
-    // ✅ 바닥 체크 로직 개선: 더 넓은 임계값(30px) 적용
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 30;
-    
-    if (isAtBottom) {
+    // 바닥 근처 여부를 더 넉넉하게 체크
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
       isPullingRef.current = true;
     }
     
-    // ✅ 바닥이든 아니든 마우스 드래그 스크롤은 항상 가능하도록 설정
     isDraggingListRef.current = !('touches' in e);
   };
 
@@ -235,16 +234,16 @@ const PostListOverlay = ({
     const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
     const diff = startYRef.current - pageY;
 
-    // 1. 일반 마우스 드래그 스크롤 (바닥 여부 상관없이 작동)
+    // 마우스 드래그 스크롤 (웹 테스트용)
     if (isDraggingListRef.current) {
       scrollContainerRef.current.scrollTop = startScrollTopRef.current + diff;
     }
 
-    // 2. 추가 로딩 풀업 모드 (바닥 근처에서 위로 올릴 때만 거리 계산)
-    if (isPullingRef.current && diff > 0) {
-      // 스크롤이 끝까지 내려간 상태에서만 풀업 거리가 쌓이도록 함
+    // 추가 로드 풀업
+    if (isPullingRef.current && diff > 0 && !isLoadingMore && hasMore) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 5) {
+      // 실제로 스크롤이 끝까지 내려간 상태에서만 게이지가 차도록 함
+      if (scrollTop + clientHeight >= scrollHeight - 10) {
         setPullUpDistance(Math.min(diff * 0.5, 120));
       }
     }
