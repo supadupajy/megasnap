@@ -50,16 +50,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   
-  // [FIX] 영상 정보를 더 우선적으로 감지
+  // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
   const youtubeId = useMemo(() => {
     if (!currentPost) return null;
-    const url = currentPost.youtubeUrl || currentPost.youtube_url; // 필드명 호환성 추가
+    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
+    console.log('[PostDetail] Checking Youtube URL:', { id: currentPost.id, url });
     return getYoutubeId(url || '');
   }, [currentPost]);
 
   const videoUrl = useMemo(() => {
     if (!currentPost) return null;
-    return currentPost.videoUrl || currentPost.video_url;
+    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
+    console.log('[PostDetail] Checking Video URL:', { id: currentPost.id, url });
+    return url;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -437,38 +440,33 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-                          {/* [CRITICAL FIX] 유튜브 및 비디오 렌더링 - 썸네일보다 최상위에 강제 배치 */}
-                          {youtubeId && (
-                            <div className="absolute inset-0 w-full h-full z-[100] bg-black">
+                          {/* [ULTIMATE FIX] 삼항 연산자 대신 명시적 렌더링으로 썸네일을 완전히 덮어씌움 */}
+                          {youtubeId ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
                               <iframe
                                 key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                className="w-full h-full border-0 pointer-events-auto"
+                                className="w-full h-full border-0"
                                 src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
                                 title="YouTube video player"
                                 allow="autoplay; encrypted-media; picture-in-picture"
                                 allowFullScreen
                               />
                             </div>
-                          )}
-
-                          {videoUrl && !youtubeId && (
-                            <div className="absolute inset-0 w-full h-full z-[100] bg-black">
+                          ) : videoUrl ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
                               <video 
                                 key={`detail-vid-${currentPost.id}-${videoUrl}`} 
                                 src={videoUrl} 
-                                className="w-full h-full object-cover pointer-events-auto" 
+                                className="w-full h-full object-cover" 
                                 autoPlay 
                                 loop 
                                 playsInline 
                                 controls 
                               />
                             </div>
-                          )}
-
-                          {/* 영상 정보가 없을 때만 이미지 레이어 렌더링 (영상이 있을 땐 DOM에서 제거) */}
-                          {!youtubeId && !videoUrl && (
+                          ) : (
                             <div className="relative w-full h-full z-10 bg-gray-100">
-                              {/* 네이티브 스크롤 슬라이더 */}
+                              {/* 이미지 슬라이더 */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
