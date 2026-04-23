@@ -266,7 +266,7 @@ const PostListOverlay = ({
                 className="py-10 flex flex-col items-center justify-center transition-all duration-200"
                 style={{ height: `${Math.max(120, pullUpDistance + 60)}px` }}
               >
-                <div className="flex flex-col items-center gap-1 mb-10">
+                <div className="flex flex-col items-center gap-1 mb-11">
                   {isLoadingMore ? (
                     <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
                   ) : (
