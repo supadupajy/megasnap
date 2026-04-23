@@ -35,8 +35,7 @@ const Write = () => {
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
 
-  const { content, setContent, category, setCategory, clear } = useWriteStore();
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const { mediaFiles, setMediaFiles, content, setContent, category, setCategory, clear } = useWriteStore();
 
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
