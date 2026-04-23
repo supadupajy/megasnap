@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +54,9 @@ const PostDetail = () => {
     }
   }, [id, allPosts]);
 
+  const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
+
   const mapDbToPost = async (p: any): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
@@ -98,8 +101,8 @@ const PostDetail = () => {
       isInfluencer: false,
       user: { 
         id: sanitized.user_id, 
-        name: sanitized.user_name || '탐험가', 
-        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` 
+        name: sanitized.user_id === authUser?.id ? displayName : (sanitized.user_name || '탐험가'), 
+        avatar: sanitized.user_id === authUser?.id ? avatarUrl : (sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`)
       },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
       location: sanitized.location_name || '알 수 없는 장소',

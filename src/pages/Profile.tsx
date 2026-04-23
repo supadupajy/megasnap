@@ -120,7 +120,11 @@ const Profile = () => {
 
     return {
       id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-      user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
+      user: { 
+        id: sanitized.user_id, 
+        name: sanitized.user_id === authUser?.id ? displayName : (sanitized.user_name || '탐험가'), 
+        avatar: sanitized.user_id === authUser?.id ? avatarUrl : (sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`)
+      },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
       likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
       image: finalImage, 
