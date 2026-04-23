@@ -44,26 +44,25 @@
   }
 }
 
-/* [FIX] 마커가 나타날 때의 뿅 나타나는 애니메이션 */
-@keyframes marker-pop-in {
-  0% { transform: scale(0) translateZ(0); opacity: 0; }
-  70% { transform: scale(1.1) translateZ(0); opacity: 1; }
-  100% { transform: scale(1) translateZ(0); opacity: 1; }
+/* [FIX] 마커가 스르륵(Fade-in) 나타나는 애니메이션 */
+@keyframes marker-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .marker-appear-animation {
-  animation: marker-pop-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  animation: marker-fade-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
   transform-origin: bottom center;
 }
 
-/* [FIX] 마커가 삭제될 때 작아지며 사라지는 애니메이션 */
-@keyframes marker-pop-out {
-  0% { transform: scale(1) translateZ(0); opacity: 1; }
-  100% { transform: scale(0) translateZ(0); opacity: 0; }
+/* [FIX] 마커가 스르륵(Fade-out) 사라지는 애니메이션 */
+@keyframes marker-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .marker-disappear-animation {
-  animation: marker-pop-out 0.4s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  animation: marker-fade-out 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   transform-origin: bottom center;
   pointer-events: none;
 }
