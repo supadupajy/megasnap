@@ -49,7 +49,7 @@ const FriendList = () => {
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col pt-[88px] overflow-hidden">
-      {/* 고정 영역: 검색창 + 광고 배너 */}
+      {/* 고정 영역: 검색창 + 광고 배너 + 타이틀 */}
       <div className="shrink-0 bg-white z-40">
         <div className="px-4 pt-4 pb-2">
           <div className="relative mb-4">
@@ -68,7 +68,7 @@ const FriendList = () => {
           </div>
 
           {/* THE NORTH FACE 광고 배너 */}
-          <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
+          <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900 mb-4">
             <img 
               src="/assets/northface-ad-banner.png" 
               alt="The North Face Ad" 
@@ -88,15 +88,16 @@ const FriendList = () => {
               </div>
             </div>
           </div>
+
+          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
+            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
+          </h2>
         </div>
       </div>
 
       {/* 스크롤 리스트 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-        <div className="px-4 pt-4">
-          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1 mb-4">
-            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
-          </h2>
+        <div className="px-4 pt-2">
           <div className="space-y-1">
             {users.map((user) => (
               <div 
