@@ -175,6 +175,7 @@ const PostListOverlay = ({
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [playingPostId, setPlayingPostId] = useState<string | null>(null);
   
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
@@ -361,6 +362,14 @@ const PostListOverlay = ({
     }
   }, [isOpen]);
 
+  const handlePlayingChange = (id: string, isIntersecting: boolean) => {
+    if (isIntersecting) {
+      setPlayingPostId(id);
+    } else {
+      setPlayingPostId(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -417,10 +426,8 @@ const PostListOverlay = ({
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                 }}
                 onDelete={(id) => onDeletePost?.(id)}
-                isPlaying={isCurrentlyVisible}
-                onPlayingChange={(id, isIntersecting) => {
-                  // 이 함수는 실제로는 사용되지 않지만, 타입 정의를 위해 포함
-                }}
+                isPlaying={playingPostId === post.id}
+                onPlayingChange={handlePlayingChange}
               />
             ))}
             
