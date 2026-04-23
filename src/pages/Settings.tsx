@@ -72,13 +72,20 @@ const Settings = () => {
   // [NEW] 관리자 권한 확인
   React.useEffect(() => {
     if (user) {
+      console.log('[Settings] Checking admin status for user:', user.email);
       const checkAdmin = async () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
+        if (error) {
+          console.error('[Settings] Admin check error:', error);
+          return;
+        }
+
+        console.log('[Settings] Admin check result:', data);
         if (data && data.role === 'admin') {
           setIsAdmin(true);
         }
