@@ -222,18 +222,12 @@ const Write = () => {
   const handlePost = async () => {
     if (!authUser) return;
     
-    // 미디어 파일이 없는 경우 방어 코드 (UI 필터링 외의 비정상 접근 대비)
     if (mediaFiles.length === 0) {
       showError('최소 한 장 이상의 사진이나 동영상을 선택해주세요.');
       return;
     }
 
     setIsSubmitting(true);
-    console.log("[Write] Starting post process", {
-      mediaCount: mediaFiles.length,
-      content: content.substring(0, 20),
-      address
-    });
 
     try {
       const uploadedUrls: string[] = [];
@@ -246,32 +240,18 @@ const Write = () => {
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        console.log(`[Write] Uploading file ${index + 1}/${mediaToUpload.length}`, {
-          fileName,
-          folder,
-          fileSize: media.file.size,
-          fileType: media.file.type
-        });
-
-        const { error: uploadError, data: uploadData } = await supabase.storage.from(folder).upload(filePath, media.file, {
+        const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file, {
           cacheControl: '3600',
           upsert: false
         });
 
         if (uploadError) {
-          console.error(`[Write] Upload error for file ${index + 1}`, uploadError);
           throw uploadError;
         }
         
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
-        console.log(`[Write] File ${index + 1} uploaded successfully`, { publicUrl });
         uploadedUrls.push(publicUrl);
       }
-
-      console.log("[Write] All files uploaded. Final check before DB insert", {
-        uploadedUrls,
-        firstUrl: uploadedUrls[0]
-      });
 
       if (uploadedUrls.length === 0) {
         throw new Error('업로드된 파일 URL이 없습니다.');
@@ -282,16 +262,14 @@ const Write = () => {
         location_name: address || '위치 미지정',
         latitude: initialLocation?.lat || null,
         longitude: initialLocation?.lng || null,
-        image_url: uploadedUrls[0], // 메인 이미지
-        images: uploadedUrls,       // 이미지 배열
+        image_url: uploadedUrls[0],
+        images: uploadedUrls,
         user_id: authUser.id,
         user_name: profile?.nickname || '탐험가',
         user_avatar: profile?.avatar_url,
         category,
         video_url: mediaToUpload[0]?.type === 'video' ? uploadedUrls[0] : null,
       };
-
-      console.log("[Write] Inserting into posts table", postData);
 
       const { data, error: insertError } = await supabase
         .from('posts')
@@ -300,20 +278,15 @@ const Write = () => {
         .single();
 
       if (insertError) {
-        console.error("[Write] Database insert error", insertError);
         throw insertError;
       }
 
-      console.log("[Write] Post created successfully in DB", data);
-      
       showSuccess('게시물이 등록되었습니다! ✨');
       clear();
       postDraftStore.clear();
       
-      // Index 페이지로 돌아가며 폭죽 트리거 전달
       navigate('/', { state: { triggerConfetti: true }, replace: true });
     } catch (err: any) {
-      console.error("[Write] Final error catch", err);
       showError('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'));
     } finally {
       setIsSubmitting(false);
