@@ -124,18 +124,23 @@ const PostListOverlay = ({
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // ✅ [FIX] 현재 화면에 보이는 지도 영역(currentBounds)을 절대로 벗어나지 않도록 쿼리 고정
-      // 이렇게 하면 대전 지도를 보고 있을 때는 대전 영역 내의 과거 포스팅만 가져오게 됩니다.
+      // ✅ [FIX] 쿼리 정교화: 영역(Bounds) 내에서 과거 데이터를 안정적으로 검색
+      // min/max 계산 시 순서 보장 (sw.lat이 ne.lat보다 항상 작다는 보장이 없으므로)
+      const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
+      const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
+      const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
+      const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
+
       const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat))
-        .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat))
-        .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng))
-        .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng))
+        .gte('latitude', latMin)
+        .lte('latitude', latMax)
+        .gte('longitude', lngMin)
+        .lte('longitude', lngMax)
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(10);
 
       if (error) throw error;
 
@@ -196,17 +201,19 @@ const PostListOverlay = ({
           return [...prev, ...filteredNew];
         });
         
-        if (data.length < 12) setHasMore(false);
+        // 10개를 요청했는데 10개 미만으로 왔다면 이 영역의 데이터는 다 불러온 것
+        if (data.length < 10) setHasMore(false);
       } else {
+        // 데이터가 아예 안 오면 종료
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Strict bounds load failed:', err);
+      console.error('[PostListOverlay] Load failed:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore, currentBounds]); // ✅ currentBounds를 다시 의존성에 추가하여 영역 엄격 적용
+  }, [posts, isLoadingMore, hasMore, currentBounds]);
 
   // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
