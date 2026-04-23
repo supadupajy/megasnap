@@ -137,7 +137,7 @@ const Index = () => {
   highlightTimeoutRef.current = window.setTimeout(() => {
     // ✅ CustomEvent를 통해 MapContainer 내부의 마커 DOM을 직접 제어
     window.dispatchEvent(new CustomEvent('highlight-marker', { 
-      detail: { id: post.id, duration: 6000 } 
+      detail: { id: post.id, duration: 4000 } // globals.css 애니메이션 시간(4s)과 일치시킴
     }));
     highlightTimeoutRef.current = null;
   }, 1100); // 1.3초 이동 완료 직전에 애니메이션 시작 준비
