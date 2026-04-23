@@ -514,7 +514,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <div className="absolute inset-0 w-full h-full z-[100]">
                               <iframe
                                 key={`yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
                                 className="w-full h-full border-0"
                                 allow="autoplay; encrypted-media"
                                 allowFullScreen
@@ -527,6 +527,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 src={vUrl} 
                                 className="w-full h-full object-cover" 
                                 autoPlay 
+                                muted
                                 loop 
                                 playsInline 
                                 controls 
