@@ -139,65 +139,55 @@ const Write = () => {
     setMediaFiles(newMedia);
   }, [mediaFiles, setMediaFiles]);
 
-  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent, idx: number) => {
-    if (isDraggingRef.current) return;
+  const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+    const media = mediaFiles[idx];
+    if (!media || media.type !== 'image') return;
     
-    isDraggingRef.current = true;
-    setDragActiveIdx(idx);
+    const isPortrait = media.orientation === 'portrait';
     
-    const startX = e.type === 'touchstart' ? (e as React.TouchEvent).touches[0].clientX : e.clientX;
-    const startY = e.type === 'touchstart' ? (e as React.TouchEvent).touches[0].clientY : e.clientY;
-    dragStartRef.current = { x: startX, y: startY };
-    
-    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-      if (!isDraggingRef.current || dragActiveIdx === null) return;
-      
-      const dx = e.type === 'touchmove' ? (e as React.TouchEvent).touches[0].clientX - dragStartRef.current.x : (e as MouseEvent).clientX - dragStartRef.current.x;
-      const dy = e.type === 'touchmove' ? (e as React.TouchEvent).touches[0].clientY - dragStartRef.current.y : (e as MouseEvent).clientY - dragStartRef.current.y;
-      
-      const media = mediaFiles[dragActiveIdx];
-      if (media && media.type === 'image') {
-        const orientation = media.orientation === 'portrait' ? 'portrait' : 'landscape';
-        const crop = media.crop || { x: 50, y: 50 };
-        
-        let newX = crop.x;
-        let newY = crop.y;
-        
-        if (orientation === 'portrait') {
-          newX = Math.max(0, Math.min(100, crop.x - dx * 0.5));
-          newY = Math.max(0, Math.min(100, crop.y - dy * 0.5));
-        } else {
-          newX = Math.max(0, Math.min(100, crop.x - dx * 0.5));
-          newY = Math.max(0, Math.min(100, crop.y - dy * 0.5));
-        }
-        
-        const newMedia = [...mediaFiles];
-        newMedia[dragActiveIdx] = { ...newMedia[dragActiveIdx], crop: { x: newX, y: newY } };
-        setMediaFiles(newMedia);
-      }
-    };
-    
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      setDragActiveIdx(null);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    if (e.type === 'touchstart') {
-      document.addEventListener('touchmove', handleMouseMove);
-      document.addEventListener('touchend', handleMouseUp);
-    }
-  }, [mediaFiles]);
+    let clientX: number;
+    let clientY: number;
 
-  const stopDragging = useCallback(() => {
-    if (dragActiveIdx !== null) {
-      setDragActiveIdx(null);
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
     }
-  }, [dragActiveIdx]);
+
+    if (dragActiveIdx !== idx) {
+      setDragActiveIdx(idx);
+      dragStartRef.current = { x: clientX, y: clientY };
+      return;
+    }
+
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+    
+    dragStartRef.current = { x: clientX, y: clientY };
+
+    // 민감도: % 단위이므로 화면 크기에 맞춰 조정 (0.2 ~ 0.5 권장)
+    const sensitivity = 0.35;
+    
+    const currentX = media.crop?.x ?? 50;
+    const currentY = media.crop?.y ?? 50;
+
+    const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
+    const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
+
+    updateMediaCrop(idx, newX, newY);
+  };
+
+  const stopDragging = () => {
+    setDragActiveIdx(null);
+  };
+
+  const updateMediaCrop = (idx: number, x: number, y: number) => {
+    const newMedia = [...mediaFiles];
+    newMedia[idx] = { ...newMedia[idx], crop: { x, y } };
+    setMediaFiles(newMedia);
+  };
 
   const handlePost = async () => {
     if (!authUser) return;
