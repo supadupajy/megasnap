@@ -232,23 +232,30 @@ const Write = () => {
       const uploadedUrls: string[] = [];
       const mediaToUpload = [...mediaFiles];
 
+      // ✅ [FIX] 동영상 업로드 시 storage 폴더 경로 및 파일 확장자 처리 강화
       for (const [index, media] of mediaToUpload.entries()) {
         const timestamp = new Date().getTime();
-        const folder = media.type === 'video' ? 'post-videos' : 'post-images';
+        // 동영상은 post-videos, 이미지는 post-images 버킷 사용
+        const bucketName = media.type === 'video' ? 'post-videos' : 'post-images';
         const fileExt = media.file.name.split('.').pop() || (media.type === 'video' ? 'mp4' : 'jpg');
-        const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file, {
+        console.log(`[Write] Uploading ${media.type}:`, filePath);
+
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, media.file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          // ✅ 동영상인 경우 contentType 명시 (브라우저/OS 호환성)
+          contentType: media.file.type || (media.type === 'video' ? 'video/mp4' : 'image/jpeg')
         });
 
         if (uploadError) {
+          console.error(`[Write] ${media.type} upload error:`, uploadError);
           throw uploadError;
         }
         
-        const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
 
@@ -256,19 +263,24 @@ const Write = () => {
         throw new Error('업로드된 파일 URL이 없습니다.');
       }
 
+      // ✅ [FIX] video_url 컬렉션 처리: 첫 번째 미디어가 동영상인 경우 video_url에 할당
+      const isFirstMediaVideo = mediaToUpload[0]?.type === 'video';
+      
       const postData = {
         content: content.trim(),
         location_name: address || '위치 미지정',
         latitude: initialLocation?.lat || null,
         longitude: initialLocation?.lng || null,
-        image_url: uploadedUrls[0],
+        image_url: uploadedUrls[0], // 썸네일 대용 (동영상의 경우 동영상 URL)
         images: uploadedUrls,
         user_id: authUser.id,
         user_name: profile?.nickname || '탐험가',
         user_avatar: profile?.avatar_url,
         category,
-        video_url: mediaToUpload[0]?.type === 'video' ? uploadedUrls[0] : null,
+        video_url: isFirstMediaVideo ? uploadedUrls[0] : null,
       };
+
+      console.log('[Write] Submitting post data:', postData);
 
       const { data, error: insertError } = await supabase
         .from('posts')
@@ -277,6 +289,7 @@ const Write = () => {
         .single();
 
       if (insertError) {
+        console.error('[Write] Post insert error:', insertError);
         throw insertError;
       }
 
