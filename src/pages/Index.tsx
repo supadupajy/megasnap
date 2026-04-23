@@ -379,17 +379,16 @@ const Index = () => {
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
           <MapContainer
-            posts={displayedMarkers}
-            viewedPostIds={viewedIds}
-            highlightedPostId={highlightedPostId}
-            onMarkerClick={handleMarkerClick}
-            onMapChange={handleMapChange}
-            center={mapCenter}
-            level={currentZoom}
-            searchResultLocation={searchResultLocation}
-            onMapClick={() => setSearchResultLocation(null)}
-            onMoveComplete={handleMoveComplete}
-          />
+  posts={displayedMarkers}
+  viewedPostIds={viewedIds}
+  highlightedPostId={highlightedPostId}
+  onMarkerClick={handleMarkerClick}
+  onMapChange={handleMapChange}
+  center={mapCenter}
+  level={currentZoom}
+  searchResultLocation={searchResultLocation}
+  onMapClick={() => setSearchResultLocation(null)}
+/>
           <AnimatePresence>
             {isSelectingLocation && (
               <>
