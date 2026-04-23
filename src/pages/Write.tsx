@@ -311,8 +311,6 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   className="pointer-events-none"
   onLoad={(e) => {
     const img = e.currentTarget;
-    console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
-    console.log('type:', currentMedia?.type, typeof currentMedia?.type);
     const container = containerRef.current;
     if (!container) return;
     const conW = container.offsetWidth;
