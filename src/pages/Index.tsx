@@ -367,12 +367,17 @@ const Index = () => {
           console.log('[Realtime] New post detected:', payload.new);
           const newRawPost = payload.new;
           
-          // 내 글인 경우 이미 로컬 상태에 추가되었을 수 있으므로 중복 체크
           const mappedPost = await mapDbToPost(newRawPost);
           if (!mappedPost) return;
 
+          // ✅ 다른 사용자가 올린 글인 경우 폭죽 효과 트리거
+          if (mappedPost.user.id !== authUser.id) {
+            triggerConfetti();
+          }
+
           setAllPosts(prev => {
             if (prev.some(p => p.id === mappedPost.id)) return prev;
+            // ✅ isNewRealtime 플래그를 추가하여 MapContainer에서 애니메이션 처리가 가능하게 함
             const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
             mapCache.posts = combined;
             return combined;
@@ -420,13 +425,15 @@ const Index = () => {
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
     
-    // ✅ [FIX] 포스팅 후 '내가 등록한 위치'로 정확히 이동하도록 보정
+    // ✅ [FIX] 포스팅 후 설정: 전체보기 모드 유지 + 줌 레벨 5로 고정
     if (routeState.filterUserId === 'me') {
-      setSelectedCategories(['mine']); 
-      setTimeout(() => setCurrentZoom(6), 500);
+      // 내 포스팅 필터를 적용하지 않고 'all'로 설정하여 전체보기 모드 유지
+      setSelectedCategories(['all']); 
+      // 지도의 줌 레벨을 디폴트인 5로 설정
+      setTimeout(() => setCurrentZoom(5), 500);
       
       if (routeState.post) {
-        // 등록된 포스트의 좌표로 확실하게 이동
+        // 등록된 포스트의 좌표로 이동
         focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
       } else {
         handleCurrentLocation();

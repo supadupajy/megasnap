@@ -261,8 +261,9 @@ const MapContainer = ({
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
+      const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}`;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
