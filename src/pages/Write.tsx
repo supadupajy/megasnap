@@ -30,7 +30,7 @@ const CATEGORIES = [
   { key: 'animal', label: '동물', Icon: PawPrint },
 ] as const;
 
-// ✅ 커스텀 미디어 슬라이더 (Embla 완전 제거)
+// ✅ 커스텀 미디어 슬라이더
 const MediaSlider = ({
   mediaFiles,
   onRemove,
@@ -45,102 +45,99 @@ const MediaSlider = ({
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
   const cropRef = useRef<{ x: number; y: number }[]>([]);
 
-  // 드래그 상태
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const isDraggingImageRef = useRef(false); // 이미지 crop 드래그 중
-  const isSwipingRef = useRef(false);       // 슬라이드 스와이프 중
-  const dragDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
-  const DIRECTION_THRESHOLD = 8; // px — 방향 판별 임계값
+  // ✅ stale closure 방지: 모든 동적 값을 ref로 유지
+  const currentIdxRef = useRef(0);
+  const mediaFilesRef = useRef<MediaFile[]>([]);
+  const onCropChangeRef = useRef(onCropChange);
+  const onRemoveRef = useRef(onRemove);
+
+  useEffect(() => { currentIdxRef.current = currentIdx; }, [currentIdx]);
+  useEffect(() => { onCropChangeRef.current = onCropChange; }, [onCropChange]);
+  useEffect(() => { onRemoveRef.current = onRemove; }, [onRemove]);
 
   useEffect(() => {
+    mediaFilesRef.current = mediaFiles;
     cropRef.current = mediaFiles.map(m => ({ x: m.crop?.x ?? 50, y: m.crop?.y ?? 50 }));
-    // 미디어 추가 시 현재 슬라이드가 범위 초과하면 보정
-    if (currentIdx >= mediaFiles.length) setCurrentIdx(Math.max(0, mediaFiles.length - 1));
-  }, [mediaFiles.length]);
+    if (currentIdx >= mediaFiles.length) {
+      setCurrentIdx(Math.max(0, mediaFiles.length - 1));
+    }
+  }, [mediaFiles]);
 
+  // ✅ 의존성 [] — 단 한 번만 등록, 최신값은 모두 ref로 참조
   useEffect(() => {
     const el = sliderRef.current;
     if (!el) return;
 
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let isDragging = false;
+
     const onTouchStart = (e: TouchEvent) => {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      isDraggingImageRef.current = false;
-      isSwipingRef.current = false;
-      dragDirectionRef.current = null;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      lastX = touchStartX;
+      lastY = touchStartY;
+      isDragging = false;
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
+      const idx = currentIdxRef.current;
+      const media = mediaFilesRef.current[idx];
 
-      const dx = e.touches[0].clientX - touchStartRef.current.x;
-      const dy = e.touches[0].clientY - touchStartRef.current.y;
+      // 이미지일 때만 처리
+      if (!media || media.type !== 'image') return;
 
-      // 방향 아직 미결정 → 임계값 넘으면 결정
-      if (!dragDirectionRef.current) {
-        if (Math.abs(dx) < DIRECTION_THRESHOLD && Math.abs(dy) < DIRECTION_THRESHOLD) return;
-        dragDirectionRef.current = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
-      }
+      // ✅ 이미지 터치 시 즉시 preventDefault → 페이지 스크롤 완전 차단
+      e.preventDefault();
+      isDragging = true;
 
-      const media = mediaFiles[currentIdx];
-      const isPortrait = media?.orientation === 'portrait';
+      const dx = e.touches[0].clientX - lastX;
+      const dy = e.touches[0].clientY - lastY;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
 
-      if (dragDirectionRef.current === 'horizontal') {
-        // 가로형 이미지: 가로 드래그 → crop
-        if (media?.type === 'image' && !isPortrait) {
-          isDraggingImageRef.current = true;
-          e.preventDefault();
-          const sensitivity = 0.35;
-          const cur = cropRef.current[currentIdx] ?? { x: 50, y: 50 };
-          const newX = Math.max(0, Math.min(100, cur.x - dx * sensitivity));
-          cropRef.current[currentIdx] = { x: newX, y: cur.y };
-          touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          const imgEl = imgRefs.current[currentIdx];
-          if (imgEl) imgEl.style.objectPosition = `${newX}% 50%`;
-        } else {
-          // 세로형 이미지 or 비디오: 가로 → 슬라이드 전환
-          isSwipingRef.current = true;
-        }
-      } else {
-        // 세로 드래그
-        if (media?.type === 'image' && isPortrait) {
-          // 세로형 이미지: 세로 드래그 → crop
-          isDraggingImageRef.current = true;
-          e.preventDefault();
-          const sensitivity = 0.35;
-          const cur = cropRef.current[currentIdx] ?? { x: 50, y: 50 };
-          const newY = Math.max(0, Math.min(100, cur.y - dy * sensitivity));
-          cropRef.current[currentIdx] = { x: cur.x, y: newY };
-          touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          const imgEl = imgRefs.current[currentIdx];
-          if (imgEl) imgEl.style.objectPosition = `50% ${newY}%`;
-        }
-        // 세로 스크롤은 브라우저 기본 동작
-      }
+      const isPortrait = media.orientation === 'portrait';
+      const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
+      const sensitivity = 0.5;
+
+      const newX = isPortrait
+        ? cur.x
+        : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
+      const newY = isPortrait
+        ? Math.max(0, Math.min(100, cur.y - dy * sensitivity))
+        : cur.y;
+
+      cropRef.current[idx] = { x: newX, y: newY };
+
+      const imgEl = imgRefs.current[idx];
+      if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
+      const idx = currentIdxRef.current;
+      const files = mediaFilesRef.current;
 
-      if (isDraggingImageRef.current) {
+      if (isDragging) {
         // crop 저장
-        const { x, y } = cropRef.current[currentIdx] ?? { x: 50, y: 50 };
-        onCropChange(currentIdx, x, y);
-      } else if (isSwipingRef.current) {
-        // 슬라이드 전환
-        const endX = e.changedTouches[0].clientX;
-        const dx = endX - touchStartRef.current.x;
-        if (dx < -40 && currentIdx < mediaFiles.length - 1) setCurrentIdx(i => i + 1);
-        else if (dx > 40 && currentIdx > 0) setCurrentIdx(i => i - 1);
+        const { x, y } = cropRef.current[idx] ?? { x: 50, y: 50 };
+        onCropChangeRef.current(idx, x, y);
+      } else {
+        // 스와이프로 슬라이드 전환
+        const totalDx = e.changedTouches[0].clientX - touchStartX;
+        if (totalDx < -40 && idx < files.length - 1) {
+          setCurrentIdx(i => i + 1);
+        } else if (totalDx > 40 && idx > 0) {
+          setCurrentIdx(i => i - 1);
+        }
       }
 
-      touchStartRef.current = null;
-      isDraggingImageRef.current = false;
-      isSwipingRef.current = false;
-      dragDirectionRef.current = null;
+      isDragging = false;
     };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false }); // passive:false 필수
     el.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
@@ -148,58 +145,66 @@ const MediaSlider = ({
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
     };
-  }, [mediaFiles, currentIdx, onCropChange]);
+  }, []); // ✅ 빈 배열 — 절대 재등록 없음
 
   if (mediaFiles.length === 0) return null;
 
   return (
-    <div ref={sliderRef} className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none">
-      {/* 슬라이드 */}
-      <div
-        className="flex h-full"
-        style={{
-          width: `${mediaFiles.length * 100}%`,
-          transform: `translateX(-${(currentIdx * 100) / mediaFiles.length}%)`,
-          transition: 'transform 0.3s ease',
-        }}
-      >
+    <div
+      ref={sliderRef}
+      className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none"
+    >
+      {/* ✅ opacity 전환 방식 — 이미지 깨짐 없음 */}
+      <div className="relative w-full h-full">
         {mediaFiles.map((media, idx) => (
           <div
             key={`${idx}-${media.url}`}
-            className="relative h-full flex-shrink-0"
-            style={{ width: `${100 / mediaFiles.length}%` }}
+            className="absolute inset-0 w-full h-full"
+            style={{
+              opacity: idx === currentIdx ? 1 : 0,
+              transition: 'opacity 0.25s ease',
+              pointerEvents: idx === currentIdx ? 'auto' : 'none',
+            }}
           >
             {media.type === 'image' ? (
               <img
                 ref={el => { imgRefs.current[idx] = el; }}
                 src={media.url}
-                className="w-full h-full object-cover pointer-events-none"
-                style={{
-                  objectPosition: media.orientation === 'portrait'
-                    ? `50% ${media.crop?.y ?? 50}%`
-                    : `${media.crop?.x ?? 50}% 50%`,
-                }}
+                className="w-full h-full object-cover"
+                draggable={false}
+                style={{ objectPosition: `${media.crop?.x ?? 50}% ${media.crop?.y ?? 50}%` }}
               />
             ) : (
-              <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+              <video
+                src={media.url}
+                className="w-full h-full object-cover"
+                autoPlay muted loop playsInline
+              />
             )}
-            {/* 삭제 버튼 */}
-            <button
-              onTouchEnd={(e) => { e.stopPropagation(); onRemove(idx); }}
-              onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
-              className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         ))}
       </div>
+
+      {/* 삭제 버튼 */}
+      <button
+        onTouchEnd={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
+        onClick={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
+        className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
       {/* 인디케이터 */}
       {mediaFiles.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
           {mediaFiles.map((_, i) => (
-            <div key={i} className={cn("h-1.5 rounded-full transition-all", currentIdx === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+            <div
+              key={i}
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                currentIdx === i ? "bg-white w-6" : "bg-white/40 w-1.5"
+              )}
+            />
           ))}
         </div>
       )}
@@ -253,7 +258,10 @@ const Write = () => {
       if (type === 'image') {
         await new Promise((resolve) => {
           const img = new Image();
-          img.onload = () => { orientation = img.width >= img.height ? 'landscape' : 'portrait'; resolve(null); };
+          img.onload = () => {
+            orientation = img.width >= img.height ? 'landscape' : 'portrait';
+            resolve(null);
+          };
           img.onerror = () => resolve(null);
           img.src = url;
         });
@@ -338,7 +346,10 @@ const Write = () => {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Leave your trace</p>
         </div>
         {currentPage === 2 && (
-          <button onClick={() => setCurrentPage(1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
+          <button
+            onClick={() => setCurrentPage(1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800"
+          >
             <ChevronLeft className="w-6 h-6" />
           </button>
         )}
@@ -362,7 +373,14 @@ const Write = () => {
                     {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
                   </span>
                 </button>
-                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
+                <input
+                  type="file"
+                  ref={mediaInputRef}
+                  className="hidden"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleMediaSelect}
+                />
               </div>
 
               {mediaFiles.length > 0 ? (
@@ -415,7 +433,9 @@ const Write = () => {
                       )}
                     >
                       <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
+                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
+                        {cat.label}
+                      </span>
                     </button>
                   ))}
                 </div>
