@@ -228,7 +228,35 @@ const Index = () => {
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
-      const mappedPosts: Post[] = await Promise.all(dbPosts.map(p => mapDbToPost(p)));
+      
+      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
+      const mappedPosts: Post[] = dbPosts.map(p => {
+        const isAd = p.content?.trim().startsWith('[AD]') || false;
+        let borderType: any = 'none';
+        if (Number(p.likes) >= 9000) borderType = 'popular';
+        
+        return {
+          id: p.id,
+          isAd,
+          lat: p.latitude,
+          lng: p.longitude,
+          likes: Number(p.likes || 0),
+          image: p.image_url || '',
+          youtubeUrl: p.youtube_url,
+          videoUrl: p.video_url,
+          category: p.category || 'none',
+          createdAt: new Date(p.created_at),
+          borderType,
+          user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
+          content: '', 
+          location: p.location_name || '',
+          images: p.image_url ? [p.image_url] : [],
+          isLiked: false,
+          commentsCount: 0,
+          comments: []
+        };
+      });
+
       setAllPosts(prev => {
         const postsToDelete: Post[] = prev.filter(p => {
           const inBounds = p.lat >= Math.min(sw.lat, ne.lat) && p.lat <= Math.max(sw.lat, ne.lat) && p.lng >= Math.min(sw.lng, ne.lng) && p.lng <= Math.max(sw.lng, ne.lng);
