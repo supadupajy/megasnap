@@ -213,6 +213,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     }));
 
     setMediaFiles(prev => [...prev, ...newItems]);
+      console.log('✅ setMediaFiles 호출됨, 길이:', next.length, next[0]?.url?.substring(0, 50));
+
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
