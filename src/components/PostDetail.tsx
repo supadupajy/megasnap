@@ -429,14 +429,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <iframe
                               key={`detail-yt-${youtubeId}`}
                               className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1`}
+                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
                               title="YouTube video player"
                               frameBorder="0"
                               allow="autoplay; encrypted-media; picture-in-picture"
                               allowFullScreen
                             />
                           ) : currentPost.videoUrl ? (
-                            <video key={`detail-vid-${currentPost.id}`} src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                            <video 
+                              key={`detail-vid-${currentPost.id}`} 
+                              src={currentPost.videoUrl} 
+                              className="w-full h-full object-cover" 
+                              autoPlay 
+                              loop 
+                              playsInline 
+                              controls 
+                            />
                           ) : (
                             <div className="relative w-full h-full">
                               {/* 네이티브 스크롤 슬라이더 */}
