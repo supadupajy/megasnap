@@ -313,6 +313,39 @@ const MapContainer = ({
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
+// ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
+useEffect(() => {
+  const handleHighlight = (e: any) => {
+    const postId = e.detail?.id;
+
+    // 모든 마커에서 highlighted 제거
+    overlaysRef.current.forEach((overlay, id) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (!content) return;
+      if (content.classList.contains('highlighted')) {
+        content.classList.remove('highlighted');
+        const post = posts.find(p => p.id === id);
+        overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
+      }
+    });
+
+    if (!postId) return;
+
+    // 해당 마커에 highlighted 추가
+    const overlay = overlaysRef.current.get(postId);
+    if (overlay) {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.classList.add('highlighted');
+        overlay.setZIndex(10000);
+      }
+    }
+  };
+
+  window.addEventListener('highlight-marker', handleHighlight);
+  return () => window.removeEventListener('highlight-marker', handleHighlight);
+}, [posts]);
+
   useEffect(() => {
     if (!mapInstance.current || !isMapReady) return;
     const map = mapInstance.current;
