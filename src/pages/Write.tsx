@@ -339,9 +339,9 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
                   {/* 이미지 / 비디오 */}
                   {currentMedia?.type === 'image' ? (
   <img
-    ref={imgRef}
-    src={currentMedia.url}
-    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+  ref={imgRef}
+  src={currentMedia.url}
+  className="pointer-events-none"
     onLoad={() => {
       const img = imgRef.current;
       const container = containerRef.current;
