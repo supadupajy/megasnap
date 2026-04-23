@@ -197,21 +197,27 @@ const Index = () => {
           setCurrentZoom(5);
 
           // [FIX] 폭죽 효과 타이밍 및 설정 대폭 강화
-          // 지도가 이동하고 마커가 생성되는 시점(약 0.6s~0.8s)에 맞춰 폭죽을 터뜨림
+          // 브라우저의 z-index 이슈를 완전히 피하기 위해 canvas-confetti의 기본 설정을 강화
           setTimeout(() => {
-            console.log('[Confetti] Firing manual confetti after post submission');
-            confetti({
-              particleCount: 250,
-              spread: 100,
-              origin: { y: 0.5, x: 0.5 }, // 화면 중앙에서 터지도록 설정
-              colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee', '#fbbf24', '#ffffff'],
-              zIndex: 99999, // 최상단에 표시
-              scalar: 1.5,
-              ticks: 300,
-              gravity: 1.2,
-              drift: 0,
-              shapes: ['circle', 'square']
-            });
+            console.log('[Confetti] FIRING FIREWORKS!');
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999 };
+
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+            const interval: any = setInterval(function() {
+              const timeLeft = animationEnd - Date.now();
+
+              if (timeLeft <= 0) {
+                return clearInterval(interval);
+              }
+
+              const particleCount = 50 * (timeLeft / duration);
+              // since particles fall down, start a bit higher than random
+              confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+              confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
           }, 800);
         }
         setIsWriteOpen(false);
@@ -844,19 +850,34 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 글 작성 완료 후 페이지 전환 완료 시점에 폭죽 터뜨림
+      // [FIX] 글 작성 완료 후 페이지 전환 완료 시점에 더 화려한 폭죽 터뜨림
       setTimeout(() => {
-        console.log('[Confetti] Firing manual confetti after post created event');
-        confetti({
-          particleCount: 250,
-          spread: 100,
-          origin: { y: 0.5, x: 0.5 },
-          colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee', '#fbbf24', '#ffffff'],
-          zIndex: 99999,
-          scalar: 1.5,
-          ticks: 300,
-          gravity: 1.2
-        });
+        console.log('[Confetti] FIRING FIREWORKS AFTER CREATED!');
+        const end = Date.now() + (3 * 1000);
+        const colors = ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'];
+
+        (function frame() {
+          confetti({
+            particleCount: 2,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: colors,
+            zIndex: 999999
+          });
+          confetti({
+            particleCount: 2,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: colors,
+            zIndex: 999999
+          });
+
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        }());
       }, 800);
     }
     setIsWriteOpen(false);
