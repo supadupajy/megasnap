@@ -168,45 +168,40 @@ const MapContainer = ({
       if (mapInstance.current) return true;
 
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
-      const initialLevel = 5; 
-
-      const options = {
+      const map = new kakao.maps.Map(containerRef.current!, {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
-        level: initialLevel
-      };
-
-      const map = new kakao.maps.Map(containerRef.current!, options);
+        level: 5
+      });
       map.setMaxLevel(11);
       mapInstance.current = map;
+
+      // [NEW] 줌 레벨에 따라 컨테이너 클래스 업데이트 (CSS 스케일링용)
+      const updateZoomClass = () => {
+        const lvl = map.getLevel();
+        const el = containerRef.current;
+        if (!el) return;
+        el.className = el.className.replace(/\bzoom-\d+\b/g, '');
+        el.classList.add(`zoom-${lvl}`);
+      };
 
       const updateMapData = () => {
         if (isProgrammaticMove.current) return;
         try {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
           
-          setCurrentLevel(mapLevel);
-          currentLevelRef.current = mapLevel;
-
-          const boundsData = { 
-            sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-            ne: { lat: ne.getLat(), lng: ne.getLng() } 
-          };
-
-          // [FIX] Save bounds to localStorage for Settings page to use
-          localStorage.setItem('map_bounds', JSON.stringify(boundsData));
+          updateZoomClass(); // 줌 클래스 갱신
 
           onMapChangeRef.current({
-            bounds: boundsData,
+            bounds: { 
+              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
+              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
+            },
             center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
             level: mapLevel,
           });
-        } catch (e) {
-          console.error('Map update error:', e);
-        }
+        } catch (e) {}
       };
 
       updateMapData();
@@ -214,48 +209,11 @@ const MapContainer = ({
       setIsLoading(false);
 
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
-
-      kakao.maps.event.addListener(map, 'dragstart', () => { 
-        isDragging.current = true; 
-        setIsMapMoving(true);
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-          isProgrammaticMove.current = false;
-        }
-      });
-      kakao.maps.event.addListener(map, 'dragend', () => { 
-        isDragging.current = false; 
-        setIsMapMoving(false);
-        lastDragEnd.current = Date.now(); 
-      });
-
-      kakao.maps.event.addListener(map, 'zoom_start', () => setIsMapMoving(true));
-
-      kakao.maps.event.addListener(map, 'zoom_changed', () => {
-        const newLevel = map.getLevel();
-        setCurrentLevel(newLevel);
-        currentLevelRef.current = newLevel;
-        
-        if (newLevel >= 8) {
-          overlaysRef.current.forEach((overlay) => {
-            overlay.setMap(null);
-          });
-        }
-      });
-
-      kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-        if (Date.now() - lastDragEnd.current < 200) return;
-        if (onMapClickRef.current) {
-          const latLng = mouseEvent.latLng;
-          onMapClickRef.current({ lat: latLng.getLat(), lng: latLng.getLng() });
-        }
-      });
-
+      kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; setIsMapMoving(true); });
+      kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; setIsMapMoving(false); lastDragEnd.current = Date.now(); });
+      
       return true;
-    } catch (e) {
-      console.error('Kakao Map Init Error:', e);
-      return false;
-    }
+    } catch (e) { return false; }
   }, []);
 
   useEffect(() => {
@@ -288,28 +246,22 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
     const level = mapInstance.current.getLevel();
-    
-    // [FIX] 마커 표시 여부만 결정 (스케일링은 CSS/이미 생성된 인스턴스에서 처리)
     if (level >= 8) {
-      overlaysRef.current.forEach((overlay) => {
-        overlay.setMap(null);
-      });
+      overlaysRef.current.forEach(o => o.setMap(null));
       return;
     }
 
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // [FIX] 화면 밖 마커 및 삭제된 마커 정리
+    // [FIX] 화면 밖 마커 효율적 정리
     overlaysRef.current.forEach((overlay, id) => {
-      const position = overlay.getPosition();
-      if (!currentPostIds.has(id) || !bounds.contain(position)) {
+      if (!currentPostIds.has(id) || !bounds.contain(overlay.getPosition())) {
         overlay.setMap(null);
         overlaysRef.current.delete(id);
       }
     });
 
-    // [FIX] 새 마커 추가 및 기존 마커 상태 유지
     posts.forEach(post => {
       if (!post) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
@@ -317,28 +269,13 @@ const MapContainer = ({
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-      const isNewRealtime = post.isNewRealtime === true;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      // [FIX] contentStateKey에서 이미지 URL 등을 제외하여 불필요한 innerHTML 갱신 최소화
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay marker-appear-animation';
-        
-        // [FIX] 초기 스케일 설정 (튀는 현상 방지)
-        const currentLevel = mapInstance.current.getLevel();
-        let initialScale = 1.0;
-        if (currentLevel === 6) initialScale = 0.7;
-        else if (currentLevel === 7) initialScale = 0.45;
-        content.style.transform = `scale(${initialScale})`;
-
-        if (isNewRealtime) {
-          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
-        }
-        
         if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -353,26 +290,20 @@ const MapContainer = ({
           position: position, 
           content: content, 
           yAnchor: 1, 
-          zIndex: baseZIndex 
+          zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
         });
         
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
         const content = existingOverlay.getContent() as HTMLElement;
-        existingOverlay.setZIndex(baseZIndex);
-        
-        // [FIX] 클래스 조작 시 리플로우 최소화
-        if (isHighlighted && !content.classList.contains('highlighted')) content.classList.add('highlighted'); 
-        else if (!isHighlighted && content.classList.contains('highlighted')) content.classList.remove('highlighted');
-
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           content.innerHTML = getMarkerInnerHtml(post, isViewed); 
           content.setAttribute('data-content-state', contentStateKey); 
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
   // [FIX] 줌 레벨 변경 핸들러 최적화 (카카오맵 이벤트를 직접 구독)
   useEffect(() => {

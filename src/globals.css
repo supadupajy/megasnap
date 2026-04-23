@@ -50,12 +50,10 @@
   cursor: pointer;
   will-change: transform;
   transform-origin: bottom center;
-  /* [FIX] transition 제거 혹은 아주 짧게 설정하여 줌 시 딜레이(튀는 현상) 방지 */
-  transition: none !important; 
+  transition: transform 0.15s ease-out; /* 부드러운 전환을 위한 최소한의 트랜지션 */
   display: block;
   z-index: 10;
-  width: 60px; /* 고정 크기 지정으로 레이아웃 흔들림 방지 */
-  height: auto;
+  width: 60px;
 }
 
 .marker-content-wrapper {
@@ -66,6 +64,22 @@
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
   /* [FIX] 하드웨어 가속 강제 */
   transform: translateZ(0);
+}
+
+/* [NEW] 줌 레벨별 마커 스케일링 일괄 적용 (JS 루프 제거용) */
+#kakao-map.zoom-6 .marker-container {
+  transform: scale(0.7) !important;
+}
+
+#kakao-map.zoom-7 .marker-container {
+  transform: scale(0.45) !important;
+}
+
+#kakao-map.zoom-8 .marker-container,
+#kakao-map.zoom-9 .marker-container,
+#kakao-map.zoom-10 .marker-container,
+#kakao-map.zoom-11 .marker-container {
+  display: none !important;
 }
 
 /* [FIX] 마커가 스르륵(Fade-in) 나타나는 애니메이션 */
