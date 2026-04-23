@@ -20,14 +20,18 @@ const ObservedPostItem = ({
   isViewed, 
   onLikeToggle, 
   onLocationClick,
-  onDelete 
+  onDelete,
+  isPlaying,
+  onPlayingChange
 }: { 
   post: Post, 
   onVisible: (id: string) => void, 
   isViewed: boolean, 
   onLikeToggle: (id: string) => void, 
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void,
+  isPlaying: boolean,
+  onPlayingChange: (id: string, isIntersecting: boolean) => void
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
@@ -95,6 +99,7 @@ const ObservedPostItem = ({
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
+        onPlayingChange(post.id, entry.isIntersecting);
       },
       { 
         threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
@@ -126,10 +131,10 @@ const ObservedPostItem = ({
       playbackObserver.disconnect();
       preloadObserver.disconnect();
     };
-  }, [post.id, onVisible]);
+  }, [post.id, onVisible, onPlayingChange]);
 
   return (
-    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
+    <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[40px]">
       <PostItem 
         post={fullPost}
         isViewed={isViewed} 
@@ -412,6 +417,10 @@ const PostListOverlay = ({
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                 }}
                 onDelete={(id) => onDeletePost?.(id)}
+                isPlaying={isCurrentlyVisible}
+                onPlayingChange={(id, isIntersecting) => {
+                  // 이 함수는 실제로는 사용되지 않지만, 타입 정의를 위해 포함
+                }}
               />
             ))}
             
