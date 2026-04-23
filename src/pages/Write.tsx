@@ -202,8 +202,7 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
           const img = new Image();
           img.onload = () => {
             orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-            console.log('📸 orientation:', orientation, img.naturalWidth, 'x', img.naturalHeight);
-            resolve();
+              resolve();
           };
           img.onerror = () => resolve();
           img.src = url;
