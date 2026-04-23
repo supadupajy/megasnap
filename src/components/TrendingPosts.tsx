@@ -230,7 +230,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             return (
               <div 
                 key={post.id}
-                onClick={() => onPostClick(post)}
+                onClick={() => {
+                  // [FIX] 상세 페이지로 넘기기 전 데이터 정규화
+                  const normalizedPost = {
+                    ...post,
+                    youtubeUrl: post.youtubeUrl || post.youtube_url,
+                    videoUrl: post.videoUrl || post.video_url
+                  };
+                  onPostClick(normalizedPost);
+                }}
                 className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
               >
                 <div className="w-6 text-center shrink-0">

@@ -285,7 +285,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
   const displayImages = useMemo(() => {
-    if (!currentPost) return [];
+    if (!currentPost || videoId || vUrl) return []; // [CRITICAL] 영상이 있으면 이미지 배열을 비움
     
     let baseImages: string[] = [];
     
@@ -314,7 +314,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     
     return imagesWithAd;
-  }, [currentPost, displayImage]);
+  }, [currentPost, displayImage, videoId, vUrl]);
 
   const adLink = useMemo(() => {
     if (!currentPost) return "https://www.coca-cola.co.kr/";
@@ -507,34 +507,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - Index.tsx/PostItem.tsx와 동일한 구조로 완전 일치 */}
+                      {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {videoId ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
+                          {/* 영상 레이어 */}
+                          {videoId && (
+                            <div className="absolute inset-0 w-full h-full z-50 bg-black">
                               <iframe
                                 key={`yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
                                 className="w-full h-full border-0"
                                 allow="autoplay; encrypted-media"
                                 allowFullScreen
                               />
                             </div>
-                          ) : vUrl ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
+                          )}
+
+                          {vUrl && !videoId && (
+                            <div className="absolute inset-0 w-full h-full z-50 bg-black">
                               <video 
                                 key={`vid-${currentPost.id}-${vUrl}`}
                                 src={vUrl} 
                                 className="w-full h-full object-cover" 
                                 autoPlay 
-                                muted
                                 loop 
                                 playsInline 
                                 controls 
                               />
                             </div>
-                          ) : (
-                            <div className="relative w-full h-full">
+                          )}
+
+                          {/* 이미지 레이어 - 영상이 없을 때만 렌더링 */}
+                          {!videoId && !vUrl && displayImages.length > 0 && (
+                            <div className="relative w-full h-full z-10">
                               {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
                               <div
                                 ref={imageScrollRef}
