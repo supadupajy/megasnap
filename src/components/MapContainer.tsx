@@ -299,11 +299,16 @@ const MapContainer = ({
             existingOverlay.setZIndex(10000);
           }
         } else {
-          if (content.classList.contains('highlighted')) {
-            content.classList.remove('highlighted');
-            existingOverlay.setZIndex(post.isAd ? 500 : post.borderType !== 'none' ? 400 : 300);
-          }
-        }
+  const content = existingOverlay.getContent() as HTMLElement;
+  if (existingOverlay.getMap() === null) {
+    existingOverlay.setMap(mapInstance.current);
+  }
+  if (content.getAttribute('data-content-state') !== contentStateKey) {
+    content.innerHTML = getMarkerInnerHtml(post, isViewed);
+    content.setAttribute('data-content-state', contentStateKey);
+  }
+  // ✅ highlighted 토글 제거 — 아래 이벤트 리스너가 담당
+}
       }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
