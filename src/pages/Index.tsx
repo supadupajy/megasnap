@@ -117,40 +117,31 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
-  const pendingHighlightRef = useRef<string | null>(null);
-
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-    if (post.lat === null || post.lng === null) return;
-    setAllPosts((prev) => {
-      if (prev.some((item) => item.id === post.id)) return prev;
-      const combined = [post, ...prev];
-      mapCache.posts = combined;
-      return combined;
-    });
-    setSelectedPostId(null);
-    setSearchResultLocation(null);
+  if (post.lat === null || post.lng === null) return;
+  setAllPosts((prev) => {
+    if (prev.some((item) => item.id === post.id)) return prev;
+    const combined = [post, ...prev];
+    mapCache.posts = combined;
+    return combined;
+  });
+  setSelectedPostId(null);
+  setSearchResultLocation(null);
+  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+  // ✅ 하이라이트 먼저 null로 초기화
+  setHighlightedPostId(null);
 
-    // ✅ 기존 하이라이트 즉시 제거, 이동 완료 후 적용할 id 예약
-    setHighlightedPostId(null);
-    pendingHighlightRef.current = post.id;
-
-    setMapCenter(center || { lat: post.lat, lng: post.lng });
-  }, []);
-
-  // ✅ 지도 이동 완료 시 호출 — MapContainer에서 smoothMoveTo 완료 후 실행
-  const handleMoveComplete = useCallback(() => {
-    if (pendingHighlightRef.current) {
-      const postId = pendingHighlightRef.current;
-      pendingHighlightRef.current = null;
-      setHighlightedPostId(postId);
-      highlightTimeoutRef.current = window.setTimeout(() => {
-        setHighlightedPostId(null);
-        highlightTimeoutRef.current = null;
-      }, 6000);
-    }
-  }, []);
+  // ✅ 지도 이동 시간(최대 1200ms) + 여유 후에 하이라이트 적용
+  setMapCenter(center || { lat: post.lat, lng: post.lng });
+  highlightTimeoutRef.current = window.setTimeout(() => {
+    setHighlightedPostId(post.id);
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedPostId(null);
+      highlightTimeoutRef.current = null;
+    }, 6000);
+  }, 1300);
+}, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
