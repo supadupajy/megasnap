@@ -156,20 +156,18 @@ const Write = () => {
     setMediaFiles(newMedia);
   };
 
+  const [dragActiveIdx, setDragActiveIdx] = useState<number | null>(null);
+
   const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
-    // 캐러셀의 기본 드래그 동작을 막기 위해 전파 중단
-    e.stopPropagation();
-    
-    if (mediaFiles[idx].type !== 'image') return;
-    
     const media = mediaFiles[idx];
-    const isPortrait = media.orientation === 'portrait';
+    if (!media || media.type !== 'image') return;
     
+    const isPortrait = media.orientation === 'portrait';
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-    if (!isDraggingRef.current) {
-      isDraggingRef.current = true;
+    if (dragActiveIdx !== idx) {
+      setDragActiveIdx(idx);
       dragStartRef.current = { x: clientX, y: clientY };
       return;
     }
@@ -179,8 +177,8 @@ const Write = () => {
     
     dragStartRef.current = { x: clientX, y: clientY };
 
-    // 민감도 조정 (이미지 크기에 비례하여 0~100 사이의 값으로 변환)
-    const sensitivity = 0.4;
+    // 민감도: % 단위이므로 화면 크기에 맞춰 조정 (0.2 ~ 0.5 권장)
+    const sensitivity = 0.35;
     
     const currentX = media.crop?.x ?? 50;
     const currentY = media.crop?.y ?? 50;
@@ -192,7 +190,7 @@ const Write = () => {
   };
 
   const stopDragging = () => {
-    isDraggingRef.current = false;
+    setDragActiveIdx(null);
   };
 
   const captureVideoThumbnail = (url: string): Promise<string> => {
@@ -312,7 +310,7 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                   <Carousel 
                     setApi={setApi} 
                     className="w-full h-full"
-                    opts={{ watchDrag: !isDraggingRef.current }} // 드래그 중에는 캐러셀 자체 드래그 비활성화 시도
+                    opts={{ watchDrag: dragActiveIdx === null }}
                   >
                     <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
@@ -320,28 +318,28 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                           <div 
                             className="w-full h-full relative overflow-hidden touch-none"
                             onMouseDown={(e) => {
-                              isDraggingRef.current = true;
+                              e.stopPropagation();
                               handleDrag(e, idx);
                             }}
                             onMouseMove={(e) => {
-                              if (isDraggingRef.current) handleDrag(e, idx);
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
                             }}
-                            onMouseUp={() => {
-                              isDraggingRef.current = false;
-                            }}
-                            onMouseLeave={() => {
-                              isDraggingRef.current = false;
-                            }}
+                            onMouseUp={stopDragging}
+                            onMouseLeave={stopDragging}
                             onTouchStart={(e) => {
-                              isDraggingRef.current = true;
+                              e.stopPropagation();
                               handleDrag(e, idx);
                             }}
                             onTouchMove={(e) => {
-                              if (isDraggingRef.current) handleDrag(e, idx);
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
                             }}
-                            onTouchEnd={() => {
-                              isDraggingRef.current = false;
-                            }}
+                            onTouchEnd={stopDragging}
                           >
                             {media.type === 'image' ? (
                               <img 
