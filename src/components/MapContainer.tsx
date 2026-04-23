@@ -362,30 +362,31 @@ const MapContainer = ({
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
+      // [FIX] isNewRealtime 플래그를 더 확실하게 감지하기 위해 post 객체의 속성을 직접 확인
       const isNewRealtime = post.isNewRealtime === true;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ isNewRealtime 상태를 contentStateKey에 포함시켜 DOM 업데이트 강제 유도
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}-${isNewRealtime}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // ✅ [FIX] globals.css에 정의된 marker-appear-animation 클래스 사용
-        content.className = 'marker-container kakao-overlay marker-appear-animation';
+        // [FIX] 1. 기본 마커 컨테이너 클래스
+        content.className = 'marker-container kakao-overlay';
         
-        // ✅ [FIX] 실시간 포스팅(방금 내가 쓴 글 포함)인 경우 더 강한 연출 적용
+        // [FIX] 2. 새로 생성되는 모든 마커에 기본 애니메이션 적용
+        content.classList.add('marker-appear-animation');
+        
+        // [FIX] 3. 실시간 또는 방금 작성한 글은 추가 연출
         if (isNewRealtime) {
           content.classList.add('animate-realtime-marker-appear');
           content.classList.add('realtime-spark');
         }
         
         content.style.opacity = '0';
-        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
         content.style.transformOrigin = 'bottom center';
         content.style.willChange = 'transform, opacity';
-        content.style.setProperty('transform', `scale(${scale})`, 'important');
 
         if (isHighlighted) content.classList.add('highlighted');
         
@@ -408,6 +409,7 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
 
+        // [FIX] 강제 애니메이션 트리거
         requestAnimationFrame(() => {
           content.style.opacity = '1';
         });
@@ -425,15 +427,18 @@ const MapContainer = ({
           if (isHighlighted) content.classList.add('highlighted'); 
           else content.classList.remove('highlighted');
 
-          // ✅ [FIX] isNewRealtime인 경우 애니메이션 강제 트리거 (reflow 이용)
+          // [FIX] 이미 존재하지만 새로고침/업데이트 등으로 isNewRealtime이 들어온 경우 처리
           if (isNewRealtime) {
             content.classList.remove('marker-appear-animation');
             content.classList.remove('animate-realtime-marker-appear');
-            void content.offsetWidth; // Force reflow
+            content.classList.remove('realtime-spark');
+            
+            void content.offsetWidth; // Reflow
+            
             content.classList.add('animate-realtime-marker-appear');
             content.classList.add('realtime-spark');
             
-            // 효과 소모 처리
+            // 데이터 원본의 플래그를 꺼서 무한 반복 방지
             post.isNewRealtime = false;
           }
 
