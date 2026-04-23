@@ -279,14 +279,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   // 이미지 슬라이더 데이터 준비
   const displayImages = useMemo(() => {
     const baseImages = Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image];
-    // 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입 (광고 포스트가 아닐 때도 포함하거나 광고 포스트일 때만 할지 결정)
-    // 사용자 요청에 따라 "모든 포스팅 화면"에 적용
-    if (baseImages.length > 0) {
-      const newImages = [...baseImages];
-      newImages.splice(1, 0, COCA_COLA_AD);
-      return newImages;
-    }
-    return [COCA_COLA_AD];
+    
+    // [FIX] 광고를 삽입하되 원본 이미지가 누락되지 않도록 로직 수정
+    const newImages = [...baseImages];
+    // 두 번째 슬라이드(index 1) 위치에 코카콜라 광고 삽입
+    newImages.splice(1, 0, COCA_COLA_AD);
+    return newImages;
   }, [post.images, post.image, post.image_url]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
