@@ -8,16 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { App as CapApp } from '@capacitor/app';
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
-import UserProfile from "./pages/UserProfile";
-import Follow from "./pages/Follow";
-import Popular from "./pages/Popular";
-import Search from "./pages/Search";
-import Notifications from "./pages/Notifications";
-import Messages from "./pages/Messages";
-import Chat from "./pages/Chat";
-import WritePage from "./pages/Write";
-import FriendList from "./pages/FriendList";
-import Login from "./pages/Login";
+import PostDetailView from "./pages/PostDetailView";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
@@ -164,11 +155,9 @@ const AnimatedRoutes = () => {
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/follow/:userId" element={<Follow />} />
-              <Route path="/profile/friends" element={<FriendList />} />
-              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/post/:postId" element={<PostDetailView />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
