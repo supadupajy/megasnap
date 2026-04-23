@@ -240,7 +240,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // ✅ 조건부 return은 모든 훅 선언 이후에
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
-  const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
+  const youtubeId = useMemo(() => {
+    if (!currentPost) return null;
+    return getYoutubeId(currentPost.youtubeUrl || '');
+  }, [currentPost]);
+
   const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
@@ -427,7 +431,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                           {youtubeId ? (
                             <iframe
-                              key={`detail-yt-${youtubeId}`}
+                              key={`detail-yt-${currentPost.id}-${isOpen}`}
                               className="w-full h-full"
                               src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
                               title="YouTube video player"
@@ -437,7 +441,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             />
                           ) : currentPost.videoUrl ? (
                             <video 
-                              key={`detail-vid-${currentPost.id}`} 
+                              key={`detail-vid-${currentPost.id}-${isOpen}`} 
                               src={currentPost.videoUrl} 
                               className="w-full h-full object-cover" 
                               autoPlay 
