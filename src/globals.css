@@ -48,11 +48,14 @@
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
-  will-change: transform, opacity;
+  will-change: transform;
   transform-origin: bottom center;
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+  /* [FIX] transition 제거 혹은 아주 짧게 설정하여 줌 시 딜레이(튀는 현상) 방지 */
+  transition: none !important; 
   display: block;
   z-index: 10;
+  width: 60px; /* 고정 크기 지정으로 레이아웃 흔들림 방지 */
+  height: auto;
 }
 
 .marker-content-wrapper {
@@ -61,6 +64,8 @@
   flex-direction: column;
   align-items: center;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  /* [FIX] 하드웨어 가속 강제 */
+  transform: translateZ(0);
 }
 
 /* [FIX] 마커가 스르륵(Fade-in) 나타나는 애니메이션 */

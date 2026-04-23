@@ -321,11 +321,20 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${post.borderType}-${post.isAd}`;
+      // [FIX] contentStateKey에서 이미지 URL 등을 제외하여 불필요한 innerHTML 갱신 최소화
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay marker-appear-animation';
+        
+        // [FIX] 초기 스케일 설정 (튀는 현상 방지)
+        const currentLevel = mapInstance.current.getLevel();
+        let initialScale = 1.0;
+        if (currentLevel === 6) initialScale = 0.7;
+        else if (currentLevel === 7) initialScale = 0.45;
+        content.style.transform = `scale(${initialScale})`;
+
         if (isNewRealtime) {
           content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         }
@@ -352,8 +361,10 @@ const MapContainer = ({
       } else {
         const content = existingOverlay.getContent() as HTMLElement;
         existingOverlay.setZIndex(baseZIndex);
-        if (isHighlighted) content.classList.add('highlighted'); 
-        else content.classList.remove('highlighted');
+        
+        // [FIX] 클래스 조작 시 리플로우 최소화
+        if (isHighlighted && !content.classList.contains('highlighted')) content.classList.add('highlighted'); 
+        else if (!isHighlighted && content.classList.contains('highlighted')) content.classList.remove('highlighted');
 
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           content.innerHTML = getMarkerInnerHtml(post, isViewed); 
@@ -362,6 +373,33 @@ const MapContainer = ({
       }
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser]);
+
+  // [FIX] 줌 레벨 변경 핸들러 최적화 (카카오맵 이벤트를 직접 구독)
+  useEffect(() => {
+    if (!mapInstance.current || !isMapReady) return;
+    
+    const map = mapInstance.current;
+    const kakao = (window as any).kakao;
+
+    const handleZoom = () => {
+      const level = map.getLevel();
+      let scale = 1.0;
+      if (level === 6) scale = 0.7;
+      else if (level === 7) scale = 0.45;
+      else if (level >= 8) scale = 0;
+
+      // [FIX] 6, 7단계에서 튀는 현상을 막기 위해 모든 오버레이의 transform을 직접 동기화
+      overlaysRef.current.forEach((overlay) => {
+        const content = overlay.getContent() as HTMLElement;
+        if (content) {
+          content.style.transform = `scale(${scale})`;
+        }
+      });
+    };
+
+    kakao.maps.event.addListener(map, 'zoom_changed', handleZoom);
+    return () => kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
+  }, [isMapReady]);
 
   // [NEW] 스케일링 전용 이펙트: GPU 가속을 활용해 한 번에 처리
   useEffect(() => {
