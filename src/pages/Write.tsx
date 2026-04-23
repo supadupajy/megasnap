@@ -444,7 +444,7 @@ const Write = () => {
                 </div>
                 <div
                   onClick={() => navigate('/', { state: { startSelection: true } })}
-                  className="p-4 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
+                  className="p-3 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
                 >
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                     <MapPin className="w-6 h-6 text-indigo-600" />
