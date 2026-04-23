@@ -441,7 +441,10 @@ const Index = () => {
             onClose={() => setIsPostListOpen(false)} 
             initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
-            currentBounds={mapData?.bounds} 
+            currentBounds={mapData?.bounds || { 
+              sw: { lat: 33, lng: 124 }, 
+              ne: { lat: 39, lng: 132 } 
+            }}
             selectedCategories={selectedCategories} 
             timeValueHours={timeValue} 
             authUserId={authUser?.id} 

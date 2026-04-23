@@ -124,12 +124,14 @@ const PostListOverlay = ({
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // ✅ [FIX] 쿼리 정교화: 영역(Bounds) 내에서 과거 데이터를 안정적으로 검색
-      // min/max 계산 시 순서 보장 (sw.lat이 ne.lat보다 항상 작다는 보장이 없으므로)
+      // [FIX] 현재 지도 영역(Bounds) 내의 데이터만 확실하게 가져오도록 필터링 순서와 로직 재점검
       const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
       const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
+
+      // [DEBUG] 영역 데이터 확인
+      console.log(`[PostListOverlay] Searching posts within: Lat(${latMin}~${latMax}), Lng(${lngMin}~${lngMax}) before ${lastPostDate}`);
 
       const { data, error } = await supabase
         .from('posts')
@@ -146,7 +148,7 @@ const PostListOverlay = ({
 
       if (data && data.length > 0) {
         const newPosts: Post[] = await Promise.all(data.map(async (p) => {
-          // [FIX] 프로필 정보(닉네임, 아바타)를 올바르게 불러오기 위한 추가 쿼리
+          // [FIX] Index.tsx와 동일한 닉네임/아바타 매핑 로직 적용 (p.user_id 기반 실시간 조회)
           let userName = p.user_name || '탐험가';
           let userAvatar = p.user_avatar || '';
           
@@ -170,27 +172,18 @@ const PostListOverlay = ({
           
           return {
             id: p.id,
-            user: { 
-              id: p.user_id, 
-              name: userName, 
-              avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` 
-            },
+            user: { id: p.user_id, name: userName, avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '',
             location: p.location_name || '알 수 없는 장소',
-            lat: p.latitude,
-            lng: p.longitude,
+            lat: p.latitude, lng: p.longitude,
             likes: Number(p.likes || 0),
             image: finalImage,
             images: p.images || [finalImage],
-            videoUrl: p.video_url,
-            youtubeUrl: p.youtube_url,
+            videoUrl: p.video_url, youtubeUrl: p.youtube_url,
             createdAt: new Date(p.created_at),
             category: p.category || 'none',
-            commentsCount: 0,
-            comments: [],
-            isLiked: false,
-            isAd: p.content?.trim().startsWith('[AD]'),
-            isGif: false,
+            commentsCount: 0, comments: [],
+            isLiked: false, isAd: p.content?.trim().startsWith('[AD]'), isGif: false,
             borderType: Number(p.likes || 0) >= 9000 ? 'popular' : 'none'
           };
         }));
@@ -198,17 +191,20 @@ const PostListOverlay = ({
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
+          // [FIX] 중복 제거된 포스트가 하나도 없다면 더 이상 데이터가 없는 것으로 간주
+          if (filteredNew.length === 0 && data.length > 0) {
+            // 이 경우 쿼리 조건이 겹칠 수 있으므로 강제로 more를 false로 두지 않고 로그만 남김
+            console.log('[PostListOverlay] All fetched posts were duplicates');
+          }
           return [...prev, ...filteredNew];
         });
         
-        // 10개를 요청했는데 10개 미만으로 왔다면 이 영역의 데이터는 다 불러온 것
         if (data.length < 10) setHasMore(false);
       } else {
-        // 데이터가 아예 안 오면 종료
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Load failed:', err);
+      console.error('[PostListOverlay] Load more error:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
