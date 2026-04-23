@@ -163,124 +163,134 @@ const Write = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-32">
-      {/* Header */}
-      <header className="h-[88px] pt-8 px-4 flex items-center justify-between border-b border-gray-50 bg-white sticky top-0 z-50">
-        <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+      {/* 1. 상단 헤더 공간 (88px) - 다른 페이지들과 높이 통일 */}
+      <div className="h-[88px] w-full bg-white shrink-0 z-50 border-b border-gray-100" />
+
+      {/* 2. 고정 영역: 페이지 타이틀 */}
+      <div className="shrink-0 bg-white z-40 border-b border-gray-50">
+        <div className="px-4 py-4 flex items-center gap-3 bg-white">
           {currentPage === 2 ? (
-            <button onClick={() => setCurrentPage(1)} className="p-2 -ml-2"><ChevronLeft className="w-6 h-6 text-gray-800" /></button>
+            <button onClick={() => setCurrentPage(1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-800" />
+            </button>
           ) : (
-            <button onClick={() => navigate(-1)} className="p-2 -ml-2"><X className="w-6 h-6 text-gray-400" /></button>
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-6 h-6 text-gray-400" />
+            </button>
           )}
           <h1 className="text-xl font-black text-gray-900">
             {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
           </h1>
         </div>
-      </header>
+      </div>
 
-      <main className="flex-1 overflow-y-auto px-5 py-6 space-y-8">
-        {currentPage === 1 ? (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
-              <button
-                onClick={() => mediaInputRef.current?.click()}
-                className={cn(
-                  "w-full h-20 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all",
-                  mediaFiles.length > 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-                )}
+      {/* 3. 실제 스크롤이 일어나는 콘텐츠 영역 */}
+      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+        <div className="px-5 py-6 space-y-8 pb-40">
+          {currentPage === 1 ? (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">미디어 첨부</p>
+                <button
+                  onClick={() => mediaInputRef.current?.click()}
+                  className={cn(
+                    "w-full h-20 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all",
+                    mediaFiles.length > 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                  )}
+                >
+                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
+                  <span className={cn("font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
+                    {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
+                  </span>
+                </button>
+                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
+              </div>
+
+              {mediaFiles.length > 0 && (
+                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
+                  <Carousel setApi={setApi} className="w-full h-full">
+                    <CarouselContent className="ml-0 h-full">
+                      {mediaFiles.map((media, idx) => (
+                        <CarouselItem key={idx} className="pl-0 h-full relative">
+                          {media.type === 'image' ? (
+                            <img src={media.url} className="w-full h-full object-cover" />
+                          ) : (
+                            <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                          )}
+                          <button onClick={() => setMediaFiles(prev => prev.filter((_, i) => i !== idx))} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"><X className="w-4 h-4" /></button>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                  {mediaFiles.length > 1 && (
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20">
+                      {mediaFiles.map((_, i) => (
+                        <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <Button 
+                className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
+                onClick={() => setCurrentPage(2)}
+                disabled={mediaFiles.length === 0}
               >
-                <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                <span className={cn("font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
-                  {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
-                </span>
-              </button>
-              <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
+                다음 단계로
+              </Button>
             </div>
-
-            {mediaFiles.length > 0 && (
-              <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
-                <Carousel setApi={setApi} className="w-full h-full">
-                  <CarouselContent className="ml-0 h-full">
-                    {mediaFiles.map((media, idx) => (
-                      <CarouselItem key={idx} className="pl-0 h-full relative">
-                        {media.type === 'image' ? (
-                          <img src={media.url} className="w-full h-full object-cover" />
-                        ) : (
-                          <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                        )}
-                        <button onClick={() => setMediaFiles(prev => prev.filter((_, i) => i !== idx))} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"><X className="w-4 h-4" /></button>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                </Carousel>
-                {mediaFiles.length > 1 && (
-                  <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20">
-                    {mediaFiles.map((_, i) => (
-                      <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
-                    ))}
-                  </div>
-                )}
+          ) : (
+            <div className="space-y-8 pb-20">
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
+                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm"><MapPin className="w-6 h-6 text-indigo-600" /></div>
+                  <p className="font-bold text-gray-900 truncate">{address || '위치 미지정'}</p>
+                </div>
               </div>
-            )}
-            
-            <Button 
-              className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
-              onClick={() => setCurrentPage(2)}
-              disabled={mediaFiles.length === 0}
-            >
-              다음 단계로
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-8 pb-20">
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
-              <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm"><MapPin className="w-6 h-6 text-indigo-600" /></div>
-                <p className="font-bold text-gray-900 truncate">{address || '위치 미지정'}</p>
+
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={cn(
+                        "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
+                        selectedCategory === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
+                      )}
+                    >
+                      <cat.Icon className={cn("w-6 h-6", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-400")} />
+                      <span className={cn("text-[10px] font-black mt-2", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
-              <div className="grid grid-cols-5 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.key}
-                    onClick={() => setSelectedCategory(cat.key)}
-                    className={cn(
-                      "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
-                      selectedCategory === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
-                    )}
-                  >
-                    <cat.Icon className={cn("w-6 h-6", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                    <span className={cn("text-[10px] font-black mt-2", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
-                  </button>
-                ))}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                <Textarea 
+                  placeholder="이 장소에서의 추억을 기록해보세요..." 
+                  className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
+                  value={draft.content}
+                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                />
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-              <Textarea 
-                placeholder="이 장소에서의 추억을 기록해보세요..." 
-                className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
-                value={draft.content}
-                onChange={(e) => postDraftStore.set({ content: e.target.value })}
-              />
+              <Button 
+                className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
+                onClick={handlePost}
+                disabled={isSubmitting || !draft.content || !selectedCategory}
+              >
+                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
+                게시물 등록하기
+              </Button>
             </div>
-
-            <Button 
-              className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
-              onClick={handlePost}
-              disabled={isSubmitting || !draft.content || !selectedCategory}
-            >
-              {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
-              게시물 등록하기
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
