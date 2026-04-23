@@ -437,7 +437,10 @@ const Write = () => {
               </div>
 
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">카테고리</p>
+                <div className="flex items-center gap-1 px-1">
+  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">카테고리</p>
+  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+</div>
                 <div className="grid grid-cols-5 gap-2">
                   {CATEGORIES.map((cat) => (
                     <button
