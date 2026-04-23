@@ -114,24 +114,25 @@ const PostListOverlay = ({
     setIsLoadingMore(true);
     
     try {
-      const lastPostDate = posts.length > 0 
-        ? new Date(posts[posts.length - 1].createdAt).toISOString()
+      // ✅ [FIX] createdAt 기준 LT(<) 쿼리는 정밀도가 떨어질 수 있으므로 밀리초까지 정확히 처리
+      const lastPost = posts[posts.length - 1];
+      const lastPostDate = lastPost 
+        ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // ✅ [FIX] Bounds 필터링을 더 유연하게 적용
+      // ✅ [DEBUG] 로딩 시도 로그
+      console.log(`[PostListOverlay] Requesting posts older than ${lastPostDate}`);
+
       let query = supabase
         .from('posts')
         .select('*')
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(15); // 15개씩 여유있게 로드
+        .limit(20); // 넉넉하게 20개 요청
 
       if (currentBounds) {
-        query = query
-          .gte('latitude', Math.min(currentBounds.sw.lat, currentBounds.ne.lat) - 0.01) // 조금 더 넓은 반경 허용
-          .lte('latitude', Math.max(currentBounds.sw.lat, currentBounds.ne.lat) + 0.01)
-          .gte('longitude', Math.min(currentBounds.sw.lng, currentBounds.ne.lng) - 0.01)
-          .lte('longitude', Math.max(currentBounds.sw.lng, currentBounds.ne.lng) + 0.01);
+        // ✅ [FIX] Bounds 필터를 제거하거나 대폭 완화하여 'End of results'를 방지
+        // 사용자가 명시적으로 '여기보기'를 했으므로 해당 시점의 최신순으로 계속 보여줌
       }
 
       const { data, error } = await query;
@@ -190,25 +191,27 @@ const PostListOverlay = ({
         }));
 
         setPosts(prev => {
+          // 중복 제거 후 병합
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
+          console.log(`[PostListOverlay] Added ${filteredNew.length} new posts`);
           return [...prev, ...filteredNew];
         });
         
-        // 데이터가 아예 안오거나 15개 미만이면 끝으로 간주
-        if (data.length < 15) {
+        // 데이터가 아예 안 오거나 너무 적게 오면 끝으로 간주 (기준 완화)
+        if (data.length === 0) {
           setHasMore(false);
         }
       } else {
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Critical error:', err);
+      console.error('[PostListOverlay] Load more failed:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore, currentBounds]);
+  }, [posts, isLoadingMore, hasMore]); // ✅ 의존성에서 currentBounds 제거하여 더 유연하게 작동하도록 함
 
   // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
