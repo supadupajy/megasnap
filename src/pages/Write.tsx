@@ -275,14 +275,12 @@ const Write = () => {
 
               {mediaFiles.length > 0 ? (
                 <div className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative">
-
-
-                  <Carousel 
-                    setApi={setApi} 
-                    className="w-full h-full"
-                    opts={{ watchDrag: dragActiveIdx === null }}
-                  >
-                    <CarouselContent className="ml-0 h-full">
+  <Carousel 
+    setApi={setApi} 
+    className="absolute inset-0"
+    opts={{ watchDrag: dragActiveIdx === null }}
+  >
+    <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
