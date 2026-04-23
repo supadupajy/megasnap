@@ -10,7 +10,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 243.4 75.4% 58.6%; /* Indigo 600 */
+    --primary: 243.4 75.4% 58.6%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,7 +26,6 @@
     --radius: 0.5rem;
   }
 
-  /* ✅ 고정 높이와 overflow: hidden 제거하여 dvh가 작동하도록 수정 */
   html, body, #root {
     width: 100%;
     margin: 0;
@@ -44,13 +43,11 @@
   }
 }
 
-/* [FIX] 마커 컨테이너: 기본 구조 및 레이아웃 설정 */
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
   will-change: transform;
   transform-origin: bottom center;
-  /* 줌 스케일링은 즉각적이어야 하므로 transition 제거 */
   transition: none !important; 
   display: block;
   z-index: 10;
@@ -64,7 +61,6 @@
   align-items: center;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
   transform: translateZ(0);
-  /* [FIX] 하이라이트/해제 시 '크기' 변화에만 부드러운 트랜지션 적용 */
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: bottom center;
   width: 100%;
@@ -75,16 +71,13 @@
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  /* [FIX] 하이라이트 시 확대 */
   transform: scale(1.5) !important;
 }
 
-/* [NEW] 하이라이트가 아닐 때의 기본 상태 명시 */
 .marker-container:not(.highlighted) .marker-content-wrapper {
   transform: scale(1);
 }
 
-/* [NEW] 줌 레벨별 마커 스케일링 일괄 적용 (!important로 인라인 스타일 간섭 차단) */
 #kakao-map.zoom-6 .marker-container {
   transform: scale(0.7) !important;
 }
@@ -100,7 +93,6 @@
   display: none !important;
 }
 
-/* [FIX] 마커가 스르륵(Fade-in) 나타나는 애니메이션 */
 @keyframes marker-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -110,7 +102,6 @@
   animation: marker-fade-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
 }
 
-/* [FIX] 마커가 스르륵(Fade-out) 사라지는 애니메이션 */
 @keyframes marker-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
@@ -121,7 +112,6 @@
   pointer-events: none;
 }
 
-/* [FIX] 지도 마커 줌 변경 및 애니메이션 시 해상도/선명도 저하 방지 */
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
@@ -130,7 +120,6 @@
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   image-rendering: -webkit-optimize-contrast;
-  /* 애니메이션 중 래스터화 방지를 위해 하드웨어 가속 강제 및 렌더링 힌트 추가 */
   will-change: transform, opacity;
 }
 
@@ -142,7 +131,6 @@
   height: 100%;
   object-fit: cover;
   image-rendering: -webkit-optimize-contrast;
-  /* GPU 가속 유도로 줌 인/아웃 및 애니메이션 시 래스터화 방지 */
   transform: translateZ(0);
 }
 
@@ -157,16 +145,14 @@
   width: 100%;
 }
 
-/* [FIX] 마커 하이라이트 시퀀스 애니메이션 */
 @keyframes marker-highlight-sequence {
   0% { transform: scale(1); }
-  10% { transform: scale(1.6); } /* 지도 이동 후 확 커짐 */
-  90% { transform: scale(1.6); } /* 핑 효과 동안 크기 유지 (약 5.4초) */
-  100% { transform: scale(1); }  /* 부드럽게 원래 크기로 복원 */
+  10% { transform: scale(1.6); }
+  90% { transform: scale(1.6); }
+  100% { transform: scale(1); }
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  /* 핑 효과 3회(6초)와 정확히 일치하는 시퀀스 애니메이션 적용 */
   animation: marker-highlight-sequence 6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
   z-index: 50;
 }
@@ -181,7 +167,6 @@
   }
 }
 
-/* ... (기존 애니메이션 스타일 유지) */
 @property --angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -257,22 +242,19 @@
   z-index: -1;
 }
 
-/* 광고 마커 숨쉬기 애니메이션 최적화 (해상도 유지) */
 @keyframes ad-breathing {
   0% { transform: scale(1) translateZ(0); }
-  50% { transform: scale(1.08) translateZ(0); } /* 스케일을 약간 낮춰서 픽셀 깨짐 최소화 */
+  50% { transform: scale(1.08) translateZ(0); }
   100% { transform: scale(1) translateZ(0); }
 }
 
 .animate-ad-breathing {
   animation: ad-breathing 2s ease-in-out infinite;
   transform-origin: bottom center;
-  /* 애니메이션 요소에 직접 하드웨어 가속 및 will-change 부여 */
   will-change: transform;
   transform: translateZ(0);
 }
 
-/* [FIX] 인기글 및 인플루언서 마커 전용 위아래 플로팅 애니메이션 */
 @keyframes marker-float {
   0% { transform: translateY(0) translateZ(0); }
   50% { transform: translateY(-8px) translateZ(0); }
@@ -285,7 +267,6 @@
   transform: translateZ(0);
 }
 
-/* 마커 사라짐 애니메이션 (작아지면서 숑!) */
 @keyframes markerDisappear {
   0% { transform: scale(1); opacity: 1; }
   30% { transform: scale(1.1); opacity: 1; }
@@ -297,7 +278,6 @@
   transform-origin: bottom center;
 }
 
-/* 마커용 작은 폭죽 가상 요소 */
 .realtime-spark::before {
   content: '✨';
   position: absolute;
@@ -321,6 +301,7 @@
   20% { left: 100%; }
   100% { left: 100%; }
 }
+
 .shine-overlay::after {
   content: "";
   position: absolute;
@@ -369,7 +350,6 @@
 
 .marker-container.highlighted .marker-highlight-ping {
   display: block;
-  /* [FIX] 3번 반복 후 멈춤 (2s * 3 = 6s) */
   animation: marker-ping 2s ease-out 3;
 }
 
@@ -401,7 +381,6 @@
 }
 
 .marker-content-wrapper {
-  /* [FIX] 상태 변화 시 부드럽게 크기가 변하도록 트랜지션 추가 */
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-origin: bottom center;
   width: 100%;
@@ -410,7 +389,6 @@
 }
 
 .marker-container.highlighted .marker-content-wrapper {
-  /* [FIX] 하이라이트 시 1.5배 확대 효과 */
   transform: scale(1.5) !important;
   z-index: 50;
 }
@@ -429,7 +407,6 @@
   50% { filter: brightness(1.2) drop-shadow(0 0 8px currentColor); }
 }
 
-/* [FIX] 인플루언서 마커 전용 글로우 효과 (테두리 안쪽이 빛나는 느낌) */
 .influencer-glow {
   position: relative;
 }
@@ -451,7 +428,6 @@
   100% { opacity: 0.4; }
 }
 
-/* [FIX] 이전 버전의 선명하고 부드러운 샤인 이펙트로 복구 */
 .shine-overlay {
   position: relative;
   overflow: hidden;
@@ -478,13 +454,6 @@
   pointer-events: none;
 }
 
-@keyframes marker-shine {
-  0% { transform: translate(-100%, -100%) rotate(30deg); }
-  40% { transform: translate(100%, 100%) rotate(30deg); }
-  100% { transform: translate(100%, 100%) rotate(30deg); }
-}
-
-/* [FIX] 폭죽 애니메이션이 캔버스 라이브러리 문제로 안 보일 경우를 대비한 CSS 기반 폭죽 효과 */
 .css-confetti-container {
   position: fixed;
   inset: 0;
