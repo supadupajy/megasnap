@@ -242,7 +242,7 @@ const PostListOverlay = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-20 custom-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar"
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
@@ -263,10 +263,10 @@ const PostListOverlay = ({
             {/* Pull Up Loading Area */}
             {hasMore && (
               <div 
-                className="py-12 flex flex-col items-center justify-center transition-all duration-200"
-                style={{ height: `${Math.max(80, pullUpDistance)}px` }}
+                className="py-16 flex flex-col items-center justify-center transition-all duration-200"
+                style={{ height: `${Math.max(120, pullUpDistance + 60)}px` }}
               >
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 mb-10">
                   {isLoadingMore ? (
                     <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
                   ) : (
