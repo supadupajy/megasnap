@@ -461,7 +461,10 @@ const Write = () => {
               </div>
 
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
+                <div className="flex items-center gap-1 px-1">
+  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
+  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+</div>
                 <Textarea
                   placeholder="이 장소에서의 추억을 기록해보세요..."
                   className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
