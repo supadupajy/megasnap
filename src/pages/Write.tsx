@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { useWriteStore } from '@/utils/write-store';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface MediaFile {
   file: File;
@@ -30,199 +31,6 @@ const CATEGORIES = [
   { key: 'animal', label: '동물', Icon: PawPrint },
 ] as const;
 
-const MediaSlider = ({
-  mediaFiles,
-  onRemove,
-  onCropChange,
-}: {
-  mediaFiles: MediaFile[];
-  onRemove: (idx: number) => void;
-  onCropChange: (idx: number, x: number, y: number) => void;
-}) => {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
-  const cropRef = useRef<{ x: number; y: number }[]>([]);
-
-  const currentIdxRef = useRef(0);
-  const mediaFilesRef = useRef<MediaFile[]>([]);
-  const onCropChangeRef = useRef(onCropChange);
-
-  useEffect(() => { currentIdxRef.current = currentIdx; }, [currentIdx]);
-  useEffect(() => { onCropChangeRef.current = onCropChange; }, [onCropChange]);
-
-  useEffect(() => {
-    mediaFilesRef.current = mediaFiles;
-    cropRef.current = mediaFiles.map(m => ({ x: m.crop?.x ?? 50, y: m.crop?.y ?? 50 }));
-    if (currentIdx >= mediaFiles.length) {
-      setCurrentIdx(Math.max(0, mediaFiles.length - 1));
-    }
-  }, [mediaFiles]);
-
-  useEffect(() => {
-  const el = sliderRef.current;
-  if (!el) return;
-
-  let startX = 0;
-  let lastX = 0;
-  let lastY = 0;
-  let isDragging = false;
-  let isMouseDown = false;
-
-  // ✅ 공통 crop 처리 함수
-  const processDrag = (clientX: number, clientY: number) => {
-    const idx = currentIdxRef.current;
-    const media = mediaFilesRef.current[idx];
-    if (!media || media.type !== 'image') return;
-
-    isDragging = true;
-    const dx = clientX - lastX;
-    const dy = clientY - lastY;
-    lastX = clientX;
-    lastY = clientY;
-
-    const isPortrait = media.orientation === 'portrait';
-    const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
-    const sensitivity = 0.5;
-    const newX = isPortrait ? cur.x : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
-    const newY = isPortrait ? Math.max(0, Math.min(100, cur.y - dy * sensitivity)) : cur.y;
-
-    cropRef.current[idx] = { x: newX, y: newY };
-    const imgEl = imgRefs.current[idx];
-    if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
-  };
-
-  const processDragEnd = (endX: number) => {
-    const idx = currentIdxRef.current;
-    const files = mediaFilesRef.current;
-    if (isDragging) {
-      const { x, y } = cropRef.current[idx] ?? { x: 50, y: 50 };
-      onCropChangeRef.current(idx, x, y);
-    } else {
-      const totalDx = endX - startX;
-      if (totalDx < -40 && idx < files.length - 1) setCurrentIdx(i => i + 1);
-      else if (totalDx > 40 && idx > 0) setCurrentIdx(i => i - 1);
-    }
-    isDragging = false;
-  };
-
-  // ✅ 터치 이벤트 (실제 모바일)
-  const onTouchStart = (e: TouchEvent) => {
-    startX = e.touches[0].clientX;
-    lastX = startX;
-    lastY = e.touches[0].clientY;
-    isDragging = false;
-  };
-  const onTouchMove = (e: TouchEvent) => {
-    e.preventDefault();
-    processDrag(e.touches[0].clientX, e.touches[0].clientY);
-  };
-  const onTouchEnd = (e: TouchEvent) => {
-    processDragEnd(e.changedTouches[0].clientX);
-  };
-
-  // ✅ 마우스 이벤트 (PC 에뮬레이터 + 데스크탑)
-  const onMouseDown = (e: MouseEvent) => {
-    isMouseDown = true;
-    isDragging = false;
-    startX = e.clientX;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    e.preventDefault();
-  };
-  const onMouseMove = (e: MouseEvent) => {
-    if (!isMouseDown) return;
-    processDrag(e.clientX, e.clientY);
-  };
-  const onMouseUp = (e: MouseEvent) => {
-    if (!isMouseDown) return;
-    isMouseDown = false;
-    processDragEnd(e.clientX);
-  };
-
-  el.addEventListener('touchstart', onTouchStart, { passive: true });
-  el.addEventListener('touchmove', onTouchMove, { passive: false });
-  el.addEventListener('touchend', onTouchEnd, { passive: true });
-  el.addEventListener('mousedown', onMouseDown);
-
-  // ✅ mousemove/mouseup은 document에 등록 — 영역 밖으로 나가도 추적
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-
-  return () => {
-    el.removeEventListener('touchstart', onTouchStart);
-    el.removeEventListener('touchmove', onTouchMove);
-    el.removeEventListener('touchend', onTouchEnd);
-    el.removeEventListener('mousedown', onMouseDown);
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  };
-}, []); // ✅ 빈 배열 — 단 한 번만 등록
-
-  if (mediaFiles.length === 0) return null;
-
-  return (
-    // ✅ touch-none: CSS 레벨에서 브라우저 기본 터치 동작 차단
-    // ✅ e.preventDefault(): JS 레벨에서 추가 차단 (iOS Safari 대응)
-    <div
-      ref={sliderRef}
-      className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none touch-none"
-    >
-      <div className="relative w-full h-full">
-        {mediaFiles.map((media, idx) => (
-          <div
-            key={`${idx}-${media.url}`}
-            className="absolute inset-0 w-full h-full"
-            style={{
-              opacity: idx === currentIdx ? 1 : 0,
-              transition: 'opacity 0.25s ease',
-              pointerEvents: idx === currentIdx ? 'auto' : 'none',
-            }}
-          >
-            {media.type === 'image' ? (
-              <img
-                ref={el => { imgRefs.current[idx] = el; }}
-                src={media.url}
-                className="w-full h-full object-cover"
-                draggable={false}
-                style={{ objectPosition: `${media.crop?.x ?? 50}% ${media.crop?.y ?? 50}%` }}
-              />
-            ) : (
-              <video
-                src={media.url}
-                className="w-full h-full object-cover"
-                autoPlay muted loop playsInline
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <button
-        onTouchEnd={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
-        onClick={(e) => { e.stopPropagation(); onRemove(currentIdx); }}
-        className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
-      >
-        <X className="w-4 h-4" />
-      </button>
-
-      {mediaFiles.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-          {mediaFiles.map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                currentIdx === i ? "bg-white w-6" : "bg-white/40 w-1.5"
-              )}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const Write = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -239,6 +47,7 @@ const Write = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [dragActiveIdx, setDragActiveIdx] = useState<number | null>(null);
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -330,6 +139,66 @@ const Write = () => {
     setMediaFiles(newMedia);
   }, [mediaFiles, setMediaFiles]);
 
+  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent, idx: number) => {
+    if (isDraggingRef.current) return;
+    
+    isDraggingRef.current = true;
+    setDragActiveIdx(idx);
+    
+    const startX = e.type === 'touchstart' ? (e as React.TouchEvent).touches[0].clientX : e.clientX;
+    const startY = e.type === 'touchstart' ? (e as React.TouchEvent).touches[0].clientY : e.clientY;
+    dragStartRef.current = { x: startX, y: startY };
+    
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDraggingRef.current || dragActiveIdx === null) return;
+      
+      const dx = e.type === 'touchmove' ? (e as React.TouchEvent).touches[0].clientX - dragStartRef.current.x : (e as MouseEvent).clientX - dragStartRef.current.x;
+      const dy = e.type === 'touchmove' ? (e as React.TouchEvent).touches[0].clientY - dragStartRef.current.y : (e as MouseEvent).clientY - dragStartRef.current.y;
+      
+      const media = mediaFiles[dragActiveIdx];
+      if (media && media.type === 'image') {
+        const orientation = media.orientation === 'portrait' ? 'portrait' : 'landscape';
+        const crop = media.crop || { x: 50, y: 50 };
+        
+        let newX = crop.x;
+        let newY = crop.y;
+        
+        if (orientation === 'portrait') {
+          newX = Math.max(0, Math.min(100, crop.x - dx * 0.5));
+          newY = Math.max(0, Math.min(100, crop.y - dy * 0.5));
+        } else {
+          newX = Math.max(0, Math.min(100, crop.x - dx * 0.5));
+          newY = Math.max(0, Math.min(100, crop.y - dy * 0.5));
+        }
+        
+        const newMedia = [...mediaFiles];
+        newMedia[dragActiveIdx] = { ...newMedia[dragActiveIdx], crop: { x: newX, y: newY } };
+        setMediaFiles(newMedia);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setDragActiveIdx(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    if (e.type === 'touchstart') {
+      document.addEventListener('touchmove', handleMouseMove);
+      document.addEventListener('touchend', handleMouseUp);
+    }
+  }, [mediaFiles]);
+
+  const stopDragging = useCallback(() => {
+    if (dragActiveIdx !== null) {
+      setDragActiveIdx(null);
+    }
+  }, [dragActiveIdx]);
+
   const handlePost = async () => {
     if (!authUser) return;
     setIsSubmitting(true);
@@ -405,44 +274,104 @@ const Write = () => {
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
+            <div className="space-y-6">
+              <div className="space-y-3">
                 <div className="flex items-center gap-1.5 px-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 </div>
-                <button
-                  onClick={() => mediaInputRef.current?.click()}
-                  className={cn(
-                    "w-full h-20 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all",
-                    mediaFiles.length > 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-gray-50"
-                  )}
-                >
-                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                  <span className={cn("font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
-                    {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
-                  </span>
-                </button>
-                <input
-                  type="file"
-                  ref={mediaInputRef}
-                  className="hidden"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleMediaSelect}
-                />
+                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
               </div>
 
               {mediaFiles.length > 0 ? (
-                <MediaSlider
-                  mediaFiles={mediaFiles}
-                  onRemove={handleRemoveMedia}
-                  onCropChange={handleCropChange}
-                />
+                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
+                  <Carousel 
+                    setApi={setApi} 
+                    className="w-full h-full"
+                    opts={{ watchDrag: dragActiveIdx === null }}
+                  >
+                    <CarouselContent className="ml-0 h-full">
+                      {mediaFiles.map((media, idx) => (
+                        <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
+                          <div 
+                            className="w-full h-full relative overflow-hidden touch-none"
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              handleDrag(e, idx);
+                            }}
+                            onMouseMove={(e) => {
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
+                            }}
+                            onMouseUp={stopDragging}
+                            onMouseLeave={stopDragging}
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                              handleDrag(e, idx);
+                            }}
+                            onTouchMove={(e) => {
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
+                            }}
+                            onTouchEnd={stopDragging}
+                          >
+                            {media.type === 'image' ? (
+                              <img 
+                                key={`img-${media.url}`}
+                                src={media.url} 
+                                className="w-full h-full object-cover pointer-events-none select-none"
+                                style={{
+                                  objectPosition: media.orientation === 'portrait' 
+                                    ? `50% ${media.crop?.y ?? 50}%` 
+                                    : `${media.crop?.x ?? 50}% 50%`
+                                }}
+                              />
+                            ) : (
+                              <video 
+                                key={`video-${media.url}`}
+                                src={media.url} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                muted 
+                                loop 
+                                playsInline 
+                              />
+                            )}
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newFiles = [...mediaFiles];
+                              newFiles.splice(idx, 1);
+                              setMediaFiles(newFiles);
+                            }} 
+                            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                  {mediaFiles.length > 1 && (
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20">
+                      {mediaFiles.map((_, i) => (
+                        <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="aspect-square w-full rounded-[32px] bg-gray-100 flex items-center justify-center gap-3 border-2 border-dashed border-gray-200">
-                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                  <span className="text-gray-500 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                <div 
+                  onClick={() => mediaInputRef.current?.click()}
+                  className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                >
+                  <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
+                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
                 </div>
               )}
 
