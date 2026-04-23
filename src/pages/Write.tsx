@@ -151,9 +151,9 @@ const MediaSlider = ({
 
   return (
     <div
-      ref={sliderRef}
-      className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none"
-    >
+  ref={sliderRef}
+  className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative select-none touch-none"
+>
       {/* ✅ opacity 전환 방식 — 이미지 깨짐 없음 */}
       <div className="relative w-full h-full">
         {mediaFiles.map((media, idx) => (
