@@ -274,8 +274,7 @@ const Write = () => {
               </div>
 
               {mediaFiles.length > 0 ? (
-                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-100 shadow-2xl relative">
-
+                <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
                   <Carousel 
                     setApi={setApi} 
                     className="w-full h-full"
@@ -285,8 +284,7 @@ const Write = () => {
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
-                              className="w-full h-full relative overflow-hidden touch-none bg-black"
-
+                            className="w-full h-full relative overflow-hidden touch-none flex items-center justify-center bg-black"
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               handleDrag(e, idx);
