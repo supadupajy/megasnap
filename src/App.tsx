@@ -59,7 +59,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow"].some(
+  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow", "/friends", "/profile/friends"].some(
     path => location.pathname.startsWith(path)
   );
 

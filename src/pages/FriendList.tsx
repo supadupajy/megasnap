@@ -92,12 +92,12 @@ const FriendList = () => {
           </div>
         </div>
 
-        <div className="px-4 py-4 mt-2">
+        <div className="px-4 py-3">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all"
+              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
