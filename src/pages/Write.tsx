@@ -420,8 +420,8 @@ const Write = () => {
             <div className="space-y-8 pb-20">
               <div className="space-y-3">
                 <div className="flex items-center gap-1 px-1">
-  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
-  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보 (선택)</p>
+
 </div>
                 <div
                   onClick={() => navigate('/', { state: { startSelection: true } })}
