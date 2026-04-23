@@ -20,18 +20,22 @@ const ObservedPostItem = ({
   isViewed, 
   onLikeToggle, 
   onLocationClick,
-  onDelete 
+  onDelete,
+  isPlaying,
+  onPlayingChange
 }: { 
   post: Post, 
   onVisible: (id: string) => void, 
   isViewed: boolean, 
   onLikeToggle: (id: string) => void, 
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void,
+  isPlaying: boolean,
+  onPlayingChange: (id: string, isIntersecting: boolean) => void
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
-  const [isNearVisible, setIsNearVisible] = useState(false); // ✅ 화면 근처 도달 상태 추가
+  const [isNearVisible, setIsNearVisible] = useState(false); 
   const [fullPost, setFullPost] = useState<Post>(post);
 
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
@@ -95,10 +99,16 @@ const ObservedPostItem = ({
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
+        // 화면의 절반 이상이 보일 때 재생 대상으로 알림
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          onPlayingChange(post.id, true);
+        } else if (!entry.isIntersecting) {
+          onPlayingChange(post.id, false);
+        }
       },
       { 
-        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
-        rootMargin: '0px'
+        threshold: [0, 0.5, 1.0], // 여러 임계값 관찰
+        rootMargin: '-10% 0px -10% 0px'
       }
     );
 
@@ -126,7 +136,7 @@ const ObservedPostItem = ({
       playbackObserver.disconnect();
       preloadObserver.disconnect();
     };
-  }, [post.id, onVisible]);
+  }, [post.id, onVisible, isPlaying]);
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
@@ -137,6 +147,7 @@ const ObservedPostItem = ({
         onLocationClick={onLocationClick}
         onDelete={onDelete}
         autoPlayVideo={isCurrentlyVisible}
+        isPlaying={isPlaying}
       />
     </div>
   );
@@ -170,6 +181,16 @@ const PostListOverlay = ({
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [playingPostId, setPlayingPostId] = useState<string | null>(null);
+
+  // 재생 중인 포스트 관리 콜백
+  const handlePlayingChange = useCallback((id: string, isIntersecting: boolean) => {
+    if (isIntersecting) {
+      setPlayingPostId(id);
+    } else {
+      setPlayingPostId(prev => prev === id ? null : prev);
+    }
+  }, []);
   
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
@@ -412,6 +433,8 @@ const PostListOverlay = ({
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                 }}
                 onDelete={(id) => onDeletePost?.(id)}
+                isPlaying={playingPostId === post.id}
+                onPlayingChange={handlePlayingChange}
               />
             ))}
             

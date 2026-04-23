@@ -54,9 +54,20 @@ interface PostItemProps {
   isViewed?: boolean;
   disablePulse?: boolean;
   autoPlayVideo?: boolean;
+  isPlaying?: boolean; // 추가된 prop
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
+const PostItem = ({ 
+  post, 
+  onLikeToggle, 
+  onLocationClick, 
+  onDelete, 
+  onSaveToggle, 
+  isViewed, 
+  disablePulse, 
+  autoPlayVideo,
+  isPlaying = false // 기본값 false
+}: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, session } = useAuth();
   const { blockUser } = useBlockedUsers();
@@ -150,24 +161,22 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const videoId = getYouTubeId(post.youtubeUrl);
 
-  // ✅ [FIX] 유튜브 자동 재생 정책(Autoplay Policy) 준수를 위해 'mute=1' 강제 적용
-  // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
   const renderMedia = () => {
     // 1. 유튜브 영상 처리
     if (videoId) {
-      const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-      // ✅ [FIX] mute=0 설정을 통해 소리가 나오도록 변경
-      // 오토플레이 정책상 사용자가 페이지와 한 번이라도 상호작용한 후에는 소리가 있는 자동재생이 허용됩니다.
+      // autoPlayVideo(화면 가시성)와 isPlaying(전역 재생 제어) 둘 다 만족해야 재생
+      const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay && isPlaying;
+      
       return (
         <div className="w-full h-full relative">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
             className="w-full h-full object-cover"
             allow="autoplay; encrypted-media"
             allowFullScreen
             onLoad={() => setVideoLoaded(true)}
           />
-          {(!videoLoaded || !isVisible) && (
+          {(!videoLoaded || !isVisible || !shouldPlay) && (
             <img 
               src={currentImage} 
               alt="" 
@@ -180,19 +189,20 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     // 2. 일반 업로드 동영상 처리
     if (post.videoUrl) {
+      const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay && isPlaying;
       return (
         <div className="w-full h-full relative">
           <video
             src={post.videoUrl}
             className="w-full h-full object-cover"
-            autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
-            // ✅ [FIX] muted 속성 제거하여 소리 나오게 함
+            autoPlay={shouldPlay}
+            muted // 자동재생을 위해 muted 강제 (브라우저 정책)
             loop
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
           />
-          {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
-          {(!videoLoaded || !isVisible || !isReadyToPlay) && (
+          {/* 비디오 로드 전이나 화면에 보이지 않을 때 또는 재생 중이 아닐 때만 썸네일 노출 */}
+          {(!videoLoaded || !isVisible || !isReadyToPlay || !shouldPlay) && (
             <img 
               src={currentImage} 
               alt="" 
