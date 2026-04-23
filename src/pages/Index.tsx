@@ -354,10 +354,13 @@ const Index = () => {
         
         const clean = url.trim();
         
+        // [FIX] Supabase Storage URL(사용자가 직접 등록한 사진)인 경우 최우선적으로 반환
+        if (clean.includes('supabase.co/storage')) {
+          return clean;
+        }
+
         // [FORCE] Unsplash URL이 감지되면 즉시 Pexels 대체 이미지로 전환
         if (clean.includes('unsplash.com')) {
-          // [FIX] 내가 직접 등록한 이미지는 Unsplash URL이 아니므로 그대로 유지되도록
-          // Unsplash URL인 경우에만 픽셀 이미지로 대체합니다.
           const pexelsPool = [
             "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
             "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
@@ -366,11 +369,6 @@ const Index = () => {
           let h = 0;
           for(let i = 0; i < p.id.length; i++) h = Math.imul(31, h) + p.id.charCodeAt(i) | 0;
           return pexelsPool[Math.abs(h) % pexelsPool.length];
-        }
-
-        // [FIX] Supabase Storage URL(내 사진)인 경우 필터링을 건너뜁니다.
-        if (clean.includes('supabase.co/storage')) {
-          return clean;
         }
 
         if (BROKEN_IDS.some(id => clean.includes(id)) || !clean.startsWith('http') || /post\s*content/i.test(clean)) {
@@ -383,7 +381,7 @@ const Index = () => {
 
       let finalImage = sanitizeUrl(p.image_url);
       
-      // [FIX] Supabase Storage URL(내 사진)인 경우 필터링을 건너뜁니다.
+      // [FIX] 최종 이미지 결정 시에도 Supabase URL을 우선시함
       if (p.image_url && p.image_url.includes('supabase.co/storage')) {
         finalImage = p.image_url;
       } else if (p.youtube_url && (!finalImage || finalImage.includes('pexels.com') || finalImage.includes('pixabay.com'))) {
