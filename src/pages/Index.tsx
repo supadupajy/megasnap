@@ -850,35 +850,42 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 글 작성 완료 후 페이지 전환 완료 시점에 더 화려한 폭죽 터뜨림
+      // [CRITICAL FIX] canvas-confetti 라이브러리 직접 호출 방식 강화
+      // 브라우저 캐시나 모듈 로드 지연을 방지하기 위해 window 객체에서도 확인
       setTimeout(() => {
-        console.log('[Confetti] FIRING FIREWORKS AFTER CREATED!');
+        console.log('[Confetti] FIREWORKS START!');
+        const myConfetti = confetti || (window as any).confetti;
+        if (!myConfetti) {
+          console.error('[Confetti] 라이브러리를 로드할 수 없습니다.');
+          return;
+        }
+
         const end = Date.now() + (3 * 1000);
         const colors = ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'];
 
         (function frame() {
-          confetti({
-            particleCount: 2,
+          myConfetti({
+            particleCount: 3,
             angle: 60,
             spread: 55,
-            origin: { x: 0 },
+            origin: { x: 0, y: 0.6 },
             colors: colors,
-            zIndex: 999999
+            zIndex: 2000000
           });
-          confetti({
-            particleCount: 2,
+          myConfetti({
+            particleCount: 3,
             angle: 120,
             spread: 55,
-            origin: { x: 1 },
+            origin: { x: 1, y: 0.6 },
             colors: colors,
-            zIndex: 999999
+            zIndex: 2000000
           });
 
           if (Date.now() < end) {
             requestAnimationFrame(frame);
           }
         }());
-      }, 800);
+      }, 500);
     }
     setIsWriteOpen(false);
   };
