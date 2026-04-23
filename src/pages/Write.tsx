@@ -180,19 +180,19 @@ const Write = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="fixed inset-0 z-[100] flex flex-col pointer-events-none"
+    <motion.div 
+      initial={{ opacity: 0, x: 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 100 }}
+      transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+      className="min-h-screen bg-white flex flex-col z-[100]"
     >
       {/* 1. 상단 헤더 공간 (88px) - 투명하게 설정하여 뒤의 HeaderAdBanner가 보이도록 함 */}
       <div className="h-[88px] w-full shrink-0" />
 
       {/* 2. 고정 영역: 페이지 타이틀 */}
-      <div className="shrink-0 bg-white z-40 border-b border-gray-50 pointer-events-auto rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
-        <div className="px-4 py-4 flex items-center gap-3 bg-white rounded-t-3xl">
+      <div className="shrink-0 bg-white border-b border-gray-100 shadow-sm">
+        <div className="px-4 py-4 flex items-center gap-3 bg-white">
           {currentPage === 2 ? (
             <button onClick={() => setCurrentPage(1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
               <ChevronLeft className="w-6 h-6 text-gray-800" />

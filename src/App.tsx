@@ -176,8 +176,9 @@ const AnimatedRoutes = () => {
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/follow/:userId" element={<Follow />} />
               <Route path="/profile/friends" element={<FriendList />} />
-              <Route path="/profile/:userId" element={<UserProfile />} />
-              {/* [FIX] 메인 탭과 작성 페이지를 동일한 라우트 구조 하에 두어 언마운트 방지 */}
+              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
           </motion.div>

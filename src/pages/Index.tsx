@@ -958,7 +958,7 @@ const Index = () => {
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       
       <AnimatePresence>
-        {location.pathname === '/write' && <WritePage />}
+        {/* REMOVED: {location.pathname === '/write' && <WritePage />} - 이제 App.tsx에서 독립 페이지로 관리됨 */}
       </AnimatePresence>
     </>
   );

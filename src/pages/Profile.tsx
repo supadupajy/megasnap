@@ -47,12 +47,6 @@ const Profile = () => {
   const scrollRef = useRef<HTMLDivElement>(null); // 스크롤 컨테이너 Ref
   const postListStartRef = useRef<HTMLDivElement>(null); // 포스팅 리스트 시작점 Ref
 
-  useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
-
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);

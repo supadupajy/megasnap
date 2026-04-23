@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import WritePost from '@/components/WritePost';
 import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
