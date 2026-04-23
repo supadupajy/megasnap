@@ -42,6 +42,7 @@ const MapContainer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState<number>(5);
   const [isMapMoving, setIsMapMoving] = useState(false);
+  const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
 
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -70,6 +71,21 @@ const MapContainer = ({
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
+
+  useEffect(() => {
+    const handleUpdateViewedMarkers = (e: any) => {
+      const ids = e.detail?.viewedIds;
+      if (Array.isArray(ids)) {
+        setInternalViewedIds(prev => {
+          const next = new Set(prev);
+          ids.forEach(id => next.add(id));
+          return next;
+        });
+      }
+    };
+    window.addEventListener('update-viewed-markers', handleUpdateViewedMarkers);
+    return () => window.removeEventListener('update-viewed-markers', handleUpdateViewedMarkers);
+  }, []);
 
   useEffect(() => {
     const handleAnimateDelete = (e: any) => {
@@ -246,6 +262,9 @@ const MapContainer = ({
 
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
+    
+    // viewedPostIds(props)와 internalViewedIds(event) 합치기
+    const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
 
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id) || !bounds.contain(overlay.getPosition())) {
@@ -259,7 +278,7 @@ const MapContainer = ({
       const position = new kakao.maps.LatLng(post.lat, post.lng);
       if (!bounds.contain(position)) return;
 
-      const isViewed = viewedPostIds.has(post.id);
+      const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);

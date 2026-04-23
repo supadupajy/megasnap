@@ -110,6 +110,15 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
+  // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
+  useEffect(() => {
+    if (viewedIds.size > 0) {
+      window.dispatchEvent(new CustomEvent('update-viewed-markers', { 
+        detail: { viewedIds: Array.from(viewedIds) } 
+      }));
+    }
+  }, [viewedIds]);
+  
   // ✅ [FIX] 대전에서 서울 데이터가 나오지 않도록, 현재 지도의 영역(Bounds)을 엄격하게 유지
   // radiusOffset 대신 bounds 기반의 엄격한 필터링 사용
   
