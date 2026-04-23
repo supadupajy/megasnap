@@ -40,14 +40,10 @@ const getFallbackImage = (postId: string) => {
   return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
 };
 
-const getYouTubeIdLocal = (url: string) => {
+const getYouTubeIdLocal = (url?: string) => {
   if (!url) return null;
-  const clean = url.trim();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be')) {
-    const match = clean.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)\/)?|[0-9]+(?:[a-zA-Z0-9\-_])?\/|s?\\d+\/)?)([a-zA-Z0-9\-_])+/);
-    return match ? match[1] : null;
-  }
-  return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+  return match ? match[1] : null;
 };
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
@@ -56,15 +52,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [dbPostData, setDbPostData] = useState<any>(null);
 
-  const [iframeReady, setIframeReady] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // [REVERT & FIX] posts에서 직접 가져온 원본 데이터를 최우선으로 사용
+  const currentPost = useMemo(() => {
+    const basePost = posts[currentPostIndex];
+    if (!basePost) return null;
+    // merge logic
+    const merged = { ...basePost, ...(dbPostData && dbPostData.id === basePost.id ? dbPostData : {}) };
+    
+    // youtubeUrl 필드 강제 보정
+    if (merged.youtube_url && !merged.youtubeUrl) {
+      merged.youtubeUrl = merged.youtube_url;
+    }
+    if (merged.video_url && !merged.videoUrl) {
+      merged.videoUrl = merged.video_url;
+    }
+    
+    return merged;
+  }, [posts, currentPostIndex, dbPostData]);
 
-  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
-
-  const videoId = useMemo(() => {
+  const youtubeId = useMemo(() => {
     if (!currentPost) return null;
     return getYouTubeIdLocal(currentPost.youtubeUrl);
   }, [currentPost]);
@@ -73,6 +81,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!currentPost) return null;
     return currentPost.videoUrl;
   }, [currentPost]);
+
+  // [DEBUG] 실시간 데이터 확인
+  useEffect(() => {
+    if (currentPost && isOpen) {
+      console.log('[PostDetail] render state:', {
+        youtubeId,
+        videoUrl,
+        postId: currentPost.id
+      });
+    }
+  }, [currentPost, isOpen, youtubeId, videoUrl]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -485,11 +504,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       {/* 미디어 영역 - Index.tsx/PostItem.tsx와 동일한 구조로 완전 일치 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {videoId ? (
+                          {youtubeId ? (
                             <div className="absolute inset-0 w-full h-full z-[100]">
                               <iframe
-                                key={`detail-yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${youtubeId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
                                 className="w-full h-full border-0"
                                 allow="autoplay; encrypted-media"
                                 allowFullScreen
