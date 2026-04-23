@@ -147,9 +147,9 @@ const Write = () => {
       }
     };
 
-    el.addEventListener('touchstart', onTouchStart, { passive: false });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchstart', onTouchStart, { passive: false, capture: true });
+el.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+el.addEventListener('touchend', onTouchEnd, { capture: true });
 
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
