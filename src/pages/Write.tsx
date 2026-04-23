@@ -35,9 +35,8 @@ const Write = () => {
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
 
-  const { content, setContent, category, setCategory, clear } = useWriteStore();
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-
+  const { content, setContent, category, setCategory, clear, mediaFiles, setMediaFiles } = useWriteStore();
+  
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
@@ -215,7 +214,7 @@ const Write = () => {
       return { file, url, type, crop: { x: 50, y: 50 }, orientation } as MediaFile;
     }));
 
-    setMediaFiles(prev => [...prev, ...newItems]);
+    setMediaFiles([...mediaFiles, ...newItems]);
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
