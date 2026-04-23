@@ -46,12 +46,13 @@ const BottomNav = () => {
       
       <button 
         onClick={handleWriteClick}
-        className="flex flex-col items-center gap-1 group -mt-10"
+        className={cn(
+          "flex flex-col items-center gap-1.5 transition-all active:scale-90 w-full", 
+          isActive('/write') ? "text-indigo-600" : "text-gray-400"
+        )}
       >
-        <div className="w-16 h-16 bg-indigo-600 rounded-[24px] flex items-center justify-center shadow-[0_15px_35px_-5px_rgba(79,70,229,0.5)] group-active:scale-90 transition-all border-4 border-white">
-          <Plus className="w-8 h-8 text-white stroke-[3px]" />
-        </div>
-        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">글쓰기</span>
+        <Plus className={cn("w-6 h-6", isActive('/write') ? "stroke-[3px]" : "stroke-[2px]")} />
+        <span className="text-[10px] font-bold tracking-tight">글쓰기</span>
       </button>
 
       <button 
