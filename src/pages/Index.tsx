@@ -833,33 +833,37 @@ const Index = () => {
   };
 
   useEffect(() => {
-    const routeState = location.state as { 
-      center?: { lat: number; lng: number }; 
-      post?: Post; 
-      filterUserId?: string; 
-      startSelection?: boolean;
-    } | null;
-    
-    if (!routeState) return;
-    
-    if (routeState.filterUserId === 'me') {
-      setSelectedCategories(['mine']);
-      // ✅ 내 포스팅 필터 시 줌 레벨 조정 (기존 10에서 6으로 변경 제안 또는 유지)
-      setTimeout(() => { setCurrentZoom(6); }, 500);
-      if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
-      else if (routeState.center) setMapCenter(routeState.center);
-      else handleCurrentLocation();
-    }
-    else if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
-    else if (routeState.center) { setSelectedPostId(null); setSearchResultLocation(null); setMapCenter(routeState.center); }
-    
-    // [FIX] Handle 'startSelection' from Write page
-    if (routeState.startSelection) {
-      startLocationSelection();
-    }
+  const routeState = location.state as { 
+    center?: { lat: number; lng: number }; 
+    post?: Post; 
+    filterUserId?: string; 
+    startSelection?: boolean;
+    triggerConfetti?: boolean; // ✅ 추가
+  } | null;
+  
+  if (!routeState) return;
 
-    navigate(location.pathname, { replace: true, state: null });
-  }, [focusPostOnMap, location.pathname, location.state, navigate]);
+  // ✅ Write 페이지에서 게시물 등록 후 돌아온 경우 폭죽 실행
+  if (routeState.triggerConfetti) {
+    setTimeout(() => triggerConfetti(), 800);
+  }
+
+  if (routeState.filterUserId === 'me') {
+    setSelectedCategories(['mine']);
+    setTimeout(() => { setCurrentZoom(6); }, 500);
+    if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
+    else if (routeState.center) setMapCenter(routeState.center);
+    else handleCurrentLocation();
+  }
+  else if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
+  else if (routeState.center) { setSelectedPostId(null); setSearchResultLocation(null); setMapCenter(routeState.center); }
+  
+  if (routeState.startSelection) {
+    startLocationSelection();
+  }
+
+  navigate(location.pathname, { replace: true, state: null });
+}, [focusPostOnMap, location.pathname, location.state, navigate, triggerConfetti]); // ✅ triggerConfetti 의존성 추가
 
   const handleTrendingPostClick = useCallback((post: Post) => { setIsTrendingExpanded(false); focusPostOnMap(post); }, [focusPostOnMap]);
   const handlePlaceSelect = (place: any) => { setMapCenter({ lat: place.lat, lng: place.lng }); setSearchResultLocation({ lat: place.lat, lng: place.lng }); };
