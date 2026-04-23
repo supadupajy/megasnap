@@ -334,39 +334,15 @@ console.log('mediaFiles:', mediaFiles, 'currentSlide:', currentSlide, 'currentMe
               </div>
 
               {mediaFiles.length > 0 ? (
-                <div ref={containerRef} className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none">
-
-                  {/* 이미지 / 비디오 */}
-                  {currentMedia?.type === 'image' ? (
-  <img
-    ref={imgRef}
-    src={currentMedia.url}
-    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-    onLoad={() => {
-      const img = imgRef.current;
-      const container = containerRef.current;
-      if (!img || !container) return;
-      const natW = img.naturalWidth;
-      const natH = img.naturalHeight;
-      const conW = container.offsetWidth;
-      const conH = container.offsetHeight;
-      const scale = Math.max(conW / natW, conH / natH);
-      const renderedW = natW * scale;
-      const renderedH = natH * scale;
-      const cropX = currentMedia.crop?.x ?? 50;
-      const cropY = currentMedia.crop?.y ?? 50;
-      cropPixelRef.current = {
-        x: renderedW === conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-        y: renderedH === conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-      };
-    }}
-    style={{
-      objectPosition: currentMedia.orientation === 'portrait'
-        ? `50% ${currentMedia.crop?.y ?? 50}%`
-        : `${currentMedia.crop?.x ?? 50}% 50%`,
-      transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-    }}
-  />
+  <div ref={containerRef} className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none">
+    {/* 임시: 단순하게 렌더링해서 이미지가 나오는지 확인 */}
+    {mediaFiles.map((m, i) => (
+      <img
+        key={i}
+        src={m.url}
+        style={{ display: i === currentSlide ? 'block' : 'none', width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+      />
+    ))}
                   ) : (
                     <video
                       src={currentMedia?.url}
