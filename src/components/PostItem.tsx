@@ -175,6 +175,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
   />
 )}
+        </div>
+      );
+    }
 
     // 2. 일반 업로드 동영상 처리
     if (post.videoUrl) {
