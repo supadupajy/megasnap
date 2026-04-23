@@ -340,20 +340,21 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
 
     const handleZoom = () => {
-      const level = map.getLevel();
-      let scale = 1.0;
-      if (level === 6) scale = 0.7;
-      else if (level === 7) scale = 0.45;
-      else if (level >= 8) scale = 0;
+  const level = map.getLevel();
+  let scale = 1.0;
+  if (level === 6) scale = 0.7;
+  else if (level === 7) scale = 0.45;
+  else if (level >= 8) scale = 0;
 
-      // [FIX] 6, 7단계에서 튀는 현상을 막기 위해 모든 오버레이의 transform을 직접 동기화
-      overlaysRef.current.forEach((overlay) => {
-        const content = overlay.getContent() as HTMLElement;
-        if (content) {
-          content.style.transform = `scale(${scale})`;
-        }
-      });
-    };
+  overlaysRef.current.forEach((overlay) => {
+    const content = overlay.getContent() as HTMLElement;
+    if (content) {
+      // ✅ highlighted 마커는 CSS 애니메이션이 담당
+      if (content.classList.contains('highlighted')) return;
+      content.style.transform = `scale(${scale})`;
+    }
+  });
+};
 
     kakao.maps.event.addListener(map, 'zoom_changed', handleZoom);
     return () => kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
