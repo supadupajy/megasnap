@@ -85,6 +85,8 @@ const Write = () => {
       const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
       setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
       setIsLoadingAddress(false);
+    } else {
+      setAddress('위치 미지정');
     }
   }, [initialLocation]);
 
@@ -261,9 +263,16 @@ const Write = () => {
             <div className="space-y-8 pb-20">
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
-                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm"><MapPin className="w-6 h-6 text-indigo-600" /></div>
-                  <p className="font-bold text-gray-900 truncate">{address || '위치 미지정'}</p>
+                <div 
+                  onClick={() => navigate('/', { state: { startSelection: true } })}
+                  className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
+                >
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                    <MapPin className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
+                    {address || '위치 미지정'}
+                  </p>
                 </div>
               </div>
 
