@@ -152,10 +152,10 @@ el.addEventListener('touchmove', onTouchMove, { passive: false, capture: true })
 el.addEventListener('touchend', onTouchEnd, { capture: true });
 
     return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
+  el.removeEventListener('touchstart', onTouchStart, { capture: true });
+  el.removeEventListener('touchmove', onTouchMove, { capture: true });
+  el.removeEventListener('touchend', onTouchEnd, { capture: true });
+};
   }, [mediaFiles]); // mediaFiles 바뀔 때만 재등록
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
