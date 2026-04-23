@@ -314,7 +314,6 @@ export const deletePostsInBounds = async (
   console.log("🗑️ [Admin] 화면 내 데이터 삭제를 시작합니다...", bounds);
 
   try {
-    // [FIX] 위경도 값의 대소 관계를 확실히 하여 쿼리 범위 오류 방지
     const minLat = Math.min(bounds.sw.lat, bounds.ne.lat);
     const maxLat = Math.max(bounds.sw.lat, bounds.ne.lat);
     const minLng = Math.min(bounds.sw.lng, bounds.ne.lng);
@@ -322,22 +321,39 @@ export const deletePostsInBounds = async (
 
     console.log(`🔍 [Admin] 삭제 범위: Lat(${minLat}~${maxLat}), Lng(${minLng}~${maxLng})`);
 
-    const { data, error } = await supabase
+    // [FIX] 먼저 해당 범위 내에 데이터가 있는지 SELECT로 확인
+    const { data: checkData, error: selectError } = await supabase
       .from('posts')
-      .delete()
+      .select('id, latitude, longitude')
       .gte('latitude', minLat)
       .lte('latitude', maxLat)
       .gte('longitude', minLng)
-      .lte('longitude', maxLng)
-      .select('id');
+      .lte('longitude', maxLng);
 
-    if (error) {
-      console.error("❌ [Admin] Supabase 삭제 쿼리 에러:", error);
-      throw error;
+    if (selectError) throw selectError;
+
+    if (!checkData || checkData.length === 0) {
+      console.log("ℹ️ [Admin] 해당 범위 내에 포스팅이 없어 삭제를 중단합니다.");
+      return 0;
     }
 
-    console.log(`✅ [Admin] 화면 범위 내 ${data?.length || 0}개의 포스팅이 삭제되었습니다.`, data);
-    return data?.length || 0;
+    const targetIds = checkData.map(p => p.id);
+    console.log(`📦 [Admin] 삭제 대상 ID (${targetIds.length}개):`, targetIds);
+
+    // [FIX] ID 리스트를 기반으로 명시적으로 삭제 (RLS 정책 충돌 방지)
+    const { data: deletedData, error: deleteError } = await supabase
+      .from('posts')
+      .delete()
+      .in('id', targetIds)
+      .select('id');
+
+    if (deleteError) {
+      console.error("❌ [Admin] Supabase 삭제 쿼리 에러:", deleteError);
+      throw deleteError;
+    }
+
+    console.log(`✅ [Admin] 실제 삭제 성공: ${deletedData?.length || 0}개`);
+    return deletedData?.length || 0;
   } catch (err) {
     console.error("❌ [Admin] 화면 내 데이터 삭제 중 예외 발생:", err);
     throw err;
