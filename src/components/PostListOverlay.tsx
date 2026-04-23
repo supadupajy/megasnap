@@ -109,48 +109,51 @@ const PostListOverlay = ({
       setIsLoadingMore(true);
       
       try {
-        // 현재 로드된 포스트들 중 가장 오래된 생성일자 기준
         const lastPostDate = posts.length > 0 
           ? new Date(posts[posts.length - 1].createdAt).toISOString()
           : new Date().toISOString();
 
-        // fetchPostsInBounds 유틸리티가 있다면 좋겠지만, 
-        // 여기서는 직접 supabase 쿼리를 통해 주변 포스트를 더 가져옵니다.
-        const radius = 0.05; // 약 5km 반경 (경위도 기준 단순 근사치)
-        
         const { data, error } = await supabase
           .from('posts')
           .select('*')
           .lt('created_at', lastPostDate)
-          .gte('latitude', mapCenter.lat - radius)
-          .lte('latitude', mapCenter.lat + radius)
-          .gte('longitude', mapCenter.lng - radius)
-          .lte('longitude', mapCenter.lng + radius)
           .order('created_at', { ascending: false })
           .limit(10);
 
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const newPosts: Post[] = data.map(p => ({
-            id: p.id,
-            user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
-            content: p.content,
-            location: p.location_name,
-            lat: p.latitude,
-            lng: p.longitude,
-            likes: p.likes || 0,
-            image: p.image_url,
-            images: p.images || [p.image_url],
-            videoUrl: p.video_url,
-            youtubeUrl: p.youtube_url,
-            createdAt: new Date(p.created_at),
-            category: p.category || 'none',
-            commentsCount: 0,
-            comments: [],
-            isLiked: false,
-            isAd: false,
-            isGif: false
+          const newPosts: Post[] = await Promise.all(data.map(async (p) => {
+            const isAd = p.content?.trim().startsWith('[AD]');
+            const likesCount = Number(p.likes || 0);
+            
+            // 이미지 최적화 및 샌니타이징
+            let finalImage = p.image_url;
+            if (finalImage?.includes('unsplash.com')) {
+              finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+            }
+            
+            return {
+              id: p.id,
+              user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar },
+              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+              location: p.location_name || '알 수 없는 장소',
+              lat: p.latitude,
+              lng: p.longitude,
+              likes: likesCount,
+              image: finalImage,
+              images: p.images || [finalImage],
+              videoUrl: p.video_url,
+              youtubeUrl: p.youtube_url,
+              createdAt: new Date(p.created_at),
+              category: p.category || 'none',
+              commentsCount: 0,
+              comments: [],
+              isLiked: false,
+              isAd,
+              isGif: false,
+              borderType: likesCount >= 8000 ? 'popular' : 'none'
+            };
           }));
 
           setPosts(prev => [...prev, ...newPosts]);
@@ -164,7 +167,7 @@ const PostListOverlay = ({
         setIsLoadingMore(false);
       }
     }
-  }, [posts, isLoadingMore, hasMore, mapCenter, initialPosts]);
+  }, [posts, isLoadingMore, hasMore, initialPosts]);
 
   // window 객체에 상태 기록
   useEffect(() => {
