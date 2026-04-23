@@ -103,15 +103,20 @@ const Write = () => {
     const newMediaItems = await Promise.all(files.map(async (file) => {
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
+      
+      let orientation: 'landscape' | 'portrait' = 'landscape';
       let thumbnail = undefined;
-      let orientation: 'landscape' | 'portrait' | undefined = undefined;
 
       if (type === 'video') {
-        thumbnail = await captureVideoThumbnail(url).catch(() => undefined);
+        try {
+          thumbnail = await captureVideoThumbnail(url);
+        } catch (err) {
+          console.error("Thumbnail error:", err);
+        }
       } else {
-        const img = new Image();
-        img.src = url;
+        // 이미지를 로드하여 방향을 확인
         await new Promise((resolve) => {
+          const img = new Image();
           img.onload = () => {
             orientation = img.width >= img.height ? 'landscape' : 'portrait';
             resolve(null);
@@ -120,14 +125,22 @@ const Write = () => {
             orientation = 'landscape';
             resolve(null);
           };
+          img.src = url;
         });
       }
 
-      return { file, url, type, thumbnail, crop: { x: 50, y: 50 }, zoom: 1, orientation } as MediaFile;
+      return { 
+        file, 
+        url, 
+        type, 
+        thumbnail, 
+        crop: { x: 50, y: 50 }, 
+        zoom: 1, 
+        orientation 
+      } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newMediaItems]);
-    // Reset file input value to allow selecting same file again
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
@@ -294,7 +307,7 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                 <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
               </div>
 
-              {mediaFiles && mediaFiles.length > 0 ? (
+              {mediaFiles.length > 0 ? (
                 <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
                   <Carousel setApi={setApi} className="w-full h-full">
                     <CarouselContent className="ml-0 h-full">
@@ -312,6 +325,7 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                           >
                             {media.type === 'image' ? (
                               <img 
+                                key={`img-${media.url}`}
                                 src={media.url} 
                                 className="w-full h-full object-cover pointer-events-none select-none"
                                 style={{
@@ -321,7 +335,15 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                                 }}
                               />
                             ) : (
-                              <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                              <video 
+                                key={`video-${media.url}`}
+                                src={media.url} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                muted 
+                                loop 
+                                playsInline 
+                              />
                             )}
                           </div>
                           <button 
@@ -331,7 +353,7 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                               newFiles.splice(idx, 1);
                               setMediaFiles(newFiles);
                             }} 
-                            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"
+                            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
                           >
                             <X className="w-4 h-4" />
                           </button>
