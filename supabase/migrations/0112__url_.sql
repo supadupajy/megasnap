@@ -1,0 +1,1 @@
+SELECT image_url FROM posts WHERE image_url IS NOT NULL LIMIT 20;
