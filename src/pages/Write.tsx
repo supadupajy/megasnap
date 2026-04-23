@@ -378,15 +378,13 @@ useEffect(() => {
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div
-                            className="w-full h-full relative overflow-hidden touch-none"
-                            onMouseDown={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
-                            onMouseMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
-                            onMouseUp={stopDragging}
-                            onMouseLeave={stopDragging}
-                            onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
-                            onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
-                            onTouchEnd={stopDragging}
-                          >
+  ref={el => { containerRefs.current[idx] = el; }}
+  className="w-full h-full relative overflow-hidden"
+  onMouseDown={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
+  onMouseMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
+  onMouseUp={stopDragging}
+  onMouseLeave={stopDragging}
+>
                             {media.type === 'image' ? (
                               <img
                                 ref={el => { imgRefs.current[idx] = el; }}
