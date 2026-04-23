@@ -267,13 +267,7 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   };
 
   const currentMedia = mediaFiles[currentSlide];
-  console.log('🎯 currentMedia:', JSON.stringify({
-  type: currentMedia?.type,
-  url: currentMedia?.url?.substring(0, 80),
-  orientation: currentMedia?.orientation,
-  crop: currentMedia?.crop,
-}));
-
+  
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       <div className="h-[88px] w-full shrink-0 pointer-events-none" />
