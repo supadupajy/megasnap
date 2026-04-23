@@ -31,12 +31,13 @@ const ObservedPostItem = ({
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
+  const [isNearVisible, setIsNearVisible] = useState(false); // ✅ 화면 근처 도달 상태 추가
   const [fullPost, setFullPost] = useState<Post>(post);
 
-  // ✅ [FIX] 마커용 경량 데이터인 경우, 화면에 보일 때 프로필 등 상세 정보를 불러옴
+  // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
   useEffect(() => {
     const fetchFullData = async () => {
-      if (post.user.name === '...') {
+      if (fullPost.user.name === '...') {
         try {
           const { data: p, error } = await supabase
             .from('posts')
@@ -73,10 +74,10 @@ const ObservedPostItem = ({
       }
     };
 
-    if (isCurrentlyVisible) {
+    if (isNearVisible || isCurrentlyVisible) {
       fetchFullData();
     }
-  }, [post.id, post.user.name, isCurrentlyVisible]);
+  }, [post.id, fullPost.user.name, isNearVisible, isCurrentlyVisible]);
 
   useEffect(() => {
     // 1. 읽음 처리용 옵저버 (기존 로직 유지)
@@ -93,23 +94,37 @@ const ObservedPostItem = ({
     // 2. 동영상 재생용 실시간 가시성 옵저버 (인스타그램 방식)
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
-        // 화면에서 사라지면 즉시 중지, 나타나면 재생
         setIsCurrentlyVisible(entry.isIntersecting);
       },
       { 
-        threshold: 0.5, // 50% 이상 보일 때
-        rootMargin: '-15% 0px -15% 0px' // 화면 중앙부 근처에서만 활성화
+        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
+        rootMargin: '0px'
+      }
+    );
+
+    // 3. 프리로딩(Pre-loading)용 옵저버: 화면 아래 1000px 이내에 들어오면 로딩 시작
+    const preloadObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsNearVisible(true);
+          preloadObserver.unobserve(entry.target);
+        }
+      },
+      { 
+        rootMargin: '0px 0px 1000px 0px' // 아래쪽으로 1000px 미리 감지
       }
     );
 
     if (itemRef.current) {
       viewObserver.observe(itemRef.current);
       playbackObserver.observe(itemRef.current);
+      preloadObserver.observe(itemRef.current);
     }
 
     return () => {
       viewObserver.disconnect();
       playbackObserver.disconnect();
+      preloadObserver.disconnect();
     };
   }, [post.id, onVisible]);
 
