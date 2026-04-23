@@ -62,7 +62,7 @@ const Write = () => {
     };
   }, []);
 
-  const [currentPage, setCurrentPage] = useState<1 | 2>(1);
+  const [currentPage, setCurrentPage] = useState<1 | 2>(location.state?.location ? 2 : 1);
   const [draft, setDraft] = useState(postDraftStore.get());
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [api, setApi] = useState<any>();
@@ -152,7 +152,7 @@ const Write = () => {
       const { data: insertData, error: insertError } = await supabase
         .from('posts')
         .insert({
-          content: draft.content,
+          content: postDraftStore.get().content,
           location_name: address || '위치 미지정',
           latitude: initialLocation?.lat || null,
           longitude: initialLocation?.lng || null,
@@ -261,9 +261,16 @@ const Write = () => {
             <div className="space-y-8 pb-20">
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
-                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm"><MapPin className="w-6 h-6 text-indigo-600" /></div>
-                  <p className="font-bold text-gray-900 truncate">{address || '위치 미지정'}</p>
+                <div
+                  onClick={() => navigate('/', { state: { startSelection: true } })}
+                  className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
+                >
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                    <MapPin className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
+                    {address || '위치 미지정'}
+                  </p>
                 </div>
               </div>
 
@@ -288,11 +295,15 @@ const Write = () => {
 
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
-                <Textarea 
-                  placeholder="이 장소에서의 추억을 기록해보세요..." 
+                <Textarea
+                  placeholder="이 장소에서의 추억을 기록해보세요..."
                   className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
                   value={draft.content}
-                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                  onChange={(e) => {
+                    const newContent = e.target.value;
+                    setDraft(prev => ({ ...prev, content: newContent }));
+                    postDraftStore.set({ content: newContent });
+                  }}
                 />
               </div>
 

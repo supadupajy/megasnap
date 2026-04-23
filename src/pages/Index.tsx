@@ -745,6 +745,12 @@ const Index = () => {
     }
     else if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
     else if (routeState.center) { setSelectedPostId(null); setSearchResultLocation(null); setMapCenter(routeState.center); }
+    
+    // [FIX] 글쓰기 페이지에서 '위치 선택'을 눌러 진입한 경우 처리
+    if ((routeState as any).startSelection) {
+      startLocationSelection();
+    }
+
     navigate(location.pathname, { replace: true, state: null });
   }, [focusPostOnMap, location.pathname, location.state, navigate]);
 

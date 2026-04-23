@@ -13,6 +13,8 @@ const BottomNav = () => {
   const location = useLocation();
 
   const handleWriteClick = () => {
+    // 이동 전 현재 경로가 write가 아니라면 새로운 작성을 시작하는 것이므로
+    // 필요 시 여기서 draft를 유지하거나 초기화할 수 있습니다.
     navigate('/write');
   };
 
