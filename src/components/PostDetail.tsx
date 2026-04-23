@@ -46,42 +46,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
-  const [dbPostData, setDbPostData] = useState<any>(null); // DB에서 직접 가져온 상세 데이터
+
+  // ✅ [FIX] Dialog 완전히 열린 후 iframe 마운트 여부 제어
+  const [iframeReady, setIframeReady] = useState(false);
   
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const currentPost = useMemo(() => {
-    const basePost = posts[currentPostIndex];
-    if (!basePost) return null;
-    // DB에서 실시간으로 가져온 데이터가 있다면 덮어씌움
-    return dbPostData && dbPostData.id === basePost.id ? { ...basePost, ...dbPostData } : basePost;
-  }, [posts, currentPostIndex, dbPostData]);
+  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   
-  // [FIX] '여기보기'처럼 상세 데이터를 직접 조회하는 로직 추가
-  useEffect(() => {
-    const fetchFullPost = async () => {
-      const basePost = posts[currentPostIndex];
-      if (!isOpen || !basePost?.id) return;
-
-      try {
-        console.log('[PostDetail] Fetching full data for:', basePost.id);
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('id', basePost.id)
-          .single();
-        
-        if (data && !error) {
-          console.log('[PostDetail] Full data loaded:', data);
-          setDbPostData(data);
-        }
-      } catch (err) {
-        console.error('[PostDetail] Data fetch error:', err);
-      }
-    };
-
-    fetchFullPost();
-  }, [currentPostIndex, isOpen, posts]);
-
+  // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
   const youtubeId = useMemo(() => {
     if (!currentPost) return null;
     const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
@@ -111,6 +83,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // ✅ [FIX] isOpen과 youtubeId/videoUrl이 바뀔 때마다 iframe 준비 타이머 제어
+  // Dialog 오픈 애니메이션(약 300ms) 완료 후 iframe을 마운트해야
+  // 사용자 탭 제스처 컨텍스트가 살아있어 mute=0 autoplay가 허용됨
+  useEffect(() => {
+    if (isOpen && (youtubeId || videoUrl)) {
+      const timer = setTimeout(() => setIframeReady(true), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setIframeReady(false);
+    }
+  }, [isOpen, youtubeId, videoUrl]);
+
+  // 포스트가 바뀔 때도 iframe 리셋 후 재마운트
+  useEffect(() => {
+    setIframeReady(false);
+    if (isOpen && (youtubeId || videoUrl)) {
+      const timer = setTimeout(() => setIframeReady(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPostIndex]);
 
   // 키보드 대응
   useEffect(() => {
@@ -468,33 +461,50 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
+                      {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-                          {/* [ULTIMATE FIX] 삼항 연산자 대신 명시적 렌더링으로 썸네일을 완전히 덮어씌움 */}
+
+                          {/* ✅ [FIX] YouTube iframe - Dialog 오픈 후 300ms 뒤에 마운트하여 autoplay 허용 */}
                           {youtubeId ? (
                             <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              <iframe
-                                key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                className="w-full h-full border-0"
-                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                                title="YouTube video player"
-                                allow="autoplay; encrypted-media; picture-in-picture"
-                                allowFullScreen
-                              />
+                              {iframeReady ? (
+                                <iframe
+                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                  className="w-full h-full border-0"
+                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                                  title="YouTube video player"
+                                  allow="autoplay; encrypted-media; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                /* 로딩 플레이스홀더 - iframe 준비 전 표시 */
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
                             </div>
+
                           ) : videoUrl ? (
+                            /* ✅ [FIX] 일반 video도 동일하게 300ms 후 마운트 */
                             <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              <video 
-                                key={`detail-vid-${currentPost.id}-${videoUrl}`} 
-                                src={videoUrl} 
-                                className="w-full h-full object-cover" 
-                                autoPlay 
-                                loop 
-                                playsInline 
-                                controls 
-                              />
+                              {iframeReady ? (
+                                <video
+                                  key={`detail-vid-${currentPost.id}-${videoUrl}`}
+                                  src={videoUrl}
+                                  className="w-full h-full object-cover"
+                                  autoPlay
+                                  loop
+                                  playsInline
+                                  controls
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
                             </div>
+
                           ) : (
                             <div className="relative w-full h-full z-10 bg-gray-100">
                               {/* 이미지 슬라이더 */}
@@ -560,7 +570,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         </div>
                       </div>
 
-                      {/* 액션 버튼 및 내용 - 아이콘 그룹과 버튼 그룹 분리 */}
+                      {/* 액션 버튼 및 내용 */}
                       <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-3">
                           {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
@@ -591,7 +601,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </div>
                           </div>
 
-                          {/* 하단: 광고 전용 주문하기 버튼 (광고일 때만 표시) */}
+                          {/* 광고 전용 주문하기 버튼 */}
                           {isAd && (
                             <div className="flex justify-end mt-[-4px]">
                               <a 
