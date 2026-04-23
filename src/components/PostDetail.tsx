@@ -40,16 +40,6 @@ const getFallbackImage = (postId: string) => {
   return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
 };
 
-const getYouTubeIdLocal = (url: string) => {
-  if (!url) return null;
-  const clean = url.trim();
-  if (clean.includes('youtube.com') || clean.includes('youtu.be')) {
-    const match = clean.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)\/)?|[0-9]+(?:[a-zA-Z0-9\-_])?\/|s?\\d+\/)?)([a-zA-Z0-9\-_])+/);
-    return match ? match[1] : null;
-  }
-  return null;
-};
-
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile } = useAuth();
@@ -64,14 +54,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
 
-  const videoId = useMemo(() => {
+  const youtubeId = useMemo(() => {
     if (!currentPost) return null;
-    return getYouTubeIdLocal(currentPost.youtubeUrl);
+
+    // 🔍 [DEBUG] 포스트 원본 데이터 전체 출력
+    console.log('[PostDetail][DEBUG] currentPost raw data:', JSON.stringify({
+      id: currentPost.id,
+      youtubeUrl: currentPost.youtubeUrl,
+      youtube_url: currentPost.youtube_url,
+      youtube_id: currentPost.youtube_id,
+      youtubeId: currentPost.youtubeId,
+      videoUrl: currentPost.videoUrl,
+      video_url: currentPost.video_url,
+      video_path: currentPost.video_path,
+    }, null, 2));
+
+    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
+    const parsed = getYoutubeId(url || '');
+
+    // 🔍 [DEBUG] 파싱 결과 출력
+    console.log('[PostDetail][DEBUG] youtubeId parse result:', { rawUrl: url, parsedId: parsed });
+
+    return parsed;
   }, [currentPost]);
 
   const videoUrl = useMemo(() => {
     if (!currentPost) return null;
-    return currentPost.videoUrl;
+    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
+
+    // 🔍 [DEBUG] video URL 출력
+    console.log('[PostDetail][DEBUG] videoUrl:', url);
+
+    return url;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -482,10 +496,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - Index.tsx/PostItem.tsx와 동일한 구조로 완전 일치 */}
+                      {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
-                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {videoId ? (
+                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+
+                          {youtubeId ? (
                             <div className="absolute inset-0 w-full h-full z-[100]">
                               <iframe
                                 key={`detail-yt-${currentPost.id}-${videoId}`}
@@ -495,11 +510,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 allowFullScreen
                               />
                             </div>
-                          ) : videoUrl ? (
+                          ) : vUrl ? (
                             <div className="absolute inset-0 w-full h-full z-[100]">
                               <video 
-                                key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                src={videoUrl} 
+                                key={`detail-vid-${currentPost.id}-${vUrl}`}
+                                src={vUrl} 
                                 className="w-full h-full object-cover" 
                                 autoPlay 
                                 loop 
@@ -508,7 +523,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               />
                             </div>
                           ) : (
-                            <div className="relative w-full h-full">
+                            <div className="relative w-full h-full z-10 bg-gray-100">
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
