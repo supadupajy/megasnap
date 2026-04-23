@@ -46,11 +46,42 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [dbPostData, setDbPostData] = useState<any>(null); // DB에서 직접 가져온 상세 데이터
   
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  const currentPost = useMemo(() => {
+    const basePost = posts[currentPostIndex];
+    if (!basePost) return null;
+    // DB에서 실시간으로 가져온 데이터가 있다면 덮어씌움
+    return dbPostData && dbPostData.id === basePost.id ? { ...basePost, ...dbPostData } : basePost;
+  }, [posts, currentPostIndex, dbPostData]);
   
-  // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
+  // [FIX] '여기보기'처럼 상세 데이터를 직접 조회하는 로직 추가
+  useEffect(() => {
+    const fetchFullPost = async () => {
+      const basePost = posts[currentPostIndex];
+      if (!isOpen || !basePost?.id) return;
+
+      try {
+        console.log('[PostDetail] Fetching full data for:', basePost.id);
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', basePost.id)
+          .single();
+        
+        if (data && !error) {
+          console.log('[PostDetail] Full data loaded:', data);
+          setDbPostData(data);
+        }
+      } catch (err) {
+        console.error('[PostDetail] Data fetch error:', err);
+      }
+    };
+
+    fetchFullPost();
+  }, [currentPostIndex, isOpen, posts]);
+
   const youtubeId = useMemo(() => {
     if (!currentPost) return null;
     const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
