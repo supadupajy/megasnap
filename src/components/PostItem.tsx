@@ -158,21 +158,18 @@ const PostItem = ({
     }
   }, [authUser]);
 
-  // Intersection Observer to track visibility
+  // [FIX] Intersection Observer 로직을 더 관대하게 수정하여 재생 지연 방지
   useEffect(() => {
     if (!autoPlayVideo) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        // [FIX] 절반 이상 보이면 바로 재생 시도
         setIsVisible(entry.isIntersecting);
       },
       {
-        // [FIX] 감지 수치 최적화
-        // threshold를 0.5로 낮추어 절반만 보여도 재생을 시도하되,
-        // rootMargin을 통해 화면 중앙 근처(상하단 25% 제외)에서만 활성화되도록 하여 
-        // 겹침 방지와 재생 반응성 사이의 균형을 맞춤
-        threshold: 0.5, 
-        rootMargin: '-25% 0px -25% 0px' 
+        threshold: 0.3, // 30%만 보여도 미리 로드/재생 시도
+        rootMargin: '0px' // 여백 없이 화면 내 진입 즉시 감지
       }
     );
 
@@ -429,11 +426,14 @@ const PostItem = ({
         onClick={() => !videoId && onLocationClick?.({} as any, lat!, lng!)}
       >
         {videoId ? (
-          <div className="w-full h-full">
+          <div className="w-full h-full relative">
             <iframe
               ref={iframeRef}
-              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
-              className="w-full h-full object-cover"
+              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3`}
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-500",
+                videoLoaded && isVisible ? "opacity-100" : "opacity-0"
+              )}
               allow="autoplay; encrypted-media"
               allowFullScreen
               onLoad={() => setVideoLoaded(true)}
@@ -442,20 +442,31 @@ const PostItem = ({
               <img 
                 src={currentImage} 
                 alt="" 
-                className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover z-10"
               />
             )}
           </div>
         ) : post.videoUrl ? (
-          <div className="w-full h-full">
+          <div className="w-full h-full relative">
             <video
               ref={videoRef}
               src={post.videoUrl}
-              className="w-full h-full object-cover"
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-500",
+                videoLoaded && isVisible ? "opacity-100" : "opacity-0"
+              )}
               loop
+              muted
               playsInline
               onLoadedData={() => setVideoLoaded(true)}
             />
+            {(!videoLoaded || !isVisible) && (
+              <img 
+                src={currentImage} 
+                alt="" 
+                className="absolute inset-0 w-full h-full object-cover z-10"
+              />
+            )}
           </div>
         ) : (
           <div className="relative w-full h-full">
