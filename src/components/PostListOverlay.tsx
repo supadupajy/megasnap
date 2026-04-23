@@ -329,7 +329,7 @@ const PostListOverlay = ({
             {/* Pull Up Loading Area - 항상 로딩 시도가 가능하도록 노출 */}
             <div 
               className="py-16 flex flex-col items-center justify-center transition-all duration-200"
-              style={{ height: `${Math.max(60, pullUpDistance + 30)}px` }}
+              style={{ height: `${Math.max(40, pullUpDistance + 20)}px` }}
             >
               <div className="flex flex-col items-center gap-2 mb-10">
                 {isLoadingMore ? (
