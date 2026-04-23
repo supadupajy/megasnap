@@ -161,7 +161,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
           </div>
 
           {/* Fixed Bottom Button Area - BottomNav 위로 올리기 위해 하단 여백(pb-12) 추가 */}
-          <div className="px-8 pt-4 pb-12 bg-white shrink-0 border-t border-gray-50">
+          <div className="px-8 pt-4 pb-24 bg-white shrink-0 border-t border-gray-50">
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               onClick={handleSave}
