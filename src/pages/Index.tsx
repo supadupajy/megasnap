@@ -57,59 +57,64 @@ const Index = () => {
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
   const triggerConfetti = useCallback(() => {
-    // 1. 타인이 생성했을 때 나타나는 방식과 동일한 옵션 적용
-    const duration = 2.5 * 1000;
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999, scalar: 1.2 };
-
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-    // 즉시 실행
-    fireConfetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      zIndex: 999999,
-      colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee']
-    });
-
-    const interval: any = setInterval(function() {
-      const timeLeft = animationEnd - Date.now();
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
-
-      const particleCount = 40 * (timeLeft / duration);
+    // [FIX] 너무 과한 폭죽 연출을 적절하고 세련되게 조정
+    try {
+      console.log('[Confetti] Firing refined celebratory effects');
       
-      fireConfetti({ 
-        ...defaults, 
-        particleCount, 
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ['#4F46E5', '#F59E0B'] 
+      // 1. 메인 폭죽: 화면 중앙에서 적절한 양으로 1회 발사
+      fireConfetti({
+        particleCount: 80, // 150 -> 80으로 축소
+        spread: 60,       // 70 -> 60으로 축소
+        origin: { y: 0.65 },
+        zIndex: 999999,
+        colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'],
+        scalar: 1.0       // 크기 표준화
       });
-      fireConfetti({ 
-        ...defaults, 
-        particleCount, 
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ['#10B981', '#EF4444'] 
-      });
-    }, 200);
 
-    // 2. 백업 CSS 폭죽 실행
-    const pieces = Array.from({ length: 60 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.random() * 2}s`,
-      color: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'][Math.floor(Math.random() * 5)]
-    }));
-    setConfettiPieces(pieces);
-    setShowCssConfetti(true);
-    
-    // 타인이 생성했을 때처럼 브라우저 기본 알림음과 유사한 효과를 위해 로그 출력
-    console.log('[Confetti] SUCCESS: Firing all layers of celebratory effects');
-    
-    setTimeout(() => setShowCssConfetti(false), 5000);
+      // 2. 보조 폭죽: 좌우 상단에서 가볍게 쏟아지는 연출 (지속 시간 단축)
+      const duration = 1.2 * 1000; // 2.5s -> 1.2s로 대폭 단축
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 25, spread: 360, ticks: 60, zIndex: 999999, scalar: 0.8 };
+
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 20 * (timeLeft / duration); // 양 축소
+        
+        fireConfetti({ 
+          ...defaults, 
+          particleCount, 
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+          colors: ['#4F46E5', '#F59E0B'] 
+        });
+        fireConfetti({ 
+          ...defaults, 
+          particleCount, 
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+          colors: ['#10B981', '#EF4444'] 
+        });
+      }, 300); // 발사 간격 늘림
+
+      // 3. 백업 CSS 폭죽 양 축소
+      const pieces = Array.from({ length: 25 }).map((_, i) => ({ // 60 -> 25로 축소
+        id: i,
+        left: `${Math.random() * 100}%`,
+        delay: `${Math.random() * 1.5}s`,
+        color: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'][Math.floor(Math.random() * 5)]
+      }));
+      setConfettiPieces(pieces);
+      setShowCssConfetti(true);
+      
+      setTimeout(() => setShowCssConfetti(false), 3000); // 유지 시간 단축
+    } catch (e) {
+      console.error('[Confetti] Confetti error:', e);
+    }
   }, []);
 
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
