@@ -861,11 +861,12 @@ const Index = () => {
     if (tempSelectedLocation) { 
       setFinalSelectedLocation(tempSelectedLocation); 
       setIsSelectingLocation(false); 
-      // [FIX] Navigate to new Write page with location data and return flag
+      // [FIX] Navigate to Write page with location, flag, and original mediaFiles
       setTimeout(() => navigate('/write', { 
         state: { 
           location: tempSelectedLocation,
-          fromLocationSelection: true 
+          fromLocationSelection: true,
+          mediaFiles: (location.state as any)?.mediaFiles || []
         } 
       }), 100); 
     } 
@@ -873,9 +874,12 @@ const Index = () => {
   const cancelLocationSelection = () => { 
     setIsSelectingLocation(false); 
     setTempSelectedLocation(null); 
-    // [FIX] Navigate back to Write page with return flag even when canceled
+    // [FIX] Navigate back to Write page with return flag and original mediaFiles even when canceled
     setTimeout(() => navigate('/write', { 
-      state: { fromLocationSelection: true } 
+      state: { 
+        fromLocationSelection: true,
+        mediaFiles: (location.state as any)?.mediaFiles || []
+      } 
     }), 100); 
   };
   const startLocationSelection = () => { 

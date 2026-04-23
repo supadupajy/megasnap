@@ -50,7 +50,18 @@ const Write = () => {
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
   const [draft, setDraft] = useState(postDraftStore.get());
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  
+  // [FIX] location.state를 통해 전달된 mediaFiles가 있으면 복구, 없으면 빈 배열
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(location.state?.mediaFiles || []);
+  
+  // [FIX] 컴포넌트 마운트 시 body 스크롤 고정
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const [api, setApi] = useState<any>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -250,7 +261,13 @@ const Write = () => {
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
                 <div 
-                  onClick={() => navigate('/', { state: { startSelection: true } })}
+                  onClick={() => navigate('/', { 
+                    state: { 
+                      startSelection: true,
+                      // [FIX] 현재 선택된 미디어 파일들을 유지하기 위해 state로 전달
+                      mediaFiles: mediaFiles
+                    } 
+                  })}
                   className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
                 >
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
