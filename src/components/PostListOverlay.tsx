@@ -152,7 +152,7 @@ const PostListOverlay = ({
               isLiked: false,
               isAd,
               isGif: false,
-              borderType: likesCount >= 8000 ? 'popular' : 'none'
+              borderType: likesCount >= 9000 ? 'popular' : 'none'
             };
           }));
 
