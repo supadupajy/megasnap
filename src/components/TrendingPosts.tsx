@@ -230,16 +230,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             return (
               <div 
                 key={post.id}
-                onClick={() => {
-                  // [FIX] Use type casting to access potential DB field names safely
-                  const p = post as any;
-                  const normalizedPost = {
-                    ...post,
-                    youtubeUrl: post.youtubeUrl || p.youtube_url,
-                    videoUrl: post.videoUrl || p.video_url
-                  };
-                  onPostClick(normalizedPost);
-                }}
+                onClick={() => onPostClick(post)}
                 className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
               >
                 <div className="w-6 text-center shrink-0">
