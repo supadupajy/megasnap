@@ -111,14 +111,24 @@ const Write = () => {
       } else {
         const img = new Image();
         img.src = url;
-        await new Promise(r => img.onload = r);
-        orientation = img.width >= img.height ? 'landscape' : 'portrait';
+        await new Promise((resolve) => {
+          img.onload = () => {
+            orientation = img.width >= img.height ? 'landscape' : 'portrait';
+            resolve(null);
+          };
+          img.onerror = () => {
+            orientation = 'landscape';
+            resolve(null);
+          };
+        });
       }
 
       return { file, url, type, thumbnail, crop: { x: 50, y: 50 }, zoom: 1, orientation } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newMediaItems]);
+    // Reset file input value to allow selecting same file again
+    if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
   const updateMediaCrop = (idx: number, x: number, y: number) => {
@@ -284,19 +294,18 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                 <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
               </div>
 
-              {mediaFiles.length > 0 ? (
+              {mediaFiles && mediaFiles.length > 0 ? (
                 <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
                   <Carousel setApi={setApi} className="w-full h-full">
                     <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
-                        <CarouselItem key={idx} className="pl-0 h-full relative select-none">
+                        <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
                             className="w-full h-full relative overflow-hidden touch-none"
                             onMouseDown={(e) => handleDrag(e, idx)}
                             onMouseMove={(e) => isDraggingRef.current && handleDrag(e, idx)}
                             onMouseUp={stopDragging}
                             onMouseLeave={stopDragging}
-                            // 터치 이벤트 핸들러 추가 및 수동 제어
                             onTouchStart={(e) => handleDrag(e, idx)}
                             onTouchMove={(e) => handleDrag(e, idx)}
                             onTouchEnd={stopDragging}
