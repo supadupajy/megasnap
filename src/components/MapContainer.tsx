@@ -36,7 +36,24 @@ const MapContainer = ({
   level = 5,
   searchResultLocation,
 }: MapContainerProps) => {
-  // ...
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentLevel, setCurrentLevel] = useState<number>(5);
+  const [isMapMoving, setIsMapMoving] = useState(false);
+
+  const overlaysRef = useRef<Map<string, any>>(new Map());
+  const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
+  const searchOverlayRef = useRef<any>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const isDragging = useRef(false);
+  const isProgrammaticMove = useRef(false);
+  const lastDragEnd = useRef(0);
+  const currentLevelRef = useRef<number>(5);
+
+  const centerRef = useRef(center);
+  const levelRef = useRef(5);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -167,9 +184,9 @@ const MapContainer = ({
           const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
           updateZoomClass();
-          const boundsData = { 
-            sw: { lat: sw.getLat(), lng: sw.getLng() }, 
-            ne: { lat: ne.getLat(), lng: ne.getLng() } 
+          const boundsData = {
+            sw: { lat: sw.getLat(), lng: sw.getLng() },
+            ne: { lat: ne.getLat(), lng: ne.getLng() }
           };
           localStorage.setItem('map_bounds', JSON.stringify(boundsData));
           onMapChangeRef.current({
@@ -187,7 +204,7 @@ const MapContainer = ({
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
       kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; setIsMapMoving(true); });
       kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; setIsMapMoving(false); lastDragEnd.current = Date.now(); });
-      
+
       return true;
     } catch (e) { return false; }
   }, []);
@@ -220,7 +237,7 @@ const MapContainer = ({
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-    
+
     const level = mapInstance.current.getLevel();
     if (level >= 8) {
       overlaysRef.current.forEach(o => o.setMap(null));
@@ -229,7 +246,7 @@ const MapContainer = ({
 
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
-    
+
     overlaysRef.current.forEach((overlay, id) => {
       if (!currentPostIds.has(id) || !bounds.contain(overlay.getPosition())) {
         overlay.setMap(null);
@@ -253,16 +270,16 @@ const MapContainer = ({
         if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        content.onclick = (e) => { 
-          e.stopPropagation(); 
-          if (isDragging.current) return; 
-          onMarkerClickRef.current(post); 
+        content.onclick = (e) => {
+          e.stopPropagation();
+          if (isDragging.current) return;
+          onMarkerClickRef.current(post);
         };
 
-        const overlay = new kakao.maps.CustomOverlay({ 
-          position: position, 
-          content: content, 
-          yAnchor: 1, 
+        const overlay = new kakao.maps.CustomOverlay({
+          position: position,
+          content: content,
+          yAnchor: 1,
           zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
         });
         overlay.setMap(mapInstance.current);
@@ -273,10 +290,9 @@ const MapContainer = ({
           existingOverlay.setMap(mapInstance.current);
         }
         if (content.getAttribute('data-content-state') !== contentStateKey) {
-          content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-          content.setAttribute('data-content-state', contentStateKey); 
+          content.innerHTML = getMarkerInnerHtml(post, isViewed);
+          content.setAttribute('data-content-state', contentStateKey);
         }
-        // ✅ highlighted 클래스 토글
         if (isHighlighted) {
           if (!content.classList.contains('highlighted')) {
             content.classList.add('highlighted');
@@ -336,9 +352,9 @@ const MapContainer = ({
   }, [currentLevel]);
 
   useEffect(() => {
-    const timer = setInterval(() => { 
+    const timer = setInterval(() => {
       try {
-        if (initMap()) clearInterval(timer); 
+        if (initMap()) clearInterval(timer);
       } catch (e) {
         console.error('Map init interval error:', e);
       }
@@ -359,8 +375,7 @@ const MapContainer = ({
     return () => clearTimeout(timer);
   }, [level, isMapReady]);
 
-  // ✅ onMoveComplete 콜백을 받는 smoothMoveTo
-  const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
+  const smoothMoveTo = (targetLat: number, targetLng: number) => {
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
     if (!map || !kakao || !kakao.maps?.LatLng) return;
@@ -396,13 +411,13 @@ const MapContainer = ({
       } else {
         isProgrammaticMove.current = false;
         animationFrameRef.current = null;
-                try {
+        try {
           const bounds = map.getBounds();
           const mapLevel = map.getLevel();
           onMapChangeRef.current({
-            bounds: { 
-              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() }, 
-              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() } 
+            bounds: {
+              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() },
+              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() }
             },
             center: { lat: targetLat, lng: targetLng },
             level: mapLevel
@@ -415,13 +430,13 @@ const MapContainer = ({
   };
 
   useEffect(() => {
-  if (isMapReady && mapInstance.current && center) {
-    const currentCenter = mapInstance.current.getCenter();
-    const latDiff = Math.abs(currentCenter.getLat() - center.lat);
-    const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
-    if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
-  }
-}, [center, isMapReady]);
+    if (isMapReady && mapInstance.current && center) {
+      const currentCenter = mapInstance.current.getCenter();
+      const latDiff = Math.abs(currentCenter.getLat() - center.lat);
+      const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
+      if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
+    }
+  }, [center, isMapReady]);
 
   useEffect(() => {
     const kakao = (window as any).kakao;
@@ -448,7 +463,7 @@ const MapContainer = ({
         position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
         content: content,
         yAnchor: 1,
-        zIndex: 11000 
+        zIndex: 11000
       });
       overlay.setMap(mapInstance.current);
       searchOverlayRef.current = overlay;
@@ -459,7 +474,7 @@ const MapContainer = ({
     const isAd = post.isAd;
     const isMine = authUser && (post.user.id === authUser.id || post.user.id === 'me');
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
-    
+
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
       if (url.includes('source.unsplash.com') || url.length < 50) return true;
@@ -487,7 +502,7 @@ const MapContainer = ({
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
-    
+
     const isInfluencer = ['gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
     let animationClass = '';
@@ -497,7 +512,7 @@ const MapContainer = ({
     const isSpecialPost = isMine || isAd || borderType !== 'none';
     const shineClass = isSpecialPost ? 'shine-overlay' : '';
 
-    let inlineBorderStyle = "border: 3px solid #ffffff;"; 
+    let inlineBorderStyle = "border: 3px solid #ffffff;";
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
     let influencerClass = "";
 
@@ -538,9 +553,9 @@ const MapContainer = ({
   };
 
   return (
-    <div 
-      className="w-full h-full relative select-none touch-none" 
-      style={{ 
+    <div
+      className="w-full h-full relative select-none touch-none"
+      style={{
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
         KhtmlUserSelect: 'none',
@@ -557,10 +572,10 @@ const MapContainer = ({
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </div>
       )}
-      <div 
+      <div
         ref={containerRef}
-        id="kakao-map" 
-        className="w-full h-full select-none" 
+        id="kakao-map"
+        className="w-full h-full select-none"
       />
     </div>
   );
