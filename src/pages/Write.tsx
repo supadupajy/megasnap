@@ -338,18 +338,36 @@ const Write = () => {
                   {/* 이미지 / 비디오 */}
                   {currentMedia?.type === 'image' ? (
                     <img
-                      ref={imgRef}
-                      src={currentMedia.url}
-                      className="absolute inset-0 w-full h-full pointer-events-none"
-                      style={{
-                        objectFit: 'cover',
-                        objectPosition: currentMedia.orientation === 'portrait'
-                          ? `50% ${currentMedia.crop?.y ?? 50}%`
-                          : `${currentMedia.crop?.x ?? 50}% 50%`,
-                        // ✅ 드래그 중: 즉각 반응 / 드래그 끝: 스프링 복귀
-                        transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                      }}
-                    />
+  ref={imgRef}
+  src={currentMedia.url}
+  className="absolute inset-0 w-full h-full pointer-events-none"
+  onLoad={() => {
+    // ✅ 이미지 로드 완료 후 초기 crop 픽셀값 동기화
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container) return;
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+    const scale = Math.max(conW / natW, conH / natH);
+    const renderedW = natW * scale;
+    const renderedH = natH * scale;
+    const cropX = currentMedia.crop?.x ?? 50;
+    const cropY = currentMedia.crop?.y ?? 50;
+    cropPixelRef.current = {
+      x: renderedW === conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+      y: renderedH === conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+    };
+  }}
+  style={{
+    objectFit: 'cover',
+    objectPosition: currentMedia.orientation === 'portrait'
+      ? `50% ${currentMedia.crop?.y ?? 50}%`
+      : `${currentMedia.crop?.x ?? 50}% 50%`,
+    transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+  }}
+/>
                   ) : (
                     <video
                       src={currentMedia?.url}
