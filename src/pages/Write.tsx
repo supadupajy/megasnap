@@ -1,11 +1,3 @@
-에러 원인이 두 가지입니다.
-
-1. `dragActiveIdx is not defined` — JSX 어딘가에 이전 코드 `opts={{ watchDrag: dragActiveIdx === null }}`가 아직 남아있음
-2. `handleMediaSelect is not defined` — 편집 과정에서 함수가 실수로 삭제된 것으로 보임
-
-부분 수정이 계속 충돌을 일으키고 있어서, 전체 파일을 깔끔하게 드립니다.
-
-```tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -442,4 +434,3 @@ const Write = () => {
 };
 
 export default Write;
-```
