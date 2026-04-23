@@ -87,8 +87,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* z-index를 200으로 높여 모든 UI 요소보다 위에 오도록 설정 */}
-      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[200]">
+      {/* DrawerContent의 z-index를 BottomNav(1000)보다 낮게 설정하여 하단바 뒤로 가도록 함 */}
+      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[900]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -144,7 +144,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
 
             {/* Bio Section */}
-            <div className="space-y-3">
+            <div className="space-y-3 pb-8">
               <div className="flex items-center gap-2 px-1">
                 <AlignLeft className="w-4 h-4 text-gray-400" />
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내 소개</p>
@@ -160,8 +160,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
           </div>
 
-          {/* Fixed Bottom Button Area */}
-          <div className="px-8 pt-4 pb-12 bg-white shrink-0 border-t border-gray-50">
+          {/* Fixed Bottom Button Area - BottomNav의 높이(100px)만큼 확실히 띄워줌 */}
+          <div className="px-8 pt-4 pb-[100px] bg-white shrink-0 border-t border-gray-50">
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               onClick={handleSave}
