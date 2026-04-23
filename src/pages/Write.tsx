@@ -318,7 +318,8 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                   <Carousel 
                     setApi={setApi} 
                     className="w-full h-full"
-                    opts={{ watchDrag: dragActiveIdx === null }}
+                    opts={{ watchDrag: !isDraggingActiveRef.current }}
+
                   >
                     <CarouselContent className="ml-0 h-full">
                       {mediaFiles.map((media, idx) => (
