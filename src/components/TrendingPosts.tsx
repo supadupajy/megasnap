@@ -231,11 +231,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               <div 
                 key={post.id}
                 onClick={() => {
-                  // [FIX] 상세 페이지로 넘기기 전 데이터 정규화
+                  // [FIX] Use type casting to access potential DB field names safely
+                  const p = post as any;
                   const normalizedPost = {
                     ...post,
-                    youtubeUrl: post.youtubeUrl || post.youtube_url,
-                    videoUrl: post.videoUrl || post.video_url
+                    youtubeUrl: post.youtubeUrl || p.youtube_url,
+                    videoUrl: post.videoUrl || p.video_url
                   };
                   onPostClick(normalizedPost);
                 }}
