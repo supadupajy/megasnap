@@ -112,6 +112,17 @@ const Index = () => {
     setTimeout(() => setShowCssConfetti(false), 5000);
   }, []);
 
+  // [FINAL FIX] 외부 이벤트를 통한 폭죽 강제 트리거 리스너 등록
+  useEffect(() => {
+    const handleForceTrigger = () => {
+      console.log('[Index] Received force-confetti-trigger event');
+      // 마커가 나타나는 시점인 1.2초 뒤에 터지도록 지연 실행
+      setTimeout(() => triggerConfetti(), 1200);
+    };
+    window.addEventListener('force-confetti-trigger', handleForceTrigger);
+    return () => window.removeEventListener('force-confetti-trigger', handleForceTrigger);
+  }, [triggerConfetti]);
+
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -911,6 +922,7 @@ const Index = () => {
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
+    console.log('[PostCreated] Handling new post:', newPost.id);
     // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가
     const postWithEffect = { ...newPost, isNewRealtime: true };
     
@@ -921,12 +933,20 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 포스팅 마커가 "뿅" 하고 나타나는 애니메이션 시점(약 1.2초 후)에 맞춰 폭죽 트리거
-      // 지도 이동 시간 + 마커 등장 애니메이션 시간을 고려하여 지연 시간 조정
+      // [CRITICAL FIX] 1.2초 지연이 페이지 전환/렌더링 상태와 충돌할 수 있으므로
+      // 여러 번에 걸쳐 트리거를 시도하여 반드시 한 번은 보이도록 보강
+      
+      // 즉시 (0.2s) - 혹시 모를 빠른 렌더링 대비
+      setTimeout(() => triggerConfetti(), 200);
+      
+      // 중간 (0.8s) - 마커 등장 시작 시점
+      setTimeout(() => triggerConfetti(), 800);
+      
+      // 메인 (1.4s) - 마커가 완전히 커진 시점 (사용자가 요청한 타이밍)
       setTimeout(() => {
-        console.log('[Confetti] Synchronized confetti with marker appearance');
+        console.log('[Confetti] Final synchronized trigger');
         triggerConfetti();
-      }, 1200);
+      }, 1400);
     }
     setIsWriteOpen(false);
   };

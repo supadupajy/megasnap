@@ -169,6 +169,11 @@ const Write = () => {
 
       showSuccess('게시물이 등록되었습니다! ✨');
       
+      // [FINAL FIX] Write 페이지에서 Index로 넘어가기 직전에 트리거를 예약하여 
+      // 상태 유실을 방지하고 가시성을 확보합니다.
+      const triggerEvent = new CustomEvent('force-confetti-trigger');
+      window.dispatchEvent(triggerEvent);
+
       clear(); // [FIX] useWriteStore 초기화
       postDraftStore.clear();
       
