@@ -83,37 +83,33 @@ const MediaSlider = ({
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      const idx = currentIdxRef.current;
-      const media = mediaFilesRef.current[idx];
+  const idx = currentIdxRef.current;
+  const media = mediaFilesRef.current[idx];
+  if (!media) return;
 
-      // 이미지일 때만 처리
-      if (!media || media.type !== 'image') return;
+  // touch-none이 있으므로 항상 preventDefault 불필요 (브라우저가 이미 차단)
+  // 이미지일 때만 crop 처리
+  if (media.type !== 'image') return;
 
-      // ✅ 이미지 터치 시 즉시 preventDefault → 페이지 스크롤 완전 차단
-      e.preventDefault();
-      isDragging = true;
+  isDragging = true;
 
-      const dx = e.touches[0].clientX - lastX;
-      const dy = e.touches[0].clientY - lastY;
-      lastX = e.touches[0].clientX;
-      lastY = e.touches[0].clientY;
+  const dx = e.touches[0].clientX - lastX;
+  const dy = e.touches[0].clientY - lastY;
+  lastX = e.touches[0].clientX;
+  lastY = e.touches[0].clientY;
 
-      const isPortrait = media.orientation === 'portrait';
-      const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
-      const sensitivity = 0.5;
+  const isPortrait = media.orientation === 'portrait';
+  const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
+  const sensitivity = 0.5;
 
-      const newX = isPortrait
-        ? cur.x
-        : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
-      const newY = isPortrait
-        ? Math.max(0, Math.min(100, cur.y - dy * sensitivity))
-        : cur.y;
+  const newX = isPortrait ? cur.x : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
+  const newY = isPortrait ? Math.max(0, Math.min(100, cur.y - dy * sensitivity)) : cur.y;
 
-      cropRef.current[idx] = { x: newX, y: newY };
+  cropRef.current[idx] = { x: newX, y: newY };
 
-      const imgEl = imgRefs.current[idx];
-      if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
-    };
+  const imgEl = imgRefs.current[idx];
+  if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
+};
 
     const onTouchEnd = (e: TouchEvent) => {
       const idx = currentIdxRef.current;
