@@ -201,21 +201,22 @@ const PostListOverlay = ({
     }
   }, [posts, isLoadingMore, hasMore, currentBounds]);
 
-  // Pull Up 제스처 핸들러
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Pull Up 제스처 핸들러 (마우스 이벤트 추가)
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
     // 바닥에 닿아있을 때만 풀업 시작
-    if (scrollTop + clientHeight >= scrollHeight - 5) {
+    if (scrollTop + clientHeight >= scrollHeight - 10) {
       isPullingRef.current = true;
-      startYRef.current = e.touches[0].pageY;
+      const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+      startYRef.current = pageY;
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
     if (!isPullingRef.current) return;
-    const currentY = e.touches[0].pageY;
-    const diff = startYRef.current - currentY;
+    const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+    const diff = startYRef.current - pageY;
     
     if (diff > 0) { // 위로 올리는 중
       setPullUpDistance(Math.min(diff * 0.5, 120)); // 저항감 부여
@@ -275,7 +276,11 @@ const PostListOverlay = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar"
+        onMouseDown={handleTouchStart}
+        onMouseMove={handleTouchMove}
+        onMouseUp={handleTouchEnd}
+        onMouseLeave={handleTouchEnd}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar select-none cursor-grab active:cursor-grabbing"
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
