@@ -237,8 +237,20 @@ const Index = () => {
       
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
+        const likesCountNum = Number(p.likes || 0);
+        
+        // [FIX] 마커용 간이 매핑에서도 borderType을 확실히 계산하여 포함
         let borderType: any = 'none';
-        if (Number(p.likes) >= 9000) borderType = 'popular';
+        if (likesCountNum >= 9000) {
+          borderType = 'popular';
+        } else if (!isAd) {
+          let h = 0;
+          const idStr = p.id.toString();
+          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+          const val = Math.abs(h % 1000) / 1000;
+          if (val < 0.05) borderType = 'diamond';
+          else if (val < 0.15) borderType = 'gold';
+        }
         
         return {
           id: p.id,
@@ -248,11 +260,11 @@ const Index = () => {
           lng: p.longitude,
           latitude: p.latitude,
           longitude: p.longitude,
-          likes: Number(p.likes || 0),
+          likes: likesCountNum,
           image: p.image_url || '',
           image_url: p.image_url || '',
-          youtubeUrl: p.youtube_url,   // ✅ 정규화
-          videoUrl: p.video_url,       // ✅ 정규화
+          youtubeUrl: p.youtube_url,
+          videoUrl: p.video_url,
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
           borderType,
@@ -317,15 +329,29 @@ const Index = () => {
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
+    // ✅ [거리 기반 가중치 정렬] 현재 지도의 중심과 각 포스트의 거리를 계산하여 가까운 순으로 표시
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
       if (!inBounds) return false;
+      
+      // 필터링 로직 확인
       if (post.isAd) return true;
       if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
-      if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
+      
+      // 카테고리 필터링
       if (selectedCategories.includes('all')) return true;
-      return selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
+      if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
+      
+      // [FIX] 인플루언서 및 인기 게시글 필터링 조건 강화
+      if (selectedCategories.includes('influencer')) {
+        return ['gold', 'diamond'].includes(post.borderType || 'none');
+      }
+      if (selectedCategories.includes('hot')) {
+        return post.borderType === 'popular';
+      }
+      
+      return selectedCategories.includes(post.category || 'none');
     }).map(p => {
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
       return [p.id, { ...p, _dist: dist }];
