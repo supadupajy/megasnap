@@ -92,6 +92,7 @@ const PostListOverlay = ({
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [radiusOffset, setRadiusOffset] = useState(0.02); // ✅ 점점 넓어질 반경 (단위: 위경도 차이)
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [pullUpDistance, setPullUpDistance] = useState(0);
   const isPullingRef = useRef(false);
@@ -105,6 +106,7 @@ const PostListOverlay = ({
     setHasMore(true); 
     setIsLoadingMore(false);
     setPullUpDistance(0);
+    setRadiusOffset(0.02); // ✅ 초기화 시 반경 초기값 설정
   }, [initialPosts]);
 
   // Infinite Scroll Handler
@@ -114,28 +116,28 @@ const PostListOverlay = ({
     setIsLoadingMore(true);
     
     try {
-      // ✅ [FIX] createdAt 기준 LT(<) 쿼리는 정밀도가 떨어질 수 있으므로 밀리초까지 정확히 처리
-      const lastPost = posts[posts.length - 1];
-      const lastPostDate = lastPost 
-        ? new Date(lastPost.createdAt).toISOString()
+      const lastPostDate = posts.length > 0 
+        ? new Date(posts[posts.length - 1].createdAt).toISOString()
         : new Date().toISOString();
 
-      // ✅ [DEBUG] 로딩 시도 로그
-      console.log(`[PostListOverlay] Requesting posts older than ${lastPostDate}`);
+      // ✅ [반경 확장 로직] 현재 보고 있는 중심점을 기준으로 검색 범위를 점점 넓힘
+      // 0.02도(약 2km)에서 시작하여 로딩 시마다 0.05도(약 5km)씩 확장
+      const currentRadius = radiusOffset;
+      const minLat = mapCenter.lat - currentRadius;
+      const maxLat = mapCenter.lat + currentRadius;
+      const minLng = mapCenter.lng - currentRadius;
+      const maxLng = mapCenter.lng + currentRadius;
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('posts')
         .select('*')
+        .gte('latitude', minLat)
+        .lte('latitude', maxLat)
+        .gte('longitude', minLng)
+        .lte('longitude', maxLng)
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(20); // 넉넉하게 20개 요청
-
-      if (currentBounds) {
-        // ✅ [FIX] Bounds 필터를 제거하거나 대폭 완화하여 'End of results'를 방지
-        // 사용자가 명시적으로 '여기보기'를 했으므로 해당 시점의 최신순으로 계속 보여줌
-      }
-
-      const { data, error } = await query;
+        .limit(10);
 
       if (error) throw error;
 
@@ -191,27 +193,36 @@ const PostListOverlay = ({
         }));
 
         setPosts(prev => {
-          // 중복 제거 후 병합
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
-          console.log(`[PostListOverlay] Added ${filteredNew.length} new posts`);
           return [...prev, ...filteredNew];
         });
         
-        // 데이터가 아예 안 오거나 너무 적게 오면 끝으로 간주 (기준 완화)
-        if (data.length === 0) {
-          setHasMore(false);
+        // 데이터가 발견되면 다음 검색을 위해 반경을 조금만 넓힘
+        setRadiusOffset(prev => prev + 0.05);
+        if (data.length < 10) {
+           // 해당 반경에 데이터가 적으면 다음엔 더 넓게 찾아봄
+           setRadiusOffset(prev => prev + 0.1);
         }
       } else {
-        setHasMore(false);
+        // 해당 반경에 데이터가 아예 없으면 더 넓은 반경으로 재시도 (최대 약 100km까지)
+        if (currentRadius < 1.0) {
+          setRadiusOffset(currentRadius + 0.2);
+          // 즉시 재귀 호출하여 다음 반경 검색 (isLoadingMore 상태 유지)
+          setIsLoadingMore(false); 
+          setTimeout(() => loadMorePosts(), 100);
+          return;
+        } else {
+          setHasMore(false);
+        }
       }
     } catch (err) {
-      console.error('[PostListOverlay] Load more failed:', err);
+      console.error('[PostListOverlay] Adaptive load failed:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [posts, isLoadingMore, hasMore]); // ✅ 의존성에서 currentBounds 제거하여 더 유연하게 작동하도록 함
+  }, [posts, isLoadingMore, hasMore, mapCenter, radiusOffset]);
 
   // Pull Up 제스처 핸들러 (마우스 이벤트 포함)
   const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
