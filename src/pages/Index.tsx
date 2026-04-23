@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
@@ -32,6 +32,7 @@ import {
   cleanupInvalidYoutubePosts,
   seedGangnamSpecialPosts 
 } from '@/utils/db-seeder';
+import WritePage from './Write';
 
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
@@ -956,73 +957,10 @@ const Index = () => {
       </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={handlePlaceSelect} />
       
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              onClick={() => setIsSettingsOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110]"
-            />
-            <motion.div 
-              initial={{ y: "100%" }} 
-              animate={{ y: 0 }} 
-              exit={{ y: "100%" }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-[120] p-8 shadow-2xl pb-12"
-            >
-              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8" />
-              <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                <RefreshCw className="w-6 h-6 text-indigo-600" />
-                데이터 관리 및 생성
-              </h3>
-              
-              <div className="flex flex-col gap-4">
-                <Button 
-                  onClick={async () => {
-                    const toastId = showLoading('강남 및 주변 데이터를 생성 중...');
-                    try {
-                      await seedGangnamSpecialPosts(authUser?.id || '');
-                      showSuccess('강남 및 주변 지역에 20개의 포스팅이 생성되었습니다!');
-                      dismissToast(toastId);
-                      setIsSettingsOpen(false);
-                      handleRefresh();
-                    } catch (err) {
-                      showError('데이터 생성에 실패했습니다.');
-                      dismissToast(toastId);
-                    }
-                  }}
-                  className="w-full h-16 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-orange-100 active:scale-95 transition-all"
-                >
-                  <Navigation className="w-6 h-6 fill-white" />
-                  강남 및 주변 특별 생성 (20개)
-                </Button>
-
-                <Button 
-                  onClick={async () => {
-                    setIsSettingsOpen(false);
-                    handleRefresh();
-                  }}
-                  variant="outline"
-                  className="w-full h-14 border-2 border-indigo-600 text-indigo-600 rounded-2xl font-bold hover:bg-indigo-50 active:scale-95 transition-all"
-                >
-                  현재 위치 재검색
-                </Button>
-
-                <Button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  variant="ghost"
-                  className="w-full h-12 text-gray-400 font-medium"
-                >
-                  닫기
-                </Button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* [FIX] /write 경로일 때만 WritePage를 렌더링하여 애니메이션 및 상단 배너 가시성 확보 */}
+      <Routes>
+        <Route path="write" element={<WritePage />} />
+      </Routes>
     </>
   );
 };

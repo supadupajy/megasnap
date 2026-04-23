@@ -181,7 +181,8 @@ const AnimatedRoutes = () => {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/messages/:chatId" element={<Chat />} />
-              <Route path="/write" element={<WritePage />} />
+              {/* [FIX] /write 경로는 Index 내부에서 처리하므로 여기서 제거하거나 유지하되 Index가 우선권 가짐 */}
+              <Route path="/write" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

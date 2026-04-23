@@ -45,6 +45,23 @@ const Write = () => {
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
   
+  // [FIX] 컴포넌트 마운트 시 body 스크롤 고정 (인기 탭 등 다른 페이지와 동일한 동작)
+  useEffect(() => {
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, []);
+
   const [currentPage, setCurrentPage] = useState<1 | 2>(1);
   const [draft, setDraft] = useState(postDraftStore.get());
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -163,9 +180,15 @@ const Write = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 1. 상단 헤더 공간 (88px) - 다른 페이지들과 높이 통일 */}
-      <div className="h-[88px] w-full bg-white shrink-0 z-50 border-b border-gray-100" />
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="fixed inset-0 bg-white flex flex-col z-[100] overflow-hidden"
+    >
+      {/* 1. 상단 헤더 공간 (88px) - 투명하게 설정하여 뒤의 HeaderAdBanner가 보이도록 함 */}
+      <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
 
       {/* 2. 고정 영역: 페이지 타이틀 */}
       <div className="shrink-0 bg-white z-40 border-b border-gray-50">
@@ -292,7 +315,7 @@ const Write = () => {
           )}
         </div>
       </main>
-    </div>
+    </motion.div>
   );
 };
 
