@@ -430,25 +430,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                           {youtubeId ? (
-                            <iframe
-                              key={`detail-yt-${currentPost.id}-${isOpen}`}
-                              className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                              title="YouTube video player"
-                              frameBorder="0"
-                              allow="autoplay; encrypted-media; picture-in-picture"
-                              allowFullScreen
-                            />
+                            <div className="w-full h-full">
+                              <iframe
+                                key={`detail-yt-${currentPost.id}-${isOpen}`}
+                                className="w-full h-full relative z-10"
+                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="autoplay; encrypted-media; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
                           ) : currentPost.videoUrl ? (
-                            <video 
-                              key={`detail-vid-${currentPost.id}-${isOpen}`} 
-                              src={currentPost.videoUrl} 
-                              className="w-full h-full object-cover" 
-                              autoPlay 
-                              loop 
-                              playsInline 
-                              controls 
-                            />
+                            <div className="w-full h-full">
+                              <video 
+                                key={`detail-vid-${currentPost.id}-${isOpen}`} 
+                                src={currentPost.videoUrl} 
+                                className="w-full h-full object-cover relative z-10" 
+                                autoPlay 
+                                loop 
+                                playsInline 
+                                controls 
+                              />
+                            </div>
                           ) : (
                             <div className="relative w-full h-full">
                               {/* 네이티브 스크롤 슬라이더 */}
