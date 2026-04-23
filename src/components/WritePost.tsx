@@ -104,27 +104,23 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     }
   }, [isOpen, initialLocation]);
 
-  // 키보드 높이 감지
+  // ✅ 키보드 높이 감지 (버그 수정 + 중복 리스너 제거)
   useEffect(() => {
-  const vv = window.visualViewport;
-  if (!vv) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
 
-  const handleResize = () => {
-    const keyboardH = window.innerHeight - vv.height - vv.offsetTop;
-    if (keyboardH > 60) {
-      setKeyboardHeight(keyboardH);
-    } else {
-      setKeyboardHeight(0);
-    }
-  };
+    const handleResize = () => {
+      const keyboardH = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardHeight(keyboardH > 60 ? keyboardH : 0);
+    };
 
-  vv.addEventListener('resize', handleResize);
-  vv.addEventListener('scroll', handleResize);
-  return () => {
-    vv.removeEventListener('resize', handleResize);
-    vv.removeEventListener('scroll', handleResize);
-  };
-}, []);
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+    };
+  }, []);
 
   // Drawer 닫힐 때 키보드 높이 초기화
   useEffect(() => {
@@ -218,7 +214,6 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
     if (!selectedCategory) { showError('카테고리를 선택해주세요.'); return; }
 
     setIsSubmitting(true);
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     const finalLat = initialLocation?.lat || null;
     const finalLng = initialLocation?.lng || null;
     const finalAddress = address || '위치 미지정';
@@ -331,17 +326,18 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
   return (
     <>
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
+        {/* ✅ 핵심 수정: translateY 대신 bottom으로 올림 → 내부 flex 높이가 89vh 그대로 유지되어 빈 공간 없음 */}
         <DrawerContent
-  className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
-  style={{ 
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none',
-    transition: keyboardHeight > 0 ? 'transform 0.25s ease-out' : 'none'
-  }}
->
+          className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
+          style={{
+            position: 'fixed',
+            bottom: keyboardHeight,
+            left: 0,
+            right: 0,
+            transform: 'none',
+            transition: 'bottom 0.25s ease-out',
+          }}
+        >
           <div className="sr-only">
             <DrawerTitle>새 게시물 작성</DrawerTitle>
             <DrawerDescription>장소를 선택하고 사진이나 동영상을 업로드하여 추억을 기록하세요.</DrawerDescription>
@@ -369,11 +365,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
               </Button>
             </div>
             
-            {/* 페이지 콘텐츠 */}
-            <div
-  className="flex-1 min-h-0 overflow-y-auto pb-4 no-scrollbar"
-  style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : undefined }}
->
+            {/* ✅ 스크롤 컨테이너: overflow-y-auto 유지, 불필요한 keyboardHeight padding 제거 */}
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
               <AnimatePresence mode="wait">
                 {currentPage === 1 ? (
                   <motion.div
@@ -639,24 +632,25 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 shrink-0">
                         내용 입력 <span className="text-indigo-600">(필수)</span>
                       </p>
+                      {/* ✅ onFocus에서 scrollIntoView로 textarea가 키보드 위에 오도록 보장 */}
                       <Textarea
-  placeholder="이 장소에서의 추억을 기록해보세요..."
-  className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
-  value={draft.content}
-  onChange={(e) => postDraftStore.set({ content: e.target.value })}
-  onFocus={(e) => {
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }}
-/>
+                        placeholder="이 장소에서의 추억을 기록해보세요..."
+                        className="flex-1 min-h-[120px] border-none bg-gray-50 rounded-2xl p-4 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 resize-none text-base font-medium mx-0.5"
+                        value={draft.content}
+                        onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                        onFocus={(e) => {
+                          setTimeout(() => {
+                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }, 300);
+                        }}
+                      />
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* [FIX] 버튼을 스크롤 가능한 콘텐츠 영역 내부 맨 하단에 배치 */}
-              <div className="mt-3 mb-32 px-1">
+              {/* ✅ mb-32 → mb-4로 축소: 불필요한 128px 하단 여백 제거 */}
+              <div className="mt-3 mb-4 px-1">
                 {currentPage === 1 ? (
                   <Button
                     className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all"
