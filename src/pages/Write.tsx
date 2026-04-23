@@ -285,7 +285,8 @@ const Write = () => {
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
-                            className="w-full h-full relative overflow-hidden touch-none flex items-center justify-center bg-black"
+                              className="w-full h-full relative overflow-hidden touch-none"
+
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               handleDrag(e, idx);
