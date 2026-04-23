@@ -372,7 +372,7 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // ✅ [FIX] 모든 새로운 마커 또는 isNewRealtime인 마커에 애니메이션 클래스 강제 적용
+        // ✅ [FIX] 모든 마커에 기본 애니메이션 클래스 적용
         content.className = 'marker-container kakao-overlay marker-appear-animation';
         
         content.style.opacity = '0';
@@ -412,16 +412,22 @@ const MapContainer = ({
           cancelPendingRemoval(post.id, content);
           
           content.style.transformOrigin = 'bottom center';
-          content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
+          content.style.willChange = 'transform, opacity'; 
           content.style.opacity = "1";
           content.style.visibility = "visible";
           
           if (isHighlighted) content.classList.add('highlighted'); 
           else content.classList.remove('highlighted');
 
-          // ✅ [FIX] 이미 존재하는 오버레이여도 isNewRealtime이 true로 바뀌면 애니메이션 다시 실행
-          if (isNewRealtime && !content.classList.contains('marker-appear-animation')) {
+          // ✅ [FIX] isNewRealtime인 경우 애니메이션 강제 트리거
+          if (isNewRealtime) {
+            content.classList.remove('marker-appear-animation');
+            // reflow 강제 발생시켜 애니메이션 초기화
+            void content.offsetWidth; 
             content.classList.add('marker-appear-animation');
+            
+            // 실시간 효과 소모 처리 (한 번만 실행되도록)
+            post.isNewRealtime = false;
           }
 
           if (content.getAttribute('data-content-state') !== contentStateKey) {

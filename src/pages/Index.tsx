@@ -192,17 +192,21 @@ const Index = () => {
         setDisplayedMarkers(prev => [newPost, ...prev]);
         
         if (latitude && longitude) {
+          // [FIX] 지도 이동 전 줌 레벨과 위치 설정
           setMapCenter({ lat: latitude, lng: longitude });
           setCurrentZoom(5);
 
-          // [FIX] 내가 쓴 글 등록 시에도 폭죽 효과 발사
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444'],
-            zIndex: 15000
-          });
+          // [FIX] 폭죽 효과 타이밍 조정 (지도 이동 및 마커 생성 시간 고려)
+          setTimeout(() => {
+            confetti({
+              particleCount: 150,
+              spread: 80,
+              origin: { y: 0.6 },
+              colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'],
+              zIndex: 15000,
+              scalar: 1.2
+            });
+          }, 300);
         }
         setIsWriteOpen(false);
         dismissToast(toastId);
@@ -824,7 +828,7 @@ const Index = () => {
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
-    // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가 (MapContainer에서 사용)
+    // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가
     const postWithEffect = { ...newPost, isNewRealtime: true };
     
     setAllPosts(prev => [postWithEffect, ...prev]);
@@ -834,14 +838,17 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 내가 쓴 글 등록 시에도 폭죽 효과 발사
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444'],
-        zIndex: 15000
-      });
+      // [FIX] 글 작성 후 메인 페이지 복귀 시 폭죽 효과
+      setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 85,
+          origin: { y: 0.6 },
+          colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'],
+          zIndex: 15000,
+          scalar: 1.2
+        });
+      }, 500);
     }
     setIsWriteOpen(false);
   };
