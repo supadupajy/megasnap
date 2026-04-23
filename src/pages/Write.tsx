@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { useWriteStore } from '@/utils/write-store';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 
 interface MediaFile {
   file: File;
@@ -405,47 +406,116 @@ const Write = () => {
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
+            <div className="space-y-6">
+              <div className="space-y-3">
                 <div className="flex items-center gap-1.5 px-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 </div>
-                <button
-                  onClick={() => mediaInputRef.current?.click()}
-                  className={cn(
-                    "w-full h-20 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-all",
-                    mediaFiles.length > 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-gray-50"
-                  )}
-                >
-                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                  <span className={cn("font-bold", mediaFiles.length > 0 ? "text-indigo-600" : "text-gray-500")}>
-                    {mediaFiles.length > 0 ? `${mediaFiles.length}개의 파일 선택됨` : '사진 / 동영상 선택'}
-                  </span>
-                </button>
-                <input
-                  type="file"
-                  ref={mediaInputRef}
-                  className="hidden"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleMediaSelect}
-                />
+                
+                {mediaFiles.length > 0 ? (
+                  <div className="aspect-square w-full rounded-[32px] overflow-hidden bg-black shadow-2xl relative">
+                    <Carousel 
+                      setApi={setApi} 
+                      className="w-full h-full"
+                      opts={{ watchDrag: dragActiveIdx === null }}
+                    >
+                      <CarouselContent className="ml-0 h-full">
+                        {mediaFiles.map((media, idx) => (
+                          <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
+                            <div 
+                              className="w-full h-full relative overflow-hidden touch-none"
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }}
+                              onMouseMove={(e) => {
+                                if (dragActiveIdx === idx) {
+                                  e.stopPropagation();
+                                  handleDrag(e, idx);
+                                }
+                              }}
+                              onMouseUp={stopDragging}
+                              onMouseLeave={stopDragging}
+                              onTouchStart={(e) => {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }}
+                              onTouchMove={(e) => {
+                                if (dragActiveIdx === idx) {
+                                  e.stopPropagation();
+                                  handleDrag(e, idx);
+                                }
+                              }}
+                              onTouchEnd={stopDragging}
+                            >
+                              {media.type === 'image' ? (
+                                <img 
+                                  key={`img-${media.url}`}
+                                  src={media.url} 
+                                  className="w-full h-full object-cover pointer-events-none select-none"
+                                  style={{
+                                    objectPosition: media.orientation === 'portrait' 
+                                      ? `50% ${media.crop?.y ?? 50}%` 
+                                      : `${media.crop?.x ?? 50}% 50%`
+                                  }}
+                                />
+                              ) : (
+                                <video 
+                                  key={`video-${media.url}`}
+                                  src={media.url} 
+                                  className="w-full h-full object-cover" 
+                                  autoPlay 
+                                  muted 
+                                  loop 
+                                  playsInline 
+                                />
+                              )}
+                            </div>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newFiles = [...mediaFiles];
+                                newFiles.splice(idx, 1);
+                                setMediaFiles(newFiles);
+                              }} 
+                              className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                    </Carousel>
+                    {mediaFiles.length > 1 && (
+                      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20">
+                        {mediaFiles.map((_, i) => (
+                          <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                        ))}
+                      </div>
+                    )}
+                    {/* 추가 첨부 버튼 */}
+                    <button
+                      onClick={() => mediaInputRef.current?.click()}
+                      className="absolute bottom-4 right-4 p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white border border-white/30 z-30 active:scale-95 transition-all"
+                    >
+                      <ImageIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => mediaInputRef.current?.click()}
+                    className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-50 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 hover:bg-gray-100 transition-all gap-3"
+                  >
+                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <span className="text-gray-500 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                  </button>
+                )}
+                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
               </div>
-
-              {mediaFiles.length > 0 ? (
-                <MediaSlider
-                  mediaFiles={mediaFiles}
-                  onRemove={handleRemoveMedia}
-                  onCropChange={handleCropChange}
-                />
-              ) : (
-                <div className="aspect-square w-full rounded-[32px] bg-gray-100 flex items-center justify-center gap-3 border-2 border-dashed border-gray-200">
-                  <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
-                  <span className="text-gray-500 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
-                </div>
-              )}
-
+              
               <Button
                 className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
                 onClick={() => setCurrentPage(2)}
