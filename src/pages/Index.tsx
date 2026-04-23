@@ -41,6 +41,37 @@ const Index = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   
+  // [FIX] CSS 폭죽을 위한 상태 추가
+  const [showCssConfetti, setShowCssConfetti] = useState(false);
+  const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
+
+  const triggerConfetti = useCallback(() => {
+    // 1. 기존 Canvas 폭죽 시도
+    try {
+      console.log('[Confetti] Attempting Canvas Confetti...');
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        zIndex: 9999999
+      });
+    } catch (e) {
+      console.error('[Confetti] Canvas error:', e);
+    }
+
+    // 2. 백업 CSS 폭죽 실행
+    console.log('[Confetti] Triggering CSS Backup Confetti');
+    const pieces = Array.from({ length: 50 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 2}s`,
+      color: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'][Math.floor(Math.random() * 5)]
+    }));
+    setConfettiPieces(pieces);
+    setShowCssConfetti(true);
+    setTimeout(() => setShowCssConfetti(false), 5000);
+  }, []);
+
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -840,7 +871,6 @@ const Index = () => {
   }, [displayedMarkers, currentZoom, mapDbToPost]);
 
   const handlePostCreated = (newPost: any) => {
-    // [FIX] 내가 쓴 글에도 뿅 나타나는 효과를 위해 isNewRealtime 플래그 추가
     const postWithEffect = { ...newPost, isNewRealtime: true };
     
     setAllPosts(prev => [postWithEffect, ...prev]);
@@ -850,42 +880,10 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [CRITICAL FIX] canvas-confetti 라이브러리 직접 호출 방식 강화
-      // 브라우저 캐시나 모듈 로드 지연을 방지하기 위해 window 객체에서도 확인
+      // [FIX] 통합 폭죽 트리거 호출
       setTimeout(() => {
-        console.log('[Confetti] FIREWORKS START!');
-        const myConfetti = confetti || (window as any).confetti;
-        if (!myConfetti) {
-          console.error('[Confetti] 라이브러리를 로드할 수 없습니다.');
-          return;
-        }
-
-        const end = Date.now() + (3 * 1000);
-        const colors = ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'];
-
-        (function frame() {
-          myConfetti({
-            particleCount: 3,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0, y: 0.6 },
-            colors: colors,
-            zIndex: 2000000
-          });
-          myConfetti({
-            particleCount: 3,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1, y: 0.6 },
-            colors: colors,
-            zIndex: 2000000
-          });
-
-          if (Date.now() < end) {
-            requestAnimationFrame(frame);
-          }
-        }());
-      }, 500);
+        triggerConfetti();
+      }, 600);
     }
     setIsWriteOpen(false);
   };
@@ -945,6 +943,22 @@ const Index = () => {
 
   return (
     <>
+      {/* [FIX] 백업 CSS 폭죽 레이어 */}
+      {showCssConfetti && (
+        <div className="css-confetti-container">
+          {confettiPieces.map((p) => (
+            <div
+              key={p.id}
+              className="css-confetti-piece animate"
+              style={{
+                left: p.left,
+                animationDelay: p.delay,
+                backgroundColor: p.color,
+              }}
+            />
+          ))}
+        </div>
+      )}
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
           <MapContainer

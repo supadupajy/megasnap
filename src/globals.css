@@ -411,3 +411,30 @@
   40% { transform: translate(100%, 100%) rotate(30deg); }
   100% { transform: translate(100%, 100%) rotate(30deg); }
 }
+
+/* [FIX] 폭죽 애니메이션이 캔버스 라이브러리 문제로 안 보일 경우를 대비한 CSS 기반 폭죽 효과 */
+.css-confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999999;
+  overflow: hidden;
+}
+
+.css-confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #ffd700;
+  top: -20px;
+  opacity: 0;
+}
+
+@keyframes css-confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.css-confetti-piece.animate {
+  animation: css-confetti-fall 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
