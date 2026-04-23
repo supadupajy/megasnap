@@ -12,7 +12,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { useWriteStore } from '@/utils/write-store';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface MediaFile {
   file: File;
@@ -35,43 +34,41 @@ const Write = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
-  
+
   const { mediaFiles, setMediaFiles, content, setContent, category, setCategory, clear } = useWriteStore();
-  
+
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
 
-  const [api, setApi] = useState<any>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  const [dragActiveIdx, setDragActiveIdx] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // [FIX] 카카오 맵 API를 사용하여 좌표를 실제 주소로 변환하는 함수
+  // crop을 픽셀 기반으로 계산하기 위한 ref
+  const cropPixelRef = useRef({ x: 0, y: 0 }); // 픽셀 오프셋
+  const isDraggingRef = useRef(false);
+
   const reverseGeocode = useCallback((lat: number, lng: number) => {
     return new Promise<string>((resolve) => {
       const kakao = (window as any).kakao;
       if (!kakao || !kakao.maps || !kakao.maps.services) {
-        // API가 로드되지 않은 경우 오프라인 로직으로 대체
         resolve(resolveOfflineLocationName(lat, lng));
         return;
       }
-
       const geocoder = new kakao.maps.services.Geocoder();
       geocoder.coord2Address(lng, lat, (result: any, status: any) => {
         if (status === kakao.maps.services.Status.OK) {
           const addr = result[0].address;
-          // 구 단위까지만 추출하여 "서울시 강남구" 형태로 가공
-          const region1 = addr.region_1depth_name; // 시/도
-          const region2 = addr.region_2depth_name; // 구/군
-          resolve(`${region1} ${region2}`);
+          resolve(`${addr.region_1depth_name} ${addr.region_2depth_name}`);
         } else {
           resolve(resolveOfflineLocationName(lat, lng));
         }
@@ -90,7 +87,6 @@ const Write = () => {
         setAddress('위치 미지정');
       }
     };
-    
     updateAddress();
   }, [initialLocation, reverseGeocode]);
 
@@ -98,6 +94,136 @@ const Write = () => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  // 슬라이드 변경 시 해당 이미지의 crop 픽셀값 동기화
+  useEffect(() => {
+    const media = mediaFiles[currentSlide];
+    if (!media || media.type !== 'image') return;
+    // % → 픽셀 변환은 드래그 시작 시 계산하므로 여기선 초기화만
+    cropPixelRef.current = { x: 0, y: 0 };
+  }, [currentSlide, mediaFiles]);
+
+  const getMaxOffset = () => {
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container) return { maxX: 0, maxY: 0 };
+
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+
+    const scaleW = conW / natW;
+    const scaleH = conH / natH;
+    const scale = Math.max(scaleW, scaleH);
+
+    const renderedW = natW * scale;
+    const renderedH = natH * scale;
+
+    return {
+      maxX: Math.max(0, (renderedW - conW) / 2),
+      maxY: Math.max(0, (renderedH - conH) / 2),
+    };
+  };
+
+  // 픽셀 오프셋 → objectPosition % 변환
+  const pixelToPercent = (offsetX: number, offsetY: number) => {
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container) return { x: 50, y: 50 };
+
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+
+    const scaleW = conW / natW;
+    const scaleH = conH / natH;
+    const scale = Math.max(scaleW, scaleH);
+
+    const renderedW = natW * scale;
+    const renderedH = natH * scale;
+
+    const x = renderedW === conW ? 50 : 50 + (offsetX / (renderedW - conW)) * 100;
+    const y = renderedH === conH ? 50 : 50 + (offsetY / (renderedH - conH)) * 100;
+
+    return { x, y };
+  };
+
+  const applyDrag = (deltaX: number, deltaY: number) => {
+    const media = mediaFiles[currentSlide];
+    if (!media || media.type !== 'image') return;
+
+    const isPortrait = media.orientation === 'portrait';
+    const { maxX, maxY } = getMaxOffset();
+
+    if (isPortrait) {
+      // 세로형: Y축만 이동
+      cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y + deltaY));
+    } else {
+      // 가로형: X축만 이동
+      cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x + deltaX));
+    }
+
+    // DOM 직접 업데이트 (re-render 없이 즉각 반응)
+    if (imgRef.current) {
+      const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+      imgRef.current.style.objectPosition = `${x}% ${y}%`;
+    }
+  };
+
+  const handleDragStart = (clientX: number, clientY: number) => {
+    const media = mediaFiles[currentSlide];
+    if (!media || media.type !== 'image') return;
+
+    // 드래그 시작 시 현재 crop % → 픽셀로 변환
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (img && container) {
+      const natW = img.naturalWidth;
+      const natH = img.naturalHeight;
+      const conW = container.offsetWidth;
+      const conH = container.offsetHeight;
+      const scaleW = conW / natW;
+      const scaleH = conH / natH;
+      const scale = Math.max(scaleW, scaleH);
+      const renderedW = natW * scale;
+      const renderedH = natH * scale;
+
+      const cropX = media.crop?.x ?? 50;
+      const cropY = media.crop?.y ?? 50;
+
+      cropPixelRef.current = {
+        x: renderedW === conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+        y: renderedH === conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+      };
+    }
+
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    dragStartRef.current = { x: clientX, y: clientY };
+  };
+
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!isDraggingRef.current) return;
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+    dragStartRef.current = { x: clientX, y: clientY };
+    applyDrag(deltaX, deltaY);
+  };
+
+  const handleDragEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+
+    // 드래그 끝: 픽셀 → % 변환 후 store 저장 + 스프링 애니메이션
+    const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+
+    const newMedia = [...mediaFiles];
+    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y } };
+    setMediaFiles(newMedia);
+  };
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -119,74 +245,11 @@ const Write = () => {
           img.src = url;
         });
       }
-
       return { file, url, type, crop: { x: 50, y: 50 }, orientation } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newItems]);
     if (mediaInputRef.current) mediaInputRef.current.value = '';
-  };
-
-  const handleRemoveMedia = useCallback((idx: number) => {
-    const newFiles = [...mediaFiles];
-    newFiles.splice(idx, 1);
-    setMediaFiles(newFiles);
-  }, [mediaFiles, setMediaFiles]);
-
-  const handleCropChange = useCallback((idx: number, x: number, y: number) => {
-    const newMedia = [...mediaFiles];
-    newMedia[idx] = { ...newMedia[idx], crop: { x, y } };
-    setMediaFiles(newMedia);
-  }, [mediaFiles, setMediaFiles]);
-
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
-    const media = mediaFiles[idx];
-    if (!media || media.type !== 'image') return;
-    
-    const isPortrait = media.orientation === 'portrait';
-    
-    let clientX: number;
-    let clientY: number;
-
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = (e as React.MouseEvent).clientX;
-      clientY = (e as React.MouseEvent).clientY;
-    }
-
-    if (dragActiveIdx !== idx) {
-      setDragActiveIdx(idx);
-      dragStartRef.current = { x: clientX, y: clientY };
-      return;
-    }
-
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
-    
-    dragStartRef.current = { x: clientX, y: clientY };
-
-    // 민감도: % 단위이므로 화면 크기에 맞춰 조정 (0.2 ~ 0.5 권장)
-    const sensitivity = 0.35;
-    
-    const currentX = media.crop?.x ?? 50;
-    const currentY = media.crop?.y ?? 50;
-
-    const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
-    const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
-
-    updateMediaCrop(idx, newX, newY);
-  };
-
-  const stopDragging = () => {
-    setDragActiveIdx(null);
-  };
-
-  const updateMediaCrop = (idx: number, x: number, y: number) => {
-    const newMedia = [...mediaFiles];
-    newMedia[idx] = { ...newMedia[idx], crop: { x, y } };
-    setMediaFiles(newMedia);
   };
 
   const handlePost = async () => {
@@ -200,28 +263,25 @@ const Write = () => {
         const fileExt = media.file.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
-
         const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file);
         if (uploadError) throw uploadError;
-
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
 
-      // [FIX] images 컬럼에 업로드된 모든 URL 배열을 저장
-      const { data: insertData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('posts')
         .insert({
-          content: content,
+          content,
           location_name: address || '위치 미지정',
           latitude: initialLocation?.lat || null,
           longitude: initialLocation?.lng || null,
-          image_url: uploadedUrls[0], // 대표 이미지 (첫 번째)
-          images: uploadedUrls,      // [핵심] 전체 이미지 배열 저장
+          image_url: uploadedUrls[0],
+          images: uploadedUrls,
           user_id: authUser.id,
           user_name: profile?.nickname || '탐험가',
           user_avatar: profile?.avatar_url,
-          category: category,
+          category,
           video_url: mediaFiles[0].type === 'video' ? uploadedUrls[0] : null,
         })
         .select()
@@ -240,6 +300,8 @@ const Write = () => {
     }
   };
 
+  const currentMedia = mediaFiles[currentSlide];
+
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       <div className="h-[88px] w-full shrink-0 pointer-events-none" />
@@ -252,10 +314,7 @@ const Write = () => {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Leave your trace</p>
         </div>
         {currentPage === 2 && (
-          <button
-            onClick={() => setCurrentPage(1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800"
-          >
+          <button onClick={() => setCurrentPage(1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
             <ChevronLeft className="w-6 h-6" />
           </button>
         )}
@@ -274,69 +333,80 @@ const Write = () => {
               </div>
 
               {mediaFiles.length > 0 ? (
-  <div className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative">
-    {/* 현재 슬라이드 이미지/비디오 */}
-    {mediaFiles[currentSlide]?.type === 'image' ? (
-      <img
-        src={mediaFiles[currentSlide].url}
-        className="absolute inset-0 w-full h-full pointer-events-none select-none"
-        style={{
-          objectFit: 'cover',
-          objectPosition: mediaFiles[currentSlide].orientation === 'portrait'
-            ? `50% ${mediaFiles[currentSlide].crop?.y ?? 50}%`
-            : `${mediaFiles[currentSlide].crop?.x ?? 50}% 50%`,
-        }}
-      />
-    ) : (
-      <video
-        src={mediaFiles[currentSlide]?.url}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay muted loop playsInline
-      />
-    )}
+                <div ref={containerRef} className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none">
 
-    {/* 드래그 오버레이 */}
-    <div
-      className="absolute inset-0 touch-none z-10"
-      onMouseDown={(e) => { e.stopPropagation(); handleDrag(e, currentSlide); }}
-      onMouseMove={(e) => { if (dragActiveIdx === currentSlide) { e.stopPropagation(); handleDrag(e, currentSlide); } }}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-      onTouchStart={(e) => { e.stopPropagation(); handleDrag(e, currentSlide); }}
-      onTouchMove={(e) => { if (dragActiveIdx === currentSlide) { e.stopPropagation(); handleDrag(e, currentSlide); } }}
-      onTouchEnd={stopDragging}
-    />
+                  {/* 이미지 / 비디오 */}
+                  {currentMedia?.type === 'image' ? (
+                    <img
+                      ref={imgRef}
+                      src={currentMedia.url}
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      style={{
+                        objectFit: 'cover',
+                        objectPosition: currentMedia.orientation === 'portrait'
+                          ? `50% ${currentMedia.crop?.y ?? 50}%`
+                          : `${currentMedia.crop?.x ?? 50}% 50%`,
+                        // ✅ 드래그 중: 즉각 반응 / 드래그 끝: 스프링 복귀
+                        transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      }}
+                    />
+                  ) : (
+                    <video
+                      src={currentMedia?.url}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      autoPlay muted loop playsInline
+                    />
+                  )}
 
-    {/* 삭제 버튼 */}
-    <button
-      onClick={(e) => { e.stopPropagation(); const newFiles = [...mediaFiles]; newFiles.splice(currentSlide, 1); setMediaFiles(newFiles); setCurrentSlide(prev => Math.min(prev, newFiles.length - 1)); }}
-      className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
-    >
-      <X className="w-4 h-4" />
-    </button>
+                  {/* ✅ 드래그 오버레이: 마우스 + 터치 모두 처리 */}
+                  <div
+                    className="absolute inset-0 z-10"
+                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
+                    onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                    onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+                    onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                    onTouchEnd={handleDragEnd}
+                  />
 
-    {/* 스와이프 감지 (좌우) */}
-    {mediaFiles.length > 1 && (
-      <>
-        <button
-          className="absolute left-0 top-0 bottom-0 w-1/3 z-20 opacity-0"
-          onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
-        />
-        <button
-          className="absolute right-0 top-0 bottom-0 w-1/3 z-20 opacity-0"
-          onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))}
-        />
-        {/* 인디케이터 */}
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-          {mediaFiles.map((_, i) => (
-            <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
-          ))}
-        </div>
-      </>
-    )}
-  </div>
+                  {/* 삭제 버튼 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newFiles = [...mediaFiles];
+                      newFiles.splice(currentSlide, 1);
+                      setMediaFiles(newFiles);
+                      setCurrentSlide(prev => Math.min(prev, newFiles.length - 1));
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  {/* 슬라이드 전환 (좌/우 버튼) */}
+                  {mediaFiles.length > 1 && (
+                    <>
+                      <button
+                        className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
+                        onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                      />
+                      <button
+                        className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
+                        onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))}
+                      />
+                      {/* 인디케이터 */}
+                      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                        {mediaFiles.map((_, i) => (
+                          <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               ) : (
-                <div 
+                <div
                   onClick={() => mediaInputRef.current?.click()}
                   className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
                 >
@@ -360,7 +430,7 @@ const Write = () => {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
                 </div>
-                <div 
+                <div
                   onClick={() => navigate('/', { state: { startSelection: true } })}
                   className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
                 >
@@ -402,15 +472,15 @@ const Write = () => {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 </div>
-                <Textarea 
-                  placeholder="이 장소에서의 추억을 기록해보세요..." 
+                <Textarea
+                  placeholder="이 장소에서의 추억을 기록해보세요..."
                   className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                 />
               </div>
 
-              <Button 
+              <Button
                 className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
                 onClick={handlePost}
                 disabled={isSubmitting || !content.trim()}
