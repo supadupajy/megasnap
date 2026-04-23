@@ -196,18 +196,23 @@ const Index = () => {
           setMapCenter({ lat: latitude, lng: longitude });
           setCurrentZoom(5);
 
-          // [FIX] 폭죽 효과 타이밍 조정 (지도 이동 및 마커 생성 시간 고려)
+          // [FIX] 폭죽 효과 타이밍 및 설정 대폭 강화
+          // 지도가 이동하고 마커가 생성되는 시점(약 0.6s~0.8s)에 맞춰 폭죽을 터뜨림
           setTimeout(() => {
+            console.log('[Confetti] Firing manual confetti after post submission');
             confetti({
-              particleCount: 200,
-              spread: 90,
-              origin: { y: 0.6 },
-              colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee', '#fbbf24'],
-              zIndex: 15000,
-              scalar: 1.4,
-              ticks: 200
+              particleCount: 250,
+              spread: 100,
+              origin: { y: 0.5, x: 0.5 }, // 화면 중앙에서 터지도록 설정
+              colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee', '#fbbf24', '#ffffff'],
+              zIndex: 99999, // 최상단에 표시
+              scalar: 1.5,
+              ticks: 300,
+              gravity: 1.2,
+              drift: 0,
+              shapes: ['circle', 'square']
             });
-          }, 600);
+          }, 800);
         }
         setIsWriteOpen(false);
         dismissToast(toastId);
@@ -839,17 +844,20 @@ const Index = () => {
       setMapCenter({ lat: newPost.lat, lng: newPost.lng });
       setCurrentZoom(5);
 
-      // [FIX] 글 작성 후 메인 페이지 복귀 시 폭죽 효과
+      // [FIX] 글 작성 완료 후 페이지 전환 완료 시점에 폭죽 터뜨림
       setTimeout(() => {
+        console.log('[Confetti] Firing manual confetti after post created event');
         confetti({
-          particleCount: 150,
-          spread: 85,
-          origin: { y: 0.6 },
-          colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'],
-          zIndex: 15000,
-          scalar: 1.2
+          particleCount: 250,
+          spread: 100,
+          origin: { y: 0.5, x: 0.5 },
+          colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee', '#fbbf24', '#ffffff'],
+          zIndex: 99999,
+          scalar: 1.5,
+          ticks: 300,
+          gravity: 1.2
         });
-      }, 500);
+      }, 800);
     }
     setIsWriteOpen(false);
   };
