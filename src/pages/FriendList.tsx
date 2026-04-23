@@ -57,19 +57,12 @@ const FriendList = () => {
   };
 
   return (
-    <div 
+    <div
       className="h-screen overflow-y-auto bg-white pb-24 no-scrollbar"
-      style={{
-        paddingTop: '88px', 
-      }}
     >
-      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-100">
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900">새 메시지</h1>
-      </div>
-
       <div className="flex flex-col">
         {/* THE NORTH FACE 광고 배너 */}
-        <div className="px-4 py-2 mt-2">
+        <div className="px-4 py-2 mt-4">
           <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
             <img 
               src="/assets/northface-ad-banner.png" 
@@ -93,19 +86,21 @@ const FriendList = () => {
         </div>
 
         <div className="px-4 py-3">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-            <input
-              placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {isLoading && searchQuery.trim() && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-              </div>
-            )}
+          <div className="flex items-center gap-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+              <input
+                placeholder="닉네임으로 친구 찾기"
+                className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {isLoading && searchQuery.trim() && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
