@@ -578,7 +578,7 @@ useEffect(() => {
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass}" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
+      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px; transform-origin: bottom center;">
         ${labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="${shineClass}">

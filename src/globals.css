@@ -86,14 +86,15 @@
   z-index: 99999 !important;
 }
 
-.marker-container.highlighted .marker-content-wrapper {
+/* 하이라이트 시 전용 타겟 클래스에 애니메이션 부여 */
+.marker-container.highlighted .marker-scaling-target {
   animation: marker-highlight-cycle 4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
 }
 
 @keyframes marker-highlight-cycle {
   0%   { transform: scale(1); }
-  15%  { transform: scale(2.0); } /* 가독성을 위해 2.0배로 증폭 */
-  85%  { transform: scale(2.0); }
+  15%  { transform: scale(2.2); } /* 더 확실한 효과를 위해 2.2배 */
+  85%  { transform: scale(2.2); }
   100% { transform: scale(1); }
 }
 
