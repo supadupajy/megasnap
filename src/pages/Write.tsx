@@ -60,79 +60,104 @@ const MediaSlider = ({
   }, [mediaFiles]);
 
   useEffect(() => {
-    const el = sliderRef.current;
-    if (!el) return;
+  const el = sliderRef.current;
+  if (!el) return;
 
-    let touchStartX = 0;
-    let lastX = 0;
-    let lastY = 0;
-    let isDragging = false;
+  let startX = 0;
+  let lastX = 0;
+  let lastY = 0;
+  let isDragging = false;
+  let isMouseDown = false;
 
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      lastX = touchStartX;
-      lastY = e.touches[0].clientY;
-      isDragging = false;
-    };
+  // ✅ 공통 crop 처리 함수
+  const processDrag = (clientX: number, clientY: number) => {
+    const idx = currentIdxRef.current;
+    const media = mediaFilesRef.current[idx];
+    if (!media || media.type !== 'image') return;
 
-    const onTouchMove = (e: TouchEvent) => {
-      const idx = currentIdxRef.current;
-      const media = mediaFilesRef.current[idx];
-      if (!media || media.type !== 'image') return;
+    isDragging = true;
+    const dx = clientX - lastX;
+    const dy = clientY - lastY;
+    lastX = clientX;
+    lastY = clientY;
 
-      // ✅ 핵심: touch-none CSS + preventDefault 둘 다 필요 (iOS Safari)
-      e.preventDefault();
-      isDragging = true;
+    const isPortrait = media.orientation === 'portrait';
+    const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
+    const sensitivity = 0.5;
+    const newX = isPortrait ? cur.x : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
+    const newY = isPortrait ? Math.max(0, Math.min(100, cur.y - dy * sensitivity)) : cur.y;
 
-      const dx = e.touches[0].clientX - lastX;
-      const dy = e.touches[0].clientY - lastY;
-      lastX = e.touches[0].clientX;
-      lastY = e.touches[0].clientY;
+    cropRef.current[idx] = { x: newX, y: newY };
+    const imgEl = imgRefs.current[idx];
+    if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
+  };
 
-      const isPortrait = media.orientation === 'portrait';
-      const cur = cropRef.current[idx] ?? { x: 50, y: 50 };
-      const sensitivity = 0.5;
+  const processDragEnd = (endX: number) => {
+    const idx = currentIdxRef.current;
+    const files = mediaFilesRef.current;
+    if (isDragging) {
+      const { x, y } = cropRef.current[idx] ?? { x: 50, y: 50 };
+      onCropChangeRef.current(idx, x, y);
+    } else {
+      const totalDx = endX - startX;
+      if (totalDx < -40 && idx < files.length - 1) setCurrentIdx(i => i + 1);
+      else if (totalDx > 40 && idx > 0) setCurrentIdx(i => i - 1);
+    }
+    isDragging = false;
+  };
 
-      const newX = isPortrait
-        ? cur.x
-        : Math.max(0, Math.min(100, cur.x - dx * sensitivity));
-      const newY = isPortrait
-        ? Math.max(0, Math.min(100, cur.y - dy * sensitivity))
-        : cur.y;
+  // ✅ 터치 이벤트 (실제 모바일)
+  const onTouchStart = (e: TouchEvent) => {
+    startX = e.touches[0].clientX;
+    lastX = startX;
+    lastY = e.touches[0].clientY;
+    isDragging = false;
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+    processDrag(e.touches[0].clientX, e.touches[0].clientY);
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    processDragEnd(e.changedTouches[0].clientX);
+  };
 
-      cropRef.current[idx] = { x: newX, y: newY };
+  // ✅ 마우스 이벤트 (PC 에뮬레이터 + 데스크탑)
+  const onMouseDown = (e: MouseEvent) => {
+    isMouseDown = true;
+    isDragging = false;
+    startX = e.clientX;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    e.preventDefault();
+  };
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isMouseDown) return;
+    processDrag(e.clientX, e.clientY);
+  };
+  const onMouseUp = (e: MouseEvent) => {
+    if (!isMouseDown) return;
+    isMouseDown = false;
+    processDragEnd(e.clientX);
+  };
 
-      const imgEl = imgRefs.current[idx];
-      if (imgEl) imgEl.style.objectPosition = `${newX}% ${newY}%`;
-    };
+  el.addEventListener('touchstart', onTouchStart, { passive: true });
+  el.addEventListener('touchmove', onTouchMove, { passive: false });
+  el.addEventListener('touchend', onTouchEnd, { passive: true });
+  el.addEventListener('mousedown', onMouseDown);
 
-    const onTouchEnd = (e: TouchEvent) => {
-      const idx = currentIdxRef.current;
-      const files = mediaFilesRef.current;
+  // ✅ mousemove/mouseup은 document에 등록 — 영역 밖으로 나가도 추적
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
 
-      if (isDragging) {
-        const { x, y } = cropRef.current[idx] ?? { x: 50, y: 50 };
-        onCropChangeRef.current(idx, x, y);
-      } else {
-        const totalDx = e.changedTouches[0].clientX - touchStartX;
-        if (totalDx < -40 && idx < files.length - 1) setCurrentIdx(i => i + 1);
-        else if (totalDx > 40 && idx > 0) setCurrentIdx(i => i - 1);
-      }
-
-      isDragging = false;
-    };
-
-    // ✅ touchstart는 passive:true (스크롤 힌트용), touchmove는 passive:false (preventDefault용)
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, []); // ✅ 빈 배열 — 단 한 번만 등록
+  return () => {
+    el.removeEventListener('touchstart', onTouchStart);
+    el.removeEventListener('touchmove', onTouchMove);
+    el.removeEventListener('touchend', onTouchEnd);
+    el.removeEventListener('mousedown', onMouseDown);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+}, []); // ✅ 빈 배열 — 단 한 번만 등록
 
   if (mediaFiles.length === 0) return null;
 
