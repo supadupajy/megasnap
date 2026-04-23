@@ -119,7 +119,6 @@ const PostListOverlay = ({
     setIsLoadingMore(true);
     
     try {
-      // ✅ [FIX] 마지막 포스트의 생성 날짜를 기준으로 다음 데이터를 가져옴
       const lastPost = posts[posts.length - 1];
       const lastPostDate = lastPost 
         ? new Date(lastPost.createdAt).toISOString()
@@ -130,7 +129,7 @@ const PostListOverlay = ({
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      // ✅ [FIX] 쿼리 1회당 limit을 20개로 늘리고, 더 정확한 시간 비교 사용
+      // ✅ [FIX] 쿼리 당 limit을 30개로 대폭 확대
       const { data, error } = await supabase
         .from('posts')
         .select('*')
@@ -138,9 +137,9 @@ const PostListOverlay = ({
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
         .lte('longitude', lngMax)
-        .lt('created_at', lastPostDate) // lastPostDate보다 이전(과거) 데이터
+        .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(30);
 
       if (error) throw error;
 
@@ -189,25 +188,18 @@ const PostListOverlay = ({
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
-          
-          // ✅ [FIX] 새로운 게시물이 발견되면 계속 hasMore 유지
-          if (filteredNew.length === 0 && data.length > 0) {
-            // 가져온 데이터가 모두 중복인 특수한 상황을 고려하여 hasMore를 즉시 끄지 않음
-            return prev;
-          }
           return [...prev, ...filteredNew];
         });
         
-        // ✅ [FIX] 20개를 요청했는데 20개 미만으로 왔다는 것은 진짜로 해당 영역에 더 데이터가 없다는 뜻
-        if (data.length < 20) {
+        // ✅ [FIX] 30개를 다 못 가져왔을 때만 hasMore를 끔 (충분히 많은 데이터를 훑게 함)
+        if (data.length < 30) {
           setHasMore(false);
         }
       } else {
-        // 데이터가 아예 없으면 종료
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[PostListOverlay] Critical load error:', err);
+      console.error('[PostListOverlay] Load more error:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
