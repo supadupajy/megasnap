@@ -346,7 +346,7 @@ const MapContainer = ({
           content.style.transformOrigin = 'bottom center';
           // will-change 추가로 줌 변경 시 렌더링 품질 유지
           content.style.willChange = 'transform, opacity';
-          // scale() 제거 - CSS 애니메이션과 충돌 방지
+          content.style.setProperty('transform', `scale(${scale})`, 'important');
         }
       }
     });

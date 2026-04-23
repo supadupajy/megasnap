@@ -44,39 +44,21 @@
   }
 }
 
-/* [FIX] 마커 애니메이션: 튀는 현상 방지를 위해 transform 초기화 및 단순화 */
+/* [FIX] 마커 애니메이션: 커지는 효과 배제, 단순 페이드 인 + 위치 이동만 사용 */
 @keyframes marker-fade-in {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .marker-appear-animation {
   animation: marker-fade-in 0.3s ease-out forwards !important;
   transform-origin: bottom center;
-}
-
-/* 하이라이트 시를 제외한 기본 상태에서는 scale(1) 고정하여 튀는 현상 방지 */
-.marker-container:not(.highlighted) .marker-content-wrapper {
-  transform: none !important;
-}
-
-.marker-content-wrapper {
-  transform-origin: bottom center;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transition: opacity 0.3s ease;
-}
-
-.marker-container.highlighted .marker-content-wrapper {
-  transform: scale(1.3) !important;
-  z-index: 1000;
 }
 
 /* [FIX] 마커가 삭제될 때 스르륵 사라지는 애니메이션 */
@@ -119,6 +101,18 @@
   width: 56px;
   height: 72px;
   pointer-events: auto;
+}
+
+.marker-content-wrapper {
+  transform: none; /* scale 제거 */
+  transform-origin: bottom center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.marker-container.highlighted .marker-content-wrapper {
+  transform: scale(1.3) !important; /* 하이라이트 시에만 제한적으로 사용 */
 }
 
 .search-result-marker-container {
