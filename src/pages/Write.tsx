@@ -186,19 +186,21 @@ const Write = () => {
 
       {/* 2. 고정 영역: 페이지 타이틀 - 인기 포스팅 레이아웃과 동일하게 수정 */}
       <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {currentPage === 2 ? (
-            <button onClick={() => setCurrentPage(1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          ) : null}
-          <h1 className="text-xl font-black text-gray-900">
+        <div className="flex flex-col">
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">
             {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-          </h1>
+          </h2>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Leave your trace</p>
         </div>
         <div className="flex items-center gap-2">
-          {currentPage === 2 && (
-            <div className="w-10" /> 
+          {currentPage === 2 ? (
+            <button onClick={() => setCurrentPage(1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          ) : (
+            <button onClick={() => navigate(-1)} className="p-2 -mr-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
+              <X className="w-6 h-6" />
+            </button>
           )}
         </div>
       </div>
