@@ -152,7 +152,7 @@ const Profile = () => {
       // 2. Fetch Saved Posts with optimized join
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
-        .select(``
+        .select(`
           post_id,
           posts (id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id)
         `)
@@ -210,7 +210,8 @@ const Profile = () => {
   }, [authUser?.id, loadProfileData]);
 
   const handleGridItemClick = (postId: string) => {
-    navigate(`/post/${postId}`);
+    setViewMode(viewMode === 'gifs' ? 'gif-list' : 'list');
+    setTimeout(() => { const element = document.getElementById(`post-${postId}`); if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
   };
 
   const handleImageError = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
@@ -298,12 +299,12 @@ const Profile = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
                     {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
-                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}>
-                        <img 
-                          src={post.image_url || post.image} 
-                          alt="" 
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
-                          onError={() => handleImageError(post.id)} 
+                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group">
+                        <img
+                          src={post.image_url || post.image}
+                          alt=""
+                          className="w-full h-full object-cover transition-opacity"
+                          onError={() => handleImageError(post.id)}
                         />
                       </div>
                     ))}
