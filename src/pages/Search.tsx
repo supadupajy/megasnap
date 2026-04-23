@@ -94,12 +94,10 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 전역 헤더 영역 제외 (App.tsx에서 친구 찾기 페이지는 헤더 비노출 처리됨) */}
-      
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden pt-[88px]">
       {/* 고정 영역: 검색창 + 광고 배너 */}
       <div className="shrink-0 bg-white z-40">
-        <div className="px-4 pt-6 pb-2">
+        <div className="px-4 py-4">
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input 

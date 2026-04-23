@@ -48,8 +48,26 @@ const FriendList = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24 no-scrollbar">
-      <div className="flex flex-col pt-6">
+    <div className="min-h-screen bg-white pb-24 no-scrollbar pt-[88px]">
+      <div className="flex flex-col">
+        {/* 닉네임 검색 창 - 상단 헤더 바로 아래 위치, 배너 넓이와 동일 */}
+        <div className="px-4 py-4">
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+            <input
+              placeholder="닉네임으로 친구 찾기"
+              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-100"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {isLoading && searchQuery.trim() && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* THE NORTH FACE 광고 배너 */}
         <div className="px-4 py-2">
           <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900">
@@ -74,26 +92,8 @@ const FriendList = () => {
           </div>
         </div>
 
-        {/* 닉네임 검색 창 - 광고 배너 넓이와 일치 */}
-        <div className="px-4 py-4">
-          <div className="relative w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-            <input
-              placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-bold placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {isLoading && searchQuery.trim() && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="space-y-6 px-4">
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
               {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
             </h2>
