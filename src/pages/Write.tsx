@@ -302,46 +302,40 @@ const Write = () => {
   className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
   style={{ aspectRatio: '1 / 1', backgroundColor: 'red' }}
 >
-                  {currentMedia?.type === 'image' ? (
-                    <img
-                      ref={imgRef}
-                      src={currentMedia.url}
-                      className="pointer-events-none"
-                      onLoad={(e) => {
-                        const img = e.currentTarget;
-                        console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
-                        const container = containerRef.current;
-                        if (!container) return;
-                        const conW = container.offsetWidth;
-                        const conH = container.offsetHeight;
-                        const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
-                        const renderedW = img.naturalWidth * scale;
-                        const renderedH = img.naturalHeight * scale;
-                        const cropX = currentMedia.crop?.x ?? 50;
-                        const cropY = currentMedia.crop?.y ?? 50;
-                        cropPixelRef.current = {
-                          x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-                          y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-                        };
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                        transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                      }}
-                    />
-                  ) : (
-                    <video
-                      src={currentMedia?.url}
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                      autoPlay muted loop playsInline
-                    />
-                  )}
+                  {/* ✅ type 조건 제거 — 무조건 img로 렌더링하여 원인 파악 */}
+<img
+  ref={imgRef}
+  src={currentMedia?.url}
+  className="pointer-events-none"
+  onLoad={(e) => {
+    const img = e.currentTarget;
+    console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
+    console.log('type:', currentMedia?.type, typeof currentMedia?.type);
+    const container = containerRef.current;
+    if (!container) return;
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+    const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+    const renderedW = img.naturalWidth * scale;
+    const renderedH = img.naturalHeight * scale;
+    const cropX = currentMedia?.crop?.x ?? 50;
+    const cropY = currentMedia?.crop?.y ?? 50;
+    cropPixelRef.current = {
+      x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+      y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+    };
+  }}
+  style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: `${currentMedia?.crop?.x ?? 50}% ${currentMedia?.crop?.y ?? 50}%`,
+    transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+  }}
+/>
 
                   {/* 드래그 오버레이 */}
                   <div
