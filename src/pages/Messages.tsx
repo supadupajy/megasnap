@@ -209,7 +209,7 @@ const Messages = () => {
     </div>
         <button
           onClick={() => navigate('/friends')}
-          className="p-8 hover:bg-gray-50 rounded-full transition-colors"
+          className="p-50 hover:bg-gray-50 rounded-full transition-colors"
         >
           <Edit className="w-6 h-6 text-indigo-600" />
         </button>
