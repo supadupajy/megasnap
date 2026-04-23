@@ -95,7 +95,9 @@ const PostListOverlay = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [pullUpDistance, setPullUpDistance] = useState(0);
   const isPullingRef = useRef(false);
+  const isDraggingListRef = useRef(false); // ✅ 마우스 드래그 스크롤용 변수
   const startYRef = useRef(0);
+  const startScrollTopRef = useRef(0); // ✅ 시작 시 스크롤 위치 기록
   
   // Update local posts when initialPosts change (map movement)
   useEffect(() => {
@@ -201,37 +203,53 @@ const PostListOverlay = ({
     }
   }, [posts, isLoadingMore, hasMore, currentBounds]);
 
-  // Pull Up 제스처 핸들러 (마우스 이벤트 추가)
-  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+  // 통합 핸들러 (터치/마우스)
+  const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
+    
+    const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+    startYRef.current = pageY;
+    startScrollTopRef.current = scrollContainerRef.current.scrollTop;
+    
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    // 바닥에 닿아있을 때만 풀업 시작
-    if (scrollTop + clientHeight >= scrollHeight - 10) {
+    
+    // 바닥에 닿아있을 때만 풀업(추가 로드) 모드 진입
+    if (scrollTop + clientHeight >= scrollHeight - 15) {
       isPullingRef.current = true;
-      const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
-      startYRef.current = pageY;
+    } else {
+      // 바닥이 아니면 일반 마우스 드래그 스크롤 모드 진입
+      isDraggingListRef.current = true;
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!isPullingRef.current) return;
+  const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
     const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
     const diff = startYRef.current - pageY;
-    
-    if (diff > 0) { // 위로 올리는 중
-      setPullUpDistance(Math.min(diff * 0.5, 120)); // 저항감 부여
+
+    // 1. 추가 로딩 풀업 모드
+    if (isPullingRef.current && diff > 0) {
+      setPullUpDistance(Math.min(diff * 0.5, 120));
+      return;
+    }
+
+    // 2. 일반 마우스 드래그 스크롤 모드 (웹 테스트용)
+    if (isDraggingListRef.current) {
+      scrollContainerRef.current.scrollTop = startScrollTopRef.current + diff;
     }
   };
 
-  const handleTouchEnd = () => {
-    if (!isPullingRef.current) return;
-    isPullingRef.current = false;
-    
-    if (pullUpDistance > 80) { // 80px 이상 올렸을 때 로딩
-      loadMorePosts();
-    } else {
-      setPullUpDistance(0);
+  const handleEnd = () => {
+    if (isPullingRef.current) {
+      if (pullUpDistance > 80) {
+        loadMorePosts();
+      } else {
+        setPullUpDistance(0);
+      }
     }
+    
+    isPullingRef.current = false;
+    isDraggingListRef.current = false;
   };
 
   // window 객체에 상태 기록
@@ -273,14 +291,14 @@ const PostListOverlay = ({
       {/* List Content */}
       <div 
         ref={scrollContainerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleTouchStart}
-        onMouseMove={handleTouchMove}
-        onMouseUp={handleTouchEnd}
-        onMouseLeave={handleTouchEnd}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar select-none cursor-grab active:cursor-grabbing"
+        onTouchStart={handleStart}
+        onTouchMove={handleMove}
+        onTouchEnd={handleEnd}
+        onMouseDown={handleStart}
+        onMouseMove={handleMove}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar select-none cursor-grab active:cursor-grabbing touch-pan-y"
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
