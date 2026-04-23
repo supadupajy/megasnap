@@ -137,11 +137,11 @@ const PostDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+    <div className="h-screen bg-white flex flex-col relative overflow-hidden">
       {/* Header Space for Banner */}
       <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
 
-      {/* Title Header - Matching Popular Page Style */}
+      {/* Fixed Title Header - Now outside of scrollable main */}
       <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
@@ -152,7 +152,7 @@ const PostDetail = () => {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Scrollable Content Area */}
       <main className="flex-1 overflow-y-auto no-scrollbar bg-white">
         <div className="pb-28">
           {allPosts.map((p) => (
