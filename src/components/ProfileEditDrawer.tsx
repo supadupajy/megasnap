@@ -87,8 +87,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* z-index를 150으로 높여 BottomNav(100)보다 위에 오도록 설정 */}
-      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[150]">
+      {/* z-index를 200으로 높여 모든 UI 요소보다 위에 오도록 설정 */}
+      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[200]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
@@ -160,8 +160,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
           </div>
 
-          {/* Fixed Bottom Button Area - BottomNav 위로 올리기 위해 하단 여백(pb-12) 추가 */}
-<div className="px-8 pt-4 pb-24 bg-white shrink-0 border-t border-gray-50">
+          {/* Fixed Bottom Button Area */}
+          <div className="px-8 pt-4 pb-12 bg-white shrink-0 border-t border-gray-50">
             <Button 
               className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               onClick={handleSave}
