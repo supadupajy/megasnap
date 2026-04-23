@@ -30,28 +30,41 @@ const ObservedPostItem = ({
   onDelete: (id: string) => void
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
+  const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false); // ✅ 현재 재생 가시성 상태 추가
 
   useEffect(() => {
-    // ✅ 사용자가 게시물을 충분히 봤는지 감지 (60% 이상 노출 시 읽음 처리)
-    const observer = new IntersectionObserver(
+    // 1. 읽음 처리용 옵저버 (기존 로직 유지)
+    const viewObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
           onVisible(post.id);
-          // 한 번 읽었으면 더 이상 감시하지 않음
-          observer.unobserve(entry.target);
+          viewObserver.unobserve(entry.target);
         }
       },
+      { threshold: [0.6], rootMargin: '-10% 0px -10% 0px' }
+    );
+
+    // 2. 동영상 재생용 실시간 가시성 옵저버 (인스타그램 방식)
+    const playbackObserver = new IntersectionObserver(
+      ([entry]) => {
+        // 화면에서 사라지면 즉시 중지, 나타나면 재생
+        setIsCurrentlyVisible(entry.isIntersecting);
+      },
       { 
-        threshold: [0, 0.6, 1.0],
-        rootMargin: '-10% 0px -10% 0px'
+        threshold: 0.5, // 50% 이상 보일 때
+        rootMargin: '-15% 0px -15% 0px' // 화면 중앙부 근처에서만 활성화
       }
     );
 
     if (itemRef.current) {
-      observer.observe(itemRef.current);
+      viewObserver.observe(itemRef.current);
+      playbackObserver.observe(itemRef.current);
     }
 
-    return () => observer.disconnect();
+    return () => {
+      viewObserver.disconnect();
+      playbackObserver.disconnect();
+    };
   }, [post.id, onVisible]);
 
   return (
@@ -62,6 +75,7 @@ const ObservedPostItem = ({
         onLikeToggle={onLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
+        autoPlayVideo={isCurrentlyVisible} // ✅ 현재 화면에 보이는 상태를 전달하여 자동 재생 제어
       />
     </div>
   );
