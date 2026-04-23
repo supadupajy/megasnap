@@ -48,12 +48,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [dbPostData, setDbPostData] = useState<any>(null);
 
-  // [REVERT & FIX] posts에서 직접 가져온 원본 데이터를 최우선으로 사용
+  // [CRITICAL FIX] "여기보기"의 PostItem.tsx와 동일한 데이터 정규화 로직 적용
   const currentPost = useMemo(() => {
     const basePost = posts[currentPostIndex];
     if (!basePost) return null;
-    // merge logic
-    return { ...basePost, ...(dbPostData && dbPostData.id === basePost.id ? dbPostData : {}) };
+    
+    // DB에서 직접 가져온 필드들(youtube_url 등)을 basePost의 속성으로 병합
+    const merged = { ...basePost, ...(dbPostData && dbPostData.id === basePost.id ? dbPostData : {}) };
+    
+    // youtubeUrl 필드 강제 보정 (youtube_url -> youtubeUrl)
+    if (merged.youtube_url && !merged.youtubeUrl) {
+      merged.youtubeUrl = merged.youtube_url;
+    }
+    if (merged.video_url && !merged.videoUrl) {
+      merged.videoUrl = merged.video_url;
+    }
+    
+    return merged;
   }, [posts, currentPostIndex, dbPostData]);
 
   // [DEBUG] 실시간 데이터 확인
@@ -77,14 +88,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const videoId = useMemo(() => {
     if (!currentPost) return null;
-    // 모든 가능한 필드 조합 체크 (기존 잘 되던 시절의 필드명 포함)
-    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id;
-    return getYouTubeIdLocal(url);
+    // PostItem.tsx와 동일한 필드 접근 방식
+    return getYouTubeIdLocal(currentPost.youtubeUrl);
   }, [currentPost]);
 
   const vUrl = useMemo(() => {
     if (!currentPost) return null;
-    return currentPost.videoUrl || currentPost.video_url;
+    return currentPost.videoUrl;
   }, [currentPost]);
 
   // ✅ [FIX] Dialog 완전히 열린 후 iframe 마운트 여부 제어
@@ -501,30 +511,33 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - 썸네일을 아예 렌더링하지 않도록 구조 변경 */}
+                      {/* 미디어 영역 - PostItem.tsx의 렌더링 로직을 그대로 이식 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {/* [FINAL FIX] 영상이 감지되면 무조건 영상만 렌더링, 이미지는 DOM에서 제거 */}
                           {videoId ? (
-                            <iframe
-                              key={`yt-frame-${currentPost.id}-${videoId}`}
-                              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                              className="absolute inset-0 w-full h-full border-0 z-50"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                            />
+                            <div className="w-full h-full relative">
+                              <iframe
+                                key={`yt-${videoId}`}
+                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                className="w-full h-full object-cover"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                              />
+                            </div>
                           ) : vUrl ? (
-                            <video 
-                              key={`vid-frame-${currentPost.id}-${vUrl}`}
-                              src={vUrl} 
-                              className="absolute inset-0 w-full h-full object-cover z-50" 
-                              autoPlay 
-                              loop 
-                              playsInline 
-                              controls 
-                            />
+                            <div className="w-full h-full relative">
+                              <video 
+                                key={`vid-${vUrl}`}
+                                src={vUrl} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                loop 
+                                playsInline 
+                                controls 
+                              />
+                            </div>
                           ) : (
-                            <div className="absolute inset-0 w-full h-full z-10">
+                            <div className="relative w-full h-full">
                               {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
                               <div
                                 ref={imageScrollRef}
