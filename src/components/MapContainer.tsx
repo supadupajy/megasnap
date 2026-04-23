@@ -362,24 +362,29 @@ const MapContainer = ({
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-      const isNewRealtime = post.isNewRealtime === true; // ✅ 플래그 확인
+      const isNewRealtime = post.isNewRealtime === true;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
       
-      // ✅ 렌더링 상태 키에 isNewRealtime 포함하여 상태 변화 감지
+      // ✅ isNewRealtime 상태를 contentStateKey에 포함시켜 DOM 업데이트 강제 유도
       const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}-${isNewRealtime}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // ✅ [FIX] 클래스 명칭 통일 및 애니메이션 즉시 적용
-        content.className = 'marker-container kakao-overlay animate-marker-appear';
+        // ✅ [FIX] globals.css에 정의된 marker-appear-animation 클래스 사용
+        content.className = 'marker-container kakao-overlay marker-appear-animation';
         
-        // ✅ [FIX] 인라인 스타일로 애니메이션 트리거 보강
+        // ✅ [FIX] 실시간 포스팅(방금 내가 쓴 글 포함)인 경우 더 강한 연출 적용
+        if (isNewRealtime) {
+          content.classList.add('animate-realtime-marker-appear');
+          content.classList.add('realtime-spark');
+        }
+        
         content.style.opacity = '0';
-        content.style.transition = 'opacity 0.3s ease-out';
+        content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
         content.style.transformOrigin = 'bottom center';
-        content.style.willChange = 'transform, opacity'; // 선명도 유지를 위한 힌트
+        content.style.willChange = 'transform, opacity';
         content.style.setProperty('transform', `scale(${scale})`, 'important');
 
         if (isHighlighted) content.classList.add('highlighted');
@@ -420,16 +425,15 @@ const MapContainer = ({
           if (isHighlighted) content.classList.add('highlighted'); 
           else content.classList.remove('highlighted');
 
-          // ✅ [FIX] isNewRealtime인 경우 애니메이션 강제 트리거
+          // ✅ [FIX] isNewRealtime인 경우 애니메이션 강제 트리거 (reflow 이용)
           if (isNewRealtime) {
-            content.classList.remove('animate-marker-appear');
+            content.classList.remove('marker-appear-animation');
             content.classList.remove('animate-realtime-marker-appear');
-            // reflow 강제 발생시켜 애니메이션 초기화
-            void content.offsetWidth; 
+            void content.offsetWidth; // Force reflow
             content.classList.add('animate-realtime-marker-appear');
             content.classList.add('realtime-spark');
             
-            // 실시간 효과 소모 처리
+            // 효과 소모 처리
             post.isNewRealtime = false;
           }
 
