@@ -437,35 +437,37 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-                          {/* 영상이 있다면 무조건 영상을 최우선으로 렌더링 */}
-                          {(youtubeId || videoUrl) ? (
-                            <div className="absolute inset-0 w-full h-full z-30 bg-black">
-                              {youtubeId ? (
-                                <iframe
-                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                  className="w-full h-full border-0"
-                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                                  title="YouTube video player"
-                                  allow="autoplay; encrypted-media; picture-in-picture"
-                                  allowFullScreen
-                                />
-                              ) : (
-                                <video 
-                                  key={`detail-vid-${currentPost.id}-${videoUrl}`} 
-                                  src={videoUrl} 
-                                  className="w-full h-full object-cover" 
-                                  autoPlay 
-                                  loop 
-                                  playsInline 
-                                  controls 
-                                />
-                              )}
+                          {/* [CRITICAL FIX] 유튜브 및 비디오 렌더링 - 썸네일보다 최상위에 강제 배치 */}
+                          {youtubeId && (
+                            <div className="absolute inset-0 w-full h-full z-[100] bg-black">
+                              <iframe
+                                key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                className="w-full h-full border-0 pointer-events-auto"
+                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                                title="YouTube video player"
+                                allow="autoplay; encrypted-media; picture-in-picture"
+                                allowFullScreen
+                              />
                             </div>
-                          ) : null}
+                          )}
 
-                          {/* 영상 정보가 확실히 없을 때만 이미지 슬라이더 노출 */}
+                          {videoUrl && !youtubeId && (
+                            <div className="absolute inset-0 w-full h-full z-[100] bg-black">
+                              <video 
+                                key={`detail-vid-${currentPost.id}-${videoUrl}`} 
+                                src={videoUrl} 
+                                className="w-full h-full object-cover pointer-events-auto" 
+                                autoPlay 
+                                loop 
+                                playsInline 
+                                controls 
+                              />
+                            </div>
+                          )}
+
+                          {/* 영상 정보가 없을 때만 이미지 레이어 렌더링 (영상이 있을 땐 DOM에서 제거) */}
                           {!youtubeId && !videoUrl && (
-                            <div className="relative w-full h-full z-10">
+                            <div className="relative w-full h-full z-10 bg-gray-100">
                               {/* 네이티브 스크롤 슬라이더 */}
                               <div
                                 ref={imageScrollRef}
