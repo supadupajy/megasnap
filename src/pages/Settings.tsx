@@ -319,7 +319,7 @@ const Settings = () => {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
                     <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
                   </div>
-                  <div className="flex flex-col items-start">
+                  <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
                     <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
                   </div>
@@ -336,7 +336,7 @@ const Settings = () => {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
                     <MapPin className="w-5 h-5" />
                   </div>
-                  <div className="flex flex-col items-start">
+                  <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-emerald-600">기존 지역명 상세 보정</span>
                     <span className="text-[10px] text-gray-400 font-medium">서울/부산처럼 짧게 저장된 포스팅을 서울시 강동구 형식으로 보정합니다.</span>
                   </div>
@@ -353,7 +353,7 @@ const Settings = () => {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600">
                     <Loader2 className={cn("w-5 h-5", isProcessing && "animate-spin")} />
                   </div>
-                  <div className="flex flex-col items-start">
+                  <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-red-600">재생 불가 유튜브 링크 정리</span>
                     <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 유튜브 URL을 검수해 재생 불가 링크를 제거합니다.</span>
                   </div>
