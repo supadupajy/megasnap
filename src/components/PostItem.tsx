@@ -156,29 +156,26 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     // 1. 유튜브 영상 처리
     if (videoId) {
       const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-const iframeSrc = shouldPlay
-  ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&playsinline=1`
-  : `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1&modestbranding=1&rel=0`;
-
-return (
-  <div className="w-full h-full relative">
-    <iframe
-      key={shouldPlay ? 'playing' : 'paused'} // ✅ key 변경으로 iframe 강제 재마운트
-      src={iframeSrc}
-      className="w-full h-full object-cover"
-      allow="autoplay; encrypted-media; fullscreen"
-      allowFullScreen
-      onLoad={() => setVideoLoaded(true)}
-    />
-    {!videoLoaded && (
-      <img 
-        src={currentImage} 
-        alt="" 
-        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-      />
-    )}
-  </div>
-);
+      // ✅ [FIX] mute=0 설정을 통해 소리가 나오도록 변경
+      // 오토플레이 정책상 사용자가 페이지와 한 번이라도 상호작용한 후에는 소리가 있는 자동재생이 허용됩니다.
+      return (
+        <div className="w-full h-full relative">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            className="w-full h-full object-cover"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            onLoad={() => setVideoLoaded(true)}
+          />
+          {(!videoLoaded || !isVisible) && (
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+            />
+          )}
+        </div>
+      );
     }
 
     // 2. 일반 업로드 동영상 처리
@@ -189,7 +186,7 @@ return (
             src={post.videoUrl}
             className="w-full h-full object-cover"
             autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
-            muted // ✅ 자동 재생을 위해 무음 필수
+            // ✅ [FIX] muted 속성 제거하여 소리 나오게 함
             loop
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
