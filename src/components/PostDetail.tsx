@@ -501,29 +501,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - 복잡한 z-index를 걷어내고 여기보기와 동일한 단순 구조로 복원 */}
+                      {/* 미디어 영역 - "여기보기"와 동일한 절대 위치 구조 적용 */}
                       <div className="px-4 mt-2">
-                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
                           {videoId ? (
                             <iframe
-                              key={`yt-${currentPost.id}-${videoId}`}
-                              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&enablejsapi=1&origin=${window.location.origin}`}
-                              className="w-full h-full"
+                              key={`yt-frame-${currentPost.id}-${videoId}`}
+                              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                              className="absolute inset-0 w-full h-full border-0"
                               allow="autoplay; encrypted-media"
                               allowFullScreen
                             />
                           ) : vUrl ? (
                             <video 
-                              key={`vid-${currentPost.id}-${vUrl}`}
+                              key={`vid-frame-${currentPost.id}-${vUrl}`}
                               src={vUrl} 
-                              className="w-full h-full object-cover" 
+                              className="absolute inset-0 w-full h-full object-cover" 
                               autoPlay 
                               loop 
                               playsInline 
                               controls 
                             />
                           ) : (
-                            <div className="relative w-full h-full bg-gray-100">
+                            <div className="absolute inset-0 w-full h-full">
+                              {/* 이미지 슬라이더 (영상이 없을 때만) */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
