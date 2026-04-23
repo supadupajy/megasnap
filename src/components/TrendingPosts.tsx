@@ -73,14 +73,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   return (
     <div 
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden border-2 border-indigo-600/20",
-        isExpanded ? "h-[500px]" : "h-[56px]"
+        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-2 border-indigo-600/20",
+        isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
       )}
-      style={{ 
-        willChange: "height",
-        transform: "translateZ(0)",
-        backfaceVisibility: "hidden"
-      }}
+      style={{ willChange: "max-height" }}
     >
       <div 
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
@@ -202,15 +198,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div 
           ref={listRef}
-          className={cn(
-            "flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative transition-opacity duration-200",
-            isExpanded ? "opacity-100" : "opacity-0"
-          )}
-          style={{ 
-            height: "444px", // 500px - Header(56px)
-            WebkitOverflowScrolling: 'touch',
-            transform: "translateZ(0)"
-          }}
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh] relative"
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {/* 상단 스크롤 안내 화살표 - 위로 스크롤 가능할 때만 나타남 */}
           {isExpanded && showScrollUpArrow && (
