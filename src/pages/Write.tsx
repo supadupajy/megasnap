@@ -284,7 +284,7 @@ const Write = () => {
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
-                            className="w-full h-full relative overflow-hidden touch-none"
+                            className="w-full h-full relative overflow-hidden touch-none flex items-center justify-center bg-black"
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               handleDrag(e, idx);
@@ -313,13 +313,18 @@ const Write = () => {
                               <img 
                                 key={`img-${media.url}`}
                                 src={media.url} 
-                                className="w-full h-full object-cover pointer-events-none select-none"
+                                className="absolute max-w-none transition-none pointer-events-none select-none"
                                 style={{
-                                  objectPosition: media.orientation === 'portrait' 
-                                    ? `50% ${media.crop?.y ?? 50}%` 
-                                    : `${media.crop?.x ?? 50}% 50%`,
-                                  width: '100%',
-                                  height: '100%'
+                                  width: media.orientation === 'portrait' ? '100%' : 'auto',
+                                  height: media.orientation === 'portrait' ? 'auto' : '100%',
+                                  minWidth: '100%',
+                                  minHeight: '100%',
+                                  objectFit: 'cover',
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: media.orientation === 'portrait' 
+                                    ? `translate(-50%, calc(-50% + ${(50 - (media.crop?.y ?? 50))} * 1%))` 
+                                    : `translate(calc(-50% + ${(50 - (media.crop?.x ?? 50))} * 1%), -50%)`
                                 }}
                               />
                             ) : (
