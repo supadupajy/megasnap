@@ -14,34 +14,45 @@ const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const [post, setPost] = useState<Post | null>(null);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPost = async () => {
-      if (!id) return;
+    const fetchAllPosts = async () => {
+      if (!authUser?.id) return;
       setLoading(true);
       try {
         const { data, error } = await supabase
           .from('posts')
           .select('*')
-          .eq('id', id)
-          .single();
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
         if (data) {
-          const formattedPost = await mapDbToPost(data);
-          setPost(formattedPost);
+          const formattedPosts = await Promise.all(data.map(mapDbToPost));
+          setAllPosts(formattedPosts);
         }
       } catch (err) {
-        console.error('Error fetching post:', err);
+        console.error('Error fetching posts:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPost();
-  }, [id]);
+    fetchAllPosts();
+  }, [authUser?.id, id]);
+
+  useEffect(() => {
+    if (id && allPosts.length > 0) {
+      setTimeout(() => {
+        const element = document.getElementById(`post-${id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [id, allPosts]);
 
   const mapDbToPost = async (p: any): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
@@ -116,7 +127,7 @@ const PostDetail = () => {
     );
   }
 
-  if (!post) {
+  if (allPosts.length === 0) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
         <p className="text-gray-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
@@ -144,11 +155,15 @@ const PostDetail = () => {
       {/* Content */}
       <main className="flex-1 overflow-y-auto no-scrollbar bg-white">
         <div className="pb-28">
-          <PostItem 
-            post={post} 
-            disablePulse={true}
-            onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post } })}
-          />
+          {allPosts.map((p) => (
+            <div key={p.id} id={`post-${p.id}`}>
+              <PostItem 
+                post={p} 
+                disablePulse={true}
+                onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
+              />
+            </div>
+          ))}
         </div>
       </main>
     </div>
