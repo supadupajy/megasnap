@@ -449,9 +449,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     <div 
       ref={containerRef}
       className={cn(
-        "bg-white transition-all duration-500",
-        !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl",
-        isViewed && "grayscale opacity-75 contrast-75 brightness-95"
+        "bg-white transition-none",
+        !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
       {/* Header Section */}
