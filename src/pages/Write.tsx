@@ -64,6 +64,78 @@ const Write = () => {
   // ✅ 드래그 관련 ref
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
+const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+// ✅ 핵심: passive: false로 네이티브 터치 이벤트 등록 → preventDefault 가능
+useEffect(() => {
+  const containers = containerRefs.current;
+
+  const onTouchStart = (e: TouchEvent, idx: number) => {
+    const media = mediaFiles[idx];
+    if (!media || media.type !== 'image') return;
+    dragActiveIdxRef.current = idx;
+    isDraggingActiveRef.current = true;
+    dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const onTouchMove = (e: TouchEvent, idx: number) => {
+    if (!isDraggingActiveRef.current || dragActiveIdxRef.current !== idx) return;
+    e.preventDefault(); // ✅ passive: false여야 작동
+    const media = mediaFiles[idx];
+    if (!media || media.type !== 'image') return;
+
+    const clientX = e.touches[0].clientX;
+    const clientY = e.touches[0].clientY;
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+    dragStartRef.current = { x: clientX, y: clientY };
+
+    const sensitivity = 0.35;
+    const isPortrait = media.orientation === 'portrait';
+    const current = cropPositionsRef.current[idx] ?? { x: 50, y: 50 };
+
+    const newX = isPortrait ? 50 : Math.max(0, Math.min(100, current.x - deltaX * sensitivity));
+    const newY = isPortrait ? Math.max(0, Math.min(100, current.y - deltaY * sensitivity)) : 50;
+
+    cropPositionsRef.current[idx] = { x: newX, y: newY };
+    const imgEl = imgRefs.current[idx];
+    if (imgEl) {
+      imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!isDraggingActiveRef.current) return;
+    isDraggingActiveRef.current = false;
+    const idx = dragActiveIdxRef.current;
+    dragActiveIdxRef.current = null;
+    if (idx !== null && cropPositionsRef.current[idx]) {
+      const { x, y } = cropPositionsRef.current[idx];
+      updateMediaCrop(idx, x, y);
+    }
+  };
+
+  const handlers: Array<{ el: HTMLDivElement; ts: (e: TouchEvent) => void; tm: (e: TouchEvent) => void; te: () => void }> = [];
+
+  containers.forEach((el, idx) => {
+    if (!el) return;
+    const ts = (e: TouchEvent) => onTouchStart(e, idx);
+    const tm = (e: TouchEvent) => onTouchMove(e, idx);
+    const te = onTouchEnd;
+    el.addEventListener('touchstart', ts, { passive: false });
+    el.addEventListener('touchmove', tm, { passive: false });
+    el.addEventListener('touchend', te);
+    handlers.push({ el, ts, tm, te });
+  });
+
+  return () => {
+    handlers.forEach(({ el, ts, tm, te }) => {
+      el.removeEventListener('touchstart', ts);
+      el.removeEventListener('touchmove', tm);
+      el.removeEventListener('touchend', te);
+    });
+  };
+}, [mediaFiles]); // mediaFiles 바뀔 때 재등록
   const cropPositionsRef = useRef<{ x: number; y: number }[]>([]);
   const dragActiveIdxRef = useRef<number | null>(null);
   const isDraggingActiveRef = useRef(false);
