@@ -430,31 +430,33 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
                           {youtubeId ? (
-                            <div className="w-full h-full">
+                            <div className="absolute inset-0 w-full h-full z-20">
                               <iframe
                                 key={`detail-yt-${currentPost.id}-${isOpen}`}
-                                className="w-full h-full relative z-10"
+                                className="w-full h-full border-0"
                                 src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
                                 title="YouTube video player"
-                                frameBorder="0"
                                 allow="autoplay; encrypted-media; picture-in-picture"
                                 allowFullScreen
                               />
                             </div>
                           ) : currentPost.videoUrl ? (
-                            <div className="w-full h-full">
+                            <div className="absolute inset-0 w-full h-full z-20 bg-black">
                               <video 
                                 key={`detail-vid-${currentPost.id}-${isOpen}`} 
                                 src={currentPost.videoUrl} 
-                                className="w-full h-full object-cover relative z-10" 
+                                className="w-full h-full object-cover" 
                                 autoPlay 
                                 loop 
                                 playsInline 
                                 controls 
                               />
                             </div>
-                          ) : (
-                            <div className="relative w-full h-full">
+                          ) : null}
+
+                          {/* 비디오/유튜브가 없을 때만 이미지 슬라이더 렌더링 */}
+                          {!youtubeId && !currentPost.videoUrl && (
+                            <div className="relative w-full h-full z-10">
                               {/* 네이티브 스크롤 슬라이더 */}
                               <div
                                 ref={imageScrollRef}
