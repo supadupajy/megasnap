@@ -9,6 +9,7 @@ import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { showSuccess, showError } from '@/utils/toast';
 
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();

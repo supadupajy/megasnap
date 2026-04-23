@@ -3,30 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Bookmark, 
-  MoreHorizontal, 
-  ChevronLeft, 
-  UserPlus, 
-  UserCheck, 
+  Settings, 
   Grid, 
-  Video, 
-  ShieldCheck,
-  CheckCircle2,
-  MapPin,
+  Map as MapIcon, 
+  ChevronLeft, 
+  User as UserIcon, 
   Loader2,
-  User as UserIcon,
-  Play
+  Play,
+  UserCheck,
+  UserPlus,
+  MessageCircle
 } from 'lucide-react';
 import { Post, User } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
-import PostItem from '@/components/PostItem';
+import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { Button } from '@/components/ui/button';
+import PostItem from '@/components/PostItem';
 
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
