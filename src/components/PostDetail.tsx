@@ -428,14 +428,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           {youtubeId ? (
                             <iframe
                               className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
+                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1`}
                               title="YouTube video player"
                               frameBorder="0"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
                           ) : currentPost.videoUrl ? (
-                            <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+                            <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
                           ) : (
                             <div className="relative w-full h-full">
                               {/* 네이티브 스크롤 슬라이더 */}
