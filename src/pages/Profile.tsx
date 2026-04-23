@@ -90,7 +90,7 @@ const Profile = () => {
     let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
     const likesCountNum = Number(sanitized.likes || 0);
     
-    // [FIX] 인기 포스팅 기준을 좋아요 8,000개 이상으로 설정
+    // [FIX] 인기 포스팅 기준을 좋아요 9,000개 이상으로 설정
     if (likesCountNum >= 9000) {
       borderType = 'popular';
     } else if (!isAd) {
