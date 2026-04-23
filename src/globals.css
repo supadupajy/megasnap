@@ -44,13 +44,13 @@
   }
 }
 
-/* [FIX] 마커 컨테이너: 모든 트랜지션을 제거하여 줌 시 튀는 현상(레이턴시)을 완전 차단 */
+/* [FIX] 마커 컨테이너: 기본 구조 및 레이아웃 설정 */
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
   will-change: transform;
   transform-origin: bottom center;
-  /* 트랜지션이 있으면 지도의 줌 애니메이션과 엇박자가 나면서 마커가 튑니다. */
+  /* 줌 스케일링은 즉각적이어야 하므로 transition 제거 */
   transition: none !important; 
   display: block;
   z-index: 10;
@@ -63,8 +63,25 @@
   flex-direction: column;
   align-items: center;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
-  /* [FIX] 하드웨어 가속 강제 */
   transform: translateZ(0);
+  /* [FIX] 하이라이트/해제 시 '크기' 변화에만 부드러운 트랜지션 적용 */
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transform-origin: bottom center;
+  width: 100%;
+}
+
+.marker-container.highlighted {
+  z-index: 10000 !important;
+}
+
+.marker-container.highlighted .marker-content-wrapper {
+  /* [FIX] 하이라이트 시 확대 */
+  transform: scale(1.5) !important;
+}
+
+/* [NEW] 하이라이트가 아닐 때의 기본 상태 명시 */
+.marker-container:not(.highlighted) .marker-content-wrapper {
+  transform: scale(1);
 }
 
 /* [NEW] 줌 레벨별 마커 스케일링 일괄 적용 (!important로 인라인 스타일 간섭 차단) */
