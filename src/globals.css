@@ -153,6 +153,22 @@
   align-items: center;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
   transform: translateZ(0);
+  transform-origin: bottom center;
+  width: 100%;
+}
+
+/* [FIX] 마커 하이라이트 시퀀스 애니메이션 */
+@keyframes marker-highlight-sequence {
+  0% { transform: scale(1); }
+  10% { transform: scale(1.6); } /* 지도 이동 후 확 커짐 */
+  90% { transform: scale(1.6); } /* 핑 효과 동안 크기 유지 (약 5.4초) */
+  100% { transform: scale(1); }  /* 부드럽게 원래 크기로 복원 */
+}
+
+.marker-container.highlighted .marker-content-wrapper {
+  /* 핑 효과 3회(6초)와 정확히 일치하는 시퀀스 애니메이션 적용 */
+  animation: marker-highlight-sequence 6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  z-index: 50;
 }
 
 @layer utilities {
