@@ -317,7 +317,10 @@ const Write = () => {
                                 style={{
                                   objectPosition: media.orientation === 'portrait' 
                                     ? `50% ${media.crop?.y ?? 50}%` 
-                                    : `${media.crop?.x ?? 50}% 50%`
+                                    : `${media.crop?.x ?? 50}% 50%`,
+                                  // [FIX] 가로형 이미지가 상하로 꽉 차도록 보장
+                                  minWidth: '100%',
+                                  minHeight: '100%'
                                 }}
                               />
                             ) : (
