@@ -420,6 +420,7 @@ const Write = () => {
             <div className="space-y-8 pb-20">
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 <div
                   onClick={() => navigate('/', { state: { startSelection: true } })}
                   className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
