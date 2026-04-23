@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useWriteStore } from '@/utils/write-store';
 import {
   Carousel,
   CarouselContent,
@@ -45,16 +46,14 @@ const Write = () => {
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
   
+  const { mediaFiles, setMediaFiles, content, setContent, category, setCategory, clear } = useWriteStore();
+  
   // [FIX] 위치를 선택하고 돌아오거나, 지도로 나갔다가 취소하고 돌아온 경우 2페이지(상세 정보 입력)가 보이도록 설정
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
-  const [draft, setDraft] = useState(postDraftStore.get());
   
-  // [FIX] location.state를 통해 전달된 mediaFiles가 있으면 복구, 없으면 빈 배열
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(location.state?.mediaFiles || []);
-  
-  // [FIX] 컴포넌트 마운트 시 body 스크롤 고정
+  // [FIX] 컴포넌트 마운트 시 body 스크롤 고정 (인기 탭 등 다른 페이지와 동일한 동작)
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -109,7 +108,7 @@ const Write = () => {
       return { file, url, type, thumbnail, crop: { x: 0, y: 0 }, zoom: 1, orientation } as MediaFile;
     }));
 
-    setMediaFiles(prev => [...prev, ...newMediaItems]);
+    setMediaFiles([...mediaFiles, ...newMediaItems]);
   };
 
   const captureVideoThumbnail = (url: string): Promise<string> => {
@@ -151,7 +150,7 @@ const Write = () => {
       const { data: insertData, error: insertError } = await supabase
         .from('posts')
         .insert({
-          content: draft.content,
+          content: content,
           location_name: address || '위치 미지정',
           latitude: initialLocation?.lat || null,
           longitude: initialLocation?.lng || null,
@@ -160,7 +159,7 @@ const Write = () => {
           user_id: authUser.id,
           user_name: profile?.nickname || '탐험가',
           user_avatar: profile?.avatar_url,
-          category: selectedCategory,
+          category: category,
           video_url: mediaFiles[0].type === 'video' ? uploadedUrls[0] : null,
         })
         .select()
@@ -169,6 +168,7 @@ const Write = () => {
       if (insertError) throw insertError;
 
       showSuccess('게시물이 등록되었습니다! ✨');
+      clear(); // [FIX] useWriteStore 초기화
       postDraftStore.clear();
       navigate('/');
     } catch (err: any) {
@@ -233,7 +233,17 @@ const Write = () => {
                           ) : (
                             <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
                           )}
-                          <button onClick={() => setMediaFiles(prev => prev.filter((_, i) => i !== idx))} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"><X className="w-4 h-4" /></button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newFiles = [...mediaFiles];
+                              newFiles.splice(idx, 1);
+                              setMediaFiles(newFiles);
+                            }} 
+                            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
@@ -261,13 +271,7 @@ const Write = () => {
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">장소 정보</p>
                 <div 
-                  onClick={() => navigate('/', { 
-                    state: { 
-                      startSelection: true,
-                      // [FIX] 현재 선택된 미디어 파일들을 유지하기 위해 state로 전달
-                      mediaFiles: mediaFiles
-                    } 
-                  })}
+                  onClick={() => navigate('/', { state: { startSelection: true } })}
                   className="p-5 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
                 >
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
@@ -285,14 +289,14 @@ const Write = () => {
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.key}
-                      onClick={() => setSelectedCategory(cat.key)}
+                      onClick={() => setCategory(cat.key)}
                       className={cn(
                         "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
-                        selectedCategory === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
+                        category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                       )}
                     >
-                      <cat.Icon className={cn("w-6 h-6", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-[10px] font-black mt-2", selectedCategory === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
+                      <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
+                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>{cat.label}</span>
                     </button>
                   ))}
                 </div>
@@ -301,17 +305,17 @@ const Write = () => {
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">내용 입력</p>
                 <Textarea 
-                  placeholder="이 장소에서의 추억을 기록해보세요." 
+                  placeholder="이 장소에서의 추억을 기록해보세요..." 
                   className="min-h-[150px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
-                  value={draft.content}
-                  onChange={(e) => postDraftStore.set({ content: e.target.value })}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                 />
               </div>
 
               <Button 
                 className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
                 onClick={handlePost}
-                disabled={isSubmitting || !draft.content || !selectedCategory}
+                disabled={isSubmitting || !content || category === 'none'}
               >
                 {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
                 게시물 등록하기
