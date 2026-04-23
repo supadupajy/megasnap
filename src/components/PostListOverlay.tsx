@@ -20,16 +20,14 @@ const ObservedPostItem = ({
   isViewed, 
   onLikeToggle, 
   onLocationClick,
-  onDelete,
-  isActiveVideo
+  onDelete 
 }: { 
   post: Post, 
   onVisible: (id: string) => void, 
   isViewed: boolean, 
   onLikeToggle: (id: string) => void, 
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
-  onDelete: (id: string) => void,
-  isActiveVideo: boolean
+  onDelete: (id: string) => void
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
@@ -138,7 +136,7 @@ const ObservedPostItem = ({
         onLikeToggle={onLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
-        autoPlayVideo={isActiveVideo}
+        autoPlayVideo={isCurrentlyVisible}
       />
     </div>
   );
@@ -173,8 +171,6 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(null); // ✅ 현재 재생할 비디오 ID 관리
-
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
     if (viewedIds.size > 0) {
@@ -202,45 +198,6 @@ const PostListOverlay = ({
     setPullUpDistance(0);
     // radiusOffset 제거
   }, [initialPosts]);
-
-  // ✅ [FIX] 인스타그램처럼 한 번에 하나의 영상만 재생되도록 관리
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let maxRatio = 0;
-        let activeId = null;
-
-        // 현재 화면에 교차되는 항목 중 가장 많이 보이는 항목을 찾음
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
-            maxRatio = entry.intersectionRatio;
-            activeId = entry.target.id.replace('post-', '');
-          }
-        });
-
-        if (activeId) {
-          setActiveVideoId(activeId);
-        }
-      },
-      {
-        threshold: [0.1, 0.3, 0.5, 0.7, 0.9],
-        root: scrollContainerRef.current
-      }
-    );
-
-    // 모든 포스트 아이템 감시
-    const timer = setTimeout(() => {
-      if (scrollContainerRef.current) {
-        const items = scrollContainerRef.current.querySelectorAll('[id^="post-"]');
-        items.forEach(item => observer.observe(item));
-      }
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-    };
-  }, [posts, isOpen]);
 
   // Infinite Scroll Handler
   const loadMorePosts = useCallback(async () => {
@@ -455,7 +412,6 @@ const PostListOverlay = ({
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                 }}
                 onDelete={(id) => onDeletePost?.(id)}
-                isActiveVideo={activeVideoId === post.id}
               />
             ))}
             
