@@ -36,7 +36,7 @@ const Write = () => {
   const { user: authUser, profile } = useAuth();
 
   const { content, setContent, category, setCategory, clear } = useWriteStore();
-const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]); // ✅ 로컬 state로 변경
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
 
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
@@ -53,9 +53,7 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]); // ✅ 로컬 sta
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // crop을 픽셀 기반으로 계산하기 위한 ref
-  const cropPixelRef = useRef({ x: 0, y: 0 }); // 픽셀 오프셋
+  const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
 
   const reverseGeocode = useCallback((lat: number, lng: number) => {
@@ -96,73 +94,51 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]); // ✅ 로컬 sta
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // 슬라이드 변경 시 해당 이미지의 crop 픽셀값 동기화
   useEffect(() => {
-    const media = mediaFiles[currentSlide];
-    if (!media || media.type !== 'image') return;
-    // % → 픽셀 변환은 드래그 시작 시 계산하므로 여기선 초기화만
     cropPixelRef.current = { x: 0, y: 0 };
-  }, [currentSlide, mediaFiles]);
+  }, [currentSlide]);
 
   const getMaxOffset = () => {
     const img = imgRef.current;
     const container = containerRef.current;
     if (!img || !container) return { maxX: 0, maxY: 0 };
-
     const natW = img.naturalWidth;
     const natH = img.naturalHeight;
+    if (!natW || !natH) return { maxX: 0, maxY: 0 };
     const conW = container.offsetWidth;
     const conH = container.offsetHeight;
-
-    const scaleW = conW / natW;
-    const scaleH = conH / natH;
-    const scale = Math.max(scaleW, scaleH);
-
+    const scale = Math.max(conW / natW, conH / natH);
     const renderedW = natW * scale;
     const renderedH = natH * scale;
-
     return {
       maxX: Math.max(0, (renderedW - conW) / 2),
       maxY: Math.max(0, (renderedH - conH) / 2),
     };
   };
 
-  // 픽셀 오프셋 → objectPosition % 변환
   const pixelToPercent = (offsetX: number, offsetY: number) => {
     const img = imgRef.current;
     const container = containerRef.current;
     if (!img || !container) return { x: 50, y: 50 };
-
     const natW = img.naturalWidth;
     const natH = img.naturalHeight;
+    if (!natW || !natH) return { x: 50, y: 50 };
     const conW = container.offsetWidth;
     const conH = container.offsetHeight;
-
-    const scaleW = conW / natW;
-    const scaleH = conH / natH;
-    const scale = Math.max(scaleW, scaleH);
-
+    const scale = Math.max(conW / natW, conH / natH);
     const renderedW = natW * scale;
     const renderedH = natH * scale;
-
-    const x = renderedW === conW ? 50 : 50 + (offsetX / (renderedW - conW)) * 100;
-    const y = renderedH === conH ? 50 : 50 + (offsetY / (renderedH - conH)) * 100;
-
+    const x = renderedW <= conW ? 50 : 50 + (offsetX / (renderedW - conW)) * 100;
+    const y = renderedH <= conH ? 50 : 50 + (offsetY / (renderedH - conH)) * 100;
     return { x, y };
   };
 
   const applyDrag = (deltaX: number, deltaY: number) => {
     const media = mediaFiles[currentSlide];
     if (!media || media.type !== 'image') return;
-
-    const isPortrait = media.orientation === 'portrait';
     const { maxX, maxY } = getMaxOffset();
-
-    // orientation 구분 없이 이동 가능한 축만 자동으로 클램핑
-cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
-cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
-
-    // DOM 직접 업데이트 (re-render 없이 즉각 반응)
+    cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
+    cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
     if (imgRef.current) {
       const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
       imgRef.current.style.objectPosition = `${x}% ${y}%`;
@@ -172,30 +148,23 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
   const handleDragStart = (clientX: number, clientY: number) => {
     const media = mediaFiles[currentSlide];
     if (!media || media.type !== 'image') return;
-
-    // 드래그 시작 시 현재 crop % → 픽셀로 변환
     const img = imgRef.current;
     const container = containerRef.current;
-    if (img && container) {
+    if (img && container && img.naturalWidth) {
       const natW = img.naturalWidth;
       const natH = img.naturalHeight;
       const conW = container.offsetWidth;
       const conH = container.offsetHeight;
-      const scaleW = conW / natW;
-      const scaleH = conH / natH;
-      const scale = Math.max(scaleW, scaleH);
+      const scale = Math.max(conW / natW, conH / natH);
       const renderedW = natW * scale;
       const renderedH = natH * scale;
-
       const cropX = media.crop?.x ?? 50;
       const cropY = media.crop?.y ?? 50;
-
       cropPixelRef.current = {
-        x: renderedW === conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-        y: renderedH === conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+        x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+        y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
       };
     }
-
     isDraggingRef.current = true;
     setIsDragging(true);
     dragStartRef.current = { x: clientX, y: clientY };
@@ -213,10 +182,7 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     setIsDragging(false);
-
-    // 드래그 끝: 픽셀 → % 변환 후 store 저장 + 스프링 애니메이션
     const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
-
     const newMedia = [...mediaFiles];
     newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y } };
     setMediaFiles(newMedia);
@@ -232,22 +198,21 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
       let orientation: 'landscape' | 'portrait' = 'landscape';
 
       if (type === 'image') {
-        await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
           const img = new Image();
           img.onload = () => {
-            orientation = img.width >= img.height ? 'landscape' : 'portrait';
-            resolve(null);
+            orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
+            console.log('📸 orientation:', orientation, img.naturalWidth, 'x', img.naturalHeight);
+            resolve();
           };
-          img.onerror = () => resolve(null);
+          img.onerror = () => resolve();
           img.src = url;
         });
       }
-      console.log('📸 새 미디어:', { type, url, orientation, naturalW: url });
-
       return { file, url, type, crop: { x: 50, y: 50 }, orientation } as MediaFile;
     }));
 
-    setMediaFiles([...mediaFiles, ...newItems]);
+    setMediaFiles(prev => [...prev, ...newItems]);
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
@@ -281,7 +246,7 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
           user_name: profile?.nickname || '탐험가',
           user_avatar: profile?.avatar_url,
           category,
-          video_url: mediaFiles[0].type === 'video' ? uploadedUrls[0] : null,
+          video_url: mediaFiles[0]?.type === 'video' ? uploadedUrls[0] : null,
         })
         .select()
         .single();
@@ -332,56 +297,53 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
               </div>
 
               {mediaFiles.length > 0 ? (
-                <div 
-  ref={containerRef} 
-  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-  style={{ aspectRatio: '1 / 1' }}
->
-
-                  {/* 이미지 / 비디오 */}
+                <div
+                  ref={containerRef}
+                  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
+                  style={{ aspectRatio: '1 / 1' }}
+                >
                   {currentMedia?.type === 'image' ? (
-  <img
-  ref={imgRef}
-  src={currentMedia.url}
-  className="pointer-events-none"
-    onLoad={() => {
-      const img = imgRef.current;
-      const container = containerRef.current;
-      if (!img || !container) return;
-      const natW = img.naturalWidth;
-      const natH = img.naturalHeight;
-      const conW = container.offsetWidth;
-      const conH = container.offsetHeight;
-      const scale = Math.max(conW / natW, conH / natH);
-      const renderedW = natW * scale;
-      const renderedH = natH * scale;
-      const cropX = currentMedia.crop?.x ?? 50;
-      const cropY = currentMedia.crop?.y ?? 50;
-      cropPixelRef.current = {
-        x: renderedW === conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-        y: renderedH === conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-      };
-    }}
-    style={{
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-    transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-  }}
-/>
+                    <img
+                      ref={imgRef}
+                      src={currentMedia.url}
+                      className="pointer-events-none"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
+                        const container = containerRef.current;
+                        if (!container) return;
+                        const conW = container.offsetWidth;
+                        const conH = container.offsetHeight;
+                        const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+                        const renderedW = img.naturalWidth * scale;
+                        const renderedH = img.naturalHeight * scale;
+                        const cropX = currentMedia.crop?.x ?? 50;
+                        const cropY = currentMedia.crop?.y ?? 50;
+                        cropPixelRef.current = {
+                          x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+                          y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+                        };
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                        transition: isDragging ? 'none' : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      }}
+                    />
                   ) : (
                     <video
                       src={currentMedia?.url}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                       autoPlay muted loop playsInline
                     />
                   )}
 
-                  {/* ✅ 드래그 오버레이: 마우스 + 터치 모두 처리 */}
+                  {/* 드래그 오버레이 */}
                   <div
                     className="absolute inset-0 z-10"
                     style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
@@ -401,25 +363,18 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
                       const newFiles = [...mediaFiles];
                       newFiles.splice(currentSlide, 1);
                       setMediaFiles(newFiles);
-                      setCurrentSlide(prev => Math.min(prev, newFiles.length - 1));
+                      setCurrentSlide(prev => Math.min(prev, Math.max(0, newFiles.length - 1)));
                     }}
                     className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
                   >
                     <X className="w-4 h-4" />
                   </button>
 
-                  {/* 슬라이드 전환 (좌/우 버튼) */}
+                  {/* 슬라이드 전환 + 인디케이터 */}
                   {mediaFiles.length > 1 && (
                     <>
-                      <button
-                        className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
-                        onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
-                      />
-                      <button
-                        className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
-                        onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))}
-                      />
-                      {/* 인디케이터 */}
+                      <button className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))} />
+                      <button className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))} />
                       <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
                         {mediaFiles.map((_, i) => (
                           <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
@@ -431,7 +386,8 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
               ) : (
                 <div
                   onClick={() => mediaInputRef.current?.click()}
-                  className="aspect-square w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                  className="w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                  style={{ aspectRatio: '1 / 1' }}
                 >
                   <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
                   <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
