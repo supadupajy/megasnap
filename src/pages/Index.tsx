@@ -351,6 +351,55 @@ const Index = () => {
   };
 
   useEffect(() => {
+    if (!authUser) return;
+
+    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정
+    const channel = supabase
+      .channel('public:posts-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'posts'
+        },
+        async (payload) => {
+          console.log('[Realtime] New post detected:', payload.new);
+          const newRawPost = payload.new;
+          
+          // 내 글인 경우 이미 로컬 상태에 추가되었을 수 있으므로 중복 체크
+          const mappedPost = await mapDbToPost(newRawPost);
+          if (!mappedPost) return;
+
+          setAllPosts(prev => {
+            if (prev.some(p => p.id === mappedPost.id)) return prev;
+            const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
+            mapCache.posts = combined;
+            return combined;
+          });
+
+          // 새로운 포스트가 영역 내에 있다면 즉시 표시를 위해 displayedMarkers 업데이트 트리거
+          if (mapData?.bounds) {
+            const { sw, ne } = mapData.bounds;
+            const inBounds = mappedPost.lat >= Math.min(sw.lat, ne.lat) && 
+                             mappedPost.lat <= Math.max(sw.lat, ne.lat) && 
+                             mappedPost.lng >= Math.min(sw.lng, ne.lng) && 
+                             mappedPost.lng <= Math.max(sw.lng, ne.lng);
+            
+            if (inBounds) {
+              // trigger setDisplayedMarkers via allPosts change
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUser, mapData, mapDbToPost]);
+
+  useEffect(() => {
     const handleFocusPost = (e: any) => {
       const { post, lat, lng } = e.detail;
       setIsPostListOpen(false); focusPostOnMap(post, { lat, lng });
@@ -370,12 +419,35 @@ const Index = () => {
     const routeState = location.state as any;
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
+    
+    // ✅ [FIX] 포스팅 후 '내가 등록한 위치'로 정확히 이동하도록 보정
     if (routeState.filterUserId === 'me') {
-      setSelectedCategories(['mine']); setTimeout(() => setCurrentZoom(6), 500);
-      if (routeState.post) focusPostOnMap(routeState.post, routeState.center); else handleCurrentLocation();
-    } else if (routeState.post) focusPostOnMap(routeState.post, routeState.center);
-    else if (routeState.center) { setSelectedPostId(null); setMapCenter(routeState.center); }
-    if (routeState.startSelection) { setIsPostListOpen(false); setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); }
+      setSelectedCategories(['mine']); 
+      setTimeout(() => setCurrentZoom(6), 500);
+      
+      if (routeState.post) {
+        // 등록된 포스트의 좌표로 확실하게 이동
+        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+      } else {
+        handleCurrentLocation();
+      }
+    } 
+    // 그 외 일반적인 포스트 포커스 처리
+    else if (routeState.post) {
+      focusPostOnMap(routeState.post, routeState.center);
+    }
+    else if (routeState.center) { 
+      setSelectedPostId(null); 
+      setMapCenter(routeState.center); 
+    }
+    
+    if (routeState.startSelection) { 
+      setIsPostListOpen(false); 
+      setTimeout(() => { 
+        setIsSelectingLocation(true); 
+        setTempSelectedLocation(mapData?.center || mapCache.lastCenter); 
+      }, 500); 
+    }
     navigate(location.pathname, { replace: true, state: null });
   }, [focusPostOnMap, location, navigate, triggerConfetti, mapData]);
 

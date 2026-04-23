@@ -272,19 +272,56 @@ const Write = () => {
         video_url: isFirstMediaVideo ? uploadedUrls[0] : null,
       };
 
-      const { data, error: insertError } = await supabase
+      const { data: createdPost, error: insertError } = await supabase
         .from('posts')
         .insert(postData)
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[Write] Post insert error:', insertError);
+        throw insertError;
+      }
+
+      // ✅ [FIX] 등록된 포스트의 실제 데이터를 포함하여 메인으로 이동
+      // Index.tsx에서 이 데이터를 기반으로 위치를 잡고 마커를 보여줌
+      const mappedPost = {
+        id: createdPost.id,
+        isAd: createdPost.content?.startsWith('[AD]'),
+        isGif: false,
+        isInfluencer: false,
+        user: { 
+          id: authUser.id, 
+          name: profile?.nickname || '탐험가', 
+          avatar: profile?.avatar_url 
+        },
+        content: createdPost.content,
+        location: createdPost.location_name,
+        lat: createdPost.latitude,
+        lng: createdPost.longitude,
+        likes: 0,
+        image: uploadedUrls[0],
+        images: uploadedUrls,
+        videoUrl: createdPost.video_url,
+        createdAt: new Date(createdPost.created_at),
+        category: createdPost.category,
+        borderType: 'none'
+      };
 
       showSuccess('게시물이 등록되었습니다! ✨');
       clear();
       postDraftStore.clear();
       
-      navigate('/', { state: { triggerConfetti: true }, replace: true });
+      // ✅ [FIX] filterUserId: 'me'와 함께 실제 post 객체를 넘겨 위치 이동 보장
+      navigate('/', { 
+        state: { 
+          triggerConfetti: true, 
+          filterUserId: 'me',
+          post: mappedPost,
+          center: { lat: mappedPost.lat, lng: mappedPost.lng }
+        }, 
+        replace: true 
+      });
     } catch (err: any) {
       showError('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'));
     } finally {
