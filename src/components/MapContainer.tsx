@@ -338,22 +338,21 @@ useEffect(() => {
     if (overlay) {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        // 하이라이트 중복 실행 방지 및 초기화
+        // 기존 상태 초기화
         content.classList.remove('highlighted');
-        void content.offsetWidth;
+        void content.offsetWidth; 
         
         content.classList.add('highlighted');
-        // 카카오맵 오버레이 자체의 ZIndex를 최상단으로
         overlay.setZIndex(99999);
 
-        // 애니메이션이 끝난 후 (4초) 원복
+        // 핑 효과 3번 (0.8s * 3 = 2.4s) 이후 원복
         setTimeout(() => {
           if (content.classList.contains('highlighted')) {
             content.classList.remove('highlighted');
             const post = posts.find(p => p.id === postId);
             overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
           }
-        }, 4000);
+        }, 2500);
       }
     }
   };
