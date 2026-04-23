@@ -319,15 +319,8 @@ const MapContainer = ({
   // ✅ highlighted 클래스 토글
   if (isHighlighted) {
   if (!content.classList.contains('highlighted')) {
-    // ✅ content를 로컬 변수로 캡처 후 setTimeout에 전달
-    const targetContent = content;
-    const targetOverlay = existingOverlay;
-    setTimeout(() => {
-      if (targetContent && targetContent.isConnected) {
-        targetContent.classList.add('highlighted');
-        targetOverlay.setZIndex(10000);
-      }
-    }, 1300);
+    content.classList.add('highlighted');
+    existingOverlay.setZIndex(10000);
   }
 } else {
     if (content.classList.contains('highlighted')) {
