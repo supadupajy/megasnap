@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { App as CapApp } from '@capacitor/app';
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
+import PostDetail from "./pages/PostDetail";
 import UserProfile from "./pages/UserProfile";
 import Follow from "./pages/Follow";
 import Popular from "./pages/Popular";
@@ -165,6 +166,7 @@ const AnimatedRoutes = () => {
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/post/:id" element={<PostDetail />} />
               <Route path="/profile/follow/:userId" element={<Follow />} />
               <Route path="/profile/friends" element={<FriendList />} />
               <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
