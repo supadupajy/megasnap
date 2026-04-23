@@ -60,9 +60,9 @@ const AnimatedRoutes = () => {
   
   const isChatPage = location.pathname.startsWith("/chat");
   const isFriendsPage = ["/friends", "/profile/friends"].includes(location.pathname);
-  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow", "/friends", "/profile/friends"].some(
-    path => location.pathname.startsWith(path)
-  );
+  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow"].some(
+  path => location.pathname.startsWith(path)
+);
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
   const isMainTab = ["/", "/popular", "/search", "/messages", "/profile", "/write"].includes(location.pathname);
