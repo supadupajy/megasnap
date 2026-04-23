@@ -48,37 +48,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [dbPostData, setDbPostData] = useState<any>(null);
 
-  // [CRITICAL FIX] "여기보기"의 PostItem.tsx와 동일한 데이터 정규화 로직 적용
+  // [CRITICAL FIX] 데이터 구조를 여기보기(Index.tsx/PostItem)와 100% 동일하게 강제 매핑
   const currentPost = useMemo(() => {
     const basePost = posts[currentPostIndex];
     if (!basePost) return null;
     
-    // DB에서 직접 가져온 필드들(youtube_url 등)을 basePost의 속성으로 병합
-    const merged = { ...basePost, ...(dbPostData && dbPostData.id === basePost.id ? dbPostData : {}) };
+    // DB 원본 데이터 (p) 와 UI용 데이터 (basePost) 병합
+    const p = dbPostData && dbPostData.id === basePost.id ? dbPostData : basePost;
     
-    // youtubeUrl 필드 강제 보정 (youtube_url -> youtubeUrl)
-    if (merged.youtube_url && !merged.youtubeUrl) {
-      merged.youtubeUrl = merged.youtube_url;
-    }
-    if (merged.video_url && !merged.videoUrl) {
-      merged.videoUrl = merged.video_url;
-    }
-    
-    return merged;
+    // Index.tsx의 mapDbToPost 로직을 그대로 가져와서 필드 복원
+    return {
+      ...basePost,
+      ...p,
+      youtubeUrl: p.youtube_url || p.youtubeUrl,
+      videoUrl: p.video_url || p.videoUrl,
+      image: p.image_url || p.image || basePost.image
+    };
   }, [posts, currentPostIndex, dbPostData]);
 
-  // [DEBUG] 실시간 데이터 확인
+  // [DEBUG] 실제 어떤 데이터가 들어오는지 브라우저 콘솔에 출력 (F12로 확인 가능)
   useEffect(() => {
-    if (currentPost) {
-      console.log('[PostDetail] Current Media Data:', {
-        id: currentPost.id,
-        youtubeUrl: currentPost.youtubeUrl,
-        youtube_url: currentPost.youtube_url,
-        videoUrl: currentPost.videoUrl,
-        video_url: currentPost.video_url
-      });
+    if (currentPost && isOpen) {
+      console.log('--- PostDetail Media Debug ---');
+      console.log('Post ID:', currentPost.id);
+      console.log('Youtube URL:', currentPost.youtubeUrl);
+      console.log('Video URL:', currentPost.videoUrl);
+      console.log('------------------------------');
     }
-  }, [currentPost]);
+  }, [currentPost, isOpen]);
 
   const getYouTubeIdLocal = (url?: string) => {
     if (!url) return null;
@@ -88,7 +85,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const videoId = useMemo(() => {
     if (!currentPost) return null;
-    // PostItem.tsx와 동일한 필드 접근 방식
     return getYouTubeIdLocal(currentPost.youtubeUrl);
   }, [currentPost]);
 
@@ -511,23 +507,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - PostItem.tsx의 렌더링 로직을 그대로 이식 */}
+                      {/* 미디어 영역 - Index.tsx/PostItem.tsx와 동일한 구조로 완전 일치 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
                           {videoId ? (
-                            <div className="w-full h-full relative">
+                            <div className="absolute inset-0 w-full h-full z-[100]">
                               <iframe
-                                key={`yt-${videoId}`}
+                                key={`yt-${currentPost.id}-${videoId}`}
                                 src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full border-0"
                                 allow="autoplay; encrypted-media"
                                 allowFullScreen
                               />
                             </div>
                           ) : vUrl ? (
-                            <div className="w-full h-full relative">
+                            <div className="absolute inset-0 w-full h-full z-[100]">
                               <video 
-                                key={`vid-${vUrl}`}
+                                key={`vid-${currentPost.id}-${vUrl}`}
                                 src={vUrl} 
                                 className="w-full h-full object-cover" 
                                 autoPlay 
