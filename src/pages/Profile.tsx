@@ -214,21 +214,6 @@ const Profile = () => {
     setTimeout(() => { const element = document.getElementById(`post-${postId}`); if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
   };
 
-  const handleGridItemClick = (postId: string) => {
-    // [FIX] 사진을 누르면 해당 포스팅이 지도 위에서 보이도록 메인 페이지로 이동
-    const post = myPosts.find(p => p.id === postId);
-    if (post) {
-      navigate('/', {
-        state: {
-          post,
-          center: { lat: post.lat, lng: post.lng },
-          zoom: 16,
-          showPostDetail: true
-        }
-      });
-    }
-  };
-
   const handleImageError = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
   const handlePostDelete = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
   
@@ -314,15 +299,11 @@ const Profile = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
                     {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
-                      <div
-                        key={post.id}
-                        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer active:opacity-70 transition-all"
-                        onClick={() => handleGridItemClick(post.id)}
-                      >
+                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group">
                         <img
                           src={post.image_url || post.image}
                           alt=""
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-opacity"
                           onError={() => handleImageError(post.id)}
                         />
                       </div>
