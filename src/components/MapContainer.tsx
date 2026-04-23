@@ -415,21 +415,13 @@ const MapContainer = ({
   };
 
   useEffect(() => {
-    if (isMapReady && mapInstance.current && center) {
-      const currentCenter = mapInstance.current.getCenter();
-      const latDiff = Math.abs(currentCenter.getLat() - center.lat);
-      const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
-      if (latDiff > 0.00001 || lngDiff > 0.00001) {
-        // ✅ 이동 완료 후 onMoveComplete 호출
-        smoothMoveTo(center.lat, center.lng, () => {
-          onMoveCompleteRef.current?.();
-        });
-      } else {
-        // ✅ 이동 불필요 시 즉시 콜백
-        onMoveCompleteRef.current?.();
-      }
-    }
-  }, [center, isMapReady]);
+  if (isMapReady && mapInstance.current && center) {
+    const currentCenter = mapInstance.current.getCenter();
+    const latDiff = Math.abs(currentCenter.getLat() - center.lat);
+    const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
+    if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
+  }
+}, [center, isMapReady]);
 
   useEffect(() => {
     const kakao = (window as any).kakao;
