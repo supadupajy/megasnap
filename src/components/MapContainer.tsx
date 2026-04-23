@@ -305,18 +305,30 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
       } else {
-        const content = existingOverlay.getContent() as HTMLElement;
-        
-        // [FIX] 기존 오버레이가 다시 지도로 들어올 때 opacity 0 현상 방지
-        if (existingOverlay.getMap() === null) {
-          existingOverlay.setMap(mapInstance.current);
-        }
+  const content = existingOverlay.getContent() as HTMLElement;
+  
+  if (existingOverlay.getMap() === null) {
+    existingOverlay.setMap(mapInstance.current);
+  }
 
-        if (content.getAttribute('data-content-state') !== contentStateKey) {
-          content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-          content.setAttribute('data-content-state', contentStateKey); 
-        }
-      }
+  if (content.getAttribute('data-content-state') !== contentStateKey) {
+    content.innerHTML = getMarkerInnerHtml(post, isViewed); 
+    content.setAttribute('data-content-state', contentStateKey); 
+  }
+
+  // ✅ highlighted 클래스 토글
+  if (isHighlighted) {
+    if (!content.classList.contains('highlighted')) {
+      content.classList.add('highlighted');
+      existingOverlay.setZIndex(10000);
+    }
+  } else {
+    if (content.classList.contains('highlighted')) {
+      content.classList.remove('highlighted');
+      existingOverlay.setZIndex(post.isAd ? 500 : post.borderType !== 'none' ? 400 : 300);
+    }
+  }
+}
     });
   }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
 
