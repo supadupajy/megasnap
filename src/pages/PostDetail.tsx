@@ -64,6 +64,28 @@ const PostDetail = () => {
     ));
   };
 
+  const handlePostDelete = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setAllPosts(prev => prev.filter(p => p.id !== postId));
+      showSuccess('게시물이 삭제되었습니다.');
+      
+      // 만약 현재 리스트에 포스팅이 더 이상 없다면 이전 화면으로 이동
+      if (allPosts.length <= 1) {
+        navigate(-1);
+      }
+    } catch (err) {
+      console.error('[PostDetail] Delete error:', err);
+      showError('게시물 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   const mapDbToPost = async (p: any): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
@@ -175,6 +197,7 @@ const PostDetail = () => {
                 disablePulse={true}
                 autoPlayVideo={true}
                 onLikeToggle={() => handleLikeToggle(p.id)}
+                onDelete={() => handlePostDelete(p.id)}
                 onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
               />
             </div>

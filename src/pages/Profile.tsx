@@ -219,7 +219,23 @@ const Profile = () => {
   };
 
   const handleImageError = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
-  const handlePostDelete = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
+  const handlePostDelete = useCallback(async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setMyPosts(prev => prev.filter(p => p.id !== postId));
+      setSavedPosts(prev => prev.filter(p => p.id !== postId));
+      showSuccess('게시물이 삭제되었습니다.');
+    } catch (err) {
+      console.error('[Profile] Delete error:', err);
+      showError('게시물 삭제 중 오류가 발생했습니다.');
+    }
+  }, []);
   
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
@@ -295,7 +311,7 @@ const Profile = () => {
                           onLikeToggle={() => handleLikeToggle(post.id, false)} 
                           onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)} 
                           onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)} 
-                          onDelete={handlePostDelete} 
+                          onDelete={() => handlePostDelete(post.id)} 
                         />
                       </div>
                     ))}
