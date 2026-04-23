@@ -201,15 +201,6 @@ const PostListOverlay = ({
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
-          
-          // ✅ [FIX] 추가로 불러온 포스팅들도 즉시 "읽음(조회)" 처리 트리거
-          // 뷰어의 markAsViewed를 통해 로컬/서버에 읽음 상태 전파
-          if (filteredNew.length > 0) {
-            filteredNew.forEach(post => {
-              window.dispatchEvent(new CustomEvent('mark-post-viewed', { detail: { id: post.id } }));
-            });
-          }
-          
           return [...prev, ...filteredNew];
         });
       }
@@ -323,18 +314,14 @@ const PostListOverlay = ({
           <div className="flex flex-col">
             {posts.map((post) => (
               <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <ObservedPostItem 
+                <PostItem 
                   post={post}
-                  isViewed={false} // 내부 IntersectionObserver에서 처리하므로 초기값은 false
-                  onVisible={(id) => {
-                    // ✅ 리스트에서 화면에 보일 때(60% 이상 노출 시) 읽음 처리 트리거
-                    window.dispatchEvent(new CustomEvent('mark-post-viewed', { detail: { id } }));
-                  }}
                   onLikeToggle={() => {}}
                   onLocationClick={(e, lat, lng) => {
                     window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                   }}
                   onDelete={(id) => onDeletePost?.(id)}
+                  autoPlayVideo={true}
                 />
               </div>
             ))}
