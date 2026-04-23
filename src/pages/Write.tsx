@@ -224,14 +224,18 @@ const Write = () => {
     setIsSubmitting(true);
     try {
       const uploadedUrls: string[] = [];
-      for (const media of mediaFiles) {
+      const mediaToUpload = [...mediaFiles]; // 고정된 리스트 사용
+
+      for (const media of mediaToUpload) {
         const timestamp = new Date().getTime();
         const folder = media.type === 'video' ? 'post-videos' : 'post-images';
         const fileExt = media.file.name.split('.').pop();
         const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
+        
         const { error: uploadError } = await supabase.storage.from(folder).upload(filePath, media.file);
         if (uploadError) throw uploadError;
+        
         const { data: { publicUrl } } = supabase.storage.from(folder).getPublicUrl(filePath);
         uploadedUrls.push(publicUrl);
       }
@@ -249,7 +253,7 @@ const Write = () => {
           user_name: profile?.nickname || '탐험가',
           user_avatar: profile?.avatar_url,
           category,
-          video_url: mediaFiles[0]?.type === 'video' ? uploadedUrls[0] : null,
+          video_url: mediaToUpload[0]?.type === 'video' ? uploadedUrls[0] : null,
         })
         .select()
         .single();
