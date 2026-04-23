@@ -129,9 +129,16 @@ const Index = () => {
     setSelectedPostId(null);
     setSearchResultLocation(null);
     setMapCenter(center || { lat: post.lat, lng: post.lng });
+    
+    // [FIX] 하이라이트 애니메이션이 무한 반복되지 않도록 조정
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
     setHighlightedPostId(post.id);
-    highlightTimeoutRef.current = window.setTimeout(() => { setHighlightedPostId(null); highlightTimeoutRef.current = null; }, 4000);
+    
+    // 3회 반복 시간에 해당하는 6초(2s * 3) 후 하이라이트 제거
+    highlightTimeoutRef.current = window.setTimeout(() => { 
+      setHighlightedPostId(null); 
+      highlightTimeoutRef.current = null; 
+    }, 6000);
   }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {

@@ -336,7 +336,8 @@
 
 .marker-container.highlighted .marker-highlight-ping {
   display: block;
-  animation: marker-ping 2s ease-out infinite;
+  /* [FIX] 3번 반복 후 멈춤 (2s * 3 = 6s) */
+  animation: marker-ping 2s ease-out 3;
 }
 
 @keyframes search-ping {
@@ -376,6 +377,7 @@
 }
 
 .marker-container.highlighted .marker-content-wrapper {
+  /* [FIX] 하이라이트 시 1.5배 확대 효과도 동일하게 부드럽게 돌아오도록 설정 */
   --marker-scale: 1.5 !important;
 }
 
