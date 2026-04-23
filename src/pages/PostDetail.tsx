@@ -138,11 +138,11 @@ const PostDetail = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* Header Space for Banner */}
+      {/* 1. 상단 헤더 공간 (88px) - 투명하게 설정하여 뒤의 HeaderAdBanner가 보이도록 함 */}
       <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
 
-      {/* Title Header - Matching Popular Page Style */}
-      <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      {/* 2. 고정 영역: 페이지 타이틀 - 스크롤해도 고정됨 */}
+      <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MY POSTS</p>
@@ -152,8 +152,8 @@ const PostDetail = () => {
         </button>
       </div>
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar bg-white">
+      {/* 3. 실제 스크롤이 일어나는 콘텐츠 영역 */}
+      <main className="flex-1 overflow-y-auto no-scrollbar bg-white overscroll-contain">
         <div className="pb-28">
           {allPosts.map((p) => (
             <div key={p.id} id={`post-${p.id}`}>
