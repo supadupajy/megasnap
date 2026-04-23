@@ -64,11 +64,10 @@ const PostItem = ({
   onLocationClick,
   onDelete,
   disablePulse = false,
-  autoPlayVideo = true 
+  autoPlayVideo = true // ✅ 기본값을 true로 설정
 }: PostItemProps) => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const { user: authUser, session } = useAuth();
@@ -100,38 +99,24 @@ const PostItem = ({
     window.open(COCA_COLA_URL, '_blank');
   }, []);
 
-  // ✅ 유튜브 및 일반 비디오 제어 통합 로직
+  // ✅ 비디오 자동 재생 및 소리 설정 로직 개선
   useEffect(() => {
-    if (!autoPlayVideo || !isVisible || !isReadyToPlay) {
-      // 화면에서 벗어나면 정지
-      if (videoRef.current) videoRef.current.pause();
-      if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-      }
-      return;
-    }
-
-    // 1. 일반 비디오 파일 재생
-    if (videoRef.current) {
+    if (autoPlayVideo && videoRef.current) {
       const video = videoRef.current;
-      video.muted = false;
-      video.volume = 0.5;
+      video.muted = false; // ✅ 소리 켜기
+      video.volume = 0.5;  // 볼륨 적정 수준 설정
+      
       const playPromise = video.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
+        playPromise.catch(error => {
+          // 브라우저 정책상 첫 상호작용 전에는 소리 있는 재생이 막힐 수 있음
+          console.log('[PostItem] Autoplay with sound blocked, trying muted...');
           video.muted = true;
           video.play();
         });
       }
     }
-
-    // 2. 유튜브 iframe 재생 제어
-    if (iframeRef.current?.contentWindow) {
-      // 유튜브 API 커맨드 전송 (소리 켜고 재생)
-      iframeRef.current.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-      iframeRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-    }
-  }, [isVisible, isReadyToPlay, autoPlayVideo, post.youtubeUrl]);
+  }, [autoPlayVideo, currentSlide]); // 슬라이드 변경 시에도 체크
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -431,8 +416,7 @@ const PostItem = ({
         {videoId ? (
           <div className="w-full h-full">
             <iframe
-              ref={iframeRef}
-              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+              src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${(autoPlayVideo && isVisible && isReadyToPlay) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
               className="w-full h-full object-cover"
               allow="autoplay; encrypted-media"
               allowFullScreen
@@ -445,17 +429,6 @@ const PostItem = ({
                 className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
               />
             )}
-          </div>
-        ) : post.videoUrl ? (
-          <div className="w-full h-full">
-            <video
-              ref={videoRef}
-              src={post.videoUrl}
-              className="w-full h-full object-cover"
-              loop
-              playsInline
-              onLoadedData={() => setVideoLoaded(true)}
-            />
           </div>
         ) : (
           <div className="relative w-full h-full">
