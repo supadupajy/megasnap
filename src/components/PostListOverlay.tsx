@@ -30,7 +30,53 @@ const ObservedPostItem = ({
   onDelete: (id: string) => void
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
-  const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false); // ✅ 현재 재생 가시성 상태 추가
+  const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
+  const [fullPost, setFullPost] = useState<Post>(post);
+
+  // ✅ [FIX] 마커용 경량 데이터인 경우, 화면에 보일 때 프로필 등 상세 정보를 불러옴
+  useEffect(() => {
+    const fetchFullData = async () => {
+      if (post.user.name === '...') {
+        try {
+          const { data: p, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', post.id)
+            .single();
+
+          if (p && !error) {
+            let userName = p.user_name || '탐험가';
+            let userAvatar = p.user_avatar || '';
+            
+            if (p.user_id) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('nickname, avatar_url')
+                .eq('id', p.user_id)
+                .maybeSingle();
+              
+              if (profileData) {
+                userName = profileData.nickname || userName;
+                userAvatar = profileData.avatar_url || userAvatar;
+              }
+            }
+
+            setFullPost(prev => ({
+              ...prev,
+              user: { ...prev.user, name: userName, avatar: userAvatar },
+              content: p.content?.replace(/^\[AD\]\s*/, '') || ''
+            }));
+          }
+        } catch (err) {
+          console.error('[PostList] Full data fetch error:', err);
+        }
+      }
+    };
+
+    if (isCurrentlyVisible) {
+      fetchFullData();
+    }
+  }, [post.id, post.user.name, isCurrentlyVisible]);
 
   useEffect(() => {
     // 1. 읽음 처리용 옵저버 (기존 로직 유지)
@@ -70,12 +116,12 @@ const ObservedPostItem = ({
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-[150px]">
       <PostItem 
-        post={post}
+        post={fullPost}
         isViewed={isViewed} 
         onLikeToggle={onLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
-        autoPlayVideo={isCurrentlyVisible} // ✅ 현재 화면에 보이는 상태를 전달하여 자동 재생 제어
+        autoPlayVideo={isCurrentlyVisible}
       />
     </div>
   );
@@ -105,7 +151,7 @@ const PostListOverlay = ({
   onDeletePost
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
-  const { viewedIds, markAsViewed } = useViewedPosts(); // ✅ 읽음 처리 훅 연결
+  const { viewedIds, markAsViewed } = useViewedPosts();
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -345,7 +391,7 @@ const PostListOverlay = ({
                 key={post.id}
                 post={post}
                 isViewed={viewedIds.has(post.id)}
-                onVisible={(id) => markAsViewed(id)} // ✅ 화면에 보이면 읽음 처리 실행
+                onVisible={(id) => markAsViewed(id)}
                 onLikeToggle={() => {}}
                 onLocationClick={(e, lat, lng) => {
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
