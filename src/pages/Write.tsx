@@ -168,17 +168,10 @@ const Write = () => {
       if (insertError) throw insertError;
 
       showSuccess('게시물이 등록되었습니다! ✨');
-      
-      // [FINAL FIX] Write 페이지에서 Index로 넘어가기 직전에 트리거를 예약하여 
-      // 상태 유실을 방지하고 가시성을 확보합니다.
-      const triggerEvent = new CustomEvent('force-confetti-trigger');
-      window.dispatchEvent(triggerEvent);
 
-      clear(); // [FIX] useWriteStore 초기화
-      postDraftStore.clear();
-      
-      // 메인 페이지로 즉시 이동 (이제 Index 페이지에서 마커 등장 시점에 맞춰 폭죽을 터뜨림)
-      navigate('/');
+clear();
+postDraftStore.clear();
+navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전달
     } catch (err: any) {
       showError('저장 중 오류가 발생했습니다.');
     } finally {
