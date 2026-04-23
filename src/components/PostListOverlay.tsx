@@ -263,7 +263,7 @@ const PostListOverlay = ({
             {/* Pull Up Loading Area */}
             {hasMore && (
               <div 
-                className="py-0 flex flex-col items-center justify-center transition-all duration-200"
+                className="py-1 flex flex-col items-center justify-center transition-all duration-200"
                 style={{ height: `${Math.max(120, pullUpDistance + 60)}px` }}
               >
                 <div className="flex flex-col items-center gap-2 mb-10">
