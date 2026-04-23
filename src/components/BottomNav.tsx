@@ -9,73 +9,69 @@ import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
 const BottomNav = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const handleWriteClick = () => {
-    // 이동 전 현재 경로가 write가 아니라면 새로운 작성을 시작하는 것이므로
-    // 필요 시 여기서 draft를 유지하거나 초기화할 수 있습니다.
-    navigate('/write');
-  };
-
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
 
+  const handleWriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (location.pathname === '/write') {
+      // 이미 글쓰기 페이지라면 이전 화면으로 돌아가거나 지도로 이동
+      if (window.history.length > 2) {
+        navigate(-1);
+      } else {
+        navigate('/', { replace: true });
+      }
+    } else {
+      navigate('/write');
+    }
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-[100px] bg-white border-t border-gray-100 flex items-center justify-around px-2 z-[2000] pb-6">
-      <button 
-        onClick={() => navigate('/')}
-        className={cn(
-          "flex flex-col items-center gap-1.5 transition-all active:scale-90 w-full", 
-          isActive('/') ? "text-indigo-600" : "text-gray-400"
-        )}
-      >
-        <Map className={cn("w-6 h-6", isActive('/') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">지도</span>
-      </button>
+    <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 px-6 py-3 z-50">
+      <div className="max-w-md mx-auto flex items-end justify-between relative">
+        <Link to="/" className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", isActive('/') ? "text-indigo-600 scale-110" : "text-gray-400")}>
+          <Map className={cn("w-6 h-6", isActive('/') && "fill-indigo-600")} />
+          <span className="text-[10px] font-bold">지도</span>
+        </Link>
+        
+        <Link to="/popular" className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", isActive('/popular') ? "text-indigo-600 scale-110" : "text-gray-400")}>
+          <Flame className={cn("w-6 h-6", isActive('/popular') && "fill-indigo-600")} />
+          <span className="text-[10px] font-bold">인기</span>
+        </Link>
 
-      <button 
-        onClick={() => navigate('/popular')}
-        className={cn(
-          "flex flex-col items-center gap-1.5 transition-all active:scale-90 w-full", 
-          isActive('/popular') ? "text-orange-500" : "text-gray-400"
-        )}
-      >
-        <Flame className={cn("w-6 h-6", isActive('/popular') ? "fill-orange-500 stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">인기</span>
-      </button>
-      
-      <button 
-        onClick={handleWriteClick}
-        className="flex flex-col items-center gap-1 group -mt-10"
-      >
-        <div className="w-16 h-16 bg-indigo-600 rounded-[24px] flex items-center justify-center shadow-[0_15px_35px_-5px_rgba(79,70,229,0.5)] group-active:scale-90 transition-all border-4 border-white">
-          <Plus className="w-8 h-8 text-white stroke-[3px]" />
+        {/* Write Button - Floating style */}
+        <div className="relative -top-6">
+          <button 
+            onClick={handleWriteClick}
+            className={cn(
+              "w-16 h-16 rounded-[24px] flex items-center justify-center shadow-2xl transition-all active:scale-95 border-4 border-white",
+              isActive('/write') 
+                ? "bg-gray-800 rotate-45 text-white" 
+                : "bg-indigo-600 text-white shadow-indigo-200"
+            )}
+          >
+            <Plus className="w-8 h-8 stroke-[3px]" />
+          </button>
+          <span className={cn(
+            "absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black transition-colors",
+            isActive('/write') ? "text-indigo-600" : "text-gray-400"
+          )}>
+            글쓰기
+          </span>
         </div>
-        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">글쓰기</span>
-      </button>
 
-      <button 
-        onClick={() => navigate('/search')}
-        className={cn(
-          "flex flex-col items-center gap-1.5 transition-all active:scale-90 w-full", 
-          isActive('/search') ? "text-indigo-600" : "text-gray-400"
-        )}
-      >
-        <Search className={cn("w-6 h-6", isActive('/search') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">친구검색</span>
-      </button>
+        <Link to="/search" className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", isActive('/search') ? "text-indigo-600 scale-110" : "text-gray-400")}>
+          <Search className={cn("w-6 h-6", isActive('/search') && "fill-indigo-600")} />
+          <span className="text-[10px] font-bold">친구검색</span>
+        </Link>
 
-      <button 
-        onClick={() => navigate('/profile')}
-        className={cn(
-          "flex flex-col items-center gap-1.5 transition-all active:scale-90 w-full", 
-          isActive('/profile') ? "text-indigo-600" : "text-gray-400"
-        )}
-      >
-        <User className={cn("w-6 h-6", isActive('/profile') ? "stroke-[2.5px]" : "stroke-[2px]")} />
-        <span className="text-[10px] font-bold tracking-tight">내정보</span>
-      </button>
-    </nav>
+        <Link to="/profile" className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", isActive('/profile') ? "text-indigo-600 scale-110" : "text-gray-400")}>
+          <User className={cn("w-6 h-6", isActive('/profile') && "fill-indigo-600")} />
+          <span className="text-[10px] font-bold">내정보</span>
+        </Link>
+      </div>
+    </div>
   );
 };
 
