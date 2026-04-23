@@ -306,7 +306,35 @@ export const cleanupInvalidYoutubePosts = async () => {
 };
 
 /**
- * [SPECIAL] 현재 보고 있는 지도 화면 내에 15개의 포스팅을 생성합니다.
+ * [ADMIN] 현재 보고 있는 지도 화면 내의 모든 포스팅을 삭제합니다.
+ */
+export const deletePostsInBounds = async (
+  bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }
+) => {
+  console.log("🗑️ [Admin] 화면 내 데이터 삭제를 시작합니다...", bounds);
+
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .delete()
+      .gte('latitude', Math.min(bounds.sw.lat, bounds.ne.lat))
+      .lte('latitude', Math.max(bounds.sw.lat, bounds.ne.lat))
+      .gte('longitude', Math.min(bounds.sw.lng, bounds.ne.lng))
+      .lte('longitude', Math.max(bounds.sw.lng, bounds.ne.lng))
+      .select('id');
+
+    if (error) throw error;
+
+    console.log(`✅ [Admin] 화면 범위 내 ${data?.length || 0}개의 포스팅이 삭제되었습니다.`);
+    return data?.length || 0;
+  } catch (err) {
+    console.error("❌ [Admin] 화면 내 데이터 삭제 실패:", err);
+    throw err;
+  }
+};
+
+/**
+ * [SPECIAL] 현재 보고 있는 지도 화면 내에 5개의 포스팅을 생성합니다.
  */
 export const seedInBoundsPosts = async (
   currentUserId: string, 
