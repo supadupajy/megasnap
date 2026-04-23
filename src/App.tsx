@@ -144,24 +144,15 @@ const AnimatedRoutes = () => {
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname === '/write' ? '/' : location.pathname}
-            initial={{
-              opacity: 0,
-              x: isMainTab ? 0 : (isBackAction ? -100 : 100),
-              scale: isMainTab ? 0.98 : 1
-            }}
+            initial={false}
             animate={{ 
               opacity: 1, 
               x: 0,
               scale: 1
             }}
-            exit={{ 
-              opacity: 0, 
-              x: isMainTab ? 0 : (isBackAction ? 100 : -100),
-              scale: isMainTab ? 0.98 : 1
-            }}
+            exit={{ opacity: 1 }}
             transition={{ 
-              duration: 0.3,
-              ease: [0.32, 0.72, 0, 1] 
+              duration: 0
             }}
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
