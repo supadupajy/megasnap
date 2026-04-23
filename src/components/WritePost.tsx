@@ -328,7 +328,8 @@ const WritePost = ({ isOpen, onClose, onPostCreated, onStartLocationSelection, o
       <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
         {/* ✅ 핵심 수정: translateY 대신 bottom으로 올림 → 내부 flex 높이가 89vh 그대로 유지되어 빈 공간 없음 */}
         <DrawerContent
-          className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none"
+            className="flex flex-col outline-none bg-white z-[40] shadow-2xl h-[89vh] rounded-t-[40px] border-none overflow-x-hidden"
+
           style={{
             position: 'fixed',
             bottom: keyboardHeight,
