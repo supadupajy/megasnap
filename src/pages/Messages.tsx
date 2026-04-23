@@ -206,6 +206,7 @@ const Messages = () => {
   </button>
   <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
     <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+    </div>
         <button
           onClick={() => navigate('/friends')}
           className="p-2 hover:bg-gray-50 rounded-full transition-colors"
