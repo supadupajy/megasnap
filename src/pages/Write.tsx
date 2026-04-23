@@ -156,42 +156,50 @@ const Write = () => {
     setMediaFiles(newMedia);
   };
 
-  const [dragActiveIdx, setDragActiveIdx] = useState<number | null>(null);
+  const dragActiveIdxRef = useRef<number | null>(null);
+const isDraggingActiveRef = useRef(false);
 
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
-    const media = mediaFiles[idx];
-    if (!media || media.type !== 'image') return;
-    
-    const isPortrait = media.orientation === 'portrait';
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+const handleDragStart = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+  const media = mediaFiles[idx];
+  if (!media || media.type !== 'image') return;
+  
+  const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+  const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-    if (dragActiveIdx !== idx) {
-      setDragActiveIdx(idx);
-      dragStartRef.current = { x: clientX, y: clientY };
-      return;
-    }
+  dragActiveIdxRef.current = idx;
+  isDraggingActiveRef.current = true;
+  dragStartRef.current = { x: clientX, y: clientY };
+};
 
-    const deltaX = clientX - dragStartRef.current.x;
-    const deltaY = clientY - dragStartRef.current.y;
-    
-    dragStartRef.current = { x: clientX, y: clientY };
+const handleDragMove = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
+  if (!isDraggingActiveRef.current || dragActiveIdxRef.current !== idx) return;
+  
+  const media = mediaFiles[idx];
+  if (!media || media.type !== 'image') return;
 
-    // 민감도: % 단위이므로 화면 크기에 맞춰 조정 (0.2 ~ 0.5 권장)
-    const sensitivity = 0.35;
-    
-    const currentX = media.crop?.x ?? 50;
-    const currentY = media.crop?.y ?? 50;
+  const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+  const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-    const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
-    const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
+  const deltaX = clientX - dragStartRef.current.x;
+  const deltaY = clientY - dragStartRef.current.y;
+  dragStartRef.current = { x: clientX, y: clientY };
 
-    updateMediaCrop(idx, newX, newY);
-  };
+  const sensitivity = 0.35;
+  const isPortrait = media.orientation === 'portrait';
+  const currentX = media.crop?.x ?? 50;
+  const currentY = media.crop?.y ?? 50;
 
-  const stopDragging = () => {
-    setDragActiveIdx(null);
-  };
+  // 세로형: 세로 스크롤만, 가로형: 가로 스크롤만
+  const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
+  const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
+
+  updateMediaCrop(idx, newX, newY);
+};
+
+const stopDragging = () => {
+  isDraggingActiveRef.current = false;
+  dragActiveIdxRef.current = null;
+};
 
   const captureVideoThumbnail = (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
