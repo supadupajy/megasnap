@@ -51,21 +51,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [iframeReady, setIframeReady] = useState(false);
   
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  const [dbPostData, setDbPostData] = useState<any>(null); // DB에서 직접 가져온 상세 데이터
   
-  // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
-  const youtubeId = useMemo(() => {
+  // [CRITICAL FIX] "여기보기(PostItem)"의 renderMedia 로직과 동일하게 맞춤
+  const currentPost = useMemo(() => {
+    const basePost = posts[currentPostIndex];
+    if (!basePost) return null;
+    return dbPostData && dbPostData.id === basePost.id ? { ...basePost, ...dbPostData } : basePost;
+  }, [posts, currentPostIndex, dbPostData]);
+  
+  // [CRITICAL FIX] PostItem.tsx의 getYouTubeId와 동일한 로직 사용
+  const getYouTubeIdLocal = (url?: string) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const videoId = useMemo(() => {
     if (!currentPost) return null;
-    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
-    console.log('[PostDetail] Checking Youtube URL:', { id: currentPost.id, url });
-    return getYoutubeId(url || '');
+    // PostItem과 동일하게 youtubeUrl, youtube_url 모두 체크
+    return getYouTubeIdLocal(currentPost.youtubeUrl || currentPost.youtube_url);
   }, [currentPost]);
 
   const videoUrl = useMemo(() => {
     if (!currentPost) return null;
-    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
-    console.log('[PostDetail] Checking Video URL:', { id: currentPost.id, url });
-    return url;
+    return currentPost.videoUrl || currentPost.video_url;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -88,18 +98,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // Dialog 오픈 애니메이션(약 300ms) 완료 후 iframe을 마운트해야
   // 사용자 탭 제스처 컨텍스트가 살아있어 mute=0 autoplay가 허용됨
   useEffect(() => {
-    if (isOpen && (youtubeId || videoUrl)) {
+    if (isOpen && (videoId || videoUrl)) {
       const timer = setTimeout(() => setIframeReady(true), 300);
       return () => clearTimeout(timer);
     } else {
       setIframeReady(false);
     }
-  }, [isOpen, youtubeId, videoUrl]);
+  }, [isOpen, videoId, videoUrl]);
 
   // 포스트가 바뀔 때도 iframe 리셋 후 재마운트
   useEffect(() => {
     setIframeReady(false);
-    if (isOpen && (youtubeId || videoUrl)) {
+    if (isOpen && (videoId || videoUrl)) {
       const timer = setTimeout(() => setIframeReady(true), 300);
       return () => clearTimeout(timer);
     }
@@ -461,53 +471,34 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 */}
+                      {/* 미디어 영역 - PostItem.tsx의 구조와 동일하게 통일 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-
-                          {/* ✅ [FIX] YouTube iframe - Dialog 오픈 후 300ms 뒤에 마운트하여 autoplay 허용 */}
-                          {youtubeId ? (
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <iframe
-                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                  className="w-full h-full border-0"
-                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                                  title="YouTube video player"
-                                  allow="autoplay; encrypted-media; picture-in-picture"
-                                  allowFullScreen
-                                />
-                              ) : (
-                                /* 로딩 플레이스홀더 - iframe 준비 전 표시 */
-                                <div className="w-full h-full flex items-center justify-center bg-black">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                </div>
-                              )}
+                          {videoId ? (
+                            <div className="absolute inset-0 w-full h-full z-[100]">
+                              <iframe
+                                key={`detail-yt-${currentPost.id}-${videoId}`}
+                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
+                                className="w-full h-full object-cover"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                              />
                             </div>
-
                           ) : videoUrl ? (
-                            /* ✅ [FIX] 일반 video도 동일하게 300ms 후 마운트 */
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <video
-                                  key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                  src={videoUrl}
-                                  className="w-full h-full object-cover"
-                                  autoPlay
-                                  loop
-                                  playsInline
-                                  controls
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-black">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                </div>
-                              )}
+                            <div className="absolute inset-0 w-full h-full z-[100]">
+                              <video 
+                                key={`detail-vid-${currentPost.id}-${videoUrl}`}
+                                src={videoUrl} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                loop 
+                                playsInline 
+                                controls 
+                              />
                             </div>
-
                           ) : (
-                            <div className="relative w-full h-full z-10 bg-gray-100">
-                              {/* 이미지 슬라이더 */}
+                            <div className="relative w-full h-full z-10">
+                              {/* 이미지 슬라이더 (영상이 없을 때만) */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
