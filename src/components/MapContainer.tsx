@@ -76,11 +76,7 @@ const MapContainer = ({
     const handleUpdateViewedMarkers = (e: any) => {
       const ids = e.detail?.viewedIds;
       if (Array.isArray(ids)) {
-        setInternalViewedIds(prev => {
-          const next = new Set(prev);
-          ids.forEach(id => next.add(id));
-          return next;
-        });
+        setInternalViewedIds(new Set(ids));
       }
     };
     window.addEventListener('update-viewed-markers', handleUpdateViewedMarkers);
@@ -250,36 +246,20 @@ const MapContainer = ({
     }
   }, [level]);
 
+  // ✅ 마커 렌더링 통합 로직 (props 변화 및 internalViewedIds 변화 모두 감지)
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
-    const level = mapInstance.current.getLevel();
-    if (level >= 8) {
-      overlaysRef.current.forEach(o => o.setMap(null));
-      return;
-    }
-
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
-    
-    // viewedPostIds(props)와 internalViewedIds(event) 합치기
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
-
-    overlaysRef.current.forEach((overlay, id) => {
-      if (!currentPostIds.has(id) || !bounds.contain(overlay.getPosition())) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
-      }
-    });
 
     posts.forEach(post => {
       if (!post) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
       if (!bounds.contain(position)) return;
 
-      // viewedPostIds(props)와 internalViewedIds(event) 합치기
-      const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
       const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
@@ -311,28 +291,15 @@ const MapContainer = ({
         if (existingOverlay.getMap() === null) {
           existingOverlay.setMap(mapInstance.current);
         }
+        
+        // 상태가 변했으면 HTML 업데이트
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           content.innerHTML = getMarkerInnerHtml(post, isViewed);
           content.setAttribute('data-content-state', contentStateKey);
         }
-        if (isHighlighted) {
-          if (!content.classList.contains('highlighted')) {
-            content.classList.add('highlighted');
-            existingOverlay.setZIndex(10000);
-          }
-        } else {
-          const content = existingOverlay.getContent() as HTMLElement;
-          if (existingOverlay.getMap() === null) {
-            existingOverlay.setMap(mapInstance.current);
-          }
-          if (content.getAttribute('data-content-state') !== contentStateKey) {
-            content.innerHTML = getMarkerInnerHtml(post, isViewed);
-            content.setAttribute('data-content-state', contentStateKey);
-          }
-        }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady]);
+  }, [posts, viewedPostIds, internalViewedIds, highlightedPostId, isMapReady]);
 
 // ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
 useEffect(() => {
