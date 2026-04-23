@@ -44,6 +44,25 @@
   }
 }
 
+/* [FIX] 마커 컨테이너 기본 스타일: 최적의 GPU 가속 설정 */
+.marker-container {
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform, opacity;
+  transform-origin: bottom center;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+  display: block;
+  z-index: 10;
+}
+
+.marker-content-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+}
+
 /* [FIX] 마커가 스르륵(Fade-in) 나타나는 애니메이션 */
 @keyframes marker-fade-in {
   from { opacity: 0; }
@@ -52,7 +71,6 @@
 
 .marker-appear-animation {
   animation: marker-fade-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
-  transform-origin: bottom center;
 }
 
 /* [FIX] 마커가 스르륵(Fade-out) 사라지는 애니메이션 */
@@ -63,7 +81,6 @@
 
 .marker-disappear-animation {
   animation: marker-fade-out 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  transform-origin: bottom center;
   pointer-events: none;
 }
 

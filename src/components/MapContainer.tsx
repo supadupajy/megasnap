@@ -288,21 +288,11 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
     
     const level = mapInstance.current.getLevel();
-    let scale = 1.0;
-    if (level === 6) scale = 0.75;
-    else if (level === 7) scale = 0.5;
-    else if (level >= 8) scale = 0;
     
+    // [FIX] 마커 표시 여부만 결정 (스케일링은 CSS/이미 생성된 인스턴스에서 처리)
     if (level >= 8) {
       overlaysRef.current.forEach((overlay) => {
-        const content = overlay.getContent();
-        if (content instanceof HTMLElement) {
-          content.style.opacity = '0';
-          content.style.transition = 'opacity 0.3s ease-out';
-          setTimeout(() => overlay.setMap(null), 300);
-        } else {
-          overlay.setMap(null);
-        }
+        overlay.setMap(null);
       });
       return;
     }
@@ -310,97 +300,48 @@ const MapContainer = ({
     const bounds = mapInstance.current.getBounds();
     const currentPostIds = new Set(posts.map(p => p.id));
     
-    // [FIX] 줌 레벨에 따른 스케일링 로직 최적화 (해상도 저하 방지)
-    // 브라우저의 래스터화 문제를 해결하기 위해 scale 대신 가능한 경우 크기 조정을 검토하거나
-    // scale 사용 시 will-change: transform을 통해 GPU 가속을 유도합니다.
+    // [FIX] 화면 밖 마커 및 삭제된 마커 정리
     overlaysRef.current.forEach((overlay, id) => {
-      const content = overlay.getContent();
       const position = overlay.getPosition();
-      
       if (!currentPostIds.has(id) || !bounds.contain(position)) {
-        if (content instanceof HTMLElement) {
-          content.style.opacity = '0';
-          content.style.transition = 'opacity 0.3s ease-out';
-          setTimeout(() => {
-            if (!currentPostIds.has(id) || !bounds.contain(position)) {
-              overlay.setMap(null);
-              overlaysRef.current.delete(id);
-            }
-          }, 300);
-        } else {
-          overlay.setMap(null);
-          overlaysRef.current.delete(id);
-        }
-      } else {
-        if (overlay.getMap() === null) {
-          overlay.setMap(mapInstance.current);
-          if (content instanceof HTMLElement) {
-            content.style.opacity = '0';
-            requestAnimationFrame(() => {
-              content.style.transition = 'opacity 0.3s ease-out, transform 0.2s ease-out';
-              content.style.opacity = '1';
-            });
-          }
-        }
-        if (content instanceof HTMLElement) {
-          content.style.transformOrigin = 'bottom center';
-          // will-change 추가로 줌 변경 시 렌더링 품질 유지
-          content.style.willChange = 'transform, opacity';
-          content.style.setProperty('transform', `scale(${scale})`, 'important');
-        }
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
       }
     });
 
+    // [FIX] 새 마커 추가 및 기존 마커 상태 유지
     posts.forEach(post => {
       if (!post) return;
-      
-      const position = new (window as any).kakao.maps.LatLng(post.lat, post.lng);
-      
-      if (!bounds.contain(position)) {
-        return;
-      }
+      const position = new kakao.maps.LatLng(post.lat, post.lng);
+      if (!bounds.contain(position)) return;
 
       const isViewed = viewedPostIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
-      // [FIX] isNewRealtime 플래그를 더 확실하게 감지하기 위해 post 객체의 속성을 직접 확인
       const isNewRealtime = post.isNewRealtime === true;
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const baseZIndex = isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300));
-      
-      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${level}-${post.borderType}-${post.isAd}-${isNewRealtime}`;
+      const contentStateKey = `${post.likes}-${isViewed}-${post.image}-${post.borderType}-${post.isAd}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
-        // [FIX] 1. 기본 마커 컨테이너 클래스
-        content.className = 'marker-container kakao-overlay';
-        
-        // [FIX] 2. 새로 생성되는 모든 마커에 기본 애니메이션 적용
-        content.classList.add('marker-appear-animation');
-        
-        // [FIX] 3. 실시간 또는 방금 작성한 글은 추가 연출
+        content.className = 'marker-container kakao-overlay marker-appear-animation';
         if (isNewRealtime) {
-          content.classList.add('animate-realtime-marker-appear');
-          content.classList.add('realtime-spark');
+          content.classList.add('animate-realtime-marker-appear', 'realtime-spark');
         }
         
-        content.style.opacity = '0';
-        content.style.transformOrigin = 'bottom center';
-        content.style.willChange = 'transform, opacity';
-
         if (isHighlighted) content.classList.add('highlighted');
-        
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         
         content.onclick = (e) => { 
           e.stopPropagation(); 
-          if (isDragging.current || (Date.now() - lastDragEnd.current < 200)) return; 
-          if (onMarkerClickRef.current) onMarkerClickRef.current(post); 
+          if (isDragging.current) return; 
+          onMarkerClickRef.current(post); 
         };
 
-        const overlay = new (window as any).kakao.maps.CustomOverlay({ 
-          position: new (window as any).kakao.maps.LatLng(post.lat, post.lng), 
+        const overlay = new kakao.maps.CustomOverlay({ 
+          position: position, 
           content: content, 
           yAnchor: 1, 
           zIndex: baseZIndex 
@@ -408,50 +349,37 @@ const MapContainer = ({
         
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
-
-        // [FIX] 강제 애니메이션 트리거
-        requestAnimationFrame(() => {
-          content.style.opacity = '1';
-        });
       } else {
-        const content = existingOverlay.getContent();
+        const content = existingOverlay.getContent() as HTMLElement;
         existingOverlay.setZIndex(baseZIndex);
-        if (content instanceof HTMLElement) {
-          cancelPendingRemoval(post.id, content);
-          
-          content.style.transformOrigin = 'bottom center';
-          content.style.willChange = 'transform, opacity'; 
-          content.style.opacity = "1";
-          content.style.visibility = "visible";
-          
-          if (isHighlighted) content.classList.add('highlighted'); 
-          else content.classList.remove('highlighted');
+        if (isHighlighted) content.classList.add('highlighted'); 
+        else content.classList.remove('highlighted');
 
-          // [FIX] 이미 존재하지만 새로고침/업데이트 등으로 isNewRealtime이 들어온 경우 처리
-          if (isNewRealtime) {
-            content.classList.remove('marker-appear-animation');
-            content.classList.remove('animate-realtime-marker-appear');
-            content.classList.remove('realtime-spark');
-            
-            void content.offsetWidth; // Reflow
-            
-            content.classList.add('animate-realtime-marker-appear');
-            content.classList.add('realtime-spark');
-            
-            // 데이터 원본의 플래그를 꺼서 무한 반복 방지
-            post.isNewRealtime = false;
-          }
-
-          if (content.getAttribute('data-content-state') !== contentStateKey) {
-            requestAnimationFrame(() => { 
-              content.innerHTML = getMarkerInnerHtml(post, isViewed); 
-              content.setAttribute('data-content-state', contentStateKey); 
-            });
-          }
+        if (content.getAttribute('data-content-state') !== contentStateKey) {
+          content.innerHTML = getMarkerInnerHtml(post, isViewed); 
+          content.setAttribute('data-content-state', contentStateKey); 
         }
       }
     });
-  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser, currentLevel]);
+  }, [posts, viewedPostIds, highlightedPostId, isMapReady, authUser]);
+
+  // [NEW] 스케일링 전용 이펙트: GPU 가속을 활용해 한 번에 처리
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const level = currentLevel;
+    let scale = 1.0;
+    if (level === 6) scale = 0.7;
+    else if (level === 7) scale = 0.45;
+    else if (level >= 8) scale = 0;
+
+    overlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.style.transition = 'transform 0.2s ease-out';
+        content.style.transform = `scale(${scale})`;
+      }
+    });
+  }, [currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => { 
