@@ -65,7 +65,6 @@ const Write = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>('none');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -315,7 +314,7 @@ const Write = () => {
               <Button 
                 className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
                 onClick={handlePost}
-                disabled={isSubmitting || !content || category === 'none'}
+                disabled={isSubmitting || !content.trim() || !initialLocation}
               >
                 {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
                 게시물 등록하기
