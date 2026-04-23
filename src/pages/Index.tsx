@@ -181,6 +181,27 @@ const Index = () => {
   }, [navigate]);
 
   useEffect(() => {
+    const handleFocusPost = (e: any) => {
+      const { post, lat, lng } = e.detail;
+      console.log('[Index] Focusing post from overlay:', post.id);
+      
+      // 1. 오버레이 닫기
+      setIsPostListOpen(false);
+      
+      // 2. 지도 이동 및 마커 하이라이트
+      focusPostOnMap(post, { lat, lng });
+      
+      // 3. 해당 포스트의 상세 모달 열기
+      setTimeout(() => {
+        setSelectedPostId(post.id);
+      }, 300);
+    };
+    
+    window.addEventListener('focus-post', handleFocusPost);
+    return () => window.removeEventListener('focus-post', handleFocusPost);
+  }, [focusPostOnMap]);
+
+  useEffect(() => {
     const handleCloseOverlay = () => {
       console.log('[Index] Received close signal from native back button');
       if (isPostListOpen) {
