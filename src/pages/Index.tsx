@@ -113,15 +113,6 @@ const Index = () => {
   }, []);
 
   // [FINAL FIX] 외부 이벤트를 통한 폭죽 강제 트리거 리스너 등록
-  useEffect(() => {
-    const handleForceTrigger = () => {
-      console.log('[Index] Received force-confetti-trigger event');
-      // 마커가 나타나는 시점인 1.2초 뒤에 터지도록 지연 실행
-      setTimeout(() => triggerConfetti(), 1200);
-    };
-    window.addEventListener('force-confetti-trigger', handleForceTrigger);
-    return () => window.removeEventListener('force-confetti-trigger', handleForceTrigger);
-  }, [triggerConfetti]);
 
   const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
