@@ -274,67 +274,89 @@ const Write = () => {
               </div>
 
               {mediaFiles.length > 0 ? (
-  <div className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative">
-    {/* 현재 슬라이드 이미지/비디오 */}
-    {mediaFiles[currentSlide]?.type === 'image' ? (
-      <img
-        src={mediaFiles[currentSlide].url}
-        className="absolute inset-0 w-full h-full pointer-events-none select-none"
-        style={{
-          objectFit: 'cover',
-          objectPosition: mediaFiles[currentSlide].orientation === 'portrait'
-            ? `50% ${mediaFiles[currentSlide].crop?.y ?? 50}%`
-            : `${mediaFiles[currentSlide].crop?.x ?? 50}% 50%`,
-        }}
-      />
-    ) : (
-      <video
-        src={mediaFiles[currentSlide]?.url}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay muted loop playsInline
-      />
-    )}
+                <div className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative">
+  <Carousel 
+    setApi={setApi} 
+    className="absolute inset-0"
+    opts={{ watchDrag: dragActiveIdx === null }}
+  >
+    <CarouselContent className="ml-0 h-full">
+                      {mediaFiles.map((media, idx) => (
+                        <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
+                          <div 
+                              className="w-full h-full relative overflow-hidden touch-none"
 
-    {/* 드래그 오버레이 */}
-    <div
-      className="absolute inset-0 touch-none z-10"
-      onMouseDown={(e) => { e.stopPropagation(); handleDrag(e, currentSlide); }}
-      onMouseMove={(e) => { if (dragActiveIdx === currentSlide) { e.stopPropagation(); handleDrag(e, currentSlide); } }}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-      onTouchStart={(e) => { e.stopPropagation(); handleDrag(e, currentSlide); }}
-      onTouchMove={(e) => { if (dragActiveIdx === currentSlide) { e.stopPropagation(); handleDrag(e, currentSlide); } }}
-      onTouchEnd={stopDragging}
-    />
-
-    {/* 삭제 버튼 */}
-    <button
-      onClick={(e) => { e.stopPropagation(); const newFiles = [...mediaFiles]; newFiles.splice(currentSlide, 1); setMediaFiles(newFiles); setCurrentSlide(prev => Math.min(prev, newFiles.length - 1)); }}
-      className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
-    >
-      <X className="w-4 h-4" />
-    </button>
-
-    {/* 스와이프 감지 (좌우) */}
-    {mediaFiles.length > 1 && (
-      <>
-        <button
-          className="absolute left-0 top-0 bottom-0 w-1/3 z-20 opacity-0"
-          onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
-        />
-        <button
-          className="absolute right-0 top-0 bottom-0 w-1/3 z-20 opacity-0"
-          onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))}
-        />
-        {/* 인디케이터 */}
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-          {mediaFiles.map((_, i) => (
-            <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
-          ))}
-        </div>
-      </>
-    )}
-  </div>
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              handleDrag(e, idx);
+                            }}
+                            onMouseMove={(e) => {
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
+                            }}
+                            onMouseUp={stopDragging}
+                            onMouseLeave={stopDragging}
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                              handleDrag(e, idx);
+                            }}
+                            onTouchMove={(e) => {
+                              if (dragActiveIdx === idx) {
+                                e.stopPropagation();
+                                handleDrag(e, idx);
+                              }
+                            }}
+                            onTouchEnd={stopDragging}
+                          >
+                            {media.type === 'image' ? (
+  <img 
+    key={`img-${media.url}`}
+    src={media.url} 
+    className="w-full h-full pointer-events-none select-none"
+    style={{
+      objectFit: 'cover',
+      objectPosition: media.orientation === 'portrait'
+        ? `50% ${media.crop?.y ?? 50}%`
+        : `${media.crop?.x ?? 50}% 50%`,
+    }}
+                              />
+                            ) : (
+                              <video 
+                                key={`video-${media.url}`}
+                                src={media.url} 
+                                className="w-full h-full object-cover" 
+                                autoPlay 
+                                muted 
+                                loop 
+                                playsInline 
+                              />
+                            )}
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newFiles = [...mediaFiles];
+                              newFiles.splice(idx, 1);
+                              setMediaFiles(newFiles);
+                            }} 
+                            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                  {mediaFiles.length > 1 && (
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20">
+                      {mediaFiles.map((_, i) => (
+                        <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div 
                   onClick={() => mediaInputRef.current?.click()}
