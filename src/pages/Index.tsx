@@ -41,6 +41,20 @@ const Index = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   
+  const { viewedIds, markAsViewed } = useViewedPosts();
+  
+  // ✅ [NEW] '여기보기' 등에서 발생하는 개별 포스트 조회 이벤트 감지
+  useEffect(() => {
+    const handleMarkViewed = (e: any) => {
+      const postId = e.detail?.id;
+      if (postId) {
+        markAsViewed(postId);
+      }
+    };
+    window.addEventListener('mark-post-viewed', handleMarkViewed);
+    return () => window.removeEventListener('mark-post-viewed', handleMarkViewed);
+  }, [markAsViewed]);
+
   const [showCssConfetti, setShowCssConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
@@ -87,7 +101,6 @@ const Index = () => {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
   
-  const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
