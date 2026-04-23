@@ -35,30 +35,10 @@ const MapContainer = ({
   center,
   level = 5,
   searchResultLocation,
-  onMoveComplete, // ✅ 추가
 }: MapContainerProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState<number>(5);
-  const [isMapMoving, setIsMapMoving] = useState(false);
-  
-  const overlaysRef = useRef<Map<string, any>>(new Map());
-  const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
-  const searchOverlayRef = useRef<any>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const isDragging = useRef(false);
-  const isProgrammaticMove = useRef(false);
-  const lastDragEnd = useRef(0);
-  const currentLevelRef = useRef<number>(5);
-
-  const centerRef = useRef(center);
-  const levelRef = useRef(5);
-  const onMoveCompleteRef = useRef(onMoveComplete);
+  // ...
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
-  useEffect(() => { onMoveCompleteRef.current = onMoveComplete; }, [onMoveComplete]);
 
   const { user: authUser } = useAuth();
 
