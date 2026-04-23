@@ -40,7 +40,7 @@ const Profile = () => {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list' | 'gif-list' | 'saved'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'saved'>('grid');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   
@@ -64,18 +64,19 @@ const Profile = () => {
   };
 
   const mapDbToPost = async (p: any): Promise<Post> => {
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    const SAFE_FALLBACK = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
 
     const isValidUrl = (url: any) => {
       if (!url || typeof url !== 'string') return false;
       const clean = url.trim();
-      // [FINAL FIX] 어떤 변형이든 'post content'가 들어있거나 http로 시작하지 않으면 무조건 배제
+      // [FIX] 'Content 0'과 같은 잘못된 플레이스홀더 텍스트나 비정상적인 URL 필터링
+      if (/content\s*\d+/i.test(clean)) return false;
       if (/post\s*content/i.test(clean)) return false;
       if (!clean.startsWith('http')) return false;
       return true;
     };
 
-    // [핵심] 원본 데이터(p.image_url, p.images)를 신뢰하지 않고 여기서 즉시 강제 필터링
+    // 데이터 클렌징: 이미지가 유효하지 않으면 폴백 이미지 사용
     let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
     let rawImages = Array.isArray(p.images) && p.images.length > 0 
       ? p.images.filter(isValidUrl)
@@ -126,12 +127,22 @@ const Profile = () => {
         name: sanitized.user_id === authUser?.id ? displayName : (sanitized.user_name || '탐험가'), 
         avatar: sanitized.user_id === authUser?.id ? avatarUrl : (sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`)
       },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', 
+      location: sanitized.location_name || '알 수 없는 장소', 
+      lat: sanitized.latitude, 
+      lng: sanitized.longitude,
+      likes: Number(sanitized.likes || 0), 
+      commentsCount: 0, 
+      comments: [], 
       image: finalImage, 
+      image_url: finalImage, // 명시적 추가
       images: finalImages.length > 0 ? finalImages : [finalImage], 
-      youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked, isSaved, createdAt: new Date(sanitized.created_at), borderType,
+      youtubeUrl: sanitized.youtube_url, 
+      videoUrl: sanitized.video_url,
+      isLiked, 
+      isSaved, 
+      createdAt: new Date(sanitized.created_at), 
+      borderType,
       category: sanitized.category || 'none'
     };
   };
@@ -186,10 +197,35 @@ const Profile = () => {
 
   useEffect(() => { 
     if (!authLoading && authUser?.id) {
-      hasFetched.current = false; // Force refresh on component mount/auth change
       loadProfileData(authUser.id); 
     } 
   }, [authLoading, authUser?.id, loadProfileData]);
+
+  // ✅ [FIX] 프로필 화면 실시간 구독 추가
+  useEffect(() => {
+    if (!authUser?.id) return;
+
+    const channel = supabase
+      .channel(`profile-posts-${authUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE 모두 감지
+          schema: 'public',
+          table: 'posts',
+          filter: `user_id=eq.${authUser.id}`
+        },
+        () => {
+          console.log('[Profile] Realtime update detected, refreshing data...');
+          loadProfileData(authUser.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUser?.id, loadProfileData]);
 
   const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
     const updatePost = (prev: Post[]) => prev.map(post => 
