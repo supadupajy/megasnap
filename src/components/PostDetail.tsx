@@ -501,14 +501,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - "여기보기"와 동일한 절대 위치 구조 적용 */}
+                      {/* 미디어 영역 - 썸네일을 아예 렌더링하지 않도록 구조 변경 */}
                       <div className="px-4 mt-2">
                         <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+                          {/* [FINAL FIX] 영상이 감지되면 무조건 영상만 렌더링, 이미지는 DOM에서 제거 */}
                           {videoId ? (
                             <iframe
                               key={`yt-frame-${currentPost.id}-${videoId}`}
                               src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                              className="absolute inset-0 w-full h-full border-0"
+                              className="absolute inset-0 w-full h-full border-0 z-50"
                               allow="autoplay; encrypted-media"
                               allowFullScreen
                             />
@@ -516,15 +517,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <video 
                               key={`vid-frame-${currentPost.id}-${vUrl}`}
                               src={vUrl} 
-                              className="absolute inset-0 w-full h-full object-cover" 
+                              className="absolute inset-0 w-full h-full object-cover z-50" 
                               autoPlay 
                               loop 
                               playsInline 
                               controls 
                             />
                           ) : (
-                            <div className="absolute inset-0 w-full h-full">
-                              {/* 이미지 슬라이더 (영상이 없을 때만) */}
+                            <div className="absolute inset-0 w-full h-full z-10">
+                              {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
