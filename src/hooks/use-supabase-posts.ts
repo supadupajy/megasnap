@@ -96,7 +96,7 @@ export const fetchPostsInBounds = async (
     // ✅ [OPTIMIZATION] select('*') 대신 마커 렌더링에 꼭 필요한 최소 데이터만 조회 (Egress 절약)
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name')
+      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))

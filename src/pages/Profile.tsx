@@ -40,7 +40,7 @@ const Profile = () => {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [viewMode, setViewMode] = useState<'grid' | 'saved'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'saved' | 'list'>('grid');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   
@@ -226,7 +226,7 @@ const Profile = () => {
   }, [authUser?.id, loadProfileData]);
 
   const handleGridItemClick = (postId: string) => {
-    setViewMode(viewMode === 'gifs' ? 'gif-list' : 'list');
+    setViewMode('list');
     setTimeout(() => { const element = document.getElementById(`post-${postId}`); if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
   };
 
