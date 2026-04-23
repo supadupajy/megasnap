@@ -313,7 +313,7 @@ const Write = () => {
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-5 py-6 space-y-6 pb-40">
+        <div className="px-5 py-6 space-y-8 pb-40">
           {currentPage === 1 ? (
             <div className="space-y-6">
               <div className="space-y-3">
