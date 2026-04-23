@@ -153,9 +153,10 @@ const Write = () => {
     
     dragStartRef.current = { x: clientX, y: clientY };
 
-    const sensitivity = 0.5;
-    const newX = isPortrait ? 50 : media.crop!.x - (deltaX * sensitivity);
-    const newY = isPortrait ? media.crop!.y - (deltaY * sensitivity) : 50;
+    // 민감도 조정: object-position % 단위에 맞춰 조정
+    const sensitivity = 0.15;
+    const newX = isPortrait ? 50 : (media.crop?.x || 50) - (deltaX * sensitivity);
+    const newY = isPortrait ? (media.crop?.y || 50) - (deltaY * sensitivity) : 50;
 
     updateMediaCrop(idx, newX, newY);
   };
@@ -293,24 +294,15 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                             onTouchEnd={stopDragging}
                           >
                             {media.type === 'image' ? (
-                              <div className="w-full h-full relative flex items-center justify-center">
-                                <img 
-                                  src={media.url} 
-                                  className="absolute max-w-none transition-none pointer-events-none"
-                                  style={{
-                                    width: media.orientation === 'portrait' ? '100%' : 'auto',
-                                    height: media.orientation === 'portrait' ? 'auto' : '100%',
-                                    left: media.orientation === 'portrait' ? '0' : 'auto',
-                                    top: media.orientation === 'portrait' ? 'auto' : '0',
-                                    transform: media.orientation === 'portrait' 
-                                      ? `translateY(${(50 - (media.crop?.y || 50))}%)` 
-                                      : `translateX(${(50 - (media.crop?.x || 50))}%)`,
-                                    minWidth: '100%',
-                                    minHeight: '100%',
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              </div>
+                              <img 
+                                src={media.url} 
+                                className="w-full h-full object-cover pointer-events-none select-none"
+                                style={{
+                                  objectPosition: media.orientation === 'portrait' 
+                                    ? `50% ${media.crop?.y || 50}%` 
+                                    : `${media.crop?.x || 50}% 50%`
+                                }}
+                              />
                             ) : (
                               <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
                             )}
