@@ -440,7 +440,7 @@ const Write = () => {
                   onCropChange={handleCropChange}
                 />
               ) : (
-                <div className="aspect-square w-full rounded-[32px] bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
+                <div className="aspect-square w-full rounded-[32px] bg-gray-100 flex items-center justify-center gap-3 border-2 border-dashed border-gray-200">
                   <ImageIcon className={cn("w-6 h-6", mediaFiles.length > 0 ? "text-indigo-500" : "text-gray-400")} />
                   <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
                 </div>
