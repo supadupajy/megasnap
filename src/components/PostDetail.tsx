@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId } from '@/lib/utils';
@@ -47,35 +47,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
-  // ✅ [FIX] Dialog 완전히 열린 후 iframe 마운트 여부 제어
+  // ✅ [핵심 FIX] mute=1로 자동재생 후 사용자가 직접 언뮤트
+  // Android Chrome은 소리 있는 autoplay를 정책상 완전 차단 → mute=1이 유일한 해결책
+  const [isMuted, setIsMuted] = useState(true);
   const [iframeReady, setIframeReady] = useState(false);
-  
-  // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const [dbPostData, setDbPostData] = useState<any>(null); // DB에서 직접 가져온 상세 데이터
-  
-  // [CRITICAL FIX] "여기보기(PostItem)"의 renderMedia 로직과 동일하게 맞춤
-  const currentPost = useMemo(() => {
-    const basePost = posts[currentPostIndex];
-    if (!basePost) return null;
-    return dbPostData && dbPostData.id === basePost.id ? { ...basePost, ...dbPostData } : basePost;
-  }, [posts, currentPostIndex, dbPostData]);
-  
-  // [CRITICAL FIX] PostItem.tsx의 getYouTubeId와 동일한 로직 사용
-  const getYouTubeIdLocal = (url?: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
-    return match ? match[1] : null;
-  };
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const videoId = useMemo(() => {
+  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+
+  const youtubeId = useMemo(() => {
     if (!currentPost) return null;
-    // PostItem과 동일하게 youtubeUrl, youtube_url 모두 체크
-    return getYouTubeIdLocal(currentPost.youtubeUrl || currentPost.youtube_url);
+    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id || currentPost.youtubeId;
+    console.log('[PostDetail] Checking Youtube URL:', { id: currentPost.id, url });
+    return getYoutubeId(url || '');
   }, [currentPost]);
 
   const videoUrl = useMemo(() => {
     if (!currentPost) return null;
-    return currentPost.videoUrl || currentPost.video_url;
+    const url = currentPost.videoUrl || currentPost.video_url || currentPost.video_path;
+    console.log('[PostDetail] Checking Video URL:', { id: currentPost.id, url });
+    return url;
   }, [currentPost]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -92,28 +84,42 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // ✅ [FIX] isOpen과 youtubeId/videoUrl이 바뀔 때마다 iframe 준비 타이머 제어
-  // Dialog 오픈 애니메이션(약 300ms) 완료 후 iframe을 마운트해야
-  // 사용자 탭 제스처 컨텍스트가 살아있어 mute=0 autoplay가 허용됨
+  // Dialog 오픈 후 300ms 뒤 iframe 마운트 (제스처 컨텍스트 유지)
   useEffect(() => {
-    if (isOpen && (videoId || videoUrl)) {
+    if (isOpen && (youtubeId || videoUrl)) {
       const timer = setTimeout(() => setIframeReady(true), 300);
       return () => clearTimeout(timer);
     } else {
       setIframeReady(false);
     }
-  }, [isOpen, videoId, videoUrl]);
+  }, [isOpen, youtubeId, videoUrl]);
 
-  // 포스트가 바뀔 때도 iframe 리셋 후 재마운트
+  // 포스트 변경 시 iframe 리셋 + 뮤트 초기화
   useEffect(() => {
     setIframeReady(false);
-    if (isOpen && (videoId || videoUrl)) {
+    setIsMuted(true);
+    if (isOpen && (youtubeId || videoUrl)) {
       const timer = setTimeout(() => setIframeReady(true), 300);
       return () => clearTimeout(timer);
     }
   }, [currentPostIndex]);
+
+  // ✅ 음소거 토글: YouTube는 postMessage API, 일반 video는 ref.muted
+  const handleMuteToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (youtubeId && iframeRef.current) {
+      const command = isMuted ? 'unMute' : 'mute';
+      iframeRef.current.contentWindow?.postMessage(
+        JSON.stringify({ event: 'command', func: command, args: [] }),
+        '*'
+      );
+      setIsMuted(!isMuted);
+    } else if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  }, [isMuted, youtubeId]);
 
   // 키보드 대응
   useEffect(() => {
@@ -198,42 +204,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return () => observer.disconnect();
   }, [currentPostIndex, isOpen, posts]);
 
-  // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단하는 헬퍼
-  const isValidUrl = (url: any) => {
-    if (typeof url !== 'string') return false;
+  const isDummyUrl = (url: any) => {
+    if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
-    return clean.startsWith('http') && !/post\s*content/i.test(clean);
+    if (clean.includes('supabase.co/storage')) return false;
+    return clean.length < 10 ||
+      clean.toLowerCase().includes('post') ||
+      clean.toLowerCase().includes('content') ||
+      !clean.startsWith('http');
   };
 
-  const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
-
   const handleImageError = (postId: string) => {
-    console.log(`[PostDetail] Image error for post: ${postId}, using fallback.`);
     setImgErrors(prev => ({ ...prev, [postId]: true }));
   };
 
   if (!currentPost) return null;
 
-  // [CRITICAL FIX] 이미지 URL 유효성 검사 강화
-  const isDummyUrl = (url: any) => {
-    if (!url || typeof url !== 'string') return true;
-    const clean = url.trim();
-    
-    // [FIX] 내가 직접 올린 이미지는 절대 더미로 판단하지 않음
-    if (clean.includes('supabase.co/storage')) return false;
-
-    // 텍스트가 섞인 비정상 URL 또는 더미 텍스트 감지
-    return clean.length < 10 || 
-           clean.toLowerCase().includes('post') || 
-           clean.toLowerCase().includes('content') || 
-           !clean.startsWith('http');
-  };
-
   const displayImage = useMemo(() => {
     if (!currentPost) return getFallbackImage('default');
     if (imgErrors[currentPost.id]) return getFallbackImage(currentPost.id);
-    
-    // [FIX] post.image_url 필드도 체크
     const rawUrl = currentPost.image || currentPost.image_url;
     return isDummyUrl(rawUrl) ? getFallbackImage(currentPost.id) : rawUrl;
   }, [currentPost, imgErrors]);
@@ -247,36 +236,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
   };
 
-  // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
   const displayImages = useMemo(() => {
     if (!currentPost) return [];
-    
     let baseImages: string[] = [];
-    
-    // 1. images 배열 확인
     if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
       baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
     }
-    
-    // 2. image_url 또는 image 단일 필드 확인
     const singleImg = currentPost.image_url || currentPost.image;
     if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
       baseImages = [singleImg];
     }
-    
-    // 3. 그래도 없으면 계산된 displayImage 사용
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    
-    // 코카콜라 광고 삽입 로직
     const imagesWithAd = [...baseImages];
     if (imagesWithAd.length > 0) {
       imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);
     } else {
       imagesWithAd.push(COCA_COLA_IMAGE);
     }
-    
     return imagesWithAd;
   }, [currentPost, displayImage]);
 
@@ -287,7 +265,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return "https://www.coca-cola.co.kr/";
   }, [currentPost]);
 
-  // ✅ 조건부 return은 모든 훅 선언 이후에
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
   const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
@@ -329,18 +306,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const confirmDelete = async () => {
     try {
       if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
-      
-      // [FIX] 삭제 프로세스 안정화:
-      // 1. UI에서 즉시 제거될 수 있도록 핸들러 먼저 호출 (상위에서 setSelectedPostId(null) 수행)
       if (onDelete) onDelete(currentPost.id);
-      
-      // 2. 모달 즉시 닫기
       onClose();
-
-      // 3. 실제 DB 삭제는 백그라운드에서 진행
       const { error } = await supabase.from('posts').delete().eq('id', currentPost.id);
       if (error) throw error;
-      
       showSuccess('포스팅이 삭제되었습니다.');
     } catch (err: any) {
       console.error('[PostDetail] Delete error:', err);
@@ -391,16 +360,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     );
   };
 
+  // ✅ mute=1 — Android Chrome autoplay 정책 준수, enablejsapi=1 — postMessage unMute에 필요
+  const youtubeSrc = youtubeId
+    ? `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`
+    : '';
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} >
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogOverlay className="bg-black/60 backdrop-blur-sm z-[1000]" />
         <DialogContent className="border-none bg-transparent shadow-none p-0 max-w-none w-full h-full flex items-center justify-center z-[1050] outline-none focus:ring-0">
           <VisuallyHidden.Root>
             <DialogTitle>포스팅 상세 보기</DialogTitle>
             <DialogDescription>선택한 포스팅의 상세 내용, 이미지, 댓글을 확인하고 소통할 수 있는 화면입니다.</DialogDescription>
           </VisuallyHidden.Root>
-          
+
           <div
             className="absolute top-8 right-6 z-[1100] transition-all duration-500"
             style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
@@ -422,7 +396,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
                 <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-                  {/* 헤더 고정 영역 */}
+
+                  {/* 헤더 */}
                   <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
@@ -471,34 +446,76 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 - PostItem.tsx의 구조와 동일하게 통일 */}
+                      {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-                          {videoId ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
-                              <iframe
-                                key={`detail-yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                                className="w-full h-full object-cover"
-                                allow="autoplay; encrypted-media"
-                                allowFullScreen
-                              />
+
+                          {youtubeId ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <iframe
+                                    ref={iframeRef}
+                                    key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                    className="w-full h-full border-0"
+                                    src={youtubeSrc}
+                                    title="YouTube video player"
+                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                  {/* ✅ 음소거 토글 버튼 (Instagram Reels / YouTube Shorts 동일 UX) */}
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
                             </div>
+
                           ) : videoUrl ? (
-                            <div className="absolute inset-0 w-full h-full z-[100]">
-                              <video 
-                                key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                src={videoUrl} 
-                                className="w-full h-full object-cover" 
-                                autoPlay 
-                                loop 
-                                playsInline 
-                                controls 
-                              />
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <>
+                                  <video
+                                    ref={videoRef}
+                                    key={`detail-vid-${currentPost.id}-${videoUrl}`}
+                                    src={videoUrl}
+                                    className="w-full h-full object-cover"
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                    muted={isMuted}
+                                    controls={false}
+                                  />
+                                  {/* ✅ 일반 video도 동일한 음소거 토글 */}
+                                  <button
+                                    onClick={handleMuteToggle}
+                                    className="absolute bottom-4 right-4 z-[1000] w-10 h-10 flex items-center justify-center bg-black/50 backdrop-blur-md rounded-full border border-white/20 active:scale-90 transition-all"
+                                  >
+                                    {isMuted
+                                      ? <VolumeX className="w-5 h-5 text-white" />
+                                      : <Volume2 className="w-5 h-5 text-white" />
+                                    }
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
                             </div>
+
                           ) : (
-                            <div className="relative w-full h-full z-10">
-                              {/* 이미지 슬라이더 (영상이 없을 때만) */}
+                            <div className="relative w-full h-full z-10 bg-gray-100">
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
@@ -514,12 +531,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                         style={{ scrollSnapStop: 'always' }}
                                         onClick={handleAdClick}
                                       >
-                                        <img
-                                          src={img}
-                                          alt="Advertisement"
-                                          className="w-full h-full object-cover"
-                                          draggable={false}
-                                        />
+                                        <img src={img} alt="Advertisement" className="w-full h-full object-cover" draggable={false} />
                                         <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
                                           <ExternalLink className="w-3.5 h-3.5" />
                                           <span className="font-bold">AD</span>
@@ -534,25 +546,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                       style={{ scrollSnapStop: 'always' }}
                                       onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
                                     >
-                                      <img
-                                        src={img}
-                                        alt={`Post content ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                        draggable={false}
-                                      />
+                                      <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover" draggable={false} />
                                     </div>
                                   );
                                 })}
                               </div>
-
-                              {/* 인디케이터 */}
                               {displayImages.length > 1 && (
                                 <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
                                   {displayImages.map((_, i) => (
-                                    <div
-                                      key={i}
-                                      className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-                                    />
+                                    <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`} />
                                   ))}
                                 </div>
                               )}
@@ -564,7 +566,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       {/* 액션 버튼 및 내용 */}
                       <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-3">
-                          {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
@@ -577,7 +578,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <Share2 className="w-6 h-6" />
                               </button>
                             </div>
-
                             <div className="flex items-center gap-2">
                               <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
                                 <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
@@ -592,14 +592,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </div>
                           </div>
 
-                          {/* 광고 전용 주문하기 버튼 */}
                           {isAd && (
                             <div className="flex justify-end mt-[-4px]">
-                              <a 
-                                href="https://s.baemin.com/t3000fBqlbHGL" 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                onClick={(e) => e.stopPropagation()} 
+                              <a
+                                href="https://s.baemin.com/t3000fBqlbHGL"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
                               >
                                 <ShoppingBag className="w-3.5 h-3.5 fill-white" />
@@ -616,6 +615,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                           </div>
                         </div>
+
                         <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
                           <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                             <Input
@@ -631,28 +631,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </button>
                           </form>
 
-                          <button 
-                            onClick={(e) => { 
-                              e.preventDefault();
-                              e.stopPropagation(); 
-                              setShowComments(!showComments); 
-                            }} 
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
                             className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
                           >
                             <span className="text-xs text-gray-400 font-medium pointer-events-none">
                               {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
                             </span>
-                            {showComments ? 
-                              <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> : 
-                              <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+                            {showComments
+                              ? <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+                              : <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
                             }
                           </button>
 
-                          <div 
-                            className={cn(
-                              "overflow-hidden transition-all duration-300 ease-in-out",
-                              showComments ? "max-height-[500px] opacity-100 mt-2" : "max-height-0 opacity-0"
-                            )}
+                          <div
+                            className={cn("overflow-hidden transition-all duration-300 ease-in-out", showComments ? "opacity-100 mt-2" : "opacity-0")}
                             style={{ maxHeight: showComments ? '1000px' : '0px' }}
                           >
                             <div className="space-y-2 pb-2">
