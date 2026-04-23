@@ -156,27 +156,29 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     // 1. 유튜브 영상 처리
     if (videoId) {
       const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-      return (
-        <div className="w-full h-full relative">
-          <iframe
-            src={shouldPlay 
-  ? `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0`
-  : `https://www.youtube.com/embed/${videoId}?controls=1&modestbranding=1&rel=0`
-}
-            className="w-full h-full object-cover"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            onLoad={() => setVideoLoaded(true)}
-          />
-          {!videoLoaded && (
-  <img 
-    src={currentImage} 
-    alt="" 
-    className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-  />
-)}
-        </div>
-      );
+const iframeSrc = shouldPlay
+  ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&playsinline=1`
+  : `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1&modestbranding=1&rel=0`;
+
+return (
+  <div className="w-full h-full relative">
+    <iframe
+      key={shouldPlay ? 'playing' : 'paused'} // ✅ key 변경으로 iframe 강제 재마운트
+      src={iframeSrc}
+      className="w-full h-full object-cover"
+      allow="autoplay; encrypted-media; fullscreen"
+      allowFullScreen
+      onLoad={() => setVideoLoaded(true)}
+    />
+    {!videoLoaded && (
+      <img 
+        src={currentImage} 
+        alt="" 
+        className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+      />
+    )}
+  </div>
+);
     }
 
     // 2. 일반 업로드 동영상 처리
