@@ -324,31 +324,15 @@ navigate('/', { state: { triggerConfetti: true } }); // ✅ state로 신호 전�
                       {mediaFiles.map((media, idx) => (
                         <CarouselItem key={`${idx}-${media.url}`} className="pl-0 h-full relative select-none">
                           <div 
-                            className="w-full h-full relative overflow-hidden touch-none"
-                            onMouseDown={(e) => {
-                              e.stopPropagation();
-                              handleDrag(e, idx);
-                            }}
-                            onMouseMove={(e) => {
-                              if (dragActiveIdx === idx) {
-                                e.stopPropagation();
-                                handleDrag(e, idx);
-                              }
-                            }}
-                            onMouseUp={stopDragging}
-                            onMouseLeave={stopDragging}
-                            onTouchStart={(e) => {
-                              e.stopPropagation();
-                              handleDrag(e, idx);
-                            }}
-                            onTouchMove={(e) => {
-                              if (dragActiveIdx === idx) {
-                                e.stopPropagation();
-                                handleDrag(e, idx);
-                              }
-                            }}
-                            onTouchEnd={stopDragging}
-                          >
+  className="w-full h-full relative overflow-hidden touch-none"
+  onMouseDown={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
+  onMouseMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
+  onMouseUp={stopDragging}
+  onMouseLeave={stopDragging}
+  onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e, idx); }}
+  onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e, idx); }}
+  onTouchEnd={stopDragging}
+>
                             {media.type === 'image' ? (
                               <img 
                                 key={`img-${media.url}`}
