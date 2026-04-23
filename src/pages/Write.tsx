@@ -313,18 +313,11 @@ const Write = () => {
                               <img 
                                 key={`img-${media.url}`}
                                 src={media.url} 
-                                className="absolute max-w-none transition-none pointer-events-none select-none"
+                                className="w-full h-full object-cover pointer-events-none select-none"
                                 style={{
-                                  width: media.orientation === 'portrait' ? '100%' : 'auto',
-                                  height: media.orientation === 'portrait' ? 'auto' : '100%',
-                                  minWidth: '100%',
-                                  minHeight: '100%',
-                                  objectFit: 'cover',
-                                  left: '50%',
-                                  top: '50%',
-                                  transform: media.orientation === 'portrait' 
-                                    ? `translate(-50%, calc(-50% + ${(50 - (media.crop?.y ?? 50))} * 1%))` 
-                                    : `translate(calc(-50% + ${(50 - (media.crop?.x ?? 50))} * 1%), -50%)`
+                                  objectPosition: media.orientation === 'portrait' 
+                                    ? `center ${media.crop?.y ?? 50}%` 
+                                    : `${media.crop?.x ?? 50}% center`
                                 }}
                               />
                             ) : (
