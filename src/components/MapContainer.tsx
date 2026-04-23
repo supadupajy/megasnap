@@ -276,6 +276,8 @@ const MapContainer = ({
       if (!existingOverlay) {
         const content = document.createElement('div');
         content.className = 'marker-container kakao-overlay marker-appear-animation';
+        
+        // [FIX] 초기 줌 레벨에 맞는 클래스를 즉시 반영하여 생성 시 튀는 현상 방지
         if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -297,6 +299,12 @@ const MapContainer = ({
         overlaysRef.current.set(post.id, overlay);
       } else {
         const content = existingOverlay.getContent() as HTMLElement;
+        
+        // [FIX] 기존 오버레이가 다시 지도로 들어올 때 opacity 0 현상 방지
+        if (existingOverlay.getMap() === null) {
+          existingOverlay.setMap(mapInstance.current);
+        }
+
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           content.innerHTML = getMarkerInnerHtml(post, isViewed); 
           content.setAttribute('data-content-state', contentStateKey); 

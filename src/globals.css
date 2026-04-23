@@ -44,13 +44,14 @@
   }
 }
 
-/* [FIX] 마커 컨테이너 기본 스타일: 최적의 GPU 가속 설정 */
+/* [FIX] 마커 컨테이너: 모든 트랜지션을 제거하여 줌 시 튀는 현상(레이턴시)을 완전 차단 */
 .marker-container {
   pointer-events: auto;
   cursor: pointer;
   will-change: transform;
   transform-origin: bottom center;
-  transition: transform 0.15s ease-out; /* 부드러운 전환을 위한 최소한의 트랜지션 */
+  /* 트랜지션이 있으면 지도의 줌 애니메이션과 엇박자가 나면서 마커가 튑니다. */
+  transition: none !important; 
   display: block;
   z-index: 10;
   width: 60px;
@@ -66,7 +67,7 @@
   transform: translateZ(0);
 }
 
-/* [NEW] 줌 레벨별 마커 스케일링 일괄 적용 (JS 루프 제거용) */
+/* [NEW] 줌 레벨별 마커 스케일링 일괄 적용 (!important로 인라인 스타일 간섭 차단) */
 #kakao-map.zoom-6 .marker-container {
   transform: scale(0.7) !important;
 }
