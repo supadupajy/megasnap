@@ -46,12 +46,52 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [dbPostData, setDbPostData] = useState<any>(null);
+
+  // [REVERT & FIX] posts에서 직접 가져온 원본 데이터를 최우선으로 사용
+  const currentPost = useMemo(() => {
+    const basePost = posts[currentPostIndex];
+    if (!basePost) return null;
+    // merge logic
+    return { ...basePost, ...(dbPostData && dbPostData.id === basePost.id ? dbPostData : {}) };
+  }, [posts, currentPostIndex, dbPostData]);
+
+  // [DEBUG] 실시간 데이터 확인
+  useEffect(() => {
+    if (currentPost) {
+      console.log('[PostDetail] Current Media Data:', {
+        id: currentPost.id,
+        youtubeUrl: currentPost.youtubeUrl,
+        youtube_url: currentPost.youtube_url,
+        videoUrl: currentPost.videoUrl,
+        video_url: currentPost.video_url
+      });
+    }
+  }, [currentPost]);
+
+  const getYouTubeIdLocal = (url?: string) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const videoId = useMemo(() => {
+    if (!currentPost) return null;
+    // 모든 가능한 필드 조합 체크 (기존 잘 되던 시절의 필드명 포함)
+    const url = currentPost.youtubeUrl || currentPost.youtube_url || currentPost.youtube_id;
+    return getYouTubeIdLocal(url);
+  }, [currentPost]);
+
+  const vUrl = useMemo(() => {
+    if (!currentPost) return null;
+    return currentPost.videoUrl || currentPost.video_url;
+  }, [currentPost]);
 
   // ✅ [FIX] Dialog 완전히 열린 후 iframe 마운트 여부 제어
   const [iframeReady, setIframeReady] = useState(false);
   
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  const currentPostData = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   
   // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
   const youtubeId = useMemo(() => {
@@ -461,53 +501,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
                   <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                     <div className="flex flex-col">
-                      {/* 미디어 영역 */}
+                      {/* 미디어 영역 - 복잡한 z-index를 걷어내고 여기보기와 동일한 단순 구조로 복원 */}
                       <div className="px-4 mt-2">
                         <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
-
-                          {/* ✅ [FIX] YouTube iframe - Dialog 오픈 후 300ms 뒤에 마운트하여 autoplay 허용 */}
-                          {youtubeId ? (
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <iframe
-                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
-                                  className="w-full h-full border-0"
-                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
-                                  title="YouTube video player"
-                                  allow="autoplay; encrypted-media; picture-in-picture"
-                                  allowFullScreen
-                                />
-                              ) : (
-                                /* 로딩 플레이스홀더 - iframe 준비 전 표시 */
-                                <div className="w-full h-full flex items-center justify-center bg-black">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                </div>
-                              )}
-                            </div>
-
-                          ) : videoUrl ? (
-                            /* ✅ [FIX] 일반 video도 동일하게 300ms 후 마운트 */
-                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
-                              {iframeReady ? (
-                                <video
-                                  key={`detail-vid-${currentPost.id}-${videoUrl}`}
-                                  src={videoUrl}
-                                  className="w-full h-full object-cover"
-                                  autoPlay
-                                  loop
-                                  playsInline
-                                  controls
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-black">
-                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                                </div>
-                              )}
-                            </div>
-
+                          {videoId ? (
+                            <iframe
+                              key={`yt-${currentPost.id}-${videoId}`}
+                              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&enablejsapi=1&origin=${window.location.origin}`}
+                              className="w-full h-full"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                            />
+                          ) : vUrl ? (
+                            <video 
+                              key={`vid-${currentPost.id}-${vUrl}`}
+                              src={vUrl} 
+                              className="w-full h-full object-cover" 
+                              autoPlay 
+                              loop 
+                              playsInline 
+                              controls 
+                            />
                           ) : (
-                            <div className="relative w-full h-full z-10 bg-gray-100">
-                              {/* 이미지 슬라이더 */}
+                            <div className="relative w-full h-full bg-gray-100">
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
