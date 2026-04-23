@@ -173,37 +173,37 @@ const PostDetail = () => {
   }
 
   return (
-    <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-  <button
-    onClick={() => navigate(-1)}
-    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-  >
-    <ChevronLeft className="w-6 h-6" />
-  </button>
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
-  </div>
-</div>
-
-      {/* Scrollable Content Area */}
-      <main className="flex-1 overflow-y-auto no-scrollbar bg-white">
-        <div className="pb-28">
-          {allPosts.map((p) => (
-            <div key={p.id} id={`post-${p.id}`}>
-              <PostItem 
-                post={p} 
-                disablePulse={true}
-                autoPlayVideo={true}
-                onLikeToggle={() => handleLikeToggle(p.id)}
-                onDelete={() => handlePostDelete(p.id)}
-                onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
-              />
-            </div>
-          ))}
-        </div>
-      </main>
+  <div className="min-h-screen bg-white" style={{ paddingTop: '88px' }}>
+    {/* Header */}
+    <div className="sticky top-[88px] z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+      <button
+        onClick={() => navigate(-1)}
+        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
+      <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+        <h2 className="text-lg font-black text-gray-900 tracking-tight">내 포스팅</h2>
+      </div>
     </div>
-  );
+
+    {/* Scrollable Content Area */}
+    <main className="pb-28">
+      {allPosts.map((p) => (
+        <div key={p.id} id={`post-${p.id}`}>
+          <PostItem 
+            post={p} 
+            disablePulse={true}
+            autoPlayVideo={true}
+            onLikeToggle={() => handleLikeToggle(p.id)}
+            onDelete={() => handlePostDelete(p.id)}
+            onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
+          />
+        </div>
+      ))}
+    </main>
+  </div>
+);
 };
 
 export default PostDetail;
