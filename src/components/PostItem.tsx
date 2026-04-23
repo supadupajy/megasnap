@@ -154,7 +154,125 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const videoId = getYouTubeId(post.youtubeUrl);
 
-  // 이미지 에러 핸들러 강화
+  // ✅ [FIX] 유튜브 자동 재생 정책(Autoplay Policy) 준수를 위해 'mute=1' 강제 적용
+  // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
+  const renderMedia = () => {
+    // 1. 유튜브 영상 처리
+    if (videoId) {
+      const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
+      return (
+        <div className="w-full h-full relative">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            className="w-full h-full object-cover"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            onLoad={() => setVideoLoaded(true)}
+          />
+          {(!videoLoaded || !isVisible) && (
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+            />
+          )}
+        </div>
+      );
+    }
+
+    // 2. 일반 업로드 동영상 처리
+    if (post.videoUrl) {
+      return (
+        <div className="w-full h-full relative">
+          <video
+            src={post.videoUrl}
+            className="w-full h-full object-cover"
+            autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
+            muted // ✅ 자동 재생을 위해 무음 필수
+            loop
+            playsInline
+            onLoadedData={() => setVideoLoaded(true)}
+          />
+          {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
+          {(!videoLoaded || !isVisible || !isReadyToPlay) && (
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+              onError={handleImageError}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // 3. 일반 이미지 슬라이더 처리
+    return (
+      <div className="relative w-full h-full">
+        <div
+          ref={imageScrollRef}
+          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+          onScroll={handleImageScroll}
+        >
+          {displayImages.map((img, index) => (
+            <div 
+              key={index} 
+              className="w-full h-full shrink-0 snap-center relative"
+              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
+            >
+              <img
+                src={img}
+                alt={`Content ${index}`}
+                className={cn(
+                  "w-full h-full object-cover",
+                  img === COCA_COLA_AD && "cursor-pointer"
+                )}
+                onError={handleImageError}
+              />
+              {img === COCA_COLA_AD && (
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
+                  AD
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 페이지 인디케이터 (구분자) */}
+        {displayImages.length > 1 && (
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+            {displayImages.map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 이미지 슬라이더 데이터 준비
+  const displayImages = useMemo(() => {
+    const baseImages = Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image];
+    
+    // [FIX] 광고를 삽입하되 원본 이미지가 누락되지 않도록 로직 수정
+    const newImages = [...baseImages];
+    // 두 번째 슬라이드(index 1) 위치에 코카콜라 광고 삽입
+    newImages.splice(1, 0, COCA_COLA_AD);
+    return newImages;
+  }, [post.images, post.image, post.image_url]);
+
+  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    if (index !== currentImageIndex) setCurrentImageIndex(index);
+  };
+
   const handleImageError = async () => {
     if (imgError) return; // 무한 루프 방지
     
@@ -276,23 +394,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     );
   };
 
-  // 이미지 슬라이더 데이터 준비
-  const displayImages = useMemo(() => {
-    const baseImages = Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image];
-    
-    // [FIX] 광고를 삽입하되 원본 이미지가 누락되지 않도록 로직 수정
-    const newImages = [...baseImages];
-    // 두 번째 슬라이드(index 1) 위치에 코카콜라 광고 삽입
-    newImages.splice(1, 0, COCA_COLA_AD);
-    return newImages;
-  }, [post.images, post.image, post.image_url]);
-
-  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentImageIndex) setCurrentImageIndex(index);
-  };
-
   const renderInteractionButtons = () => {
     return (
       <div className="px-4 pt-3 pb-2 flex flex-col gap-3">
@@ -340,105 +441,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <ShoppingBag className="w-3.5 h-3.5 fill-white" />
               <span className="text-[10px] font-black">주문하기</span>
             </a>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderMedia = () => {
-    // 1. 유튜브 영상 처리
-    if (videoId) {
-      return (
-        <div className="w-full h-full relative">
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${(autoPlayVideo && isVisible && isReadyToPlay) ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
-            className="w-full h-full object-cover"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            onLoad={() => setVideoLoaded(true)}
-          />
-          {(!videoLoaded || !isVisible) && (
-            <img 
-              src={currentImage} 
-              alt="" 
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-            />
-          )}
-        </div>
-      );
-    }
-
-    // 2. 일반 업로드 동영상 처리
-    if (post.videoUrl) {
-      return (
-        <div className="w-full h-full relative">
-          <video
-            src={post.videoUrl}
-            className="w-full h-full object-cover"
-            autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
-            muted
-            loop
-            playsInline
-            onLoadedData={() => setVideoLoaded(true)}
-          />
-          {/* ✅ 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출, 재생 중에는 썸네일 완전 제거 */}
-          {(!videoLoaded || !isVisible || !isReadyToPlay) && (
-            <img 
-              src={currentImage} 
-              alt="" 
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-              onError={handleImageError}
-            />
-          )}
-        </div>
-      );
-    }
-
-    // 3. 일반 이미지 슬라이더 처리
-    return (
-      <div className="relative w-full h-full">
-        <div
-          ref={imageScrollRef}
-          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-          onScroll={handleImageScroll}
-        >
-          {displayImages.map((img, index) => (
-            <div 
-              key={index} 
-              className="w-full h-full shrink-0 snap-center relative"
-              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-            >
-              <img
-                src={img}
-                alt={`Content ${index}`}
-                className={cn(
-                  "w-full h-full object-cover",
-                  img === COCA_COLA_AD && "cursor-pointer"
-                )}
-                onError={handleImageError}
-              />
-              {img === COCA_COLA_AD && (
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
-                  AD
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* 페이지 인디케이터 (구분자) */}
-        {displayImages.length > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-            {displayImages.map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
-                )}
-              />
-            ))}
           </div>
         )}
       </div>
