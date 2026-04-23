@@ -299,12 +299,12 @@ const Profile = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-1 px-6">
                     {(viewMode === 'gifs' ? myPosts.filter(p => p.isGif) : myPosts).map((post) => (
-                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group" onClick={() => handleGridItemClick(post.id)}>
-                        <img 
-                          src={post.image_url || post.image} 
-                          alt="" 
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity cursor-pointer" 
-                          onError={() => handleImageError(post.id)} 
+                      <div key={post.id} className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group">
+                        <img
+                          src={post.image_url || post.image}
+                          alt=""
+                          className="w-full h-full object-cover transition-opacity"
+                          onError={() => handleImageError(post.id)}
                         />
                       </div>
                     ))}
