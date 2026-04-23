@@ -71,98 +71,26 @@ const Write = () => {
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const rafRef = useRef<number | null>(null);
+const dragStartRef = useRef({ x: 0, y: 0 });
 
-  useEffect(() => {
-    if (!api) return;
-
-    setCurrentSlide(api.selectedScrollSnap());
-
-    api.on("select", () => {
-      setCurrentSlide(api.selectedScrollSnap());
-    });
-  }, [api]);
-
-  useEffect(() => {
-    if (initialLocation) {
-      setIsLoadingAddress(true);
-      const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
-      setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-      setIsLoadingAddress(false);
-    } else {
-      setAddress('위치 미지정');
-    }
-  }, [initialLocation]);
-
-  const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const newMediaItems = await Promise.all(files.map(async (file) => {
-      const type = file.type.startsWith('video/') ? 'video' : 'image';
-      const url = URL.createObjectURL(file);
-      
-      let orientation: 'landscape' | 'portrait' = 'landscape';
-      let thumbnail = undefined;
-
-      if (type === 'video') {
-        try {
-          thumbnail = await captureVideoThumbnail(url);
-        } catch (err) {
-          console.error("Thumbnail error:", err);
-        }
-      } else {
-        // 이미지를 로드하여 방향을 확인
-        await new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            orientation = img.width >= img.height ? 'landscape' : 'portrait';
-            resolve(null);
-          };
-          img.onerror = () => {
-            orientation = 'landscape';
-            resolve(null);
-          };
-          img.src = url;
-        });
-      }
-
-      return { 
-        file, 
-        url, 
-        type, 
-        thumbnail, 
-        crop: { x: 50, y: 50 }, 
-        zoom: 1, 
-        orientation 
-      } as MediaFile;
-    }));
-
-    setMediaFiles([...mediaFiles, ...newMediaItems]);
-    if (mediaInputRef.current) mediaInputRef.current.value = '';
-  };
-
-  const updateMediaCrop = (idx: number, x: number, y: number) => {
-    const newMedia = [...mediaFiles];
-    newMedia[idx] = { 
-      ...newMedia[idx], 
-      crop: { 
-        x: Math.max(0, Math.min(100, x)), 
-        y: Math.max(0, Math.min(100, y)) 
-      } 
-    };
-    setMediaFiles(newMedia);
-  };
-
-  const dragActiveIdxRef = useRef<number | null>(null);
+// ✅ 핵심: DOM 직접 조작을 위한 img ref + crop 위치 ref
+const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
+const cropPositionsRef = useRef<{ x: number; y: number }[]>([]);
+const dragActiveIdxRef = useRef<number | null>(null);
 const isDraggingActiveRef = useRef(false);
+
+// ✅ mediaFiles 길이 변경 시 cropPositions 초기화
+useEffect(() => {
+  cropPositionsRef.current = mediaFiles.map(m => ({
+    x: m.crop?.x ?? 50,
+    y: m.crop?.y ?? 50,
+  }));
+}, [mediaFiles.length]);
 
 const handleDragStart = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
   const media = mediaFiles[idx];
   if (!media || media.type !== 'image') return;
-  
+
   const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
   const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
@@ -173,7 +101,7 @@ const handleDragStart = (e: React.MouseEvent | React.TouchEvent, idx: number) =>
 
 const handleDragMove = (e: React.MouseEvent | React.TouchEvent, idx: number) => {
   if (!isDraggingActiveRef.current || dragActiveIdxRef.current !== idx) return;
-  
+
   const media = mediaFiles[idx];
   if (!media || media.type !== 'image') return;
 
@@ -186,19 +114,30 @@ const handleDragMove = (e: React.MouseEvent | React.TouchEvent, idx: number) => 
 
   const sensitivity = 0.35;
   const isPortrait = media.orientation === 'portrait';
-  const currentX = media.crop?.x ?? 50;
-  const currentY = media.crop?.y ?? 50;
+  const current = cropPositionsRef.current[idx] ?? { x: 50, y: 50 };
 
-  // 세로형: 세로 스크롤만, 가로형: 가로 스크롤만
-  const newX = isPortrait ? 50 : currentX - (deltaX * sensitivity);
-  const newY = isPortrait ? currentY - (deltaY * sensitivity) : 50;
+  const newX = isPortrait ? 50 : Math.max(0, Math.min(100, current.x - deltaX * sensitivity));
+  const newY = isPortrait ? Math.max(0, Math.min(100, current.y - deltaY * sensitivity)) : 50;
 
-  updateMediaCrop(idx, newX, newY);
+  // ✅ React state 대신 ref + DOM 직접 업데이트 → 즉각 반응
+  cropPositionsRef.current[idx] = { x: newX, y: newY };
+  const imgEl = imgRefs.current[idx];
+  if (imgEl) {
+    imgEl.style.objectPosition = isPortrait ? `50% ${newY}%` : `${newX}% 50%`;
+  }
 };
 
 const stopDragging = () => {
+  if (!isDraggingActiveRef.current) return;
   isDraggingActiveRef.current = false;
+  const idx = dragActiveIdxRef.current;
   dragActiveIdxRef.current = null;
+
+  // ✅ 드래그 끝날 때만 store에 저장
+  if (idx !== null && cropPositionsRef.current[idx]) {
+    const { x, y } = cropPositionsRef.current[idx];
+    updateMediaCrop(idx, x, y);
+  }
 };
 
   const captureVideoThumbnail = (url: string): Promise<string> => {
