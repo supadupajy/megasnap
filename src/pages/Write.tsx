@@ -180,15 +180,9 @@ const Write = () => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 100 }}
-      transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-      className="min-h-screen bg-white flex flex-col z-[100]"
-    >
+    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       {/* 1. 상단 헤더 공간 (88px) - 투명하게 설정하여 뒤의 HeaderAdBanner가 보이도록 함 */}
-      <div className="h-[88px] w-full shrink-0" />
+      <div className="h-[88px] w-full shrink-0 z-50 pointer-events-none" />
 
       {/* 2. 고정 영역: 페이지 타이틀 */}
       <div className="shrink-0 bg-white border-b border-gray-100 shadow-sm">
@@ -315,7 +309,7 @@ const Write = () => {
           )}
         </div>
       </main>
-    </motion.div>
+    </div>
   );
 };
 

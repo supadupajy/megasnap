@@ -62,8 +62,8 @@ const AnimatedRoutes = () => {
     path => location.pathname.startsWith(path)
   );
 
-  // 하단 탭 메뉴(메인 메뉴)인지 확인
-  const isMainTab = ["/", "/popular", "/search", "/messages", "/profile"].includes(location.pathname);
+  // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
+  const isMainTab = ["/", "/popular", "/search", "/messages", "/profile", "/write"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
