@@ -80,7 +80,7 @@ const ObservedPostItem = ({
   }, [post.id, fullPost.user.name, isNearVisible, isCurrentlyVisible]);
 
   useEffect(() => {
-    // 1. 읽음 처리용 옵저버 (60% 이상 노출 시)
+    // 1. 읽음 처리용 옵저버 (기존 로직 유지)
     const viewObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
@@ -92,14 +92,13 @@ const ObservedPostItem = ({
     );
 
     // 2. 동영상 재생용 실시간 가시성 옵저버 (인스타그램 방식)
-    // ✅ [FIX] 여러 영상이 동시에 재생되지 않도록 rootMargin을 조절하여 화면 중앙부(좁은 영역)에 올 때만 활성화
     const playbackObserver = new IntersectionObserver(
       ([entry]) => {
         setIsCurrentlyVisible(entry.isIntersecting);
       },
       { 
-        threshold: 0.6, // 60% 이상 확실히 보일 때
-        rootMargin: '-30% 0px -30% 0px' // 화면 상하단 30%씩 제외한 중앙 40% 영역 내에 있을 때만 재생
+        threshold: 0.2, // 20%만 보여도 로딩 시작 판단에 활용
+        rootMargin: '0px'
       }
     );
 
