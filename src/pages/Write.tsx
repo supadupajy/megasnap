@@ -227,34 +227,68 @@ const Write = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, profile } = useAuth();
+  
   const { mediaFiles, setMediaFiles, content, setContent, category, setCategory, clear } = useWriteStore();
-
+  
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
+  const [api, setApi] = useState<any>();
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  // [FIX] 카카오 맵 API를 사용하여 좌표를 실제 주소로 변환하는 함수
+  const reverseGeocode = useCallback((lat: number, lng: number) => {
+    return new Promise<string>((resolve) => {
+      const kakao = (window as any).kakao;
+      if (!kakao || !kakao.maps || !kakao.maps.services) {
+        // API가 로드되지 않은 경우 오프라인 로직으로 대체
+        resolve(resolveOfflineLocationName(lat, lng));
+        return;
+      }
+
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const addr = result[0].address;
+          // 구 단위까지만 추출하여 "서울시 강남구" 형태로 가공
+          const region1 = addr.region_1depth_name; // 시/도
+          const region2 = addr.region_2depth_name; // 구/군
+          resolve(`${region1} ${region2}`);
+        } else {
+          resolve(resolveOfflineLocationName(lat, lng));
+        }
+      });
+    });
+  }, []);
 
   useEffect(() => {
-    if (initialLocation) {
-      setIsLoadingAddress(true);
-      const resolvedAddress = resolveOfflineLocationName(initialLocation.lat, initialLocation.lng);
-      setAddress(resolvedAddress || `좌표: ${initialLocation.lat.toFixed(4)}, ${initialLocation.lng.toFixed(4)}`);
-      setIsLoadingAddress(false);
-    } else {
-      setAddress('위치 미지정');
-    }
-  }, [initialLocation]);
+    const updateAddress = async () => {
+      if (initialLocation) {
+        setIsLoadingAddress(true);
+        const resolvedAddress = await reverseGeocode(initialLocation.lat, initialLocation.lng);
+        setAddress(resolvedAddress);
+        setIsLoadingAddress(false);
+      } else {
+        setAddress('위치 미지정');
+      }
+    };
+    
+    updateAddress();
+  }, [initialLocation, reverseGeocode]);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
