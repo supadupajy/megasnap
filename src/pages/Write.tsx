@@ -202,7 +202,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
           const img = new Image();
           img.onload = () => {
             orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-              resolve();
+            console.log('📸 orientation:', orientation, img.naturalWidth, 'x', img.naturalHeight);
+            resolve();
           };
           img.onerror = () => resolve();
           img.src = url;
@@ -212,6 +213,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
     }));
 
     setMediaFiles(prev => [...prev, ...newItems]);
+      console.log('✅ setMediaFiles 호출됨, 길이:', next.length, next[0]?.url?.substring(0, 50));
+
     if (mediaInputRef.current) mediaInputRef.current.value = '';
   };
 
@@ -264,7 +267,13 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   };
 
   const currentMedia = mediaFiles[currentSlide];
-  
+  console.log('🎯 currentMedia:', JSON.stringify({
+  type: currentMedia?.type,
+  url: currentMedia?.url?.substring(0, 80),
+  orientation: currentMedia?.orientation,
+  crop: currentMedia?.crop,
+}));
+
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       <div className="h-[88px] w-full shrink-0 pointer-events-none" />
@@ -308,6 +317,8 @@ const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   className="pointer-events-none"
   onLoad={(e) => {
     const img = e.currentTarget;
+    console.log('🖼️ onLoad:', img.naturalWidth, 'x', img.naturalHeight);
+    console.log('type:', currentMedia?.type, typeof currentMedia?.type);
     const container = containerRef.current;
     if (!container) return;
     const conW = container.offsetWidth;
