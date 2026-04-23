@@ -46,58 +46,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
-  const [dbPostData, setDbPostData] = useState<any>(null);
-
-  // [CRITICAL FIX] 데이터 구조를 여기보기(Index.tsx/PostItem)와 100% 동일하게 강제 매핑
-  const currentPost = useMemo(() => {
-    const basePost = posts[currentPostIndex];
-    if (!basePost) return null;
-    
-    // DB 원본 데이터 (p) 와 UI용 데이터 (basePost) 병합
-    const p = dbPostData && dbPostData.id === basePost.id ? dbPostData : basePost;
-    
-    // Index.tsx의 mapDbToPost 로직을 그대로 가져와서 필드 복원
-    return {
-      ...basePost,
-      ...p,
-      youtubeUrl: p.youtube_url || p.youtubeUrl,
-      videoUrl: p.video_url || p.videoUrl,
-      image: p.image_url || p.image || basePost.image
-    };
-  }, [posts, currentPostIndex, dbPostData]);
-
-  // [DEBUG] 실제 어떤 데이터가 들어오는지 브라우저 콘솔에 출력 (F12로 확인 가능)
-  useEffect(() => {
-    if (currentPost && isOpen) {
-      console.log('--- PostDetail Media Debug ---');
-      console.log('Post ID:', currentPost.id);
-      console.log('Youtube URL:', currentPost.youtubeUrl);
-      console.log('Video URL:', currentPost.videoUrl);
-      console.log('------------------------------');
-    }
-  }, [currentPost, isOpen]);
-
-  const getYouTubeIdLocal = (url?: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
-    return match ? match[1] : null;
-  };
-
-  const videoId = useMemo(() => {
-    if (!currentPost) return null;
-    return getYouTubeIdLocal(currentPost.youtubeUrl);
-  }, [currentPost]);
-
-  const vUrl = useMemo(() => {
-    if (!currentPost) return null;
-    return currentPost.videoUrl;
-  }, [currentPost]);
 
   // ✅ [FIX] Dialog 완전히 열린 후 iframe 마운트 여부 제어
   const [iframeReady, setIframeReady] = useState(false);
   
   // [FIX] 현재 인덱스의 포스트 데이터를 실시간으로 감시
-  const currentPostData = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   
   // [CRITICAL FIX] 모든 가능한 필드명 체크 및 디버깅 로그 추가
   const youtubeId = useMemo(() => {
@@ -285,7 +239,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
   const displayImages = useMemo(() => {
-    if (!currentPost || videoId || vUrl) return []; // [CRITICAL] 영상이 있으면 이미지 배열을 비움
+    if (!currentPost) return [];
     
     let baseImages: string[] = [];
     
@@ -314,7 +268,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     
     return imagesWithAd;
-  }, [currentPost, displayImage, videoId, vUrl]);
+  }, [currentPost, displayImage]);
 
   const adLink = useMemo(() => {
     if (!currentPost) return "https://www.coca-cola.co.kr/";
@@ -509,38 +463,51 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="flex flex-col">
                       {/* 미디어 영역 */}
                       <div className="px-4 mt-2">
-                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {/* 영상 레이어 */}
-                          {videoId && (
-                            <div className="absolute inset-0 w-full h-full z-50 bg-black">
-                              <iframe
-                                key={`yt-${currentPost.id}-${videoId}`}
-                                src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0&origin=${window.location.origin}`}
-                                className="w-full h-full border-0"
-                                allow="autoplay; encrypted-media"
-                                allowFullScreen
-                              />
-                            </div>
-                          )}
+                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
 
-                          {vUrl && !videoId && (
-                            <div className="absolute inset-0 w-full h-full z-50 bg-black">
-                              <video 
-                                key={`vid-${currentPost.id}-${vUrl}`}
-                                src={vUrl} 
-                                className="w-full h-full object-cover" 
-                                autoPlay 
-                                loop 
-                                playsInline 
-                                controls 
-                              />
+                          {/* ✅ [FIX] YouTube iframe - Dialog 오픈 후 300ms 뒤에 마운트하여 autoplay 허용 */}
+                          {youtubeId ? (
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <iframe
+                                  key={`detail-yt-${currentPost.id}-${youtubeId}`}
+                                  className="w-full h-full border-0"
+                                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&loop=1&playlist=${youtubeId}&enablejsapi=1&origin=${window.location.origin}`}
+                                  title="YouTube video player"
+                                  allow="autoplay; encrypted-media; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                /* 로딩 플레이스홀더 - iframe 준비 전 표시 */
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
                             </div>
-                          )}
 
-                          {/* 이미지 레이어 - 영상이 없을 때만 렌더링 */}
-                          {!videoId && !vUrl && displayImages.length > 0 && (
-                            <div className="relative w-full h-full z-10">
-                              {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
+                          ) : videoUrl ? (
+                            /* ✅ [FIX] 일반 video도 동일하게 300ms 후 마운트 */
+                            <div className="absolute inset-0 w-full h-full z-[999] bg-black">
+                              {iframeReady ? (
+                                <video
+                                  key={`detail-vid-${currentPost.id}-${videoUrl}`}
+                                  src={videoUrl}
+                                  className="w-full h-full object-cover"
+                                  autoPlay
+                                  loop
+                                  playsInline
+                                  controls
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
+                              )}
+                            </div>
+
+                          ) : (
+                            <div className="relative w-full h-full z-10 bg-gray-100">
+                              {/* 이미지 슬라이더 */}
                               <div
                                 ref={imageScrollRef}
                                 className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
