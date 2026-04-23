@@ -16,7 +16,6 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
   level?: number;
   searchResultLocation?: { lat: number; lng: number } | null;
-  onMoveComplete?: () => void; // ✅ 추가
 }
 
 const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
