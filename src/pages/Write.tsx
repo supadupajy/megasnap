@@ -330,7 +330,11 @@ cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y -
               </div>
 
               {mediaFiles.length > 0 ? (
-                <div ref={containerRef} className="aspect-square w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none">
+                <div 
+  ref={containerRef} 
+  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
+  style={{ aspectRatio: '1 / 1' }}
+>
 
                   {/* 이미지 / 비디오 */}
                   {currentMedia?.type === 'image' ? (
