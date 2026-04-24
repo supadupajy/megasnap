@@ -252,13 +252,32 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
     const bounds = mapInstance.current.getBounds();
-    const currentPostIds = new Set(posts.map(p => p.id));
+    // 맵 경계에 약간의 마진을 주어 마커가 경계에서 급격히 사라지는 것을 방지 (약 10% 확장)
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const latDelta = (ne.getLat() - sw.getLat()) * 0.1;
+    const lngDelta = (ne.getLng() - sw.getLng()) * 0.1;
+    
+    const extendedBounds = new kakao.maps.LatLngBounds(
+      new kakao.maps.LatLng(sw.getLat() - latDelta, sw.getLng() - lngDelta),
+      new kakao.maps.LatLng(ne.getLat() + latDelta, ne.getLng() + lngDelta)
+    );
+
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
 
     posts.forEach(post => {
-      if (!post) return;
+      if (!post || post.lat === null || post.lng === null) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
-      if (!bounds.contain(position)) return;
+      
+      // 확장된 영역 체크로 마커 가시성 확보
+      if (!extendedBounds.contain(position)) {
+        // 영역 밖으로 나간 마커는 메모리 관리를 위해 제거 (단, highlighted는 유지)
+        if (overlaysRef.current.has(post.id) && highlightedPostId !== post.id) {
+          overlaysRef.current.get(post.id).setMap(null);
+          overlaysRef.current.delete(post.id);
+        }
+        return;
+      }
 
       const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
