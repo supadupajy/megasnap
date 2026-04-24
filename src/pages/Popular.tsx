@@ -56,10 +56,10 @@ const Popular = () => {
       const to = from + PAGE_SIZE - 1;
       await initializeYoutubePool();
       
-      const storedBounds = localStorage.getItem('map_bounds');
-      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+      const storedLocation = localStorage.getItem('last_known_location');
+      const location = storedLocation ? JSON.parse(storedLocation) : null;
       
-      console.log(`[Popular] fetchPopularPosts (Initial). Bounds:`, bounds);
+      console.log(`[Popular] fetchPopularPosts (Initial). Location:`, location?.address);
 
       let query = supabase
         .from('posts_with_profiles')
@@ -67,20 +67,10 @@ const Popular = () => {
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (bounds) {
-        const latMin = Math.min(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
-        const latMax = Math.max(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
-        const lngMin = Math.min(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
-        const lngMax = Math.max(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
-        
-        const latBuffer = (latMax - latMin) * 0.1;
-        const lngBuffer = (lngMax - lngMin) * 0.1;
-
-        query = query
-          .gte('latitude', latMin - latBuffer)
-          .lte('latitude', latMax + latBuffer)
-          .gte('longitude', lngMin - lngBuffer)
-          .lte('longitude', lngMax + lngBuffer);
+      if (location && location.address) {
+        const addrParts = location.address.split(' ');
+        const regionSearch = addrParts.slice(0, 2).join(' ');
+        query = query.ilike('location_name', `%${regionSearch}%`);
       }
 
       const { data, error, count } = await query.range(from, to);
@@ -142,42 +132,29 @@ const Popular = () => {
       const from = posts.length;
       const to = from + 9;
       
-      const storedBounds = localStorage.getItem('map_bounds');
-      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+      const storedLocation = localStorage.getItem('last_known_location');
+      const location = storedLocation ? JSON.parse(storedLocation) : null;
       
-      console.log(`[Popular] loadNearbyPosts triggered. Current posts count: ${from}. Target range: ${from}-${to}`);
-      console.log(`[Popular] Current map bounds from localStorage:`, bounds);
+      console.log(`[Popular] loadNearbyPosts triggered. Current count: ${from}. Range: ${from}-${to}`);
       
+      // [FIX] 지도 좌표(bounds) 대신 사용자의 행정구역(address) 정보를 기반으로 필터링
       let query = supabase
         .from('posts_with_profiles')
         .select('*', { count: 'exact' })
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false });
       
-      if (bounds) {
-        // [FIX] bounds 객체 구조에 따라 위경도 추출 (sw, ne 가 직접 숫자가 아닐 수 있음을 대비)
-        const latMin = Math.min(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
-        const latMax = Math.max(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
-        const lngMin = Math.min(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
-        const lngMax = Math.max(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
+      if (location && location.address) {
+        // "서울특별서 강남구 ..." 에서 첫 두 마디(시/도 + 구) 정도를 추출하여 지역성 확보
+        const addrParts = location.address.split(' ');
+        const regionSearch = addrParts.slice(0, 2).join(' ');
+        console.log(`[Popular] Filtering by region address: "${regionSearch}"`);
         
-        // [EXPAND] 사용자가 보고 있는 지역보다 약간 더 넓은 범위(약 10%)를 검색하여 데이터 부족 현상 방지
-        const latBuffer = (latMax - latMin) * 0.1;
-        const lngBuffer = (lngMax - lngMin) * 0.1;
-
-        console.log(`[Popular] Filtering (with buffer): Lat(${latMin - latBuffer} to ${latMax + latBuffer}), Lng(${lngMin - lngBuffer} to ${lngMax + lngBuffer})`);
-        
-        query = query
-          .gte('latitude', latMin - latBuffer)
-          .lte('latitude', latMax + latBuffer)
-          .gte('longitude', lngMin - lngBuffer)
-          .lte('longitude', lngMax + lngBuffer);
+        query = query.ilike('location_name', `%${regionSearch}%`);
       } else {
-        console.warn('[Popular] No map bounds found in localStorage. Falling back to global popular.');
-        // bounds가 없으면 그냥 전역 인기 포스팅이라도 보여주도록 처리 (사용자 경험 개선)
+        console.warn('[Popular] No location address found. Loading global popular posts.');
       }
 
-      // range 적용
       const { data, error, count } = await query.range(from, to);
       
       if (error) {
@@ -185,7 +162,7 @@ const Popular = () => {
         throw error;
       }
 
-      console.log(`[Popular] Query result - Data length: ${data?.length}, Total count for this area: ${count}`);
+      console.log(`[Popular] Query result - Data length: ${data?.length}, Total in area: ${count}`);
 
       if (data && data.length > 0) {
         const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
