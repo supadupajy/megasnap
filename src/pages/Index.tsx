@@ -36,6 +36,16 @@ const fireConfetti = (options: any) => {
 
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
+const getTierFromId = (id: string) => {
+  let h = 0;
+  const idStr = id.toString();
+  for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+  const val = Math.abs(h % 1000) / 1000;
+  if (val < 0.05) return 'diamond';
+  if (val < 0.15) return 'gold';
+  return 'none';
+};
+
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -144,26 +154,6 @@ const Index = () => {
       highlightTimeoutRef.current = null;
     }, 1500); 
   }, []);
-
-  const getTierFromId = (id: string) => {
-    let h = 0;
-    const idStr = id.toString();
-    for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-    const val = Math.abs(h % 1000) / 1000;
-    if (val < 0.05) return 'diamond';
-    if (val < 0.15) return 'gold';
-    return 'none';
-  };
-
-  const getTierFromId = (id: string) => {
-    let h = 0;
-    const idStr = id.toString();
-    for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-    const val = Math.abs(h % 1000) / 1000;
-    if (val < 0.05) return 'diamond';
-    if (val < 0.15) return 'gold';
-    return 'none';
-  };
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
