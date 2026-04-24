@@ -225,45 +225,46 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      // [OPTIMIZATION] posts 대신 posts_with_profiles 뷰를 사용하여 프로필 정보를 한 번에 가져옴
-      // 좋아요가 많은 순서대로 50개를 가져온 뒤 상위 20개를 추출하여 로딩 루프 방지
+      // [FIX] 좌표 정보(latitude, longitude)가 NULL이 아닌 유효한 포스트만 인기 순위에 포함시킵니다.
       const { data, error } = await supabase
         .from('posts_with_profiles')
         .select('*')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
         .order('likes', { ascending: false })
         .limit(50);
         
       if (!error && data) {
-        // [FIX] 매번 셔플(random)하지 않고 고정된 순위(좋아요 순)를 제공하여 UI 깜빡임 방지
-        const mapped = await Promise.all(data.map(async (p) => {
-          const isAd = p.content?.trim().startsWith('[AD]') || false;
-          const borderType = getTierFromId(p.id);
-          
-          return {
-            id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
-            user: { 
-              id: p.user_id, 
-              name: p.user_nickname || '탐험가', 
-              avatar: p.user_avatar_url || '' 
-            },
-            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-            location: p.location_name || '알 수 없는 장소',
-            lat: p.latitude, lng: p.longitude, 
-            likes: Number(p.likes || 0), commentsCount: 0, comments: [],
-            image: p.image_url || '',
-            images: p.images || [p.image_url], 
-            youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-            category: p.category || 'none', isLiked: false, 
-            createdAt: new Date(p.created_at), borderType
-          };
-        }));
+        // [FIX] 프로필 정보가 유실된 포스트는 순위에서 제외하여 클릭 시 위치 이동 오류를 방지합니다.
+        const mapped = data
+          .filter(p => p.user_id && p.latitude && p.longitude)
+          .map((p) => {
+            const isAd = p.content?.trim().startsWith('[AD]') || false;
+            const borderType = getTierFromId(p.id);
+            
+            return {
+              id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
+              user: { 
+                id: p.user_id, 
+                name: p.user_nickname || '탐험가', 
+                avatar: p.user_avatar_url || '' 
+              },
+              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+              location: p.location_name || '알 수 없는 장소',
+              lat: Number(p.latitude), 
+              lng: Number(p.longitude), 
+              likes: Number(p.likes || 0), commentsCount: 0, comments: [],
+              image: p.image_url || '',
+              images: p.images || [p.image_url], 
+              youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+              category: p.category || 'none', isLiked: false, 
+              createdAt: new Date(p.created_at), 
+              borderType: borderType as "none" | "gold" | "silver" | "diamond" | "popular"
+            };
+          });
         
         // 상위 20개만 고정 순위로 설정
-        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ 
-          ...p, 
-          rank: idx + 1,
-          borderType: p.borderType as "none" | "gold" | "silver" | "diamond" | "popular"
-        })));
+        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 })));
       }
     } catch (err) { console.error(err); }
   }, [getTierFromId]);
