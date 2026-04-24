@@ -99,16 +99,16 @@ const Popular = () => {
     
     try {
       const lastPost = posts[posts.length - 1];
-      // [CRITICAL FIX] CreatedAt이 유효하지 않을 경우를 대비해 현재 시간 또는 아주 먼 과거부터 역순 조회
       const lastPostDate = lastPost?.createdAt ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
       
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      console.log('[Popular] Attempting to load 10 more posts before:', lastPostDate);
+      console.log('[Popular] Attempting to load 10 more posts from posts_with_profiles view before:', lastPostDate);
       
+      // [CRITICAL FIX] posts 테이블 대신 프로필 정보가 포함된 posts_with_profiles 뷰에서 데이터를 가져옵니다.
       let query = supabase
-        .from('posts')
+        .from('posts_with_profiles')
         .select('*')
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
@@ -129,20 +129,42 @@ const Popular = () => {
 
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('[Popular] Supabase query error:', error);
+        throw error;
+      }
 
       if (data && data.length > 0) {
-        const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
-        const mappedPosts = sanitizedData.map(p => {
+        // [FIX] posts_with_profiles의 user_nickname, user_avatar_url을 Post 타입에 맞게 매핑
+        const mappedPosts = data.map(p => {
           const borderType = getTierFromId(p.id);
           const isAd = p.content?.trim().startsWith('[AD]');
           let finalImage = p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+          
           return {
-            id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-            user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
-            content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
-            likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-            isLiked: false, isSaved: false, createdAt: new Date(p.created_at), borderType,
+            id: p.id, 
+            isAd, 
+            isGif: false, 
+            isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+            user: { 
+              id: p.user_id, 
+              name: p.user_nickname || '탐험가', 
+              avatar: p.user_avatar_url || '' 
+            },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '', 
+            location: p.location_name, 
+            lat: p.latitude, 
+            lng: p.longitude,
+            likes: Number(p.likes || 0), 
+            commentsCount: 0, 
+            comments: [], 
+            image: finalImage, 
+            youtubeUrl: p.youtube_url, 
+            videoUrl: p.video_url,
+            isLiked: false, 
+            isSaved: false, 
+            createdAt: new Date(p.created_at), 
+            borderType,
             category: p.category || 'none',
           };
         }) as Post[];
@@ -151,15 +173,14 @@ const Popular = () => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
           
-          console.log(`[Popular] Successfully loaded ${filteredNew.length} new unique posts.`);
+          console.log(`[Popular] DB response size: ${data.length}, New unique posts: ${filteredNew.length}`);
           
-          // 가져온 데이터가 있다면 무조건 hasMore를 true로 유지하여 다음 로딩을 허용
+          // 데이터가 응답되었으므로 다음 로딩을 위해 hasMore를 true로 유지
           setHasMore(true); 
           return [...prev, ...filteredNew];
         });
       } else {
-        // DB에서 실제로 반환된 데이터가 0개일 때만 종료
-        console.log('[Popular] Zero results from DB. Marking end of region data.');
+        console.log('[Popular] No more posts found in this region for date:', lastPostDate);
         setHasMore(false);
       }
     } catch (err) {
