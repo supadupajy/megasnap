@@ -58,14 +58,14 @@ const Popular = () => {
       
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+      
+      console.log(`[Popular] fetchPopularPosts (Initial). Bounds:`, bounds);
 
-      // [CRITICAL] 초기 로딩 시에도 현재 사용자가 보고 있는 지도 영역(bounds) 내의 포스팅만 필터링
       let query = supabase
         .from('posts_with_profiles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('likes', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
 
       if (bounds) {
         const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
@@ -80,10 +80,18 @@ const Popular = () => {
           .lte('longitude', lngMax);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query.range(from, to);
       
       if (error) throw error;
-      if (!data || data.length < PAGE_SIZE) setHasMore(false);
+      
+      console.log(`[Popular] Initial fetch result: ${data?.length} posts found. Total in area: ${count}`);
+
+      if (!data || data.length < PAGE_SIZE || (count !== null && data.length >= count)) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
       const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));
       const mappedPosts = sanitizedData.map(p => {
         const borderType = getTierFromId(p.id);
@@ -134,21 +142,22 @@ const Popular = () => {
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      console.log(`[Popular] Loading more posts (range ${from}-${to}) restricted to current map bounds`);
+      console.log(`[Popular] loadNearbyPosts triggered. Current posts count: ${from}. Target range: ${from}-${to}`);
+      console.log(`[Popular] Current map bounds from localStorage:`, bounds);
       
       let query = supabase
         .from('posts_with_profiles')
-        .select('*')
+        .select('*', { count: 'exact' }) // 정확한 전체 개수 확인을 위해 count 옵션 추가
         .order('likes', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
       
-      // [CRITICAL] 현재 사용자가 보고 있는 지도 영역(bounds) 내의 포스팅만 필터링
       if (bounds) {
         const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
         const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
         const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
         const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        
+        console.log(`[Popular] Filtering by: Lat(${latMin} to ${latMax}), Lng(${lngMin} to ${lngMax})`);
         
         query = query
           .gte('latitude', latMin)
@@ -156,19 +165,19 @@ const Popular = () => {
           .gte('longitude', lngMin)
           .lte('longitude', lngMax);
       } else {
-        // 위치 정보가 없으면 로딩 중단 (내 지역 포스팅만 보여주기 위함)
-        console.warn('[Popular] No map bounds found in localStorage');
-        setHasMore(false);
-        setIsLoadingMore(false);
-        return;
+        console.warn('[Popular] No map bounds found in localStorage. Falling back to global popular.');
+        // bounds가 없으면 그냥 전역 인기 포스팅이라도 보여주도록 처리 (사용자 경험 개선)
       }
 
-      const { data, error } = await query;
+      // range 적용
+      const { data, error, count } = await query.range(from, to);
       
       if (error) {
         console.error('[Popular] Supabase query error:', error);
         throw error;
       }
+
+      console.log(`[Popular] Query result - Data length: ${data?.length}, Total count for this area: ${count}`);
 
       if (data && data.length > 0) {
         const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
@@ -209,13 +218,19 @@ const Popular = () => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
           
-          console.log(`[Popular] DB response size: ${data.length}, New unique posts: ${filteredNew.length}`);
+          console.log(`[Popular] Unique new posts added: ${filteredNew.length}`);
           
-          if (data.length < 10) setHasMore(false);
+          // 가져온 데이터가 요청량보다 적거나, 전체 카운트에 도달했으면 더 이상 데이터 없음
+          if (data.length < 10 || (count !== null && prev.length + filteredNew.length >= count)) {
+            console.log('[Popular] Reached the end of posts for this area.');
+            setHasMore(false);
+          } else {
+            setHasMore(true);
+          }
           return [...prev, ...filteredNew];
         });
       } else {
-        console.log('[Popular] No more posts found');
+        console.log('[Popular] No more data returned from Supabase.');
         setHasMore(false);
       }
     } catch (err) {
