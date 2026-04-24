@@ -98,16 +98,18 @@ const Popular = () => {
     
     try {
       const lastPost = posts[posts.length - 1];
+      // [FIX] created_at 기준으로 정확히 이전 데이터들을 순차적으로 가져오도록 함
       const lastPostDate = lastPost ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
       
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      // [FIX] 해당 지역의 모든 포스팅을 불러올 수 있도록 쿼리 구성
+      console.log('[Popular] Fetching more posts before:', lastPostDate);
+      
       let query = supabase
         .from('posts')
         .select('*')
-        .lt('created_at', lastPostDate)
+        .lt('created_at', lastPostDate) // 마지막 포스트보다 이전 시간의 데이터만
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -148,20 +150,17 @@ const Popular = () => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
           
-          // [FIX] 현재 지역의 모든 데이터를 불러올 때까지 hasMore 유지
-          if (filteredNew.length === 0 && mappedPosts.length > 0) {
-            // 중복만 있고 새로운 게 없더라도, DB 응답이 있었다면 다음 시간을 시도해볼 수 있도록 유지
-            return prev;
-          }
+          console.log(`[Popular] New unique posts found: ${filteredNew.length} / ${mappedPosts.length}`);
           
-          if (mappedPosts.length === 0) {
-            setHasMore(false);
+          // 데이터가 일부라도 있으면 hasMore를 true로 명시적 유지
+          if (mappedPosts.length > 0) {
+            setHasMore(true);
           }
           
           return [...prev, ...filteredNew];
         });
       } else {
-        // [FIX] 해당 지역에 더 이상 데이터가 없는 경우에만 false
+        console.log('[Popular] No more data found in this region.');
         setHasMore(false);
       }
     } catch (err) {
