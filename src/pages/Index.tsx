@@ -259,7 +259,11 @@ const Index = () => {
         }));
         
         // 상위 20개만 고정 순위로 설정
-        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 })));
+        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ 
+          ...p, 
+          rank: idx + 1,
+          borderType: p.borderType as "none" | "gold" | "silver" | "diamond" | "popular"
+        })));
       }
     } catch (err) { console.error(err); }
   }, [getTierFromId]);
