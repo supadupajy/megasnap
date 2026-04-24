@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ChevronUp } from 'lucide-react';
+import { Loader2, ChevronUp, CircleOff } from 'lucide-react';
 import { getDiverseUnsplashUrl, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
@@ -284,13 +284,20 @@ const Popular = () => {
               </div>
             )}
             
-            {hasMore && posts.length > 0 && (
+            {posts.length > 0 && (
               <div 
                 className="py-10 flex flex-col items-center justify-center transition-all duration-200"
-                style={{ height: `${Math.max(80, pullUpDistance + 40)}px` }}
+                style={{ height: `${Math.max(100, pullUpDistance + 40)}px` }}
               >
                 {isLoadingMore ? (
                   <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                ) : !hasMore ? (
+                  <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
+                    <CircleOff className="w-8 h-8 text-gray-300 mb-2" />
+                    <p className="text-xs font-bold text-gray-400">
+                      더 이상 이 지역에 포스팅이 없습니다.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <motion.div
