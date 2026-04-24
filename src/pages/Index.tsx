@@ -126,6 +126,7 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
+
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
     if (post.lat === null || post.lng === null) return;
@@ -139,34 +140,29 @@ const Index = () => {
     setSearchResultLocation(null);
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    // 하이라이트 상태 초기화
+    // 하이라이트 초기화 및 지도 이동 시작
     setHighlightedPostId(null);
-    // 지도 중심 이동
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-    // ✅ [MOD] 지도가 이동하고 마커가 생성될 시간을 충분히 준 뒤 하이라이트 이벤트 발송
-    // 먼 거리 이동 시 마커 로딩이 지연될 수 있으므로 대기 시간을 1.5초로 상향
+    // ✅ 하이라이트 이벤트 발송 시간 조정
     highlightTimeoutRef.current = window.setTimeout(() => {
-      console.log('[Index] Triggering delayed highlight for post:', post.id);
       window.dispatchEvent(new CustomEvent('highlight-marker', { 
         detail: { id: post.id, duration: 3000 } 
       }));
       highlightTimeoutRef.current = null;
-    }, 1500); 
+    }, 1500);
   }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      // [OPTIMIZATION] 이미 rawPost에 모든 데이터가 포함되어 있다고 가정하고 추가 쿼리를 제거합니다.
-      // 만약 데이터가 부족하다면 상위 fetch 단계에서 조인을 통해 한꺼번에 가져와야 합니다.
+      // [OPTIMIZATION] rawPost is already populated with profile data from the view
       const p = rawPost;
 
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
       
-      // [FIX] REMOVED REDUNDANT DECLARATION
       let bType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       if (likesCount >= 9000) {
         bType = 'popular';
@@ -174,45 +170,21 @@ const Index = () => {
         bType = getTierFromId(p.id);
       }
 
-      const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
-      const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
-
       const sanitizeUrl = (url: any) => {
-        if (!url || typeof url !== 'string') return HIGH_RES_FALLBACK + "&sig=" + p.id;
-        const clean = url.trim();
-        if (clean.includes('supabase.co/storage')) return clean;
-        if (clean.includes('unsplash.com')) {
-          const pexelsPool = ["https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg", "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg", "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg"];
-          let h = 0;
-          for(let i = 0; i < p.id.length; i++) h = Math.imul(31, h) + p.id.charCodeAt(i) | 0;
-          return pexelsPool[Math.abs(h) % pexelsPool.length];
-        }
-        if (BROKEN_IDS.some(id => clean.includes(id)) || !clean.startsWith('http')) return HIGH_RES_FALLBACK + "&sig=" + p.id;
-        return clean;
+        if (!url || typeof url !== 'string') return FALLBACK_IMAGE;
+        return url.trim();
       };
 
       let finalImage = sanitizeUrl(p.image_url);
-      if (p.image_url && p.image_url.includes('supabase.co/storage')) finalImage = p.image_url;
-      else if (p.youtube_url && (!finalImage || finalImage.includes('pexels.com'))) {
+      if (p.youtube_url) {
         const thumb = getYoutubeThumbnail(p.youtube_url);
         if (thumb) finalImage = thumb;
       }
       
-      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.map(img => img.includes('supabase.co/storage') ? img : sanitizeUrl(img)) : [finalImage];
-      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-      if (Number(likesCount) >= 9000) borderType = 'popular';
-      else if (!isAd) {
-        let h = 0;
-        const idStr = p.id.toString();
-        for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-        const val = Math.abs(h % 1000) / 1000;
-        if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
-      }
+      const validImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
       
-      // [OPTIMIZATION] 프로필 정보를 가져오기 위해 개별 쿼리를 날리던 부분을 제거하고
-      // 전달받은 데이터에 이미 포함된 nickname, avatar_url 등을 사용합니다.
-      let userName = p.user_name || p.profiles?.nickname || '탐험가';
-      let userAvatar = p.user_avatar || p.profiles?.avatar_url || '';
+      let userName = p.user_nickname || p.profiles?.nickname || '탐험가';
+      let userAvatar = p.user_avatar_url || p.profiles?.avatar_url || '';
 
       return {
         id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(bType),
@@ -224,82 +196,62 @@ const Index = () => {
         category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType: bType
       };
     } catch (err) { return null as any; }
-  }, [getTierFromId]);
+  }, []);
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      // [OPTIMIZATION] posts 대신 posts_with_profiles 뷰를 사용하여 프로필 정보를 한 번에 가져옴
-      // 좋아요가 많은 순서대로 50개를 가져온 뒤 상위 20개를 추출하여 로딩 루프 방지
       const { data, error } = await supabase
         .from('posts_with_profiles')
         .select('*')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
         .order('likes', { ascending: false })
         .limit(50);
         
       if (!error && data) {
-        // [FIX] 매번 셔플(random)하지 않고 고정된 순위(좋아요 순)를 제공하여 UI 깜빡임 방지
-        const mapped = await Promise.all(data.map(async (p) => {
+        const mapped = data.map((p) => {
           const isAd = p.content?.trim().startsWith('[AD]') || false;
-          const borderType = getTierFromId(p.id);
+          const bType = getTierFromId(p.id);
+          const likesCount = Number(p.likes || 0);
+          const borderType = likesCount >= 9000 ? 'popular' : (isAd ? 'none' : bType);
           
           return {
             id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
-            user: { 
-              id: p.user_id, 
-              name: p.user_nickname || '탐험가', 
-              avatar: p.user_avatar_url || '' 
-            },
+            user: { id: p.user_id, name: p.user_nickname || '탐험가', avatar: p.user_avatar_url || '' },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '',
             location: p.location_name || '알 수 없는 장소',
             lat: p.latitude, lng: p.longitude, 
-            likes: Number(p.likes || 0), commentsCount: 0, comments: [],
+            likes: likesCount, commentsCount: 0, comments: [],
             image: p.image_url || '',
             images: p.images || [p.image_url], 
             youtubeUrl: p.youtube_url, videoUrl: p.video_url,
             category: p.category || 'none', isLiked: false, 
-            createdAt: new Date(p.created_at), borderType
+            createdAt: new Date(p.created_at), borderType: borderType as "none" | "gold" | "silver" | "diamond" | "popular"
           };
-        }));
+        });
         
-        // 상위 20개만 고정 순위로 설정
-        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ 
-          ...p, 
-          rank: idx + 1,
-          borderType: p.borderType as "none" | "gold" | "silver" | "diamond" | "popular"
-        })));
+        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 })));
       }
     } catch (err) { console.error(err); }
-  }, [getTierFromId]);
+  }, []);
 
-  useEffect(() => { 
-    if (authUser && globalTrendingPosts.length === 0) {
-      fetchGlobalTrending(); 
-    }
-  }, [authUser, fetchGlobalTrending, globalTrendingPosts.length]);
+  useEffect(() => { if (authUser && globalTrendingPosts.length === 0) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending, globalTrendingPosts.length]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     if (!targetBounds || isSyncing.current) return;
     isSyncing.current = true;
     const { sw, ne } = targetBounds;
-    const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
     try {
-      // fetchPostsInBounds 내부에서 프로필 조인을 수행하도록 보장되어야 함
-      const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
+      const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, mapData?.center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [CRITICAL FIX] 지도 마커 동기화 시 인플루언서 로직 확실히 적용
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         const likesCountNum = Number(p.likes || 0);
-        
-        let borderType: any = 'none';
-        if (likesCountNum >= 9000) {
-          borderType = 'popular';
-        } else if (!isAd) {
-          borderType = getTierFromId(p.id);
-        }
+        const bType = getTierFromId(p.id);
+        const borderType = likesCountNum >= 9000 ? 'popular' : (isAd ? 'none' : bType);
         
         return {
           id: p.id,
@@ -316,9 +268,9 @@ const Index = () => {
           videoUrl: p.video_url,
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
-          borderType, // 이 값이 'none'이 아니어야 마커 테두리가 그려짐
+          borderType: borderType as "none" | "gold" | "silver" | "diamond" | "popular",
           isInfluencer: !isAd && ['gold', 'diamond'].includes(borderType),
-          user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
+          user: { id: p.user_id, name: p.profiles?.nickname || '...', avatar: p.profiles?.avatar_url || '' },
           content: p.content || '',
           location: p.location_name || '',
           images: p.image_url ? [p.image_url] : [],
@@ -347,7 +299,7 @@ const Index = () => {
         return combined;
       });
     } catch (err) { console.error(err); } finally { isSyncing.current = false; }
-  }, [mapData, currentZoom, mapDbToPost]);
+  }, [mapData, currentZoom]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
@@ -375,11 +327,10 @@ const Index = () => {
     if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     
     const { sw, ne } = mapData.bounds;
-    const center = mapData.center; // ✅ 지도의 중심점
+    const center = mapData.center;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // ✅ [거리 기반 가중치 정렬] 현재 지도의 중심과 각 포스트의 거리를 계산하여 가까운 순으로 표시
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
@@ -388,49 +339,32 @@ const Index = () => {
       if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       if (selectedCategories.includes('all')) return true;
-      return selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
+      
+      if (selectedCategories.includes('influencer')) {
+        return ['gold', 'diamond'].includes(post.borderType || 'none');
+      }
+      if (selectedCategories.includes('hot')) {
+        return post.borderType === 'popular';
+      }
+      
+      return selectedCategories.includes(post.category || 'none');
     }).map(p => {
-      // ✅ 거리 계산 (간이 유클리드 거리)
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
       return [p.id, { ...p, _dist: dist }];
     })).values());
 
-    // ✅ 가까운 거리 순으로 정렬하여 displayedMarkers 업데이트
-    // 이렇게 하면 '여기 보기' 클릭 시 중심점 기준 가까운 포스팅이 먼저 나타납니다.
     const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
-    
-    setDisplayedMarkers(prev => {
-      if (prev.length === sortedPosts.length && prev.every((p, i) => p.id === sortedPosts[i].id)) return prev;
-      return sortedPosts;
-    });
+    setDisplayedMarkers(sortedPosts);
   }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback(async (postId: string) => {
-    if (!authUser) {
-      showError('로그인이 필요한 기능입니다.');
-      return;
-    }
-
+    if (!authUser) { showError('로그인이 필요한 기능입니다.'); return; }
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
-
     const isLiked = post.isLiked;
     
-    // UI 즉시 반영 (Optimistic Update)
-    setAllPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p;
-      const nextLiked = !isLiked;
-      return { 
-        ...p, 
-        isLiked: nextLiked, 
-        likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
-      };
-    }));
-    setGlobalTrendingPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p;
-      const nextLiked = !isLiked;
-      return { ...p, isLiked: nextLiked, likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
-    }));
+    setAllPosts(prev => prev.map(p => p.id === postId ? { ...p, isLiked: !isLiked, likes: !isLiked ? p.likes + 1 : Math.max(0, p.likes - 1) } : p));
+    setGlobalTrendingPosts(prev => prev.map(p => p.id === postId ? { ...p, isLiked: !isLiked, likes: !isLiked ? p.likes + 1 : Math.max(0, p.likes - 1) } : p));
 
     try {
       if (!isLiked) {
@@ -440,10 +374,7 @@ const Index = () => {
         await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUser.id);
         await supabase.rpc('decrement_likes', { post_id: postId });
       }
-    } catch (err) {
-      console.error('[Index] Like toggle error:', err);
-      // 에러 시 복구 로직 (생략 가능하나 안정성을 위해 추가 권장)
-    }
+    } catch (err) { console.error(err); }
   }, [authUser, allPosts]);
 
   const handleRefresh = useCallback(async () => {
@@ -464,7 +395,7 @@ const Index = () => {
     setSelectedPostId(lightPost.id);
     if (lightPost.user.name !== '...') return;
     try {
-      const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
+      const { data, error } = await supabase.from('posts_with_profiles').select('*').eq('id', lightPost.id).single();
       if (!error && data) {
         const full = await mapDbToPost(data);
         if (full) {
@@ -486,69 +417,24 @@ const Index = () => {
 
   useEffect(() => {
     if (!authUser) return;
-
-    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
-    const channel = supabase
-      .channel('public:posts-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'posts'
-        },
-        async (payload) => {
-          console.log('[Realtime] New post detected:', payload.new);
-          const newRawPost = payload.new;
-          
-          const mappedPost = await mapDbToPost(newRawPost);
-          if (!mappedPost) return;
-
-          if (mappedPost.user.id !== authUser.id) {
-            triggerConfetti();
-          }
-
-          setAllPosts(prev => {
-            if (prev.some(p => p.id === mappedPost.id)) return prev;
-            const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
-            mapCache.posts = combined;
-            return combined;
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'posts'
-        },
-        (payload) => {
-          const deletedId = payload.old.id;
-          console.log('[Realtime] Post deleted:', deletedId);
-
-          // ✅ [FADE OUT] 마커 삭제 애니메이션 트리거 (MapContainer에서 처리)
-          window.dispatchEvent(new CustomEvent('animate-marker-delete', { 
-            detail: { id: deletedId } 
-          }));
-
-          // 애니메이션 시간(약 400~500ms) 후 상태에서 실제 제거
-          setTimeout(() => {
-            setAllPosts(prev => {
-              const filtered = prev.filter(p => p.id !== deletedId);
-              mapCache.posts = filtered;
-              return filtered;
-            });
-            setDisplayedMarkers(prev => prev.filter(p => p.id !== deletedId));
-          }, 450);
-        }
-      )
+    const channel = supabase.channel('public:posts-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
+        const mappedPost = await mapDbToPost(payload.new);
+        if (!mappedPost) return;
+        if (mappedPost.user.id !== authUser.id) triggerConfetti();
+        setAllPosts(prev => prev.some(p => p.id === mappedPost.id) ? prev : [{ ...mappedPost, isNewRealtime: true }, ...prev]);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
+        const deletedId = payload.old.id;
+        window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: deletedId } }));
+        setTimeout(() => {
+          setAllPosts(prev => prev.filter(p => p.id !== deletedId));
+          setDisplayedMarkers(prev => prev.filter(p => p.id !== deletedId));
+        }, 450);
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [authUser, mapData, mapDbToPost, triggerConfetti]);
+    return () => { supabase.removeChannel(channel); };
+  }, [authUser, mapDbToPost, triggerConfetti]);
 
   useEffect(() => {
     const handleFocusPost = (e: any) => {
@@ -570,36 +456,20 @@ const Index = () => {
     const routeState = location.state as any;
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
-    
-    // ✅ [FIX] 포스팅 후 설정: 전체보기 모드 유지 + 줌 레벨 5로 고정
     if (routeState.filterUserId === 'me') {
-      // 내 포스팅 필터를 적용하지 않고 'all'로 설정하여 전체보기 모드 유지
       setSelectedCategories(['all']); 
-      // 지도의 줌 레벨을 디폴트인 5로 설정
       setTimeout(() => setCurrentZoom(5), 500);
-      
-      if (routeState.post) {
-        // 등록된 포스트의 좌표로 이동
-        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
-      } else {
-        handleCurrentLocation();
-      }
-    } 
-    // 그 외 일반적인 포스트 포커스 처리
-    else if (routeState.post) {
+      if (routeState.post) focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+      else handleCurrentLocation();
+    } else if (routeState.post) {
       focusPostOnMap(routeState.post, routeState.center);
-    }
-    else if (routeState.center) { 
+    } else if (routeState.center) { 
       setSelectedPostId(null); 
       setMapCenter(routeState.center); 
     }
-    
     if (routeState.startSelection) { 
       setIsPostListOpen(false); 
-      setTimeout(() => { 
-        setIsSelectingLocation(true); 
-        setTempSelectedLocation(mapData?.center || mapCache.lastCenter); 
-      }, 500); 
+      setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500); 
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [focusPostOnMap, location, navigate, triggerConfetti, mapData]);
@@ -608,7 +478,7 @@ const Index = () => {
     setSelectedPostId(null);
     window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
     setTimeout(() => {
-      setAllPosts(prev => { const f = prev.filter(p => p.id !== id); mapCache.posts = f; return f; });
+      setAllPosts(prev => prev.filter(p => p.id !== id));
       setDisplayedMarkers(prev => prev.filter(p => p.id !== id));
     }, 400);
   }, []);
@@ -618,17 +488,7 @@ const Index = () => {
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
       <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
         <div className="absolute inset-0 z-0">
-          <MapContainer
-  posts={displayedMarkers}
-  viewedPostIds={viewedIds}
-  highlightedPostId={highlightedPostId}
-  onMarkerClick={handleMarkerClick}
-  onMapChange={handleMapChange}
-  center={mapCenter}
-  level={currentZoom}
-  searchResultLocation={searchResultLocation}
-  onMapClick={() => setSearchResultLocation(null)}
-/>
+          <MapContainer posts={displayedMarkers} viewedPostIds={viewedIds} highlightedPostId={highlightedPostId} onMarkerClick={handleMarkerClick} onMapChange={handleMapChange} center={mapCenter} level={currentZoom} searchResultLocation={searchResultLocation} onMapClick={() => setSearchResultLocation(null)} />
           <AnimatePresence>
             {isSelectingLocation && (
               <>
@@ -660,21 +520,7 @@ const Index = () => {
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
       <AnimatePresence>
         {isPostListOpen && (
-          <PostListOverlay 
-            key="post-list-overlay" 
-            isOpen={isPostListOpen} 
-            onClose={() => setIsPostListOpen(false)} 
-            initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
-            mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
-            currentBounds={mapData?.bounds || { 
-              sw: { lat: 33, lng: 124 }, 
-              ne: { lat: 39, lng: 132 } 
-            }}
-            selectedCategories={selectedCategories} 
-            timeValueHours={timeValue} 
-            authUserId={authUser?.id} 
-            onDeletePost={handlePostDeleted} 
-          />
+          <PostListOverlay key="post-list-overlay" isOpen={isPostListOpen} onClose={() => setIsPostListOpen(false)} initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }} selectedCategories={selectedCategories} timeValueHours={timeValue} authUserId={authUser?.id} onDeletePost={handlePostDeleted} />
         )}
       </AnimatePresence>
       <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={allPosts} initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onDelete={handlePostDeleted} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
