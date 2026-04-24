@@ -155,8 +155,9 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const { data: p, error: postError } = await supabase.from('posts').select('*').eq('id', rawPost.id).single();
-      if (postError || !p) throw postError || new Error('Post not found');
+      // [OPTIMIZATION] 이미 rawPost에 모든 데이터가 포함되어 있다고 가정하고 추가 쿼리를 제거합니다.
+      // 만약 데이터가 부족하다면 상위 fetch 단계에서 조인을 통해 한꺼번에 가져와야 합니다.
+      const p = rawPost;
 
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
@@ -205,12 +206,10 @@ const Index = () => {
         if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
       }
       
-      let userName = p.user_name || '탐험가';
-      let userAvatar = p.user_avatar || '';
-      if (p.user_id) {
-        const { data: profileData } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', p.user_id).maybeSingle();
-        if (profileData) { userName = profileData.nickname || userName; userAvatar = profileData.avatar_url || userAvatar; }
-      }
+      // [OPTIMIZATION] 프로필 정보를 가져오기 위해 개별 쿼리를 날리던 부분을 제거하고
+      // 전달받은 데이터에 이미 포함된 nickname, avatar_url 등을 사용합니다.
+      let userName = p.user_name || p.profiles?.nickname || '탐험가';
+      let userAvatar = p.user_avatar || p.profiles?.avatar_url || '';
 
       return {
         id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(bType),
@@ -245,6 +244,7 @@ const Index = () => {
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
     try {
+      // fetchPostsInBounds 내부에서 프로필 조인을 수행하도록 보장되어야 함
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       

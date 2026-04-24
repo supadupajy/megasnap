@@ -93,10 +93,10 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] select('*') 대신 마커 렌더링에 꼭 필요한 최소 데이터만 조회 (Egress 절약)
+    // ✅ [OPTIMIZATION] 프로필 정보를 한 번의 쿼리로 함께 가져와서 리소스 부족 에러(ERR_INSUFFICIENT_RESOURCES) 해결
     let query = supabase
       .from('posts')
-      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name')
+      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name, profiles(nickname, avatar_url)')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
