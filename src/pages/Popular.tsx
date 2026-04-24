@@ -176,6 +176,31 @@ const Popular = () => {
     isPullingRef.current = false;
   };
 
+  // 마우스 이벤트 핸들러 추가 (웹 환경 대응)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current || isLoadingMore) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    
+    // 바닥 근처일 때만 드래그 로직 활성화
+    if (scrollTop + clientHeight >= scrollHeight - 10) {
+      isPullingRef.current = true;
+      startYRef.current = e.pageY;
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPullingRef.current) return;
+    const pageY = e.pageY;
+    const diff = startYRef.current - pageY;
+    if (diff > 0) {
+      setPullUpDistance(Math.min(diff * 0.5, 120));
+    }
+  };
+
+  const handleMouseUp = () => {
+    handleTouchEnd();
+  };
+
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
       if (post.id !== postId) return post;
@@ -197,7 +222,11 @@ const Popular = () => {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar select-none"
     >
       <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
