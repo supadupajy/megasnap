@@ -120,7 +120,7 @@ const Index = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const mapRef = useRef<any>(null);
-  const focusPostOnMap = (post: Post) => {
+  const focusPostOnMap = useCallback((post: Post) => {
     if (!mapRef.current) return;
 
     // Ensure the post is in the displayed list (Force Show)
@@ -139,18 +139,23 @@ const Index = () => {
     // Set highlighted post ID for the ping effect
     setHighlightedPostId(post.id);
 
+    console.log("[Focus] Flying to:", post.longitude, post.latitude);
+
     // Fly to location
-    mapRef.current.flyTo({
-      center: [post.longitude, post.latitude],
-      zoom: 16,
-      duration: 1500
-    });
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [post.longitude, post.latitude],
+        zoom: 16,
+        duration: 1500,
+        essential: true
+      });
+    }
 
     // Remove highlight after some time
     setTimeout(() => {
       setHighlightedPostId(null);
     }, 5000);
-  };
+  }, []);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -610,7 +615,7 @@ const Index = () => {
     } else if (routeState.post) {
       focusPostOnMap(routeState.post);
     }
-  }, [location.state]);
+  }, [location.state, focusPostOnMap]);
 
   const handlePostDeleted = useCallback((id: string) => {
     setSelectedPostId(null);
