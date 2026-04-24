@@ -98,18 +98,18 @@ const Popular = () => {
     
     try {
       const lastPost = posts[posts.length - 1];
-      // [FIX] created_at 기준으로 정확히 이전 데이터들을 순차적으로 가져오도록 함
-      const lastPostDate = lastPost ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
+      // [CRITICAL FIX] CreatedAt이 유효하지 않을 경우를 대비해 현재 시간 또는 아주 먼 과거부터 역순 조회
+      const lastPostDate = lastPost?.createdAt ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
       
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      console.log('[Popular] Fetching more posts before:', lastPostDate);
+      console.log('[Popular] Attempting to load 10 more posts before:', lastPostDate);
       
       let query = supabase
         .from('posts')
         .select('*')
-        .lt('created_at', lastPostDate) // 마지막 포스트보다 이전 시간의 데이터만
+        .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -150,21 +150,19 @@ const Popular = () => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
           
-          console.log(`[Popular] New unique posts found: ${filteredNew.length} / ${mappedPosts.length}`);
+          console.log(`[Popular] Successfully loaded ${filteredNew.length} new unique posts.`);
           
-          // 데이터가 일부라도 있으면 hasMore를 true로 명시적 유지
-          if (mappedPosts.length > 0) {
-            setHasMore(true);
-          }
-          
+          // 가져온 데이터가 있다면 무조건 hasMore를 true로 유지하여 다음 로딩을 허용
+          setHasMore(true); 
           return [...prev, ...filteredNew];
         });
       } else {
-        console.log('[Popular] No more data found in this region.');
+        // DB에서 실제로 반환된 데이터가 0개일 때만 종료
+        console.log('[Popular] Zero results from DB. Marking end of region data.');
         setHasMore(false);
       }
     } catch (err) {
-      console.error('[Popular] Load nearby failed:', err);
+      console.error('[Popular] Data fetch error:', err);
     } finally {
       setIsLoadingMore(false);
       setPullUpDistance(0);
