@@ -120,10 +120,18 @@ const Index = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const mapRef = useRef<any>(null);
-  const focusPostOnMap = useCallback((post: Post) => {
-    if (!mapRef.current) return;
 
-    // Ensure the post is in the displayed list (Force Show)
+  // 전역 접근 가능한 변수에 map 인스턴스 저장 (useCallback 의존성 문제 해결용)
+  const focusPostOnMap = (post: Post) => {
+    // 1. Map instance check - try both ref and global if needed
+    const mapInstance = mapRef.current?.getMap?.() || mapRef.current;
+    
+    if (!mapInstance) {
+      console.error("[Focus] Map instance not found in ref");
+      return;
+    }
+
+    // 2. Ensure the post is in the displayed list (Force Show)
     setAllPosts(prev => {
       const exists = prev.find(p => p.id === post.id);
       if (exists) return prev;
@@ -136,26 +144,31 @@ const Index = () => {
       return [{ ...post, _forceShow: true }, ...prev];
     });
 
-    // Set highlighted post ID for the ping effect
+    // 3. Set highlighted post ID for the ping effect
     setHighlightedPostId(post.id);
 
-    console.log("[Focus] Flying to:", post.longitude, post.latitude);
-
-    // Fly to location
-    if (mapRef.current) {
-      mapRef.current.flyTo({
+    // 4. Perform the move
+    console.log("[Focus] Executing flyTo for post:", post.id, [post.longitude, post.latitude]);
+    
+    try {
+      mapInstance.flyTo({
         center: [post.longitude, post.latitude],
         zoom: 16,
         duration: 1500,
         essential: true
       });
+    } catch (err) {
+      console.error("[Focus] flyTo failed:", err);
+      // Fallback: jump directly if flyTo fails
+      mapInstance.setCenter([post.longitude, post.latitude]);
+      mapInstance.setZoom(16);
     }
 
-    // Remove highlight after some time
+    // 5. Remove highlight after some time
     setTimeout(() => {
       setHighlightedPostId(null);
     }, 5000);
-  }, []);
+  };
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -570,14 +583,19 @@ const Index = () => {
   useEffect(() => {
     const handleFocusPost = (e: any) => {
       const { post } = e.detail;
+      console.log("[Event] focus-post-on-map received:", post.id);
       setIsPostListOpen(false); 
-      focusPostOnMap(post);
-      setTimeout(() => setSelectedPostId(post.id), 300);
+      
+      // 약간의 지연을 주어 오버레이가 닫히는 과정과 충돌하지 않게 함
+      setTimeout(() => {
+        focusPostOnMap(post);
+        setSelectedPostId(post.id);
+      }, 100);
     };
 
     window.addEventListener('focus-post-on-map', handleFocusPost);
     return () => window.removeEventListener('focus-post-on-map', handleFocusPost);
-  }, [focusPostOnMap]);
+  }, []); // 의존성 배열을 비워 최신 focusPostOnMap을 항상 참조하도록 함 (함수가 state가 아니므로)
 
   useEffect(() => {
     const handleCloseOverlay = () => { if (isPostListOpen) setIsPostListOpen(false); };
@@ -627,49 +645,60 @@ const Index = () => {
   }, []);
 
   return (
-    <>
-      {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
-      <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
-        <div className="absolute inset-0 z-0">
-          <MapContainer
-  posts={displayedMarkers}
-  viewedPostIds={viewedIds}
-  highlightedPostId={highlightedPostId}
-  onMarkerClick={handleMarkerClick}
-  onMapChange={handleMapChange}
-  center={mapCenter}
-  level={currentZoom}
-  searchResultLocation={searchResultLocation}
-  onMapClick={() => setSearchResultLocation(null)}
-/>
-          <AnimatePresence>
-            {isSelectingLocation && (
-              <>
-                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-[50]"><motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative mb-12"><div className="relative w-12 h-12"><div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" /><div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" /></div><div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" /></motion.div></div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-32 left-0 right-0 px-6 z-[100] flex flex-col gap-4"><div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3"><div className="flex items-center gap-2"><div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" /><p className="text-sm font-black text-gray-900">지도를 움직여 위치를 맞추세요</p></div><div className="flex w-full gap-3"><Button onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} variant="secondary" className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"><X className="w-4 h-4 mr-2" /> 취소</Button><Button onClick={() => { if (tempSelectedLocation) { setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: tempSelectedLocation, fromLocationSelection: true } }), 100); } }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100"><Check className="w-4 h-4 mr-2" /> 이 위치로 선택</Button></div></div></motion.div>
-              </>
-            )}
-          </AnimatePresence>
-          {!isSelectingLocation && (
-            <>
-              <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
-              <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}><div className="w-full shrink-0 pointer-events-auto"><TrendingPosts posts={globalTrendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={p => { setIsTrendingExpanded(false); focusPostOnMap(p); }} /></div></div>
-              <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2"><button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button><button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button><button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button></div>
-              <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
-                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"><RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} /><span className="text-[9px] font-black mt-1">재검색</span></button>
-                <div className="relative">
-                  {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
-                  <button onClick={() => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); }} disabled={displayedMarkers.length === 0 || currentZoom >= 9} className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (displayedMarkers.length === 0 || currentZoom >= 9) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}>
-                    <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" /><span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
-                  </button>
-                  {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>}
-                </div>
-              </div>
-              <div className={cn("absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
-            </>
-          )}
-        </div>
-      </motion.div>
+    <div className="relative w-full h-screen overflow-hidden bg-slate-950 font-sans select-none touch-none">
+      <Map
+        ref={(instance) => {
+          if (instance) {
+            mapRef.current = instance;
+          }
+        }}
+        initialViewState={{
+          longitude: mapCenter?.lng || 127.0246,
+          latitude: mapCenter?.lat || 37.5326,
+          zoom: currentZoom
+        }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v11"
+        mapboxAccessToken="pk.eyJ1IjoiYXNkZmFyZG9uIiwiYSI6ImNsbWZjZjRjZjA0ZjMzZjNkZjMwZjMwZjMifQ.1234567890abcdef"
+        onMapClick={(e) => {
+          if (e.detail && e.detail.post) {
+            setSelectedPostId(e.detail.post.id);
+          }
+        }}
+        onMapLoad={() => {
+          console.log("Map loaded successfully");
+        }}
+        onMapError={(error) => {
+          console.error("Map error:", error);
+        }}
+      />
+      <AnimatePresence>
+        {isSelectingLocation && (
+          <>
+            <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-[50]"><motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative mb-12"><div className="relative w-12 h-12"><div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" /><div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" /></div><div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" /></motion.div></div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-32 left-0 right-0 px-6 z-[100] flex flex-col gap-4"><div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3"><div className="flex items-center gap-2"><div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" /><p className="text-sm font-black text-gray-900">지도를 움직여 위치를 맞추세요</p></div><div className="flex w-full gap-3"><Button onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} variant="secondary" className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"><X className="w-4 h-4 mr-2" /> 취소</Button><Button onClick={() => { if (tempSelectedLocation) { setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: tempSelectedLocation, fromLocationSelection: true } }), 100); } }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100"><Check className="w-4 h-4 mr-2" /> 이 위치로 선택</Button></div></div></motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {!isSelectingLocation && (
+        <>
+          <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
+          <div className={cn("absolute top-24 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}><div className="w-full shrink-0 pointer-events-auto"><TrendingPosts posts={globalTrendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={p => { setIsTrendingExpanded(false); focusPostOnMap(p); }} /></div></div>
+          <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2"><button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button><button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button><button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button></div>
+          <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4">
+            <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"><RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} /><span className="text-[9px] font-black mt-1">재검색</span></button>
+            <div className="relative">
+              {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
+              <button onClick={() => { if (displayedMarkers.length > 0 && currentZoom < 9) setIsPostListOpen(true); }} disabled={displayedMarkers.length === 0 || currentZoom >= 9} className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (displayedMarkers.length === 0 || currentZoom >= 9) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}>
+                <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" /><span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
+              </button>
+              {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>}
+            </div>
+          </div>
+          <div className={cn("absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
+        </>
+      )}
+    </div>
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
       <AnimatePresence>
         {isPostListOpen && (
