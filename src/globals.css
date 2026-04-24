@@ -197,3 +197,26 @@
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@layer components {
+  .marker-ping-animation {
+    @apply absolute -inset-4 rounded-full border-2 border-red-500 opacity-0 pointer-events-none;
+    animation: marker-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes marker-ping {
+    0% {
+      transform: scale(0.5);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
+  }
+
+  .marker-highlight-ring {
+    @apply absolute inset-0 rounded-full border-2 border-red-500 opacity-0 pointer-events-none;
+    animation: marker-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}

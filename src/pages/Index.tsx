@@ -117,39 +117,38 @@ const Index = () => {
   const isSyncing = useRef(false);
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
-  const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-    if (post.lat === null || post.lng === null) return;
-    
-    // [CRITICAL FIX] 인기 리스트에서 클릭한 포스트가 현재 필터나 영역 때문에 안 보일 수 있으므로
-    // 강제로 전체 포스트 및 표시 마커 목록에 추가합니다.
-    setAllPosts((prev) => {
+  const mapRef = useRef<any>(null);
+  const focusPostOnMap = (post: Post) => {
+    if (!mapRef.current) return;
+
+    // Ensure the post is in the displayed list (Force Show)
+    setAllPosts(prev => {
       const exists = prev.find(p => p.id === post.id);
       if (exists) return prev;
-      const combined = [{ ...post, _forceShow: true }, ...prev];
-      mapCache.posts = combined;
-      return combined;
+      return [post, ...prev];
     });
 
-    // 표시 중인 마커 목록에도 즉시 추가하여 지도가 이동했을 때 바로 보이게 함
     setDisplayedMarkers(prev => {
-      if (prev.some(m => m.id === post.id)) return prev;
+      const exists = prev.find(p => p.id === post.id);
+      if (exists) return prev;
       return [{ ...post, _forceShow: true }, ...prev];
     });
 
-    setSelectedPostId(null);
-    setSearchResultLocation(null);
-    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+    // Set highlighted post ID for the ping effect
+    setHighlightedPostId(post.id);
 
-    setHighlightedPostId(null);
-    setMapCenter(center || { lat: post.lat, lng: post.lng });
+    // Fly to location
+    mapRef.current.flyTo({
+      center: [post.longitude, post.latitude],
+      zoom: 16,
+      duration: 1500
+    });
 
-    highlightTimeoutRef.current = window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('highlight-marker', { 
-        detail: { id: post.id, duration: 3000 } 
-      }));
-      highlightTimeoutRef.current = null;
-    }, 1100);
-  }, []);
+    // Remove highlight after some time
+    setTimeout(() => {
+      setHighlightedPostId(null);
+    }, 5000);
+  };
 
   const getTierFromId = (id: string) => {
     let h = 0;
