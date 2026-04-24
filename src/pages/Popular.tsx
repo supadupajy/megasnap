@@ -55,7 +55,14 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       await initializeYoutubePool();
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).range(from, to);
+      // [FIX] 초기 로딩 시에도 프로필 정보가 포함된 posts_with_profiles 뷰에서 데이터를 가져옵니다.
+      const { data, error } = await supabase
+        .from('posts_with_profiles')
+        .select('*')
+        .order('likes', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
       const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));
@@ -66,7 +73,11 @@ const Popular = () => {
         if (!isAd && !p.youtube_url && !p.video_url && finalImage.includes('img.youtube.com')) finalImage = getDiverseUnsplashUrl(p.id, 'general');
         return {
           id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-          user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+          user: { 
+            id: p.user_id, 
+            name: p.user_nickname || p.user_name || '탐험가', 
+            avatar: p.user_avatar_url || p.user_avatar || '' 
+          },
           content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
           likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
           isLiked: false, isSaved: false, createdAt: new Date(p.created_at), borderType,
@@ -98,36 +109,18 @@ const Popular = () => {
     setIsLoadingMore(true);
     
     try {
-      const lastPost = posts[posts.length - 1];
-      const lastPostDate = lastPost?.createdAt ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
+      // [FIX] 인기 포스팅이므로 좋아요(likes) 순으로 로드하되, 이미 로드된 개수를 기반으로 다음 범위를 가져옵니다.
+      const from = posts.length;
+      const to = from + 9; // 한 번에 10개씩 추가 로드
       
-      const storedBounds = localStorage.getItem('map_bounds');
-      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+      console.log(`[Popular] Attempting to load 10 more posts (range ${from}-${to}) from posts_with_profiles`);
       
-      console.log('[Popular] Attempting to load 10 more posts from posts_with_profiles view before:', lastPostDate);
-      
-      // [CRITICAL FIX] posts 테이블 대신 프로필 정보가 포함된 posts_with_profiles 뷰에서 데이터를 가져옵니다.
-      let query = supabase
+      const { data, error } = await supabase
         .from('posts_with_profiles')
         .select('*')
-        .lt('created_at', lastPostDate)
+        .order('likes', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (bounds) {
-        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
-        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
-        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
-        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
-        
-        query = query
-          .gte('latitude', latMin)
-          .lte('latitude', latMax)
-          .gte('longitude', lngMin)
-          .lte('longitude', lngMax);
-      }
-
-      const { data, error } = await query;
+        .range(from, to);
       
       if (error) {
         console.error('[Popular] Supabase query error:', error);
@@ -135,8 +128,8 @@ const Popular = () => {
       }
 
       if (data && data.length > 0) {
-        // [FIX] posts_with_profiles의 user_nickname, user_avatar_url을 Post 타입에 맞게 매핑
-        const mappedPosts = data.map(p => {
+        const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
+        const mappedPosts = sanitizedData.map(p => {
           const borderType = getTierFromId(p.id);
           const isAd = p.content?.trim().startsWith('[AD]');
           let finalImage = p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
@@ -148,8 +141,8 @@ const Popular = () => {
             isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
             user: { 
               id: p.user_id, 
-              name: p.user_nickname || '탐험가', 
-              avatar: p.user_avatar_url || '' 
+              name: p.user_nickname || p.user_name || '탐험가', 
+              avatar: p.user_avatar_url || p.user_avatar || '' 
             },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '', 
             location: p.location_name, 
@@ -175,12 +168,11 @@ const Popular = () => {
           
           console.log(`[Popular] DB response size: ${data.length}, New unique posts: ${filteredNew.length}`);
           
-          // 데이터가 응답되었으므로 다음 로딩을 위해 hasMore를 true로 유지
-          setHasMore(true); 
+          if (data.length < 10) setHasMore(false);
           return [...prev, ...filteredNew];
         });
       } else {
-        console.log('[Popular] No more posts found in this region for date:', lastPostDate);
+        console.log('[Popular] No more posts found');
         setHasMore(false);
       }
     } catch (err) {
@@ -189,7 +181,7 @@ const Popular = () => {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [isLoadingMore, hasMore, posts]);
+  }, [isLoadingMore, hasMore, posts.length]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!scrollContainerRef.current || isLoadingMore) return;
