@@ -151,6 +151,20 @@ const Index = () => {
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
+      
+      // [FIX] 인플루언서 및 인기 등급 판정 로직 강화 및 동기화
+      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      if (likesCount >= 9000) {
+        borderType = 'popular';
+      } else if (!isAd) {
+        let h = 0;
+        const idStr = p.id.toString();
+        for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+        const val = Math.abs(h % 1000) / 1000;
+        if (val < 0.05) borderType = 'diamond'; 
+        else if (val < 0.15) borderType = 'gold';
+      }
+
       const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
       const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
 
@@ -194,7 +208,7 @@ const Index = () => {
       }
 
       return {
-        id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
+        id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(borderType),
         user: { id: p.user_id || '', name: userName, avatar: userAvatar },
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
@@ -229,11 +243,23 @@ const Index = () => {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
+      // ✅ [OPTIMIZATION] 마커용 데이터 매핑
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
+        const likesCountNum = Number(p.likes || 0);
+        
+        // [FIX] 인플루언서 등급 판정 로직을 mapDbToPost와 완벽하게 일치시킴
         let borderType: any = 'none';
-        if (Number(p.likes) >= 9000) borderType = 'popular';
+        if (likesCountNum >= 9000) {
+          borderType = 'popular';
+        } else if (!isAd) {
+          let h = 0;
+          const idStr = p.id.toString();
+          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+          const val = Math.abs(h % 1000) / 1000;
+          if (val < 0.05) borderType = 'diamond';
+          else if (val < 0.15) borderType = 'gold';
+        }
         
         return {
           id: p.id,
@@ -243,14 +269,15 @@ const Index = () => {
           lng: p.longitude,
           latitude: p.latitude,
           longitude: p.longitude,
-          likes: Number(p.likes || 0),
+          likes: likesCountNum,
           image: p.image_url || '',
           image_url: p.image_url || '',
           youtubeUrl: p.youtube_url,
           videoUrl: p.video_url,
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
-          borderType,
+          borderType, // 이 값이 'none'이 아니어야 마커 테두리가 그려짐
+          isInfluencer: !isAd && ['gold', 'diamond'].includes(borderType),
           user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
           content: p.content || '',
           location: p.location_name || '',
