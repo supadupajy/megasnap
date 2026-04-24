@@ -3,9 +3,9 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ChevronUp } from 'lucide-react';
-import { getDiverseUnsplashUrl, getYoutubeThumbnail, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { getDiverseUnsplashUrl, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
