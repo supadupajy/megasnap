@@ -121,17 +121,11 @@ const Index = () => {
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const mapRef = useRef<any>(null);
 
-  // 전역 접근 가능한 변수에 map 인스턴스 저장 (useCallback 의존성 문제 해결용)
-  const focusPostOnMap = (post: Post) => {
-    // 1. Map instance check - try both ref and global if needed
-    const mapInstance = mapRef.current?.getMap?.() || mapRef.current;
-    
-    if (!mapInstance) {
-      console.error("[Focus] Map instance not found in ref");
-      return;
-    }
+  // Kakao Map reference
+  const mapContainerRef = useRef<any>(null);
 
-    // 2. Ensure the post is in the displayed list (Force Show)
+  const focusPostOnMap = (post: Post) => {
+    // 1. Ensure the post is in the displayed list (Force Show)
     setAllPosts(prev => {
       const exists = prev.find(p => p.id === post.id);
       if (exists) return prev;
@@ -144,25 +138,16 @@ const Index = () => {
       return [{ ...post, _forceShow: true }, ...prev];
     });
 
-    // 3. Set highlighted post ID for the ping effect
+    // 2. Set highlighted post ID for the ping effect
     setHighlightedPostId(post.id);
 
-    // 4. Perform the move
-    console.log("[Focus] Executing flyTo for post:", post.id, [post.longitude, post.latitude]);
-    
-    try {
-      mapInstance.flyTo({
-        center: [post.longitude, post.latitude],
-        zoom: 16,
-        duration: 1500,
-        essential: true
-      });
-    } catch (err) {
-      console.error("[Focus] flyTo failed:", err);
-      // Fallback: jump directly if flyTo fails
-      mapInstance.setCenter([post.longitude, post.latitude]);
-      mapInstance.setZoom(16);
-    }
+    // 3. Move map via MapContainer ref
+    setMapCenter({ lat: post.latitude, lng: post.longitude });
+
+    // 4. Trigger ping animation via CustomEvent
+    window.dispatchEvent(new CustomEvent('highlight-marker', { 
+      detail: { id: post.id } 
+    }));
 
     // 5. Remove highlight after some time
     setTimeout(() => {
@@ -586,7 +571,6 @@ const Index = () => {
       console.log("[Event] focus-post-on-map received:", post.id);
       setIsPostListOpen(false); 
       
-      // 약간의 지연을 주어 오버레이가 닫히는 과정과 충돌하지 않게 함
       setTimeout(() => {
         focusPostOnMap(post);
         setSelectedPostId(post.id);
@@ -595,7 +579,7 @@ const Index = () => {
 
     window.addEventListener('focus-post-on-map', handleFocusPost);
     return () => window.removeEventListener('focus-post-on-map', handleFocusPost);
-  }, []); // 의존성 배열을 비워 최신 focusPostOnMap을 항상 참조하도록 함 (함수가 state가 아니므로)
+  }, []);
 
   useEffect(() => {
     const handleCloseOverlay = () => { if (isPostListOpen) setIsPostListOpen(false); };
@@ -646,31 +630,19 @@ const Index = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-950 font-sans select-none touch-none">
-      <Map
-        ref={(instance) => {
-          if (instance) {
-            mapRef.current = instance;
-          }
+      <MapContainer 
+        posts={displayedMarkers}
+        viewedPostIds={viewedIds}
+        highlightedPostId={highlightedPostId}
+        onMarkerClick={(post) => setSelectedPostId(post.id)}
+        onMapChange={(data) => {
+          setMapData(data);
+          setMapCenter(data.center);
+          setCurrentZoom(data.level);
         }}
-        initialViewState={{
-          longitude: mapCenter?.lng || 127.0246,
-          latitude: mapCenter?.lat || 37.5326,
-          zoom: currentZoom
-        }}
-        style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v11"
-        mapboxAccessToken="pk.eyJ1IjoiYXNkZmFyZG9uIiwiYSI6ImNsbWZjZjRjZjA0ZjMzZjNkZjMwZjMwZjMifQ.1234567890abcdef"
-        onMapClick={(e) => {
-          if (e.detail && e.detail.post) {
-            setSelectedPostId(e.detail.post.id);
-          }
-        }}
-        onMapLoad={() => {
-          console.log("Map loaded successfully");
-        }}
-        onMapError={(error) => {
-          console.error("Map error:", error);
-        }}
+        center={mapCenter}
+        level={currentZoom}
+        searchResultLocation={searchResultLocation}
       />
       <AnimatePresence>
         {isSelectingLocation && (
@@ -698,30 +670,24 @@ const Index = () => {
           <div className={cn("absolute bottom-6 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
         </>
       )}
+      {/* Category Menu */}
+      <CategoryMenu 
+        isOpen={isCategoryOpen} 
+        onClose={() => setIsCategoryOpen(false)} 
+        selectedCategories={selectedCategories} 
+        onSelect={(cats) => setSelectedCategories(cats)} 
+      />
+
+      {/* Search Overlay */}
+      <PlaceSearch 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onSelect={p => { 
+          setMapCenter({ lat: p.lat, lng: p.lng }); 
+          setSearchResultLocation({ lat: p.lat, lng: p.lng }); 
+        }} 
+      />
     </div>
-      <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
-      <AnimatePresence>
-        {isPostListOpen && (
-          <PostListOverlay 
-            key="post-list-overlay" 
-            isOpen={isPostListOpen} 
-            onClose={() => setIsPostListOpen(false)} 
-            initialPosts={displayedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)} 
-            mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }} 
-            currentBounds={mapData?.bounds || { 
-              sw: { lat: 33, lng: 124 }, 
-              ne: { lat: 39, lng: 132 } 
-            }}
-            selectedCategories={selectedCategories} 
-            timeValueHours={timeValue} 
-            authUserId={authUser?.id} 
-            onDeletePost={handlePostDeleted} 
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={allPosts} initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onDelete={handlePostDeleted} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { setMapCenter({ lat, lng }); setSelectedPostId(null); }} />}</AnimatePresence>
-      <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }} />
-    </>
   );
 };
 
