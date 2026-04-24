@@ -2,17 +2,16 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { Loader2, ChevronUp } from 'lucide-react';
+import { getDiverseUnsplashUrl, getYoutubeThumbnail, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import PostItem from '@/components/PostItem';
-import { ChevronUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -38,16 +37,12 @@ const Popular = () => {
   
   const hasLoaded = useRef(false);
   
-  // Pull up 상태 관리
   const [pullUpDistance, setPullUpDistance] = useState(0);
   const isPullingRef = useRef(false);
   const startYRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
-
-  useEffect(() => {
-  }, []);
 
   const filteredPosts = useMemo(() => {
     if (!posts) return [];
@@ -102,10 +97,8 @@ const Popular = () => {
     setIsLoadingMore(true);
     
     try {
-      // 1. 현재 위치 기반으로 주변 포스트 10개 가져오기
       const lastPost = posts[posts.length - 1];
       const lastPostDate = lastPost ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
-
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
@@ -116,7 +109,6 @@ const Popular = () => {
         const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
         const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
         const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
-        
         query = query.gte('latitude', latMin).lte('latitude', latMax).gte('longitude', lngMin).lte('longitude', lngMax);
       }
 
@@ -153,9 +145,8 @@ const Popular = () => {
       setIsLoadingMore(false);
       setPullUpDistance(0);
     }
-  }, [isLoadingMore, hasMore]);
+  }, [isLoadingMore, hasMore, posts]);
 
-  // Pull Up 제스처 핸들러
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!scrollContainerRef.current || isLoadingMore) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
@@ -185,23 +176,6 @@ const Popular = () => {
     isPullingRef.current = false;
   };
 
-  const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    const nextPage = page + 1;
-    const newPosts = await fetchPopularPosts(nextPage);
-    if (newPosts.length > 0) { setPosts(prev => [...prev, ...newPosts]); setPage(nextPage); }
-    else setHasMore(false);
-    setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, page, fetchPopularPosts]);
-
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting && posts.length > 0 && hasMore) loadMorePosts(); }, { threshold: 0.1 });
-    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [loadMorePosts, posts.length, hasMore]);
-
   const handleLikeToggle = useCallback((postId: string) => {
     setPosts(prev => prev.map(post => {
       if (post.id !== postId) return post;
@@ -217,21 +191,14 @@ const Popular = () => {
 
   const handlePostDelete = useCallback((postId: string) => { setPosts(prev => prev.filter(p => p.id !== postId)); }, []);
 
-  // ✅ [DEBUG] 렌더링 직전 상태 로그 (필요시 사용)
-  // console.log('Popular Render Status:', { isLoading, postsCount: posts.length });
-
   return (
     <div 
       ref={scrollContainerRef}
-      onScroll={(e) => {
-        // 기존 IntersectionObserver를 대체하여 자동 로드 방지
-      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar"
     >
-      {/* 고정 상단 헤더 */}
       <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
@@ -264,7 +231,6 @@ const Popular = () => {
               </div>
             )}
             
-            {/* Pull Up Loading Area */}
             {hasMore && posts.length > 0 && (
               <div 
                 className="py-10 flex flex-col items-center justify-center transition-all duration-200"
