@@ -162,12 +162,12 @@ const Index = () => {
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
       
-      // [FIX] 등급 판정 로직을 중앙 함수로 관리
-      let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      // [FIX] REMOVED REDUNDANT DECLARATION
+      let bType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       if (likesCount >= 9000) {
-        borderType = 'popular';
+        bType = 'popular';
       } else if (!isAd) {
-        borderType = getTierFromId(p.id);
+        bType = getTierFromId(p.id);
       }
 
       const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
@@ -213,16 +213,16 @@ const Index = () => {
       }
 
       return {
-        id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(borderType),
+        id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(bType),
         user: { id: p.user_id || '', name: userName, avatar: userAvatar },
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude, lng: p.longitude, likes: likesCount, commentsCount: 0, comments: [],
         image: finalImage, images: validImages, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-        category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType
+        category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType: bType
       };
     } catch (err) { return null as any; }
-  }, []);
+  }, [getTierFromId]);
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
