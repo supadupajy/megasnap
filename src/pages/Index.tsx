@@ -142,6 +142,16 @@ const Index = () => {
   }, 1100);
 }, []);
 
+  const getTierFromId = (id: string) => {
+    let h = 0;
+    const idStr = id.toString();
+    for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+    const val = Math.abs(h % 1000) / 1000;
+    if (val < 0.05) return 'diamond';
+    if (val < 0.15) return 'gold';
+    return 'none';
+  };
+
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
@@ -152,17 +162,12 @@ const Index = () => {
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
       
-      // [FIX] 인플루언서 및 인기 등급 판정 로직 강화 및 동기화
+      // [FIX] 등급 판정 로직을 중앙 함수로 관리
       let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
       if (likesCount >= 9000) {
         borderType = 'popular';
       } else if (!isAd) {
-        let h = 0;
-        const idStr = p.id.toString();
-        for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-        const val = Math.abs(h % 1000) / 1000;
-        if (val < 0.05) borderType = 'diamond'; 
-        else if (val < 0.15) borderType = 'gold';
+        borderType = getTierFromId(p.id);
       }
 
       const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
@@ -241,24 +246,17 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
-      const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터 매핑
+      // ✅ [CRITICAL FIX] 지도 마커 동기화 시 인플루언서 로직 확실히 적용
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         const likesCountNum = Number(p.likes || 0);
         
-        // [FIX] 인플루언서 등급 판정 로직을 mapDbToPost와 완벽하게 일치시킴
         let borderType: any = 'none';
         if (likesCountNum >= 9000) {
           borderType = 'popular';
         } else if (!isAd) {
-          let h = 0;
-          const idStr = p.id.toString();
-          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
-          const val = Math.abs(h % 1000) / 1000;
-          if (val < 0.05) borderType = 'diamond';
-          else if (val < 0.15) borderType = 'gold';
+          borderType = getTierFromId(p.id);
         }
         
         return {
