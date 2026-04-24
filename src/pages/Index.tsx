@@ -118,29 +118,32 @@ const Index = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-  if (post.lat === null || post.lng === null) return;
-  setAllPosts((prev) => {
-    if (prev.some((item) => item.id === post.id)) return prev;
-    const combined = [post, ...prev];
-    mapCache.posts = combined;
-    return combined;
-  });
-  setSelectedPostId(null);
-  setSearchResultLocation(null);
-  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+    if (post.lat === null || post.lng === null) return;
+    setAllPosts((prev) => {
+      if (prev.some((item) => item.id === post.id)) return prev;
+      const combined = [post, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
+    setSelectedPostId(null);
+    setSearchResultLocation(null);
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-  // ✅ 하이라이트 초기화 및 지도 이동 시작
-  setHighlightedPostId(null);
-  setMapCenter(center || { lat: post.lat, lng: post.lng });
+    // 하이라이트 상태 초기화
+    setHighlightedPostId(null);
+    // 지도 중심 이동
+    setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-  // ✅ 하이라이트 이벤트 발송 시간 조정
-  highlightTimeoutRef.current = window.setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('highlight-marker', { 
-      detail: { id: post.id, duration: 2500 } 
-    }));
-    highlightTimeoutRef.current = null;
-  }, 1100);
-}, []);
+    // ✅ [MOD] 지도가 이동하고 마커가 생성될 시간을 충분히 준 뒤 하이라이트 이벤트 발송
+    // 먼 거리 이동 시 마커 로딩이 지연될 수 있으므로 대기 시간을 1.5초로 상향
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      console.log('[Index] Triggering delayed highlight for post:', post.id);
+      window.dispatchEvent(new CustomEvent('highlight-marker', { 
+        detail: { id: post.id, duration: 3000 } 
+      }));
+      highlightTimeoutRef.current = null;
+    }, 1500); 
+  }, []);
 
   const getTierFromId = (id: string) => {
     let h = 0;
