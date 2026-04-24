@@ -124,8 +124,8 @@ const Index = () => {
   // Kakao Map reference
   const mapContainerRef = useRef<any>(null);
 
-  const focusPostOnMap = (post: Post) => {
-    // 1. Ensure the post is in the displayed list (Force Show)
+  const focusPostOnMap = useCallback((post: Post) => {
+    // Ensure the post is in the displayed list (Force Show)
     setAllPosts(prev => {
       const exists = prev.find(p => p.id === post.id);
       if (exists) return prev;
@@ -138,22 +138,22 @@ const Index = () => {
       return [{ ...post, _forceShow: true }, ...prev];
     });
 
-    // 2. Set highlighted post ID for the ping effect
+    // Set highlighted post ID for the ping effect
     setHighlightedPostId(post.id);
 
-    // 3. Move map via MapContainer ref
+    // Move map via MapContainer ref
     setMapCenter({ lat: post.latitude, lng: post.longitude });
 
-    // 4. Trigger ping animation via CustomEvent
+    // Trigger ping animation via CustomEvent
     window.dispatchEvent(new CustomEvent('highlight-marker', { 
       detail: { id: post.id } 
     }));
 
-    // 5. Remove highlight after some time
+    // Remove highlight after some time
     setTimeout(() => {
       setHighlightedPostId(null);
     }, 5000);
-  };
+  }, []);
 
   const getTierFromId = (id: string) => {
     let h = 0;
@@ -590,7 +590,11 @@ const Index = () => {
   useEffect(() => {
     const routeState = location.state as any;
     if (!routeState) return;
-    if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
+    if (routeState.triggerConfetti) {
+      setTimeout(() => triggerConfetti(), 800);
+      // Clear state to prevent re-triggering on every render
+      navigate(location.pathname, { replace: true, state: { ...routeState, triggerConfetti: false } });
+    }
     
     // ✅ [FIX] 포스팅 후 설정: 전체보기 모드 유지 + 줌 레벨 5로 고정
     if (routeState.filterUserId === 'me') {
@@ -600,11 +604,13 @@ const Index = () => {
       setTimeout(() => setCurrentZoom(5), 500);
       
       if (routeState.post) {
-        // 등록된 포스트의 좌표로 이동
         focusPostOnMap(routeState.post);
       } else {
         handleCurrentLocation();
       }
+      
+      // Clear routeState to prevent infinite loop
+      navigate(location.pathname, { replace: true, state: { ...routeState, filterUserId: null, post: null } });
     } 
     // 그 외 일반적인 포스트 포커스 처리
     else if (routeState?.fromUpload && routeState?.post) {
@@ -612,12 +618,15 @@ const Index = () => {
         title: "포스팅이 등록되었습니다!",
         description: "지도의 붉은색 마커를 확인해보세요.",
       });
-      // 등록된 포스트의 좌표로 이동
       focusPostOnMap(routeState.post);
+      // Clear state
+      navigate(location.pathname, { replace: true, state: { ...routeState, fromUpload: false, post: null } });
     } else if (routeState.post) {
       focusPostOnMap(routeState.post);
+      // Clear state
+      navigate(location.pathname, { replace: true, state: { ...routeState, post: null } });
     }
-  }, [location.state, focusPostOnMap]);
+  }, [location.state, focusPostOnMap, triggerConfetti, navigate, location.pathname, toast]);
 
   const handlePostDeleted = useCallback((id: string) => {
     setSelectedPostId(null);
