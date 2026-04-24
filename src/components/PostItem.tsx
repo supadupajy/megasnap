@@ -118,19 +118,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     if (!autoPlayVideo) return;
 
     const observer = new IntersectionObserver(
-  ([entry]) => {
-    setIsVisible(entry.isIntersecting);
-  },
-  {
-<<<<<<< HEAD
-    threshold: 0.6,
-    rootMargin: '-20% 0px -20% 0px'
-=======
-    threshold: 0.5,
-    rootMargin: '-30% 0px -30% 0px'
->>>>>>> 844ea166a1a97bc70b3088afa31ef9953564bd38
-  }
-);
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.6,
+        rootMargin: '-20% 0px -20% 0px'
+      }
+    );
 
     if (containerRef.current) {
       observer.observe(containerRef.current);
