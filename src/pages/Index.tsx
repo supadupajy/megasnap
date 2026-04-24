@@ -333,6 +333,10 @@ const Index = () => {
 
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
+      
+      // ✅ [DEBUG] 3위 포스팅 강제 노출 (디버깅용)
+      if (post.id === 'cebfd060-7116-4a6c-b259-b5bba3cb9d44') return true;
+
       const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
       if (!inBounds) return false;
       if (post.isAd) return true;
