@@ -11,6 +11,8 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import PostItem from '@/components/PostItem';
+import { ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const getTierFromId = (id: string) => {
   let h = 0;
@@ -30,15 +32,18 @@ const Popular = () => {
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
-  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   
   const hasLoaded = useRef(false);
+  
+  // Pull up 상태 관리
+  const [pullUpDistance, setPullUpDistance] = useState(0);
+  const isPullingRef = useRef(false);
+  const startYRef = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ [FIX] isLoading 변수를 명시적으로 선언하고 초기 렌더링 시 crash 방지
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
   useEffect(() => {
@@ -95,6 +100,94 @@ const Popular = () => {
     }
   }, [authLoading, authUser, loadInitialData, navigate]);
 
+  const loadNearbyPosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    
+    try {
+      // 1. 현재 위치 기반으로 주변 포스트 10개 가져오기
+      // localStorage에 저장된 마지막 맵 바운드나 중심좌표 활용
+      const storedBounds = localStorage.getItem('map_bounds');
+      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+      
+      // 기본 범위 (전역)
+      let query = supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(10);
+      
+      // 위치 정보가 있다면 해당 영역 포스트 우선 로드
+      if (bounds) {
+        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
+        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
+        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
+        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        
+        query = query.gte('latitude', latMin).lte('latitude', latMax).gte('longitude', lngMin).lte('longitude', lngMax);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
+        const mappedPosts = sanitizedData.map(p => {
+          const borderType = getTierFromId(p.id);
+          const isAd = p.content?.trim().startsWith('[AD]');
+          let finalImage = p.youtube_url ? (getYoutubeThumbnail(p.youtube_url) || p.image_url) : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
+          return {
+            id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+            user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '', location: p.location_name, lat: p.latitude, lng: p.longitude,
+            likes: Number(p.likes || 0), commentsCount: 0, comments: [], image: finalImage, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+            isLiked: false, isSaved: false, createdAt: new Date(p.created_at), borderType,
+            category: p.category || 'none',
+          };
+        }) as Post[];
+
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
+          return [...prev, ...filteredNew];
+        });
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('[Popular] Load nearby failed:', err);
+    } finally {
+      setIsLoadingMore(false);
+      setPullUpDistance(0);
+    }
+  }, [isLoadingMore, hasMore]);
+
+  // Pull Up 제스처 핸들러
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!scrollContainerRef.current || isLoadingMore) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 10) {
+      isPullingRef.current = true;
+      startYRef.current = e.touches[0].pageY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPullingRef.current) return;
+    const pageY = e.touches[0].pageY;
+    const diff = startYRef.current - pageY;
+    if (diff > 0) {
+      setPullUpDistance(Math.min(diff * 0.5, 120));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPullingRef.current) {
+      if (pullUpDistance > 80) {
+        loadNearbyPosts();
+      } else {
+        setPullUpDistance(0);
+      }
+    }
+    isPullingRef.current = false;
+  };
+
   const loadMorePosts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
@@ -131,7 +224,16 @@ const Popular = () => {
   // console.log('Popular Render Status:', { isLoading, postsCount: posts.length });
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div 
+      ref={scrollContainerRef}
+      onScroll={(e) => {
+        // 기존 IntersectionObserver를 대체하여 자동 로드 방지
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar"
+    >
       {/* 고정 상단 헤더 */}
       <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex flex-col">
@@ -164,9 +266,31 @@ const Popular = () => {
                 표시할 인기 포스팅이 없습니다.
               </div>
             )}
+            
+            {/* Pull Up Loading Area */}
             {hasMore && posts.length > 0 && (
-              <div ref={loadMoreRef} className="py-10 flex justify-center">
-                {isLoadingMore && <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />}
+              <div 
+                className="py-10 flex flex-col items-center justify-center transition-all duration-200"
+                style={{ height: `${Math.max(80, pullUpDistance + 40)}px` }}
+              >
+                {isLoadingMore ? (
+                  <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                ) : (
+                  <>
+                    <motion.div
+                      animate={{ y: pullUpDistance > 80 ? -10 : 0 }}
+                      className={pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"}
+                    >
+                      <ChevronUp className="w-8 h-8 stroke-[3px]" />
+                    </motion.div>
+                    <p className={cn(
+                      "text-xs font-black uppercase tracking-tighter mt-2 transition-colors",
+                      pullUpDistance > 80 ? "text-indigo-600" : "text-gray-400"
+                    )}>
+                      {pullUpDistance > 80 ? "놓아서 주변 포스팅 로드" : "페이지를 위로 당겨 포스팅 추가"}
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
