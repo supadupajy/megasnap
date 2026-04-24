@@ -68,16 +68,19 @@ const Popular = () => {
         .order('created_at', { ascending: false });
 
       if (bounds) {
-        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
-        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
-        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
-        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        const latMin = Math.min(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
+        const latMax = Math.max(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
+        const lngMin = Math.min(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
+        const lngMax = Math.max(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
         
+        const latBuffer = (latMax - latMin) * 0.1;
+        const lngBuffer = (lngMax - lngMin) * 0.1;
+
         query = query
-          .gte('latitude', latMin)
-          .lte('latitude', latMax)
-          .gte('longitude', lngMin)
-          .lte('longitude', lngMax);
+          .gte('latitude', latMin - latBuffer)
+          .lte('latitude', latMax + latBuffer)
+          .gte('longitude', lngMin - lngBuffer)
+          .lte('longitude', lngMax + lngBuffer);
       }
 
       const { data, error, count } = await query.range(from, to);
@@ -147,23 +150,28 @@ const Popular = () => {
       
       let query = supabase
         .from('posts_with_profiles')
-        .select('*', { count: 'exact' }) // 정확한 전체 개수 확인을 위해 count 옵션 추가
+        .select('*', { count: 'exact' })
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false });
       
       if (bounds) {
-        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
-        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
-        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
-        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        // [FIX] bounds 객체 구조에 따라 위경도 추출 (sw, ne 가 직접 숫자가 아닐 수 있음을 대비)
+        const latMin = Math.min(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
+        const latMax = Math.max(Number(bounds.sw.lat || bounds.sw._lat), Number(bounds.ne.lat || bounds.ne._lat));
+        const lngMin = Math.min(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
+        const lngMax = Math.max(Number(bounds.sw.lng || bounds.sw._lng), Number(bounds.ne.lng || bounds.ne._lng));
         
-        console.log(`[Popular] Filtering by: Lat(${latMin} to ${latMax}), Lng(${lngMin} to ${lngMax})`);
+        // [EXPAND] 사용자가 보고 있는 지역보다 약간 더 넓은 범위(약 10%)를 검색하여 데이터 부족 현상 방지
+        const latBuffer = (latMax - latMin) * 0.1;
+        const lngBuffer = (lngMax - lngMin) * 0.1;
+
+        console.log(`[Popular] Filtering (with buffer): Lat(${latMin - latBuffer} to ${latMax + latBuffer}), Lng(${lngMin - lngBuffer} to ${lngMax + lngBuffer})`);
         
         query = query
-          .gte('latitude', latMin)
-          .lte('latitude', latMax)
-          .gte('longitude', lngMin)
-          .lte('longitude', lngMax);
+          .gte('latitude', latMin - latBuffer)
+          .lte('latitude', latMax + latBuffer)
+          .gte('longitude', lngMin - lngBuffer)
+          .lte('longitude', lngMax + lngBuffer);
       } else {
         console.warn('[Popular] No map bounds found in localStorage. Falling back to global popular.');
         // bounds가 없으면 그냥 전역 인기 포스팅이라도 보여주도록 처리 (사용자 경험 개선)
