@@ -99,25 +99,36 @@ const Popular = () => {
     try {
       const lastPost = posts[posts.length - 1];
       const lastPostDate = lastPost ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
+      
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      let query = supabase.from('posts').select('*').lt('created_at', lastPostDate).order('created_at', { ascending: false }).limit(10);
+      // [FIX] 해당 지역의 모든 포스팅을 불러올 수 있도록 쿼리 구성
+      let query = supabase
+        .from('posts')
+        .select('*')
+        .lt('created_at', lastPostDate)
+        .order('created_at', { ascending: false })
+        .limit(10);
       
       if (bounds) {
         const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
         const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
         const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
         const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
-        query = query.gte('latitude', latMin).lte('latitude', latMax).gte('longitude', lngMin).lte('longitude', lngMax);
+        
+        query = query
+          .gte('latitude', latMin)
+          .lte('latitude', latMax)
+          .gte('longitude', lngMin)
+          .lte('longitude', lngMax);
       }
 
       const { data, error } = await query;
+      
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // [FIX] 데이터가 PAGE_SIZE보다 적게 왔다고 해서 바로 hasMore를 false로 만들지 않음
-        // 여기서는 limit 10을 줬으므로 data.length가 0일 때만 데이터가 끝난 것으로 간주
         const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
         const mappedPosts = sanitizedData.map(p => {
           const borderType = getTierFromId(p.id);
@@ -136,11 +147,21 @@ const Popular = () => {
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
-          // [FIX] 중복 제거 후 실제로 추가된 데이터가 없다면 더 이상 데이터가 없는 것으로 판단
-          if (filteredNew.length === 0) setHasMore(false);
+          
+          // [FIX] 현재 지역의 모든 데이터를 불러올 때까지 hasMore 유지
+          if (filteredNew.length === 0 && mappedPosts.length > 0) {
+            // 중복만 있고 새로운 게 없더라도, DB 응답이 있었다면 다음 시간을 시도해볼 수 있도록 유지
+            return prev;
+          }
+          
+          if (mappedPosts.length === 0) {
+            setHasMore(false);
+          }
+          
           return [...prev, ...filteredNew];
         });
       } else {
+        // [FIX] 해당 지역에 더 이상 데이터가 없는 경우에만 false
         setHasMore(false);
       }
     } catch (err) {
