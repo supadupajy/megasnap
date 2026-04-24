@@ -614,7 +614,8 @@ useEffect(() => {
         msUserSelect: 'none',
         userSelect: 'none',
         WebkitTouchCallout: 'none',
-        ...({ WebkitUserDrag: 'none' } as any)
+        ...({ WebkitUserDrag: 'none' } as any),
+        cursor: isMapMoving ? 'grabbing' : 'grab'
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
