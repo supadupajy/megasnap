@@ -261,7 +261,7 @@ const Messages = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
-                          {conv.unread_count > 0 && <div className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
+                          {conv.unread_count > 0 && <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
                         </div>
                       </div>
                     </motion.div>
