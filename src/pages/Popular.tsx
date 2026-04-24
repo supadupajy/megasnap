@@ -47,9 +47,6 @@ const Popular = () => {
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
   useEffect(() => {
-    const handleOpenWrite = () => setIsWriteOpen((prev) => !prev);
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
 
   const filteredPosts = useMemo(() => {
@@ -106,14 +103,14 @@ const Popular = () => {
     
     try {
       // 1. 현재 위치 기반으로 주변 포스트 10개 가져오기
-      // localStorage에 저장된 마지막 맵 바운드나 중심좌표 활용
+      const lastPost = posts[posts.length - 1];
+      const lastPostDate = lastPost ? new Date(lastPost.createdAt).toISOString() : new Date().toISOString();
+
       const storedBounds = localStorage.getItem('map_bounds');
       let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      // 기본 범위 (전역)
-      let query = supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(10);
+      let query = supabase.from('posts').select('*').lt('created_at', lastPostDate).order('created_at', { ascending: false }).limit(10);
       
-      // 위치 정보가 있다면 해당 영역 포스트 우선 로드
       if (bounds) {
         const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
         const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
