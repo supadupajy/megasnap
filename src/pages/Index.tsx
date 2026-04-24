@@ -24,6 +24,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import confetti from 'canvas-confetti';
+import { useToast } from "@/components/ui/use-toast";
 
 const fireConfetti = (options: any) => {
   try {
@@ -37,6 +38,7 @@ const fireConfetti = (options: any) => {
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
 const Index = () => {
+  const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
@@ -562,12 +564,14 @@ const Index = () => {
 
   useEffect(() => {
     const handleFocusPost = (e: any) => {
-      const { post, lat, lng } = e.detail;
-      setIsPostListOpen(false); focusPostOnMap(post, { lat, lng });
+      const { post } = e.detail;
+      setIsPostListOpen(false); 
+      focusPostOnMap(post);
       setTimeout(() => setSelectedPostId(post.id), 300);
     };
-    window.addEventListener('focus-post', handleFocusPost);
-    return () => window.removeEventListener('focus-post', handleFocusPost);
+
+    window.addEventListener('focus-post-on-map', handleFocusPost);
+    return () => window.removeEventListener('focus-post-on-map', handleFocusPost);
   }, [focusPostOnMap]);
 
   useEffect(() => {
@@ -590,29 +594,23 @@ const Index = () => {
       
       if (routeState.post) {
         // 등록된 포스트의 좌표로 이동
-        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+        focusPostOnMap(routeState.post);
       } else {
         handleCurrentLocation();
       }
     } 
     // 그 외 일반적인 포스트 포커스 처리
-    else if (routeState.post) {
-      focusPostOnMap(routeState.post, routeState.center);
+    else if (routeState?.fromUpload && routeState?.post) {
+      toast({
+        title: "포스팅이 등록되었습니다!",
+        description: "지도의 붉은색 마커를 확인해보세요.",
+      });
+      // 등록된 포스트의 좌표로 이동
+      focusPostOnMap(routeState.post);
+    } else if (routeState.post) {
+      focusPostOnMap(routeState.post);
     }
-    else if (routeState.center) { 
-      setSelectedPostId(null); 
-      setMapCenter(routeState.center); 
-    }
-    
-    if (routeState.startSelection) { 
-      setIsPostListOpen(false); 
-      setTimeout(() => { 
-        setIsSelectingLocation(true); 
-        setTempSelectedLocation(mapData?.center || mapCache.lastCenter); 
-      }, 500); 
-    }
-    navigate(location.pathname, { replace: true, state: null });
-  }, [focusPostOnMap, location, navigate, triggerConfetti, mapData]);
+  }, [location.state]);
 
   const handlePostDeleted = useCallback((id: string) => {
     setSelectedPostId(null);
