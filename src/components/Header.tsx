@@ -229,7 +229,7 @@ const Header = () => {
         >
           <MessageSquare className="w-6 h-6 text-gray-600" />
           {unreadMsgCount > 0 && (
-            <span className="absolute top-0 right-0 w-4 h-4 bg-indigo-600 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
+            <span className="absolute top-0 right-0 w-[18px] h-[18px] bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
               {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
             </span>
           )}
