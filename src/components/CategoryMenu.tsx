@@ -19,6 +19,7 @@ const CATEGORIES = [
   { id: 'accident', label: '사고', icon: Car, color: 'bg-red-600' },
   { id: 'place', label: '명소', icon: TreePine, color: 'bg-green-600' },
   { id: 'animal', label: '동물', icon: PawPrint, color: 'bg-purple-600' },
+  { id: 'none', label: '기타', icon: Sparkles, color: 'bg-slate-500' },
 ];
 
 const SPECIAL_FILTERS = [
