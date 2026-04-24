@@ -52,6 +52,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+  
+  // 마우스 드래그를 위한 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  // 마우스 드래그 핸들러
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!imageScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
+    setScrollLeft(imageScrollRef.current.scrollLeft);
+  };
+
+  const onMouseUp = () => {
+    setIsDragging(false);
+    if (imageScrollRef.current) {
+      const container = imageScrollRef.current;
+      const index = Math.round(container.scrollLeft / container.clientWidth);
+      setCurrentImageIndex(index);
+    }
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !imageScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - imageScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    imageScrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   const [localComments, setLocalComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -60,7 +92,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -245,6 +276,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isDragging) return;
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / container.clientWidth);
     if (index !== currentImageIndex) setCurrentImageIndex(index);
@@ -424,7 +456,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="flex flex-col">
                       {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
                       <div className="px-4 mt-2">
-                        <div className="relative overflow-hidden bg-black aspect-square rounded-3xl">
+                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
                           {youtubeId ? (
                             <iframe
                               className="w-full h-full"
@@ -437,12 +469,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           ) : currentPost.videoUrl ? (
                             <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                           ) : (
-                            <div className="relative w-full h-full">
-                              {/* 네이티브 스크롤 슬라이더 */}
+                            <div className="absolute inset-0 w-full h-full z-10">
+                              {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
                               <div
                                 ref={imageScrollRef}
-                                className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                                className={cn(
+                                  "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+                                  isDragging && "cursor-grabbing snap-none"
+                                )}
                                 onScroll={handleImageScroll}
+                                onMouseDown={onMouseDown}
+                                onMouseUp={onMouseUp}
+                                onMouseLeave={onMouseUp}
+                                onMouseMove={onMouseMove}
                               >
                                 {displayImages.map((img, index) => {
                                   const isAdSlide = img === COCA_COLA_IMAGE;
@@ -457,7 +496,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                         <img
                                           src={img}
                                           alt="Advertisement"
-                                          className="w-full h-full object-cover"
+                                          className="w-full h-full object-cover pointer-events-none"
                                           draggable={false}
                                         />
                                         <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
@@ -477,7 +516,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                       <img
                                         src={img}
                                         alt={`Post content ${index + 1}`}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover pointer-events-none"
                                         draggable={false}
                                       />
                                     </div>
@@ -502,24 +541,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
 
                       {/* 액션 버튼 및 내용 - 아이콘 그룹과 버튼 그룹 분리 */}
-                      <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()} >
                         <div className="flex flex-col gap-3">
                           {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
+                              <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }} >
                                 <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                              <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} >
                                 <MessageCircle className="w-6 h-6 text-gray-700" />
                               </button>
-                              <button className="text-gray-700" onClick={(e) => e.stopPropagation()}>
+                              <button className="text-gray-700" onClick={(e) => e.stopPropagation()} >
                                 <Share2 className="w-6 h-6" />
                               </button>
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+                              <button className="transition-transform active:scale-125" onClick={handleSaveToggle} >
                                 <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
                               </button>
                               {renderCategoryBadge()}
@@ -556,7 +595,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                           </div>
                         </div>
-                        <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()} >
                           <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                             <Input
                               ref={commentInputRef}
