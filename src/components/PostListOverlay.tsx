@@ -143,6 +143,7 @@ const ObservedPostItem = ({
         onLocationClick={onLocationClick}
         onDelete={onDelete}
         autoPlayVideo={isCurrentlyVisible}
+        isPlaying={isPlaying}
       />
     </div>
   );

@@ -230,15 +230,15 @@ const Popular = () => {
       return;
     }
 
+    // [FIX] posts와 filteredPosts 모두에서 대상을 찾고 상태 동기화
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    const isLiked = post.isLiked;
+    const nextLiked = !post.isLiked;
     
     // UI 즉시 반영 (Optimistic Update)
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      const nextLiked = !isLiked;
       return { 
         ...p, 
         isLiked: nextLiked, 
