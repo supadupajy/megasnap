@@ -246,6 +246,7 @@ const Index = () => {
     const zoomToUse = forceZoom ?? currentZoom;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
+      const validDbIds = new Set(dbPosts.map(p => p.id));
       
       // ✅ [CRITICAL FIX] 지도 마커 동기화 시 인플루언서 로직 확실히 적용
       const mappedPosts: Post[] = dbPosts.map(p => {
