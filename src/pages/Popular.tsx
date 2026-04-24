@@ -55,13 +55,32 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       await initializeYoutubePool();
-      // [FIX] 초기 로딩 시에도 프로필 정보가 포함된 posts_with_profiles 뷰에서 데이터를 가져옵니다.
-      const { data, error } = await supabase
+      
+      const storedBounds = localStorage.getItem('map_bounds');
+      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
+
+      // [CRITICAL] 초기 로딩 시에도 현재 사용자가 보고 있는 지도 영역(bounds) 내의 포스팅만 필터링
+      let query = supabase
         .from('posts_with_profiles')
         .select('*')
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to);
+
+      if (bounds) {
+        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
+        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
+        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
+        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        
+        query = query
+          .gte('latitude', latMin)
+          .lte('latitude', latMax)
+          .gte('longitude', lngMin)
+          .lte('longitude', lngMax);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
@@ -109,18 +128,42 @@ const Popular = () => {
     setIsLoadingMore(true);
     
     try {
-      // [FIX] 인기 포스팅이므로 좋아요(likes) 순으로 로드하되, 이미 로드된 개수를 기반으로 다음 범위를 가져옵니다.
       const from = posts.length;
-      const to = from + 9; // 한 번에 10개씩 추가 로드
+      const to = from + 9;
       
-      console.log(`[Popular] Attempting to load 10 more posts (range ${from}-${to}) from posts_with_profiles`);
+      const storedBounds = localStorage.getItem('map_bounds');
+      let bounds = storedBounds ? JSON.parse(storedBounds) : null;
       
-      const { data, error } = await supabase
+      console.log(`[Popular] Loading more posts (range ${from}-${to}) restricted to current map bounds`);
+      
+      let query = supabase
         .from('posts_with_profiles')
         .select('*')
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to);
+      
+      // [CRITICAL] 현재 사용자가 보고 있는 지도 영역(bounds) 내의 포스팅만 필터링
+      if (bounds) {
+        const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
+        const latMax = Math.max(bounds.sw.lat, bounds.ne.lat);
+        const lngMin = Math.min(bounds.sw.lng, bounds.ne.lng);
+        const lngMax = Math.max(bounds.sw.lng, bounds.ne.lng);
+        
+        query = query
+          .gte('latitude', latMin)
+          .lte('latitude', latMax)
+          .gte('longitude', lngMin)
+          .lte('longitude', lngMax);
+      } else {
+        // 위치 정보가 없으면 로딩 중단 (내 지역 포스팅만 보여주기 위함)
+        console.warn('[Popular] No map bounds found in localStorage');
+        setHasMore(false);
+        setIsLoadingMore(false);
+        return;
+      }
+
+      const { data, error } = await query;
       
       if (error) {
         console.error('[Popular] Supabase query error:', error);
