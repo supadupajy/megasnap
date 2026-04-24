@@ -350,7 +350,7 @@ const Index = () => {
     const isLiked = post.isLiked;
     
     // UI 즉시 반영 (Optimistic Update)
-    const updateFn = (prev: Post[]) => prev.map(p => {
+    setAllPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
       const nextLiked = !isLiked;
       return { 
@@ -358,12 +358,6 @@ const Index = () => {
         isLiked: nextLiked, 
         likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
       };
-    };
-
-    setAllPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p;
-      const nextLiked = !isLiked;
-      return { ...p, isLiked: nextLiked, likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
     }));
     setGlobalTrendingPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;

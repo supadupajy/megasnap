@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import PostItem from '@/components/PostItem';
 import { motion } from 'framer-motion';
+import { showError } from '@/utils/toast';
 
 const getTierFromId = (id: string) => {
   let h = 0;

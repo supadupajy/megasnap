@@ -13,6 +13,7 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
+import { showError } from '@/utils/toast';
 
 const ObservedPostItem = ({ 
   post, 
