@@ -93,10 +93,11 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] select('*') 대신 마커 렌더링에 꼭 필요한 최소 데이터만 조회 (Egress 절약)
+    // ✅ [OPTIMIZATION] 테이블 직접 조인 대신 데이터베이스 뷰(posts_with_profiles)를 사용하여
+    // 외래키 관계 오류(PGRST200) 및 네트워크 리소스 부족 에러를 동시에 해결합니다.
     let query = supabase
-      .from('posts')
-      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name')
+      .from('posts_with_profiles')
+      .select('*')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -107,7 +108,17 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    
+    // UI에서 기대하는 profiles(nickname, avatar_url) 구조로 변환하여 기존 코드와 호환성을 유지합니다.
+    const mappedData = (data || []).map(p => ({
+      ...p,
+      profiles: {
+        nickname: p.user_nickname,
+        avatar_url: p.user_avatar_url
+      }
+    }));
+
+    return mappedData;
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
     return [];

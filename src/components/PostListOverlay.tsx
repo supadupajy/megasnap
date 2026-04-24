@@ -13,6 +13,7 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
+import { showError } from '@/utils/toast';
 
 const ObservedPostItem = ({ 
   post, 
@@ -142,6 +143,7 @@ const ObservedPostItem = ({
         onLocationClick={onLocationClick}
         onDelete={onDelete}
         autoPlayVideo={isCurrentlyVisible}
+        isPlaying={isPlaying}
       />
     </div>
   );
@@ -370,6 +372,41 @@ const PostListOverlay = ({
     }
   };
 
+  const handleLikeToggle = useCallback(async (postId: string) => {
+    if (!authUserId) {
+      showError('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.isLiked;
+    
+    // UI 즉시 반영 (Optimistic Update)
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { 
+        ...p, 
+        isLiked: nextLiked, 
+        likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
+      };
+    }));
+
+    try {
+      if (!isLiked) {
+        await supabase.from('likes').insert({ post_id: postId, user_id: authUserId });
+        await supabase.rpc('increment_likes', { post_id: postId });
+      } else {
+        await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUserId);
+        await supabase.rpc('decrement_likes', { post_id: postId });
+      }
+    } catch (err) {
+      console.error('[PostListOverlay] Like toggle error:', err);
+    }
+  }, [authUserId, posts]);
+
   if (!isOpen) return null;
 
   return (
@@ -421,7 +458,7 @@ const PostListOverlay = ({
                 post={post}
                 isViewed={viewedIds.has(post.id)}
                 onVisible={(id) => markAsViewed(id)}
-                onLikeToggle={() => {}}
+                onLikeToggle={handleLikeToggle}
                 onLocationClick={(e, lat, lng) => {
                   window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
                 }}

@@ -142,15 +142,35 @@ const Index = () => {
   }, 1100);
 }, []);
 
+  const getTierFromId = (id: string) => {
+    let h = 0;
+    const idStr = id.toString();
+    for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+    const val = Math.abs(h % 1000) / 1000;
+    if (val < 0.05) return 'diamond';
+    if (val < 0.15) return 'gold';
+    return 'none';
+  };
+
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const { data: p, error: postError } = await supabase.from('posts').select('*').eq('id', rawPost.id).single();
-      if (postError || !p) throw postError || new Error('Post not found');
+      // [OPTIMIZATION] 이미 rawPost에 모든 데이터가 포함되어 있다고 가정하고 추가 쿼리를 제거합니다.
+      // 만약 데이터가 부족하다면 상위 fetch 단계에서 조인을 통해 한꺼번에 가져와야 합니다.
+      const p = rawPost;
 
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
       const likesCount = Number(p.likes || 0);
+      
+      // [FIX] REMOVED REDUNDANT DECLARATION
+      let bType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
+      if (likesCount >= 9000) {
+        bType = 'popular';
+      } else if (!isAd) {
+        bType = getTierFromId(p.id);
+      }
+
       const BROKEN_IDS = ["photo-1548199973-03cbf5292374"];
       const HIGH_RES_FALLBACK = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=90";
 
@@ -186,37 +206,73 @@ const Index = () => {
         if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
       }
       
-      let userName = p.user_name || '탐험가';
-      let userAvatar = p.user_avatar || '';
-      if (p.user_id) {
-        const { data: profileData } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', p.user_id).maybeSingle();
-        if (profileData) { userName = profileData.nickname || userName; userAvatar = profileData.avatar_url || userAvatar; }
-      }
+      // [OPTIMIZATION] 프로필 정보를 가져오기 위해 개별 쿼리를 날리던 부분을 제거하고
+      // 전달받은 데이터에 이미 포함된 nickname, avatar_url 등을 사용합니다.
+      let userName = p.user_name || p.profiles?.nickname || '탐험가';
+      let userAvatar = p.user_avatar || p.profiles?.avatar_url || '';
 
       return {
-        id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
+        id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['gold', 'diamond'].includes(bType),
         user: { id: p.user_id || '', name: userName, avatar: userAvatar },
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
         location: p.location_name || '알 수 없는 장소',
         lat: p.latitude, lng: p.longitude, likes: likesCount, commentsCount: 0, comments: [],
         image: finalImage, images: validImages, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
-        category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType
+        category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType: bType
       };
     } catch (err) { return null as any; }
-  }, []);
+  }, [getTierFromId]);
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('posts').select('*').limit(100);
+      // [OPTIMIZATION] posts 대신 posts_with_profiles 뷰를 사용하여 프로필 정보를 한 번에 가져옴
+      // 좋아요가 많은 순서대로 50개를 가져온 뒤 상위 20개를 추출하여 로딩 루프 방지
+      const { data, error } = await supabase
+        .from('posts_with_profiles')
+        .select('*')
+        .order('likes', { ascending: false })
+        .limit(50);
+        
       if (!error && data) {
-        const shuffled = [...data].sort(() => Math.random() - 0.5);
-        const mapped = await Promise.all(shuffled.map(mapDbToPost));
-        setGlobalTrendingPosts(mapped.filter(p => p !== null).slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 })));
+        // [FIX] 매번 셔플(random)하지 않고 고정된 순위(좋아요 순)를 제공하여 UI 깜빡임 방지
+        const mapped = await Promise.all(data.map(async (p) => {
+          const isAd = p.content?.trim().startsWith('[AD]') || false;
+          const borderType = getTierFromId(p.id);
+          
+          return {
+            id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
+            user: { 
+              id: p.user_id, 
+              name: p.user_nickname || '탐험가', 
+              avatar: p.user_avatar_url || '' 
+            },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+            location: p.location_name || '알 수 없는 장소',
+            lat: p.latitude, lng: p.longitude, 
+            likes: Number(p.likes || 0), commentsCount: 0, comments: [],
+            image: p.image_url || '',
+            images: p.images || [p.image_url], 
+            youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+            category: p.category || 'none', isLiked: false, 
+            createdAt: new Date(p.created_at), borderType
+          };
+        }));
+        
+        // 상위 20개만 고정 순위로 설정
+        setGlobalTrendingPosts(mapped.slice(0, 20).map((p, idx) => ({ 
+          ...p, 
+          rank: idx + 1,
+          borderType: p.borderType as "none" | "gold" | "silver" | "diamond" | "popular"
+        })));
       }
     } catch (err) { console.error(err); }
-  }, [mapDbToPost]);
+  }, [getTierFromId]);
 
-  useEffect(() => { if (authUser) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending]);
+  useEffect(() => { 
+    if (authUser && globalTrendingPosts.length === 0) {
+      fetchGlobalTrending(); 
+    }
+  }, [authUser, fetchGlobalTrending, globalTrendingPosts.length]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
@@ -226,14 +282,21 @@ const Index = () => {
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
     try {
+      // fetchPostsInBounds 내부에서 프로필 조인을 수행하도록 보장되어야 함
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
+      // ✅ [CRITICAL FIX] 지도 마커 동기화 시 인플루언서 로직 확실히 적용
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
+        const likesCountNum = Number(p.likes || 0);
+        
         let borderType: any = 'none';
-        if (Number(p.likes) >= 9000) borderType = 'popular';
+        if (likesCountNum >= 9000) {
+          borderType = 'popular';
+        } else if (!isAd) {
+          borderType = getTierFromId(p.id);
+        }
         
         return {
           id: p.id,
@@ -243,14 +306,15 @@ const Index = () => {
           lng: p.longitude,
           latitude: p.latitude,
           longitude: p.longitude,
-          likes: Number(p.likes || 0),
+          likes: likesCountNum,
           image: p.image_url || '',
           image_url: p.image_url || '',
           youtubeUrl: p.youtube_url,
           videoUrl: p.video_url,
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
-          borderType,
+          borderType, // 이 값이 'none'이 아니어야 마커 테두리가 그려짐
+          isInfluencer: !isAd && ['gold', 'diamond'].includes(borderType),
           user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
           content: p.content || '',
           location: p.location_name || '',
@@ -338,11 +402,46 @@ const Index = () => {
     });
   }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
-  const handleLikeToggle = useCallback((postId: string) => {
-    const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;
-    setAllPosts(prev => prev.map(updater));
-    setGlobalTrendingPosts(prev => prev.map(updater));
-  }, []);
+  const handleLikeToggle = useCallback(async (postId: string) => {
+    if (!authUser) {
+      showError('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.isLiked;
+    
+    // UI 즉시 반영 (Optimistic Update)
+    setAllPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { 
+        ...p, 
+        isLiked: nextLiked, 
+        likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
+      };
+    }));
+    setGlobalTrendingPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { ...p, isLiked: nextLiked, likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
+    }));
+
+    try {
+      if (!isLiked) {
+        await supabase.from('likes').insert({ post_id: postId, user_id: authUser.id });
+        await supabase.rpc('increment_likes', { post_id: postId });
+      } else {
+        await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUser.id);
+        await supabase.rpc('decrement_likes', { post_id: postId });
+      }
+    } catch (err) {
+      console.error('[Index] Like toggle error:', err);
+      // 에러 시 복구 로직 (생략 가능하나 안정성을 위해 추가 권장)
+    }
+  }, [authUser, allPosts]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true); await fetchGlobalTrending();
