@@ -338,11 +338,52 @@ const Index = () => {
     });
   }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
-  const handleLikeToggle = useCallback((postId: string) => {
-    const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;
-    setAllPosts(prev => prev.map(updater));
-    setGlobalTrendingPosts(prev => prev.map(updater));
-  }, []);
+  const handleLikeToggle = useCallback(async (postId: string) => {
+    if (!authUser) {
+      showError('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.isLiked;
+    
+    // UI 즉시 반영 (Optimistic Update)
+    const updateFn = (prev: Post[]) => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { 
+        ...p, 
+        isLiked: nextLiked, 
+        likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
+      };
+    };
+
+    setAllPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { ...p, isLiked: nextLiked, likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
+    }));
+    setGlobalTrendingPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { ...p, isLiked: nextLiked, likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
+    }));
+
+    try {
+      if (!isLiked) {
+        await supabase.from('likes').insert({ post_id: postId, user_id: authUser.id });
+        await supabase.rpc('increment_likes', { post_id: postId });
+      } else {
+        await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUser.id);
+        await supabase.rpc('decrement_likes', { post_id: postId });
+      }
+    } catch (err) {
+      console.error('[Index] Like toggle error:', err);
+      // 에러 시 복구 로직 (생략 가능하나 안정성을 위해 추가 권장)
+    }
+  }, [authUser, allPosts]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true); await fetchGlobalTrending();

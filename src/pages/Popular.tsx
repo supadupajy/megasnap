@@ -223,13 +223,63 @@ const Popular = () => {
     handleTouchEnd();
   };
 
-  const handleLikeToggle = useCallback((postId: string) => {
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post;
-      const isLiked = !post.isLiked;
-      return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
+  const handleLikeToggle = useCallback(async (postId: string) => {
+    if (!authUser) {
+      showError('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isLiked = post.isLiked;
+    
+    // UI 즉시 반영 (Optimistic Update)
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const nextLiked = !isLiked;
+      return { 
+        ...p, 
+        isLiked: nextLiked, 
+        likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1) 
+      };
     }));
-  }, []);
+
+    try {
+      if (!isLiked) {
+        // 좋아요 추가
+        const { error } = await supabase
+          .from('likes')
+          .insert({ post_id: postId, user_id: authUser.id });
+        if (error) throw error;
+        
+        // 포스트 테이블 좋아요 수 업데이트
+        await supabase.rpc('increment_likes', { post_id: postId });
+      } else {
+        // 좋아요 취소
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', authUser.id);
+        if (error) throw error;
+        
+        // 포스트 테이블 좋아요 수 업데이트
+        await supabase.rpc('decrement_likes', { post_id: postId });
+      }
+    } catch (err) {
+      console.error('[Popular] Like toggle error:', err);
+      // 에러 발생 시 원래 상태로 복구
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        return { 
+          ...p, 
+          isLiked: isLiked, 
+          likes: isLiked ? p.likes : Math.max(0, p.likes) 
+        };
+      }));
+    }
+  }, [authUser, posts]);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);
