@@ -532,7 +532,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
       {/* Content Section */}
       <div className="px-4 pb-4 space-y-1">
-        <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
+        <p className="text-[13px] font-black text-gray-900">좋아요 {post.likes.toLocaleString()}개</p>
         <div className="flex gap-2 items-start">
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
