@@ -230,11 +230,11 @@ const Popular = () => {
       return;
     }
 
-    // [FIX] posts와 filteredPosts 모두에서 대상을 찾고 상태 동기화
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    const nextLiked = !post.isLiked;
+    const originalLiked = post.isLiked;
+    const nextLiked = !originalLiked;
     
     // UI 즉시 반영 (Optimistic Update)
     setPosts(prev => prev.map(p => {
@@ -247,14 +247,12 @@ const Popular = () => {
     }));
 
     try {
-      if (!isLiked) {
+      if (nextLiked) {
         // 좋아요 추가
         const { error } = await supabase
           .from('likes')
           .insert({ post_id: postId, user_id: authUser.id });
         if (error) throw error;
-        
-        // 포스트 테이블 좋아요 수 업데이트
         await supabase.rpc('increment_likes', { post_id: postId });
       } else {
         // 좋아요 취소
@@ -264,8 +262,6 @@ const Popular = () => {
           .eq('post_id', postId)
           .eq('user_id', authUser.id);
         if (error) throw error;
-        
-        // 포스트 테이블 좋아요 수 업데이트
         await supabase.rpc('decrement_likes', { post_id: postId });
       }
     } catch (err) {
@@ -275,8 +271,8 @@ const Popular = () => {
         if (p.id !== postId) return p;
         return { 
           ...p, 
-          isLiked: isLiked, 
-          likes: isLiked ? p.likes : Math.max(0, p.likes) 
+          isLiked: originalLiked, 
+          likes: post.likes // 원본 상태의 likes 수 사용
         };
       }));
     }
