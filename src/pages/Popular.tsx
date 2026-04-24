@@ -116,6 +116,8 @@ const Popular = () => {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        // [FIX] 데이터가 PAGE_SIZE보다 적게 왔다고 해서 바로 hasMore를 false로 만들지 않음
+        // 여기서는 limit 10을 줬으므로 data.length가 0일 때만 데이터가 끝난 것으로 간주
         const sanitizedData = await Promise.all(data.map((post) => sanitizeYoutubeMedia(post)));
         const mappedPosts = sanitizedData.map(p => {
           const borderType = getTierFromId(p.id);
@@ -134,6 +136,8 @@ const Popular = () => {
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const filteredNew = mappedPosts.filter(p => !existingIds.has(p.id));
+          // [FIX] 중복 제거 후 실제로 추가된 데이터가 없다면 더 이상 데이터가 없는 것으로 판단
+          if (filteredNew.length === 0) setHasMore(false);
           return [...prev, ...filteredNew];
         });
       } else {
