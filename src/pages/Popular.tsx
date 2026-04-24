@@ -59,7 +59,10 @@ const Popular = () => {
       const storedLocation = localStorage.getItem('last_known_location');
       const location = storedLocation ? JSON.parse(storedLocation) : null;
       
-      console.log(`[Popular] fetchPopularPosts (Initial). Location:`, location?.address);
+      const userCity = location?.address ? location.address.split(' ')[0] : '서울';
+      const searchKey = userCity.substring(0, 2);
+      
+      console.log(`[Popular] fetchPopularPosts (Initial). City: ${userCity}, SearchKey: ${searchKey}`);
 
       let query = supabase
         .from('posts_with_profiles')
@@ -67,11 +70,7 @@ const Popular = () => {
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (location && location.address) {
-        const addrParts = location.address.split(' ');
-        const regionSearch = addrParts.slice(0, 2).join(' ');
-        query = query.ilike('location_name', `%${regionSearch}%`);
-      }
+      query = query.ilike('location_name', `%${searchKey}%`);
 
       const { data, error, count } = await query.range(from, to);
       
@@ -135,25 +134,21 @@ const Popular = () => {
       const storedLocation = localStorage.getItem('last_known_location');
       const location = storedLocation ? JSON.parse(storedLocation) : null;
       
-      console.log(`[Popular] loadNearbyPosts triggered. Current count: ${from}. Range: ${from}-${to}`);
+      // 주소가 없을 경우 '서울'을 기본값으로 사용하거나 전체를 불러오는 대신 안전하게 처리
+      const userCity = location?.address ? location.address.split(' ')[0] : '서울';
       
-      // [FIX] 지도 좌표(bounds) 대신 사용자의 행정구역(address) 정보를 기반으로 필터링
+      console.log(`[Popular] loadNearbyPosts triggered. City: ${userCity}. Range: ${from}-${to}`);
+      
       let query = supabase
         .from('posts_with_profiles')
         .select('*', { count: 'exact' })
         .order('likes', { ascending: false })
         .order('created_at', { ascending: false });
       
-      if (location && location.address) {
-        // "서울특별서 강남구 ..." 에서 첫 두 마디(시/도 + 구) 정도를 추출하여 지역성 확보
-        const addrParts = location.address.split(' ');
-        const regionSearch = addrParts.slice(0, 2).join(' ');
-        console.log(`[Popular] Filtering by region address: "${regionSearch}"`);
-        
-        query = query.ilike('location_name', `%${regionSearch}%`);
-      } else {
-        console.warn('[Popular] No location address found. Loading global popular posts.');
-      }
+      // [FIX] 'location_name' 필드가 "서울시 강남구" 형식이므로 '서울' 키워드로 필터링
+      // 시/도 단위(예: 서울, 대구, 경기)로 엄격하게 필터링하여 타 지역 노출 방지
+      const searchKey = userCity.substring(0, 2); // '서울특별시' -> '서울', '대구광역시' -> '대구'
+      query = query.ilike('location_name', `%${searchKey}%`);
 
       const { data, error, count } = await query.range(from, to);
       
