@@ -332,17 +332,16 @@ const Write = () => {
   const currentMedia = mediaFiles[currentSlide];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col relative overflow-hidden">
       {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
-      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div
+      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
+        <div 
           className="px-5 py-6 space-y-8 pb-32"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
         >
-
           {/* 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
-          <div
-            className="mb-8"
+          <div 
+            className="mb-8 p-6 bg-white rounded-[32px] border border-gray-100 shadow-sm"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
