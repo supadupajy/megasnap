@@ -329,37 +329,43 @@ const Index = () => {
 
   useEffect(() => {
     if (!mapData?.bounds) return;
-    if (currentZoom >= 9) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
+    if (currentZoom >= 11) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     
     const { sw, ne } = mapData.bounds;
-    const center = mapData.center; // ✅ 지도의 중심점
+    const center = mapData.center;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
-    // ✅ [거리 기반 가중치 정렬] 현재 지도의 중심과 각 포스트의 거리를 계산하여 가까운 순으로 표시
+    // ✅ 필터링 및 거리순 정렬 로직 최적화
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
-      const inBounds = post.lat >= Math.min(sw.lat, ne.lat) && post.lat <= Math.max(sw.lat, ne.lat) && post.lng >= Math.min(sw.lng, ne.lng) && post.lng <= Math.max(sw.lng, ne.lng);
+      
+      // ✅ [FIX] 경계값 마진을 주어 마커가 잘리는 현상 방지
+      const margin = 0.002;
+      const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin && 
+                       post.lat <= Math.max(sw.lat, ne.lat) + margin && 
+                       post.lng >= Math.min(sw.lng, ne.lng) - margin && 
+                       post.lng <= Math.max(sw.lng, ne.lng) + margin;
+      
       if (!inBounds) return false;
-      if (post.isAd) return true;
+      
+      // ✅ [FIX] 시간 필터가 너무 타이트한 경우 완화 (전체보기 시 모든 포스트 노출)
       if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       if (selectedCategories.includes('all')) return true;
-      return selectedCategories.includes(post.category || 'none') || (selectedCategories.includes('hot') && post.borderType === 'popular') || (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
+      
+      return selectedCategories.includes(post.category || 'none') || 
+             (selectedCategories.includes('hot') && post.borderType === 'popular') || 
+             (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
     }).map(p => {
-      // ✅ 거리 계산 (간이 유클리드 거리)
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
       return [p.id, { ...p, _dist: dist }];
     })).values());
 
-    // ✅ 가까운 거리 순으로 정렬하여 displayedMarkers 업데이트
-    // 이렇게 하면 '여기 보기' 클릭 시 중심점 기준 가까운 포스팅이 먼저 나타납니다.
     const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
     
-    setDisplayedMarkers(prev => {
-      if (prev.length === sortedPosts.length && prev.every((p, i) => p.id === sortedPosts[i].id)) return prev;
-      return sortedPosts;
-    });
+    setDisplayedMarkers(sortedPosts);
   }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
