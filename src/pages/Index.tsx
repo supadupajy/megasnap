@@ -646,8 +646,9 @@ const Index = () => {
           {!isSelectingLocation && (
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
-              <div className={cn("absolute top-20 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
-                <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,10px)]">
+              
+              <div className={cn("absolute top-16 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+                <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,4px)] pt-2">
                   <TrendingPosts 
                     posts={globalTrendingPosts} 
                     isExpanded={isTrendingExpanded} 
