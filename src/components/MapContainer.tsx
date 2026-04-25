@@ -281,7 +281,8 @@ const MapContainer = ({
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: content,
-          yAnchor: 1,
+          xAnchor: 0.5,
+          yAnchor: 1.0,
           zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
         });
         overlay.setMap(mapInstance.current);
@@ -503,7 +504,8 @@ useEffect(() => {
       const overlay = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
         content: content,
-        yAnchor: 1,
+        xAnchor: 0.5,
+        yAnchor: 1.0,
         zIndex: 11000
       });
       overlay.setMap(mapInstance.current);
