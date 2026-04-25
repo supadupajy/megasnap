@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2, PenLine, Send, Bell, MessageSquare } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2, PenLine, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -12,7 +12,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { useWriteStore } from '@/utils/write-store';
-import HeaderAdBanner from '@/components/HeaderAdBanner';
 
 interface MediaFile {
   file: File;
@@ -334,82 +333,42 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* [FIX] 고정 상단 헤더 - Header.tsx와 동일한 스타일 적용 */}
+      {/* [FIX] 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
       <div 
-        className="fixed top-0 inset-x-0 z-[100] bg-white border-b border-gray-100"
+        className="fixed top-0 inset-x-0 z-[100] bg-white border-b border-gray-100 shadow-sm"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
-          <div 
-            className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-            onClick={() => navigate('/')}
-          >
-            <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
-              <span className="text-gray-900">Chora</span>
-              <span className="text-indigo-600">Snap</span>
-            </h1>
+        <div className="pt-16 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+              <PenLine className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+              </h2>
+              <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+            </div>
           </div>
-
-          <HeaderAdBanner />
-
-          <div className="flex items-center gap-4 shrink-0">
-            <button 
-              className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-              onClick={() => navigate('/notifications')}
-            >
-              <Bell className="w-6 h-6 text-gray-600" />
-            </button>
-            <button 
-              className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-              onClick={() => navigate('/messages')}
-            >
-              <MessageSquare className="w-6 h-6 text-gray-600" />
-            </button>
+          <div className="flex items-center gap-2">
+            {currentPage === 2 && (
+              <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+              <Send className="w-5 h-5 text-indigo-600" />
+            </div>
           </div>
         </div>
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 */}
+        {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
         <div 
           className="px-5 py-6 space-y-8 pb-40"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 140px)' }}
         >
-          {/* 타이틀 영역 - 인기 포스팅 메뉴와 100% 동일한 속성 적용 */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              {/* 인기 포스팅과 동일한 배경색, 크기, 라운드값 */}
-              <div className="w-[88px] h-[88px] bg-[#FFF1E7] rounded-[32px] flex items-center justify-center shadow-sm">
-                {/* 인기 포스팅 아이콘 비율에 맞춘 크기 조정 */}
-                <PenLine className="w-10 h-10 text-[#E36414] fill-[#E36414]" />
-              </div>
-              <div className="flex flex-col">
-                {/* 인기 포스팅과 동일한 폰트 크기 및 색상 */}
-                <h2 className="text-[28px] font-black text-[#1E293B] tracking-tighter leading-tight">
-                  {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-                </h2>
-                {/* 인기 포스팅과 동일한 서브 텍스트 스타일 */}
-                <p className="text-[14px] text-[#94a3b8] font-bold uppercase tracking-[0.1em] leading-none mt-1">
-                  LEAVE YOUR TRACE
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {currentPage === 2 && (
-                <button 
-                  onClick={() => setCurrentPage(1)} 
-                  className="w-[56px] h-[56px] bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-50 flex items-center justify-center text-gray-800 active:scale-95 transition-all"
-                >
-                  <ChevronLeft className="w-7 h-7" />
-                </button>
-              )}
-              <div className="w-[56px] h-[56px] bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-50 flex items-center justify-center">
-                <Send className="w-7 h-7 text-indigo-600" />
-              </div>
-            </div>
-          </div>
-
           {currentPage === 1 ? (
             <div className="space-y-6">
               <div className="space-y-3">
