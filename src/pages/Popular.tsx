@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Flame, TrendingUp } from 'lucide-react';
 import { createMockPosts, getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
@@ -132,15 +132,27 @@ const Popular = () => {
 
   return (
     <div className="min-h-screen bg-white pb-32">
-      {/* 고정 상단 헤더 - env(safe-area-inset-top)을 고려하여 위치 조정 및 패딩 축소 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-2 flex items-center justify-between">
-        <div className="flex flex-col">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trending Now</p>
+      {/* 고정 상단 헤더 - 내 프로필 화면과 동일한 스타일로 개선 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
+        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <Flame className="w-6 h-6 text-orange-600 fill-orange-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
+                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Trending Now</p>
+              </div>
+            </div>
+            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+              <TrendingUp className="w-5 h-5 text-indigo-600" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="pt-[calc(env(safe-area-inset-top,0px)+112px)]">
+      <div className="pt-[calc(env(safe-area-inset-top,0px)+148px)]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
