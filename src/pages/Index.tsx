@@ -644,20 +644,17 @@ const Index = () => {
             "relative w-full flex flex-col pointer-events-none transition-all duration-300",
             isTrendingExpanded ? "z-[100]" : "z-10"
           )}>
-            {/* Header Spacer - 헤더의 고정 높이(64px)만큼 공간 확보 */}
-            <div className="h-16 shrink-0" />
-
             <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-black/5 backdrop-blur-[2px] z-[35] pointer-events-auto" />}</AnimatePresence>
             
-            {/* 상단 인기 포스팅: 스마트폰에서 더 위로 바짝 붙이고, 확장 시 최상단 레이어로 설정 */}
+            {/* 상단 인기 포스팅: 환경에 상관없이 헤더 바로 아래에 붙도록 절대 위치와 고정 수치 사용 */}
             <div 
               className={cn(
-                "w-full px-4 pt-2 pointer-events-none transition-all duration-300 relative",
+                "fixed left-0 right-0 px-4 pointer-events-none transition-all duration-300",
                 isTrendingExpanded ? "z-[60]" : "z-[40]"
               )}
               style={{ 
-                /* 모바일에서는 위로 더 바짝 올림 (-24px) */
-                marginTop: 'calc(-24px * clamp(0, env(safe-area-inset-top), 1))' 
+                /* 헤더 높이(64px)와 상태바 여백을 고려하여 상단에서 76px 지점으로 강제 고정 */
+                top: 'calc(env(safe-area-inset-top, 0px) + 68px)',
               }}
             >
               <div className="w-full shrink-0 pointer-events-auto">
