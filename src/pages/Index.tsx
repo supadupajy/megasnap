@@ -118,29 +118,36 @@ const Index = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
   // ✅ 지도 이동 완료 후 적용할 하이라이트 id 예약
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
-  if (post.lat === null || post.lng === null) return;
-  setAllPosts((prev) => {
-    if (prev.some((item) => item.id === post.id)) return prev;
-    const combined = [post, ...prev];
-    mapCache.posts = combined;
-    return combined;
-  });
-  setSelectedPostId(null);
-  setSearchResultLocation(null);
-  if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
+    if (post.lat === null || post.lng === null) return;
+    
+    // ✅ [FIX] 리스트에서 클릭한 포스트가 현재 지도 데이터(allPosts)에 없는 경우, 
+    // 즉시 추가하여 MapContainer가 마커를 생성할 수 있도록 보장합니다.
+    setAllPosts((prev) => {
+      const exists = prev.some((item) => item.id === post.id);
+      if (exists) return prev;
+      
+      const newPost = { ...post };
+      const combined = [newPost, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
 
-  // ✅ 하이라이트 초기화 및 지도 이동 시작
-  setHighlightedPostId(null);
-  setMapCenter(center || { lat: post.lat, lng: post.lng });
+    setSelectedPostId(null);
+    setSearchResultLocation(null);
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-  // ✅ 하이라이트 이벤트 발송 시간 조정
-  highlightTimeoutRef.current = window.setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('highlight-marker', { 
-      detail: { id: post.id, duration: 2500 } 
-    }));
-    highlightTimeoutRef.current = null;
-  }, 1100);
-}, []);
+    // ✅ 하이라이트 초기화 및 지도 이동 시작
+    setHighlightedPostId(null);
+    setMapCenter(center || { lat: post.lat, lng: post.lng });
+
+    // ✅ 하이라이트 이벤트 발송 시간 조정
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('highlight-marker', { 
+        detail: { id: post.id, duration: 2500 } 
+      }));
+      highlightTimeoutRef.current = null;
+    }, 1100);
+  }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
