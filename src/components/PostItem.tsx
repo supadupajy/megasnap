@@ -54,9 +54,10 @@ interface PostItemProps {
   isViewed?: boolean;
   disablePulse?: boolean;
   autoPlayVideo?: boolean;
+  isPlaying?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo }: PostItemProps) => {
+const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, session } = useAuth();
   const { blockUser } = useBlockedUsers();
@@ -79,6 +80,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+  
+  // 마우스 드래그를 위한 상태
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   const { user, content, isAd } = post;
   const isMine = authUser?.id === user.id;
@@ -206,11 +212,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     // 3. 일반 이미지 슬라이더 처리
     return (
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full group/slider">
         <div
           ref={imageScrollRef}
-          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+          className={cn(
+            "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+            isDragging && "cursor-grabbing snap-none" // 드래그 중에는 스냅 일시 중지하여 부드럽게
+          )}
           onScroll={handleImageScroll}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onMouseMove={onMouseMove}
         >
           {displayImages.map((img, index) => (
             <div 
@@ -222,7 +235,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 src={img}
                 alt={`Content ${index}`}
                 className={cn(
-                  "w-full h-full object-cover",
+                  "w-full h-full object-cover pointer-events-none", // 이미지 자체 드래그 방지
                   img === COCA_COLA_AD && "cursor-pointer"
                 )}
                 onError={handleImageError}
@@ -266,9 +279,36 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   }, [post.images, post.image, post.image_url]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isDragging) return; // 드래그 중에는 스크롤 이벤트에 의한 인덱스 업데이트 방지 (선택 사항)
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / container.clientWidth);
     if (index !== currentImageIndex) setCurrentImageIndex(index);
+  };
+
+  // 마우스 드래그 핸들러
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!imageScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
+    setScrollLeft(imageScrollRef.current.scrollLeft);
+  };
+
+  const onMouseUp = () => {
+    setIsDragging(false);
+    // 드래그 종료 시 가장 가까운 슬라이드로 스냅 (CSS snap-type이 이미 적용되어 있음)
+    if (imageScrollRef.current) {
+      const container = imageScrollRef.current;
+      const index = Math.round(container.scrollLeft / container.clientWidth);
+      setCurrentImageIndex(index);
+    }
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !imageScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - imageScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // 스크롤 속도 조절
+    imageScrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
   const handleImageError = async () => {
