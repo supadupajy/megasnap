@@ -6,7 +6,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { usePushNotifications } from '@/components/NotificationsProvider';
 
 // 사운드 파일 경로 (더 명확하고 호환성 높은 MP3 파일로 교체)
 const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
@@ -14,7 +13,6 @@ const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/235
 const Header = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasUnread } = usePushNotifications();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
@@ -42,22 +40,12 @@ const Header = () => {
             onClick={() => navigate('/notifications')}
           >
             <Bell className="w-6 h-6 text-gray-600" />
-            {hasUnread && (
-              <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
-                {hasUnread ? '1' : ''}
-              </span>
-            )}
           </button>
           <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
             onClick={() => navigate('/messages')}
           >
             <MessageSquare className="w-6 h-6 text-gray-600" />
-            {hasUnread && (
-              <span className="absolute top-0 right-0 w-[18px] h-[18px] bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold animate-in zoom-in duration-300">
-                {hasUnread > 99 ? '99+' : hasUnread}
-              </span>
-            )}
           </button>
         </div>
       </div>

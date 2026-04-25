@@ -612,13 +612,11 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
-      <motion.div 
-        initial={{ opacity: 1 }} 
-        animate={{ opacity: 1 }} 
-        className="relative w-full h-full overflow-hidden bg-gray-50 flex flex-col"
-        style={{ 
-          height: '100vh',
-          height: '100dvh', // 다이내믹 뷰포트 높이 사용
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
+        className="relative w-full h-[100dvh] overflow-hidden bg-gray-50 flex flex-col"
+        style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
