@@ -131,10 +131,10 @@ const Popular = () => {
   // console.log('Popular Render Status:', { isLoading, postsCount: posts.length });
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar">
       {/* 고정 상단 헤더 - 내 프로필 화면과 동일한 스타일로 개선 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
-        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-white pt-[64px]">
+        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center shadow-sm">
@@ -152,7 +152,7 @@ const Popular = () => {
         </div>
       </div>
 
-      <div className="pt-[calc(env(safe-area-inset-top,0px)+148px)]">
+      <div className="">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
