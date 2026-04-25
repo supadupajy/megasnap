@@ -198,7 +198,7 @@ const Header = () => {
   }, [user.id]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-[100] flex items-center justify-between px-4 border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 h-[64px] pt-2 bg-white z-[100] flex items-center justify-between px-4 border-b border-gray-100">
       <div className="flex items-center gap-3">
         <h1 
           className="text-2xl font-black tracking-tighter cursor-pointer italic shrink-0"
