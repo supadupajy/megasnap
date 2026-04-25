@@ -26,7 +26,7 @@ import PostItem from '@/components/PostItem';
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
 const UserProfile = () => {
-  const { id: profileUserId } = useParams<{ id: string }>();
+  const { userId: profileUserId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   
@@ -103,19 +103,25 @@ const UserProfile = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!profileUserId) return;
       try {
         setLoading(true);
         
+        // Profiles 테이블에서 조회하도록 수정
         const { data, error } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('id', profileUserId)
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Profile fetch error:', error);
+          throw error;
+        }
         
         setUserProfile(data);
         
+        // 포스트 조회
         const { data: posts, error: postsError } = await supabase
           .from('posts')
           .select('*')
@@ -123,26 +129,28 @@ const UserProfile = () => {
         
         if (postsError) throw postsError;
         
-        const mappedPosts = await Promise.all(posts.map(mapDbToPost));
+        const mappedPosts = await Promise.all((posts || []).map(mapDbToPost));
         setUserPosts(mappedPosts);
         
-        const { data: followers, error: followersError } = await supabase
-          .from('followers')
-          .select('id')
-          .eq('following_user_id', profileUserId);
+        // 팔로워/팔로잉 수 조회 (follows 테이블 기준)
+        const [followersResult, followingResult] = await Promise.all([
+          supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', profileUserId),
+          supabase.from('follows').select('id', { count: 'exact' }).eq('follower_id', profileUserId)
+        ]);
         
-        if (followersError) throw followersError;
+        setFollowerCount(followersResult.count || 0);
+        setFollowingCount(followingResult.count || 0);
         
-        setFollowerCount(followers.length);
-        
-        const { data: following, error: followingError } = await supabase
-          .from('followers')
-          .select('id')
-          .eq('user_id', profileUserId);
-        
-        if (followingError) throw followingError;
-        
-        setFollowingCount(following.length);
+        // 현재 내가 팔로우 중인지 확인
+        if (authUser?.id) {
+          const { data: followCheck } = await supabase
+            .from('follows')
+            .select('id')
+            .eq('follower_id', authUser.id)
+            .eq('following_id', profileUserId)
+            .maybeSingle();
+          setIsFollowing(!!followCheck);
+        }
         
         setLoading(false);
       } catch (error) {
@@ -152,7 +160,7 @@ const UserProfile = () => {
     };
 
     fetchUserData();
-  }, [profileUserId]);
+  }, [profileUserId, authUser?.id]);
 
   if (loading) {
     return (
