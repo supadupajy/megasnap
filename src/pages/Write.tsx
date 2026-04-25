@@ -334,7 +334,7 @@ const Write = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       {/* 고정 상단 헤더 - 인기 포스팅 스타일로 개선 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -363,7 +363,7 @@ const Write = () => {
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-5 py-6 space-y-8 pb-40 pt-[148px]">
+        <div className="px-5 py-6 space-y-8 pb-40 pt-[calc(env(safe-area-inset-top,0px)+148px)]">
           {currentPage === 1 ? (
             <div className="space-y-6">
               <div className="space-y-3">
