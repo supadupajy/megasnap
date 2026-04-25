@@ -612,8 +612,16 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
-      <motion.div initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="relative w-full h-screen overflow-hidden bg-gray-50">
-        <div className="absolute inset-0 z-0">
+      <motion.div 
+        initial={{ opacity: 1 }} 
+        animate={{ opacity: 1 }} 
+        className="relative w-full h-screen overflow-hidden bg-gray-50 flex flex-col"
+        style={{ 
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }}
+      >
+        <div className="flex-1 relative overflow-hidden">
           <MapContainer
             posts={displayedMarkers}
             viewedPostIds={viewedIds}
