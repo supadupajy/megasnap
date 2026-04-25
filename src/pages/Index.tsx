@@ -152,8 +152,21 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      const { data: p, error: postError } = await supabase.from('posts').select('*').eq('id', rawPost.id).single();
-      if (postError || !p) throw postError || new Error('Post not found');
+      // ✅ [FIX] rawPost에 이미 필요한 정보가 대부분 있는 경우, 불필요한 단일 조회를 건너뛰거나
+      // 정보가 부족할 때만 fetch하도록 로직 개선
+      let p = rawPost;
+      
+      // 만약 닉네임이나 이미지 URL 등이 없는 요약본인 경우 상세 데이터 fetch
+      if (!p.user_name || !p.location_name || !p.content) {
+        const { data: fullData, error: postError } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', rawPost.id)
+          .single();
+        if (!postError && fullData) {
+          p = fullData;
+        }
+      }
 
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
@@ -209,7 +222,10 @@ const Index = () => {
         image: finalImage, images: validImages, youtubeUrl: p.youtube_url, videoUrl: p.video_url,
         category: p.category || 'none', isLiked: false, createdAt: new Date(p.created_at), borderType
       };
-    } catch (err) { return null as any; }
+    } catch (err) { 
+      console.error('[Index] mapDbToPost error:', err);
+      return null as any; 
+    }
   }, []);
 
   const fetchGlobalTrending = useCallback(async () => {
@@ -298,8 +314,20 @@ const Index = () => {
             setDisplayedMarkers(current => current.filter(p => !deletedIds.has(p.id)));
           }, 450);
         }
+        
+        // ✅ [FIX] mappedPosts가 최소 정보만 가지고 있으므로, 
+        // 기존에 이미 Full 정보를 가지고 있던 포스트가 덮어씌워지지 않도록 merge 로직 개선
+        const mergedPosts = mappedPosts.map(newP => {
+          const existing = prev.find(p => p.id === newP.id);
+          // 기존 데이터가 더 상세한 정보(user.name이 실제 이름인 경우 등)를 가지고 있다면 유지
+          if (existing && existing.user && existing.user.name !== '...' && existing.content) {
+            return { ...existing, ...newP, user: existing.user, content: existing.content, location: existing.location };
+          }
+          return newP;
+        });
+
         const existingIds = new Set(prev.map(p => p.id));
-        const combined = [...mappedPosts.filter(p => !existingIds.has(p.id)), ...prev].slice(0, 3000);
+        const combined = [...mergedPosts.filter(p => !existingIds.has(p.id)), ...prev].slice(0, 3000);
         mapCache.posts = combined;
         return combined;
       });
@@ -389,18 +417,45 @@ const Index = () => {
   }, [fetchGlobalTrending, mapData, mapDbToPost]);
 
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
+    // 1. 즉시 ID 설정하여 모달 오픈 시도
     setSelectedPostId(lightPost.id);
-    if (lightPost.user.name !== '...') return;
+    
+    // 2. 이미 모든 정보가 있다면 추가 fetch 불필요
+    if (lightPost.user && lightPost.user.name !== '...' && lightPost.location && lightPost.content) {
+      return;
+    }
+
+    // 3. 정보가 부족한 경우 (MapContainer에서 최소 데이터만 받은 경우) 상세 정보 로드
     try {
-      const { data, error } = await supabase.from('posts').select('*').eq('id', lightPost.id).single();
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', lightPost.id)
+        .single();
+        
       if (!error && data) {
         const full = await mapDbToPost(data);
         if (full) {
-          setAllPosts(prev => prev.map(p => p.id === full.id ? full : p));
-          setDisplayedMarkers(prev => prev.map(p => p.id === full.id ? full : p));
+          setAllPosts(prev => {
+            const index = prev.findIndex(p => p.id === full.id);
+            if (index === -1) return [full, ...prev];
+            const next = [...prev];
+            next[index] = full;
+            return next;
+          });
+          
+          setDisplayedMarkers(prev => {
+            const index = prev.findIndex(p => p.id === full.id);
+            if (index === -1) return prev;
+            const next = [...prev];
+            next[index] = full;
+            return next;
+          });
         }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error('[Index] Failed to fetch full post data:', err); 
+    }
   }, [mapDbToPost]);
 
   const handleCurrentLocation = async () => {

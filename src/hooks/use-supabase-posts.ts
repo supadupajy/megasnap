@@ -38,10 +38,10 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     user: {
       id: p.user_id,
       name: p.user_name || '익명 사용자',
-      avatar: p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id}`,
+      avatar: p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`,
     },
-    content: p.content || '',
-    location: p.location_name || '',
+    content: p.content || '설명이 없는 포스팅입니다.',
+    location: p.location_name || '알 수 없는 장소',
     lat: p.latitude,
     lng: p.longitude,
     latitude: p.latitude,
@@ -93,10 +93,10 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] select('*') 대신 마커 렌더링에 꼭 필요한 최소 데이터만 조회 (Egress 절약)
+    // ✅ [FIX] user_name, user_avatar 추가하여 초기 렌더링 시에도 유저 정보 표시 가능하도록 수정
     let query = supabase
       .from('posts')
-      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, location_name')
+      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, user_name, user_avatar, location_name')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
