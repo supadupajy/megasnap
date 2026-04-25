@@ -94,11 +94,11 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden pt-[88px]">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden pt-[env(safe-area-inset-top,0px)] mt-[64px]">
       {/* 고정 영역: 검색창 + 광고 배너 + 타이틀 */}
       <div className="shrink-0 bg-white z-40">
-        <div className="px-4 pt-4 pb-2">
-          <div className="relative mb-4">
+        <div className="px-4 pt-2 pb-2">
+          <div className="relative mb-3">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input 
               placeholder="닉네임으로 친구 찾기" 

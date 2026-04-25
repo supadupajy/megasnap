@@ -182,13 +182,13 @@ const UserProfile = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-[88px]">
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+      <div className="pt-[env(safe-area-inset-top,0px)] mt-[64px]">
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-12 border-b border-gray-50">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필</h2>

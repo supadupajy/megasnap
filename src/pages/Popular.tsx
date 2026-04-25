@@ -132,15 +132,15 @@ const Popular = () => {
 
   return (
     <div className="min-h-screen bg-white pb-32">
-      {/* 고정 상단 헤더 */}
-      <div className="fixed top-[88px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      {/* 고정 상단 헤더 - env(safe-area-inset-top)을 고려하여 위치 조정 및 패딩 축소 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white border-b border-gray-100 px-6 py-2 flex items-center justify-between">
         <div className="flex flex-col">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Trending Now</p>
         </div>
       </div>
 
-      <div className="pt-[160px]">
+      <div className="pt-[calc(env(safe-area-inset-top,0px)+112px)]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
