@@ -24,18 +24,45 @@ const PostDetail = () => {
 
   useEffect(() => {
     const fetchAllPosts = async () => {
+      // If no authUser, don't return "not found" immediately if we are still loading
       if (!authUser?.id) return;
+      
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Fetch specific post first to verify it exists and who it belongs to
+        if (id) {
+          const { data: targetPost, error: targetError } = await supabase
+            .from('posts')
+            .select('user_id')
+            .eq('id', id)
+            .maybeSingle();
+            
+          if (targetPost) {
+            // Fetch all posts belonging to the owner of this post
+            const { data, error } = await supabase
+              .from('posts')
+              .select('*')
+              .eq('user_id', targetPost.user_id)
+              .order('created_at', { ascending: false });
+
+            if (!error && data) {
+              const formattedPosts = await Promise.all(data.map(mapDbToPost));
+              setAllPosts(formattedPosts);
+              return;
+            }
+          }
+        }
+
+        // Default: fetch my posts if no ID or target not found
+        const { data: myData, error: myError } = await supabase
           .from('posts')
           .select('*')
           .eq('user_id', authUser.id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        if (data) {
-          const formattedPosts = await Promise.all(data.map(mapDbToPost));
+        if (myError) throw myError;
+        if (myData) {
+          const formattedPosts = await Promise.all(myData.map(mapDbToPost));
           setAllPosts(formattedPosts);
         }
       } catch (err) {
