@@ -612,12 +612,12 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
-      <motion.div 
-        initial={{ opacity: 1 }} 
-        animate={{ opacity: 1 }} 
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
         className="relative w-full h-[100dvh] overflow-hidden bg-gray-50 flex flex-col"
-        style={{ 
-          paddingTop: isSelectingLocation ? '0px' : 'env(safe-area-inset-top)',
+        style={{
+          paddingTop: isSelectingLocation ? '0px' : 'calc(env(safe-area-inset-top, 0px) + 64px)',
           paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
