@@ -646,8 +646,14 @@ const Index = () => {
 
             <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
             
-            {/* 상단 인기 포스팅: sticky/relative 구조로 변경하여 헤더 바로 아래 안착 */}
-            <div className={cn("w-full px-4 pt-2 pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-[60]" : "z-[40]")}>
+            {/* 상단 인기 포스팅: 스마트폰(SafeArea 존재 시)에서만 더 위로 바짝 붙도록 설정 */}
+            <div 
+              className={cn("w-full px-4 pt-2 pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-[60]" : "z-[40]")}
+              style={{ 
+                /* env 값이 있는 모바일에서는 위로 12px 더 올림 (웹뷰는 0) */
+                marginTop: 'calc(-12px * clamp(0, env(safe-area-inset-top), 1))' 
+              }}
+            >
               <div className="w-full shrink-0 pointer-events-auto">
                 <TrendingPosts 
                   posts={globalTrendingPosts} 
