@@ -574,7 +574,12 @@ const Chat = () => {
             className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm h-8 font-bold"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
           />
           <Button
             size="icon"
