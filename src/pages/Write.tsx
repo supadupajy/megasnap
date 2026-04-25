@@ -333,42 +333,37 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 고정 상단 헤더 - 지도 선택 모드에서는 숨김 처리 */}
-      {!location.state?.fromLocationSelection && (
-        <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
-          <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                  <PenLine className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-gray-900 tracking-tight">
-                    {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-                  </h2>
-                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
-                </div>
+      {/* 고정 상단 헤더 - 위치 선택 모드가 아닌 일반 글쓰기 상태에서는 항상 노출 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <PenLine className="w-6 h-6 text-indigo-600" />
               </div>
-              <div className="flex items-center gap-2">
-                {currentPage === 2 && (
-                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                )}
-                <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-                  <Send className="w-5 h-5 text-indigo-600" />
-                </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                  {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+                </h2>
+                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {currentPage === 2 && (
+                <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+                <Send className="w-5 h-5 text-indigo-600" />
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className={cn(
-          "px-5 py-6 space-y-8 pb-40",
-          !location.state?.fromLocationSelection ? "pt-[148px]" : "pt-6"
-        )}>
+        <div className="px-5 py-6 space-y-8 pb-40 pt-[148px]">
           {currentPage === 1 ? (
             <div className="space-y-6">
               <div className="space-y-3">
