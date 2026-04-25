@@ -214,13 +214,30 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('posts').select('*').limit(100);
+      // 1. 최신/인기 포스트 100개 가져오기
+      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(100);
       if (!error && data) {
-        const shuffled = [...data].sort(() => Math.random() - 0.5);
-        const mapped = await Promise.all(shuffled.map(mapDbToPost));
-        setGlobalTrendingPosts(mapped.filter(p => p !== null).slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 })));
+        // 2. [FIX] 가져온 100개 중 실제로 데이터가 유효한지 확인하고 상세 매핑
+        const mappedRaw = await Promise.all(data.map(mapDbToPost));
+        const validMapped = mappedRaw.filter(p => p !== null && p.id);
+        
+        // 3. 좋아요 순으로 정렬하여 상위 20개 선정
+        const sorted = [...validMapped].sort((a, b) => b.likes - a.likes);
+        const trending = sorted.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 }));
+        
+        setGlobalTrendingPosts(trending);
+        
+        // 4. [CRITICAL] 인기 포스트 리스트에 있는 항목들이 지도에서도 즉시 보일 수 있도록 cache/allPosts에 미리 등록
+        setAllPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newOnes = trending.filter(p => !existingIds.has(p.id));
+          if (newOnes.length === 0) return prev;
+          const combined = [...newOnes, ...prev];
+          mapCache.posts = combined;
+          return combined;
+        });
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('[Trending] Fetch error:', err); }
   }, [mapDbToPost]);
 
   useEffect(() => { if (authUser) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending]);
