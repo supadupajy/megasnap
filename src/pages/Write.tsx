@@ -375,26 +375,32 @@ const Write = () => {
           className="px-5 py-6 space-y-8 pb-40"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
         >
-          {/* 타이틀 영역 */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <PenLine className="w-6 h-6 text-indigo-600" />
+          {/* 타이틀 영역 - 인기 포스팅 스타일로 변경 */}
+          <div className="flex items-center justify-between mb-8 bg-white py-2">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-indigo-50 rounded-[22px] flex items-center justify-center shadow-sm border border-indigo-100/50">
+                <PenLine className="w-7 h-7 text-indigo-600" />
               </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">
+              <div className="flex flex-col">
+                <h2 className="text-[22px] font-black text-gray-900 tracking-tight leading-none mb-1.5">
                   {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
                 </h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.15em] leading-none">
+                  LEAVE YOUR TRACE
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            
+            <div className="flex items-center gap-3">
               {currentPage === 2 && (
-                <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                <button 
+                  onClick={() => setCurrentPage(1)} 
+                  className="w-11 h-11 bg-white rounded-full shadow-md shadow-gray-100 border border-gray-100 flex items-center justify-center text-gray-800 active:scale-90 transition-all"
+                >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
-              <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+              <div className="w-11 h-11 bg-white rounded-full shadow-md shadow-gray-100 border border-gray-100 flex items-center justify-center">
                 <Send className="w-5 h-5 text-indigo-600" />
               </div>
             </div>
