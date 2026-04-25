@@ -183,11 +183,16 @@ const UserProfile = () => {
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[88px]">
-        <div className="px-4 py-4 flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
           </button>
-          <h2 className="text-lg font-black text-gray-900">{userProfile?.nickname || '탐험가'}</h2>
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필</h2>
+          </div>
         </div>
         
         <div className="p-6">
