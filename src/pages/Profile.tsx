@@ -38,36 +38,32 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const postListStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchProfileData = async () => {
+    const fetchProfileAndPosts = async () => {
+      if (!user) return;
       try {
         setLoading(true);
-        
-        // Fetch user profile
+        // [FIX] 'user_id' 컬럼은 존재하지 않으므로 'id' 컬럼을 사용합니다.
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .single();
-          
+
         if (profileError) throw profileError;
-        
         setProfile(profileData);
-        
-        // Fetch posts
-        const { data: postData, error: postError } = await supabase
+
+        const { data: postsData, error: postsError } = await supabase
           .from('posts')
-          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id')
+          .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
+          .order('created_at', { ascending: false });
           
-        if (postError) throw postError;
+        if (postsError) throw postsError;
         
-        setPosts(postData);
+        setPosts(postsData);
       } catch (error) {
         console.error('Error fetching profile data:', error);
       } finally {
@@ -75,7 +71,7 @@ const Profile = () => {
       }
     };
     
-    fetchProfileData();
+    fetchProfileAndPosts();
   }, [user]);
 
   const mapDbToPost = async (p: any): Promise<Post> => {
