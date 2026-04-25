@@ -230,47 +230,29 @@ const UserProfile = () => {
           </div>
 
           <div className="flex border-b border-gray-100 mb-4">
-            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'grid' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}>
+            <div className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600 text-indigo-600">
               <Grid className="w-6 h-6" />
-            </button>
-            <button onClick={() => setViewMode('list')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'list' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}>
-              <MapIcon className="w-6 h-6" />
-            </button>
+            </div>
           </div>
 
           <div className="flex flex-col -mx-6">
-            {(viewMode === 'list') ? (
-              <div className="flex flex-col">
-                {userPosts.map((post) => (
-                  <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                    <PostItem 
-                      post={post} 
-                      disablePulse={true} 
-                      onLikeToggle={() => {}} 
-                      onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post } })} 
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-1 px-6">
-                {userPosts.map((post) => (
-                  <div 
-                    key={post.id} 
-                    className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
-                    onClick={() => navigate(`/post/${post.id}`)}
-                  >
-                    <img 
-                      src={post.image_url || post.image} 
-                      alt="" 
-                      className="w-full h-full object-cover hover:opacity-80 transition-opacity" 
-                      onError={() => {}} 
-                    />
-                  </div>
-                ))}
-                {userPosts.length === 0 && <p className="text-center py-10 text-gray-400">게시물이 없습니다.</p>}
-              </div>
-            )}
+            <div className="grid grid-cols-3 gap-1 px-6">
+              {userPosts.map((post) => (
+                <div 
+                  key={post.id} 
+                  className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+                  onClick={() => navigate(`/post/${post.id}`)}
+                >
+                  <img 
+                    src={post.image_url || post.image} 
+                    alt="" 
+                    className="w-full h-full object-cover hover:opacity-80 transition-opacity" 
+                    onError={() => {}} 
+                  />
+                </div>
+              ))}
+              {userPosts.length === 0 && <p className="text-center py-10 text-gray-400">게시물이 없습니다.</p>}
+            </div>
           </div>
         </div>
       </div>
