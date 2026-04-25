@@ -216,6 +216,15 @@ const MapContainer = ({
       kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
       kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; setIsMapMoving(true); });
       kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; setIsMapMoving(false); lastDragEnd.current = Date.now(); });
+      
+      // ✅ 지도 클릭 시 검색 결과 마커 제거 로직 추가
+      kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
+        // 검색 마커 제거 (상태 초기화 트리거를 위해 부모에게 알림)
+        if (onMapClickRef.current) {
+          const latlng = mouseEvent.latLng;
+          onMapClickRef.current({ lat: latlng.getLat(), lng: latlng.getLng() });
+        }
+      });
 
       return true;
     } catch (e) { return false; }
