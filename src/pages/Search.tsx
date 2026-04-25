@@ -95,8 +95,8 @@ const Search = () => {
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 고정 상단 헤더 - 인기 포스팅 스타일로 개선 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
+      {/* 고정 상단 헤더 - z-index와 배경색 명시하여 확실히 노출 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ const Search = () => {
         </div>
       </div>
 
-      {/* 검색 입력창 영역 - 헤더 스타일과 통합하여 배치 */}
+      {/* 검색 입력창 영역 - 헤더 바로 아래에서 시작하도록 pt 조정 */}
       <div className="shrink-0 bg-white z-40 pt-[calc(env(safe-area-inset-top,0px)+148px)]">
         <div className="px-4 pb-2">
           <div className="relative mb-4">
