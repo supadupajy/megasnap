@@ -622,7 +622,7 @@ const Index = () => {
         }}
       >
         <div className="flex-1 relative overflow-hidden flex flex-col">
-          {/* Map is background */}
+          {/* Map is background - z-index 조정하여 선택 UI가 위에 오도록 함 */}
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
@@ -642,30 +642,34 @@ const Index = () => {
           {/* [FIX] UI Elements Over Map */}
           <div className={cn(
             "relative w-full flex flex-col pointer-events-none transition-all duration-300",
-            isTrendingExpanded ? "z-[100]" : "z-10"
+            (isTrendingExpanded || isSelectingLocation) ? "z-[100]" : "z-10"
           )}>
+            {/* Header Spacer - 위치 선택 모드일 때는 헤더 공간도 제거 */}
+            {!isSelectingLocation && <div className="h-16 shrink-0" />}
+
             <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-black/5 backdrop-blur-[2px] z-[35] pointer-events-auto" />}</AnimatePresence>
             
-            {/* 상단 인기 포스팅: 환경에 상관없이 헤더 바로 아래에 붙도록 절대 위치와 고정 수치 사용 */}
-            <div 
-              className={cn(
-                "fixed left-0 right-0 px-4 pointer-events-none transition-all duration-300",
-                isTrendingExpanded ? "z-[60]" : "z-[40]"
-              )}
-              style={{ 
-                /* 헤더 높이(64px)와 상태바 여백을 고려하여 상단에서 76px 지점으로 강제 고정 */
-                top: 'calc(env(safe-area-inset-top, 0px) + 68px)',
-              }}
-            >
-              <div className="w-full shrink-0 pointer-events-auto">
-                <TrendingPosts 
-                  posts={globalTrendingPosts} 
-                  isExpanded={isTrendingExpanded} 
-                  onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
-                  onPostClick={handleTrendingPostClick} 
-                />
+            {/* 상단 인기 포스팅: 위치 선택 모드일 때는 숨김 */}
+            {!isSelectingLocation && (
+              <div 
+                className={cn(
+                  "fixed left-0 right-0 px-4 pointer-events-none transition-all duration-300",
+                  isTrendingExpanded ? "z-[60]" : "z-[40]"
+                )}
+                style={{ 
+                  top: 'calc(env(safe-area-inset-top, 0px) + 68px)',
+                }}
+              >
+                <div className="w-full shrink-0 pointer-events-auto">
+                  <TrendingPosts 
+                    posts={globalTrendingPosts} 
+                    isExpanded={isTrendingExpanded} 
+                    onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
+                    onPostClick={handleTrendingPostClick} 
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {!isSelectingLocation && (
