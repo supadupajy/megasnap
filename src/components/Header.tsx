@@ -22,15 +22,15 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
-      {/* 안드로이드 상단 상태바 여백 */}
+      {/* 안드로이드 상단 상태바 여백 - Index와의 간격을 위해 높이를 최소화하거나 Index에서 조절 */}
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
-        <div
+        <div 
           className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
           onClick={() => navigate('/')}
         >
-          <h1
+          <h1 
             className="text-2xl font-black tracking-tighter italic shrink-0"
           >
             <span className="text-gray-900">Chora</span>
@@ -38,16 +38,16 @@ const Header = () => {
           </h1>
         </div>
 
-        {/* 광고 배너 제거 - HeaderAdBanner 제거 */}
+        <HeaderAdBanner />
 
         <div className="flex items-center gap-4 shrink-0">
-          <button
+          <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
             onClick={() => navigate('/notifications')}
           >
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
-          <button
+          <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
             onClick={() => navigate('/messages')}
           >
