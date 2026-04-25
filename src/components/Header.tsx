@@ -15,10 +15,10 @@ const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // ✅ [FIX] 위치 선택 모드(지도를 직접 조작할 때)에만 헤더를 숨기고, 
-  // 글쓰기 페이지(Write) 자체에서는 헤더가 보이도록 조건 수정
-  const isSelectingLocation = location.pathname === '/' && location.state?.startSelection;
-  if (isSelectingLocation) return null;
+  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
+  // 글쓰기(Write) 등 다른 페이지에서는 무조건 헤더를 보여줍니다.
+  const isSelectingLocationOnMap = location.pathname === '/' && location.state?.startSelection;
+  if (isSelectingLocationOnMap) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">

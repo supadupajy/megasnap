@@ -333,7 +333,7 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 고정 상단 헤더 - 위치 선택 모드가 아닌 일반 글쓰기 상태에서는 항상 노출 */}
+      {/* [FIX] 고정 상단 헤더 - 어떠한 조건에서도 글쓰기 페이지에서는 항상 노출되도록 강제 고정 */}
       <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
@@ -363,6 +363,7 @@ const Write = () => {
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+        {/* 상단 헤더 공간(148px)을 무조건 확보하여 가려짐 방지 */}
         <div className="px-5 py-6 space-y-8 pb-40 pt-[148px]">
           {currentPage === 1 ? (
             <div className="space-y-6">
