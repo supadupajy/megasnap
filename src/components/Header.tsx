@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, MessageSquare, ChevronLeft } from 'lucide-react';
+import { Bell, MessageSquare, ChevronLeft, PenLine, Send } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,45 +15,70 @@ const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
-  // 글쓰기(Write) 등 다른 페이지에서는 무조건 헤더를 보여줍니다.
+  // 위치 선택 모드 체크
   const isSelectingLocationOnMap = location.pathname === '/' && location.state?.startSelection;
   if (isSelectingLocationOnMap) return null;
 
+  // 글쓰기 페이지 여부 체크
+  const isWritePage = location.pathname === '/write';
+
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
-      {/* 안드로이드 상단 상태바 여백 - Index와의 간격을 위해 높이를 최소화하거나 Index에서 조절 */}
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
-        <div 
-          className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-          onClick={() => navigate('/')}
-        >
-          <h1 
-            className="text-2xl font-black tracking-tighter italic shrink-0"
-          >
-            <span className="text-gray-900">Chora</span>
-            <span className="text-indigo-600">Snap</span>
-          </h1>
-        </div>
+        {isWritePage ? (
+          /* 글쓰기 전용 헤더 디자인 */
+          <>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <PenLine className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-gray-900 leading-tight">새 게시물 작성</h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Leave your trace</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+                <Send className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* 일반 페이지 헤더 디자인 */
+          <>
+            <div 
+              className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+              onClick={() => navigate('/')}
+            >
+              <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
+                <span className="text-gray-900">Chora</span>
+                <span className="text-indigo-600">Snap</span>
+              </h1>
+            </div>
 
-        <HeaderAdBanner />
+            <HeaderAdBanner />
 
-        <div className="flex items-center gap-4 shrink-0">
-          <button 
-            className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-            onClick={() => navigate('/notifications')}
-          >
-            <Bell className="w-6 h-6 text-gray-600" />
-          </button>
-          <button 
-            className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-            onClick={() => navigate('/messages')}
-          >
-            <MessageSquare className="w-6 h-6 text-gray-600" />
-          </button>
-        </div>
+            <div className="flex items-center gap-4 shrink-0">
+              <button 
+                className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
+                onClick={() => navigate('/notifications')}
+              >
+                <Bell className="w-6 h-6 text-gray-600" />
+              </button>
+              <button 
+                className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
+                onClick={() => navigate('/messages')}
+              >
+                <MessageSquare className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </header>
   );
