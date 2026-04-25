@@ -47,20 +47,31 @@
   pointer-events: auto;
   cursor: pointer;
   will-change: transform;
-  transform-origin: 50% 100%;
   display: block;
   z-index: 10;
   width: 60px;
+  height: 60px;
   transition: transform 0.2s ease-out !important;
 }
 
-/* 줌 레벨에 따른 스케일 조정 */
+/* 줌 레벨에 따른 스케일 조정 - transform-origin을 bottom center(50% 100%)로 고정 */
 #kakao-map.zoom-6 .marker-container {
-  transform: scale(0.7) !important;
+  transform: translate(-50%, -100%) scale(0.7) !important;
+  transform-origin: 50% 100%;
 }
 
 #kakao-map.zoom-7 .marker-container {
-  transform: scale(0.45) !important;
+  transform: translate(-50%, -100%) scale(0.45) !important;
+  transform-origin: 50% 100%;
+}
+
+#kakao-map.zoom-1 .marker-container,
+#kakao-map.zoom-2 .marker-container,
+#kakao-map.zoom-3 .marker-container,
+#kakao-map.zoom-4 .marker-container,
+#kakao-map.zoom-5 .marker-container {
+  transform: translate(-50%, -100%) scale(1) !important;
+  transform-origin: 50% 100%;
 }
 
 #kakao-map.zoom-8 .marker-container,
@@ -76,7 +87,6 @@
   flex-direction: column;
   align-items: center;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
-  transform-origin: 50% 100%;
   width: 100%;
   will-change: transform;
 }

@@ -281,8 +281,6 @@ const MapContainer = ({
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: content,
-          xAnchor: 0.5,
-          yAnchor: 1.0,
           zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
         });
         overlay.setMap(mapInstance.current);
@@ -362,36 +360,18 @@ useEffect(() => {
       else if (level === 7) scale = 0.45;
       else if (level >= 8) scale = 0;
 
-      overlaysRef.current.forEach((overlay) => {
-        const content = overlay.getContent() as HTMLElement;
-        if (content) {
-          if (content.classList.contains('highlighted')) return;
-          content.style.transform = `scale(${scale})`;
-        }
-      });
+      // REMOVED: manual scale adjustment here. 
+      // We rely on CSS classes (zoom-X) added to the map container.
+      const el = containerRef.current;
+      if (el) {
+        el.className = el.className.replace(/\bzoom-\d+\b/g, '');
+        el.classList.add(`zoom-${level}`);
+      }
     };
 
     kakao.maps.event.addListener(map, 'zoom_changed', handleZoom);
     return () => kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
   }, [isMapReady]);
-
-  useEffect(() => {
-    if (!mapInstance.current) return;
-    const level = currentLevel;
-    let scale = 1.0;
-    if (level === 6) scale = 0.7;
-    else if (level === 7) scale = 0.45;
-    else if (level >= 8) scale = 0;
-
-    overlaysRef.current.forEach((overlay) => {
-      const content = overlay.getContent() as HTMLElement;
-      if (content) {
-        if (content.classList.contains('highlighted')) return;
-        content.style.transition = 'transform 0.2s ease-out';
-        content.style.transform = `scale(${scale})`;
-      }
-    });
-  }, [currentLevel]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -495,7 +475,7 @@ useEffect(() => {
       content.innerHTML = `
         <div class="relative">
           <div class="search-marker-ping"></div>
-          <div class="relative w-12 h-12">
+          <div class="relative w-12 h-12" style="transform: translate(-50%, -100%);">
             <div class="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl"></div>
             <div class="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10"></div>
           </div>
@@ -504,8 +484,6 @@ useEffect(() => {
       const overlay = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(searchResultLocation.lat, searchResultLocation.lng),
         content: content,
-        xAnchor: 0.5,
-        yAnchor: 1.0,
         zIndex: 11000
       });
       overlay.setMap(mapInstance.current);
@@ -574,7 +552,7 @@ useEffect(() => {
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px; transform-origin: bottom center;">
+      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="${shineClass}">
