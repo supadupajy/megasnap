@@ -375,20 +375,21 @@ const Write = () => {
           className="px-5 py-6 space-y-8 pb-40"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
         >
-          {/* 타이틀 영역 - 룩앤필은 유지하되 규격만 인기포스팅과 동일하게 조정 */}
+          {/* 타이틀 영역 - 인기 포스팅 메뉴와 100% 동일한 속성 적용 */}
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              {/* 인기포스팅과 동일한 56x56 규격, 룩앤필은 연보라색 유지 */}
-              <div className="w-[56px] h-[56px] bg-[#EEF2FF] rounded-[20px] flex items-center justify-center shadow-sm">
-                <PenLine className="w-8 h-8 text-[#4F46E5]" />
+            <div className="flex items-center gap-4">
+              {/* 인기 포스팅과 동일한 배경색, 크기, 라운드값 */}
+              <div className="w-[88px] h-[88px] bg-[#FFF1E7] rounded-[32px] flex items-center justify-center shadow-sm">
+                {/* 인기 포스팅 아이콘 비율에 맞춘 크기 조정 */}
+                <PenLine className="w-10 h-10 text-[#E36414] fill-[#E36414]" />
               </div>
               <div className="flex flex-col">
-                {/* 인기포스팅과 동일한 24px 텍스트 크기 */}
-                <h2 className="text-[24px] font-black text-[#1E293B] tracking-tight leading-tight">
+                {/* 인기 포스팅과 동일한 폰트 크기 및 색상 */}
+                <h2 className="text-[28px] font-black text-[#1E293B] tracking-tighter leading-tight">
                   {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
                 </h2>
-                {/* 인기포스팅과 동일한 12px 서브 텍스트 */}
-                <p className="text-[12px] text-[#94a3b8] font-bold uppercase tracking-[0.1em] leading-none mt-1">
+                {/* 인기 포스팅과 동일한 서브 텍스트 스타일 */}
+                <p className="text-[14px] text-[#94a3b8] font-bold uppercase tracking-[0.1em] leading-none mt-1">
                   LEAVE YOUR TRACE
                 </p>
               </div>
@@ -398,13 +399,13 @@ const Write = () => {
               {currentPage === 2 && (
                 <button 
                   onClick={() => setCurrentPage(1)} 
-                  className="w-[48px] h-[48px] bg-white rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 flex items-center justify-center text-gray-800 active:scale-95 transition-all"
+                  className="w-[56px] h-[56px] bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-50 flex items-center justify-center text-gray-800 active:scale-95 transition-all"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-7 h-7" />
                 </button>
               )}
-              <div className="w-[48px] h-[48px] bg-white rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 flex items-center justify-center">
-                <Send className="w-6 h-6 text-[#4F46E5]" />
+              <div className="w-[56px] h-[56px] bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-50 flex items-center justify-center">
+                <Send className="w-7 h-7 text-indigo-600" />
               </div>
             </div>
           </div>
