@@ -20,7 +20,7 @@ const Header = () => {
   if (isHiddenPage) return null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 z-[50] bg-white border-b border-gray-100">
       {/* 안드로이드 상단 상태바 여백 - Index와의 간격을 위해 높이를 최소화하거나 Index에서 조절 */}
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
