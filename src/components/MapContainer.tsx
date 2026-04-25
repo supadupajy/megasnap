@@ -268,6 +268,17 @@ const MapContainer = ({
     const currentPostIds = new Set(posts.map(p => p.id));
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
 
+    // Get list of IDs currently in props
+    const propPostIds = new Set(posts.map(p => p.id));
+
+    // Remove overlays that are no longer in the posts prop
+    overlaysRef.current.forEach((overlay, id) => {
+      if (!propPostIds.has(id)) {
+        overlay.setMap(null);
+        overlaysRef.current.delete(id);
+      }
+    });
+
     posts.forEach(post => {
       if (!post) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);

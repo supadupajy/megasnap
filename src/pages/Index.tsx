@@ -368,23 +368,24 @@ const Index = () => {
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       
-      // ✅ [FIX] 경계값 마진을 주어 마커가 잘리는 현상 방지
       const margin = 0.002;
-      const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin && 
-                       post.lat <= Math.max(sw.lat, ne.lat) + margin && 
-                       post.lng >= Math.min(sw.lng, ne.lng) - margin && 
+      const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin &&
+                       post.lat <= Math.max(sw.lat, ne.lat) + margin &&
+                       post.lng >= Math.min(sw.lng, ne.lng) - margin &&
                        post.lng <= Math.max(sw.lng, ne.lng) + margin;
       
       if (!inBounds) return false;
       
-      // ✅ [FIX] 시간 필터가 너무 타이트한 경우 완화 (전체보기 시 모든 포스트 노출)
-      if (timeValue < 100 && (now - post.createdAt.getTime()) > timeLimitMs) return false;
+      const postTime = new Date(post.createdAt).getTime();
+      const isWithinTime = (now - postTime) <= timeLimitMs;
+      
+      if (!isWithinTime) return false;
       
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       if (selectedCategories.includes('all')) return true;
       
-      return selectedCategories.includes(post.category || 'none') || 
-             (selectedCategories.includes('hot') && post.borderType === 'popular') || 
+      return selectedCategories.includes(post.category || 'none') ||
+             (selectedCategories.includes('hot') && post.borderType === 'popular') ||
              (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
     }).map(p => {
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
