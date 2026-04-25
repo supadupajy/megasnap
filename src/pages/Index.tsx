@@ -647,11 +647,12 @@ const Index = () => {
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
               
-              {/* 상단 인기 포스팅: 헤더(약 64px) 바로 아래에서 시작하도록 조정 */}
+              {/* 상단 인기 포스팅: Header 내부의 SafeArea를 고려하여 top 위치를 고정 수치로 조정 */}
               <div className={cn("absolute left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}
                 style={{ 
-                  top: 'calc(64px + env(safe-area-inset-top, 0px))',
-                  marginTop: '8px' // 헤더와의 최소 간격
+                  /* Header의 기본 높이(64px)와 safe-area가 적용된 영역 바로 아래에 위치하도록 80px 정도로 고정 */
+                  top: 'calc(68px + env(safe-area-inset-top, 0px))',
+                  marginTop: '0px'
                 }}
               >
                 <div className="w-full shrink-0 pointer-events-auto">
