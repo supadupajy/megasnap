@@ -193,7 +193,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const videoId = getYouTubeId(post.youtubeUrl);
 
-  // ✅ [FIX] 유튜브 자동 재생 정책(Autoplay Policy) 준수를 위해 'mute=1' 강제 적용
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
   const renderMedia = () => {
     // 1. 유튜브 영상 처리
