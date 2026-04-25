@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2 } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2, PenLine, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -333,24 +333,37 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      <div className="h-[88px] w-full shrink-0 pointer-events-none" />
-
-      <div className="shrink-0 bg-white z-40 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <div className="flex flex-col">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">
-            {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-          </h2>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Leave your trace</p>
+      {/* 고정 상단 헤더 - 인기 포스팅 스타일로 개선 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
+        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <PenLine className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                  {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+                </h2>
+                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {currentPage === 2 && (
+                <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+              <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+                <Send className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+          </div>
         </div>
-        {currentPage === 2 && (
-          <button onClick={() => setCurrentPage(1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-800">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-5 py-6 space-y-8 pb-40">
+        <div className="px-5 py-6 space-y-8 pb-40 pt-[148px]">
           {currentPage === 1 ? (
             <div className="space-y-6">
               <div className="space-y-3">

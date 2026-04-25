@@ -94,11 +94,31 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden pt-[env(safe-area-inset-top,0px)] mt-[64px]">
-      {/* 고정 영역: 검색창 + 광고 배너 + 타이틀 */}
-      <div className="shrink-0 bg-white z-40">
-        <div className="px-4 pt-2 pb-2">
-          <div className="relative mb-3">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* 고정 상단 헤더 - 인기 포스팅 스타일로 개선 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-40 bg-white">
+        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <SearchIcon className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
+                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Find your friends</p>
+              </div>
+            </div>
+            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+              <Users className="w-5 h-5 text-indigo-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 검색 입력창 영역 - 헤더 스타일과 통합하여 배치 */}
+      <div className="shrink-0 bg-white z-40 pt-[calc(env(safe-area-inset-top,0px)+148px)]">
+        <div className="px-4 pb-2">
+          <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input 
               placeholder="닉네임으로 친구 찾기" 
