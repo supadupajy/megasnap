@@ -19,7 +19,7 @@ import {
   Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post, Comment as PostComment } from '@/types';
@@ -34,6 +34,7 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285
 
 const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
   
   const [myPosts, setMyPosts] = useState<Post[]>([]);
@@ -281,7 +282,7 @@ const Profile = () => {
 
   return (
     <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-[env(safe-area-inset-top,0px)] mt-[64px]">
+      <div className="pt-[env(safe-area-inset-top,0px)]">
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm"><UserIcon className="w-6 h-6 text-indigo-600" /></div><div><h2 className="text-lg font-black text-gray-900">내 프로필</h2><p className="text-[10px] text-gray-400 font-medium leading-none">나의 활동과 기록</p></div></div><button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><Settings className="w-5 h-5 text-gray-400" /></button></div></div>
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8"><div className="relative"><div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600"><img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} /></div></div><div className="flex-1"><h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2><p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p><div className="flex gap-4"><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={handleScrollToPosts}><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}><p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}><p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div></div></div></div>

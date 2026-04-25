@@ -15,10 +15,10 @@ const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
-  // 글쓰기(Write) 등 다른 페이지에서는 무조건 헤더를 보여줍니다.
-  const isSelectingLocationOnMap = location.pathname === '/' && location.state?.startSelection;
-  if (isSelectingLocationOnMap) return null;
+  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때나 프로필 페이지('/profile')에서는 헤더를 숨깁니다.
+  // 프로필 페이지는 자체적인 헤더 영역을 가지고 있어 이중으로 보일 수 있습니다.
+  const isHiddenPage = (location.pathname === '/' && location.state?.startSelection) || location.pathname === '/profile';
+  if (isHiddenPage) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
