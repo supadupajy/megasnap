@@ -30,65 +30,66 @@ interface Conversation {
 const Messages = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   const [swipedId, setSwipedId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isDragging = useRef(false);
+
+  const fetchConversations = async () => {
+    if (!authUser) return;
+    try {
+      const { data: messages } = await supabase.from('messages').select('*').or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`).order('created_at', { ascending: false });
+      const convMap = new Map<string, any>();
+      
+      // 현재 사용자가 보고 있는 채팅방 ID 확인 (URL 파라미터나 상태에서 가져오기 어려우므로 
+      // 렌더링 시점에 Messages 페이지가 활성화된 경우만 뱃지 표시)
+      // 실제로는 전역 상태(예: useChat)에 activeChatId를 저장하는 것이 가장 좋음.
+      
+      if (messages) {
+        for (const msg of messages) {
+          const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
+          
+          // 로컬 스토리지 등에 저장된 '현재 열린 채팅방' 정보를 활용할 수도 있음
+          const activeChatId = localStorage.getItem('activeChatId');
+          const shouldShowBadge = !msg.is_read && msg.receiver_id === authUser.id && otherId !== activeChatId;
+
+          if (!convMap.has(otherId)) {
+            convMap.set(otherId, { 
+              other_id: otherId, 
+              last_message: msg.content, 
+              created_at: msg.created_at, 
+              unread_count: shouldShowBadge ? 1 : 0 
+            });
+          } else if (shouldShowBadge) {
+            convMap.get(otherId).unread_count += 1;
+          }
+        }
+      }
+      const localRooms = chatStore.getRooms();
+      for (const room of localRooms) {
+        if (!convMap.has(room.id) && room.messages.length > 0) {
+          const lastMsg = room.messages[room.messages.length - 1];
+          convMap.set(room.id, { other_id: room.id, last_message: lastMsg.text, created_at: new Date().toISOString(), unread_count: room.unread ? 1 : 0, profile: { nickname: room.user.name, avatar_url: room.user.avatar } });
+        }
+      }
+      const convList = Array.from(convMap.values());
+      const results = await Promise.all(convList.map(async (conv) => {
+        if (conv.profile) return conv;
+        const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url, last_seen').eq('id', conv.other_id).single();
+        return { ...conv, profile: profile || { nickname: '사용자', avatar_url: null, last_seen: null } };
+      }));
+
+      results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setConversations(results);
+    } catch (err) {} finally { setIsLoading(false); }
+  };
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      if (!authUser) return;
-      try {
-        const { data: messages } = await supabase.from('messages').select('*').or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`).order('created_at', { ascending: false });
-        const convMap = new Map<string, any>();
-        
-        // 현재 사용자가 보고 있는 채팅방 ID 확인 (URL 파라미터나 상태에서 가져오기 어려우므로 
-        // 렌더링 시점에 Messages 페이지가 활성화된 경우만 뱃지 표시)
-        // 실제로는 전역 상태(예: useChat)에 activeChatId를 저장하는 것이 가장 좋음.
-        
-        if (messages) {
-          for (const msg of messages) {
-            const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
-            
-            // 로컬 스토리지 등에 저장된 '현재 열린 채팅방' 정보를 활용할 수도 있음
-            const activeChatId = localStorage.getItem('activeChatId');
-            const shouldShowBadge = !msg.is_read && msg.receiver_id === authUser.id && otherId !== activeChatId;
-
-            if (!convMap.has(otherId)) {
-              convMap.set(otherId, { 
-                other_id: otherId, 
-                last_message: msg.content, 
-                created_at: msg.created_at, 
-                unread_count: shouldShowBadge ? 1 : 0 
-              });
-            } else if (shouldShowBadge) {
-              convMap.get(otherId).unread_count += 1;
-            }
-          }
-        }
-        const localRooms = chatStore.getRooms();
-        for (const room of localRooms) {
-          if (!convMap.has(room.id) && room.messages.length > 0) {
-            const lastMsg = room.messages[room.messages.length - 1];
-            convMap.set(room.id, { other_id: room.id, last_message: lastMsg.text, created_at: new Date().toISOString(), unread_count: room.unread ? 1 : 0, profile: { nickname: room.user.name, avatar_url: room.user.avatar } });
-          }
-        }
-        const convList = Array.from(convMap.values());
-        const results = await Promise.all(convList.map(async (conv) => {
-          if (conv.profile) return conv;
-          const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url, last_seen').eq('id', conv.other_id).single();
-          return { ...conv, profile: profile || { nickname: '사용자', avatar_url: null, last_seen: null } };
-        }));
-
-        results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setConversations(results);
-      } catch (err) {} finally { setLoading(false); }
-    };
-
     fetchConversations();
     if (!authUser) return;
     
@@ -145,101 +146,74 @@ const Messages = () => {
     };
   }, [authUser]);
 
-  // 검색 필터링 로직
-  const filteredConversations = useMemo(() => {
-    if (!query.trim()) return conversations;
-    const lowerQuery = query.toLowerCase();
-    return conversations.filter(conv => 
-      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
-      conv.last_message?.toLowerCase().includes(lowerQuery)
-    );
-  }, [conversations, query]);
-
-  // 글로벌 유저 검색 (디바운스 적용)
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setGlobalSearchResults([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
+    const searchGlobalUsers = async () => {
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length < 1) { setGlobalSearchResults([]); return; }
       setIsSearchingGlobal(true);
       try {
-        const results = await searchProfilesByNickname(query);
-        // 이미 대화 중인 사람은 제외
-        const convIds = new Set(conversations.map(c => c.other_id));
-        setGlobalSearchResults(results.filter(r => !convIds.has(r.id) && r.id !== authUser?.id));
-      } catch (err) {
-        console.error('Global search error:', err);
-      } finally {
-        setIsSearchingGlobal(false);
-      }
-    }, 500);
-
+        const data = await searchProfilesByNickname(trimmedQuery, authUser?.id, 10);
+        const existingIds = new Set(conversations.map(c => c.other_id));
+        setGlobalSearchResults(data.filter(u => !existingIds.has(u.id)));
+      } catch (err) {} finally { setIsSearchingGlobal(false); }
+    };
+    const timer = setTimeout(searchGlobalUsers, 300);
     return () => clearTimeout(timer);
-  }, [query, conversations, authUser?.id]);
+  }, [query, authUser, conversations]);
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDeleteTargetId(id);
-    setIsDeleteDialogOpen(true);
-  };
+  const filteredConversations = useMemo(() => {
+    const lowerQuery = query.toLowerCase().trim();
+    if (!lowerQuery) return conversations;
+    return conversations.filter(conv => conv.profile.nickname?.toLowerCase().includes(lowerQuery) || conv.last_message.toLowerCase().includes(lowerQuery));
+  }, [query, conversations]);
 
+  const handleStartChat = (user: any) => { chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url); navigate(`/chat/${user.id}`); };
+  const handleDeleteClick = (e: React.MouseEvent, otherId: string) => { e.stopPropagation(); setDeleteTargetId(otherId); setIsDeleteDialogOpen(true); };
   const confirmDelete = async () => {
-    if (!deleteTargetId || !authUser) return;
+    if (!authUser || !deleteTargetId) return;
     try {
-      // 1. DB 메시지 삭제
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`);
-      
-      if (error) throw error;
-
-      // 2. 로컬 스토어에서도 삭제
-      chatStore.deleteRoom(deleteTargetId);
-      
-      // 3. UI 업데이트
+      await supabase.from('messages').delete().or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`);
       setConversations(prev => prev.filter(c => c.other_id !== deleteTargetId));
       setSwipedId(null);
-      showSuccess('대화방이 삭제되었습니다.');
-    } catch (err) {
-      console.error('Delete chat error:', err);
-      showError('대화방 삭제 중 오류가 발생했습니다.');
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setDeleteTargetId(null);
-    }
+      showSuccess('대화가 삭제되었습니다.');
+    } catch (err) { showError('대화 삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); setDeleteTargetId(null); }
   };
 
-  const handleStartChat = (user: any) => {
-    navigate(`/chat/${user.id}`);
+  const handleBack = () => {
+    // Direct Message 창에서 뒤로가기는 항상 지도 화면('/')으로 이동
+    // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
+    navigate('/', { 
+      replace: true, 
+      state: { direction: 'back' } 
+    });
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        {/* 안드로이드 상단 상태바 여백 */}
-        <div className="h-[env(safe-area-inset-top,0px)] w-full" />
-        
-        <div className="h-16 px-4 flex items-center justify-between max-w-lg mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
-          </div>
-          <button
-            onClick={() => navigate('/friends')}
-            className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
-          >
-            <Edit className="w-6 h-6 text-indigo-600" />
-          </button>
-        </div>
-      </div>
+    <div 
+      className="min-h-screen bg-white pb-24 no-scrollbar" 
+      onClick={() => setSwipedId(null)}
+      style={{
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 아래로 밀어내기
+      }}
+    >
+      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+  <button
+    onClick={handleBack}
+    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+  >
+    <ChevronLeft className="w-6 h-6" />
+  </button>
+  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+    <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
+  </div>
+  <button
+    onClick={() => navigate('/friends')}
+    className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
+  >
+    <Edit className="w-6 h-6 text-indigo-600" />
+  </button>
+</div>
 
       <div className="flex flex-col">
         <div className="bg-white px-4 py-4">
@@ -297,7 +271,7 @@ const Messages = () => {
             </div>
           </div>
           {query.trim() && globalSearchResults.length > 0 && (<div className="space-y-4 pt-2 border-t border-gray-50"><h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2"><UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기</h2><div className="space-y-1">{globalSearchResults.map((user) => (<div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"><div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0"><Avatar className="w-full h-full border-2 border-white"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback></Avatar></div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900">{user.nickname}</p><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div></div>))}</div></div>)}
-          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !loading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed whitespace-pre-line">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
+          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
         </div>
       </div>
       <DeleteChatDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />

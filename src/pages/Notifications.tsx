@@ -189,23 +189,27 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        {/* 안드로이드 상단 상태바 여백 */}
-        <div className="h-[env(safe-area-inset-top,0px)] w-full" />
-        
-        <div className="h-16 px-4 flex items-center justify-center max-w-lg mx-auto relative">
-          <button
-            onClick={() => navigate(-1)}
-            className="absolute left-4 w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
-        </div>
-      </div>
+    <div 
+      className="min-h-screen bg-white pb-24 no-scrollbar"
+      onClick={() => setSwipedId(null)}
+      style={{
+        paddingTop: '88px', // 글로벌 헤더 높이만큼 아래로 밀어내기
+      }}
+    >
+      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+  <button
+    onClick={handleBack}
+    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+  >
+    <ChevronLeft className="w-6 h-6" />
+  </button>
+  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+    <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+  </div>
+</div>
 
-      <div className="max-w-lg mx-auto">
+      <div className="flex flex-col">
         {isLoading ? (
           <div className="py-20 flex justify-center">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />

@@ -181,79 +181,78 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-28 no-scrollbar">
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        {/* 안드로이드 상단 상태바 여백 */}
-        <div className="h-[env(safe-area-inset-top,0px)] w-full" />
-        
-        <div className="h-14 px-4 flex items-center justify-center max-w-lg mx-auto relative">
+    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
+      <div className="pt-[88px]">
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-4 w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필</h2>
-        </div>
-      </div>
-      
-      <div className="max-w-lg mx-auto p-6">
-        <div className="flex items-center gap-6 mb-8">
-          <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
-            <img src={userProfile?.avatar_url || FALLBACK_IMAGE} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필</h2>
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-black text-gray-900 mb-1">{userProfile?.nickname || '탐험가'}</h2>
-            <p className="text-sm text-gray-500 mb-4">{userProfile?.bio || "지도를 여행하는 탐험가 📍"}</p>
-            <div className="flex gap-4">
-              <div className="text-center">
-                <p className="font-bold text-gray-900">{userPosts.length}</p>
-                <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-gray-900">{followerCount}</p>
-                <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-gray-900">{followingCount}</p>
-                <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
+        </div>
+        
+        <div className="p-6">
+          <div className="flex items-center gap-6 mb-8">
+            <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+              <img src={userProfile?.avatar_url || FALLBACK_IMAGE} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-black text-gray-900 mb-1">{userProfile?.nickname || '탐험가'}</h2>
+              <p className="text-sm text-gray-500 mb-4">{userProfile?.bio || "지도를 여행하는 탐험가 📍"}</p>
+              <div className="flex gap-4">
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{userPosts.length}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{followerCount}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{followingCount}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex gap-2 mb-8">
-          <Button onClick={toggleFollow} className={cn("flex-1 rounded-xl font-bold h-11", isFollowing ? "bg-gray-100 hover:bg-gray-200 text-gray-900" : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100")}>
-            {isFollowing ? <><UserCheck className="w-4 h-4 mr-2" /> 팔로잉</> : <><UserPlus className="w-4 h-4 mr-2" /> 팔로우</>}
-          </Button>
-          <Button variant="outline" onClick={() => navigate(`/chat/${profileUserId}`)} className="flex-1 rounded-xl font-bold h-11 border-gray-200">
-            <MessageCircle className="w-4 h-4 mr-2" /> 메시지
-          </Button>
-        </div>
-
-        <div className="flex border-b border-gray-100 mb-4">
-          <div className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600 text-indigo-600">
-            <Grid className="w-6 h-6" />
+          <div className="flex gap-2 mb-8">
+            <Button onClick={toggleFollow} className={cn("flex-1 rounded-xl font-bold h-11", isFollowing ? "bg-gray-100 hover:bg-gray-200 text-gray-900" : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100")}>
+              {isFollowing ? <><UserCheck className="w-4 h-4 mr-2" /> 팔로잉</> : <><UserPlus className="w-4 h-4 mr-2" /> 팔로우</>}
+            </Button>
+            <Button variant="outline" onClick={() => navigate(`/chat/${profileUserId}`)} className="flex-1 rounded-xl font-bold h-11 border-gray-200">
+              <MessageCircle className="w-4 h-4 mr-2" /> 메시지
+            </Button>
           </div>
-        </div>
 
-        <div className="flex flex-col -mx-6">
-          <div className="grid grid-cols-3 gap-1 px-6">
-            {userPosts.map((post) => (
-              <div 
-                key={post.id} 
-                className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
-                onClick={() => navigate(`/post/${post.id}`)}
-              >
-                <img 
-                  src={post.image_url || post.image} 
-                  alt="" 
-                  className="w-full h-full object-cover hover:opacity-80 transition-opacity" 
-                  onError={() => {}} 
-                />
-              </div>
-            ))}
-            {userPosts.length === 0 && <p className="text-center py-10 text-gray-400">게시물이 없습니다.</p>}
+          <div className="flex border-b border-gray-100 mb-4">
+            <div className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600 text-indigo-600">
+              <Grid className="w-6 h-6" />
+            </div>
+          </div>
+
+          <div className="flex flex-col -mx-6">
+            <div className="grid grid-cols-3 gap-1 px-6">
+              {userPosts.map((post) => (
+                <div 
+                  key={post.id} 
+                  className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+                  onClick={() => navigate(`/post/${post.id}`)}
+                >
+                  <img 
+                    src={post.image_url || post.image} 
+                    alt="" 
+                    className="w-full h-full object-cover hover:opacity-80 transition-opacity" 
+                    onError={() => {}} 
+                  />
+                </div>
+              ))}
+              {userPosts.length === 0 && <p className="text-center py-10 text-gray-400">게시물이 없습니다.</p>}
+            </div>
           </div>
         </div>
       </div>
