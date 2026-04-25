@@ -617,12 +617,12 @@ const Index = () => {
         animate={{ opacity: 1 }} 
         className="relative w-full h-[100dvh] overflow-hidden bg-gray-50 flex flex-col"
         style={{ 
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)'
+          paddingTop: isSelectingLocation ? '0px' : 'env(safe-area-inset-top)',
+          paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
         <div className="flex-1 relative overflow-hidden flex flex-col">
-          {/* Map is background - z-index 조정하여 선택 UI가 위에 오도록 함 */}
+          {/* Map is background */}
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
@@ -639,38 +639,54 @@ const Index = () => {
             />
           </div>
 
-          {/* [FIX] UI Elements Over Map */}
-          <div className={cn(
-            "relative w-full flex flex-col pointer-events-none transition-all duration-300",
-            (isTrendingExpanded || isSelectingLocation) ? "z-[100]" : "z-10"
-          )}>
-            {/* Header Spacer - 위치 선택 모드일 때는 헤더 공간도 제거 */}
-            {!isSelectingLocation && <div className="h-16 shrink-0" />}
-
-            <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-black/5 backdrop-blur-[2px] z-[35] pointer-events-auto" />}</AnimatePresence>
-            
-            {/* 상단 인기 포스팅: 위치 선택 모드일 때는 숨김 */}
-            {!isSelectingLocation && (
-              <div 
-                className={cn(
-                  "fixed left-0 right-0 px-4 pointer-events-none transition-all duration-300",
-                  isTrendingExpanded ? "z-[60]" : "z-[40]"
-                )}
-                style={{ 
-                  top: 'calc(env(safe-area-inset-top, 0px) + 68px)',
-                }}
-              >
-                <div className="w-full shrink-0 pointer-events-auto">
-                  <TrendingPosts 
-                    posts={globalTrendingPosts} 
-                    isExpanded={isTrendingExpanded} 
-                    onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
-                    onPostClick={handleTrendingPostClick} 
-                  />
+          <AnimatePresence>
+            {isSelectingLocation && (
+              <div className="fixed inset-0 z-[120] pointer-events-none">
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <motion.div 
+                    initial={{ y: -20, opacity: 0 }} 
+                    animate={{ y: 0, opacity: 1 }} 
+                    className="relative mb-12"
+                  >
+                    <div className="relative w-12 h-12">
+                      <div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" />
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
+                    </div>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
+                  </motion.div>
                 </div>
+                
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, y: 20 }} 
+                  className="absolute bottom-10 left-0 right-0 px-6 pointer-events-auto"
+                >
+                  <div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
+                      <p className="text-sm font-black text-gray-900">지도를 움직여 위치를 맞추세요</p>
+                    </div>
+                    <div className="flex w-full gap-3">
+                      <Button 
+                        onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} 
+                        variant="secondary" 
+                        className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"
+                      >
+                        <X className="w-4 h-4 mr-2" /> 취소
+                      </Button>
+                      <Button 
+                        onClick={() => { if (tempSelectedLocation) { setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: tempSelectedLocation, fromLocationSelection: true } }), 100); } }} 
+                        className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+                      >
+                        <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             )}
-          </div>
+          </AnimatePresence>
 
           {!isSelectingLocation && (
             <>

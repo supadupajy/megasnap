@@ -12,7 +12,12 @@ const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/235
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  
+  // ✅ [FIX] 위치 선택 모드일 때는 헤더 자체를 렌더링하지 않음
+  const isSelectingLocation = location.state?.startSelection;
+  if (isSelectingLocation) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white/80 backdrop-blur-xl border-b border-gray-100">
