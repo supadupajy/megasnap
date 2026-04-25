@@ -647,8 +647,9 @@ const Index = () => {
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
               
-              <div className={cn("absolute top-16 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
-                <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,4px)] pt-2">
+              {/* 상단 인기 포스팅: 헤더 광고바에 더 밀착되도록 top과 mt 조정 */}
+              <div className={cn("absolute top-[68px] left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+                <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,0px)]">
                   <TrendingPosts 
                     posts={globalTrendingPosts} 
                     isExpanded={isTrendingExpanded} 
@@ -657,13 +658,15 @@ const Index = () => {
                   />
                 </div>
               </div>
-              <div className="absolute bottom-32 left-4 z-20 flex flex-col gap-2 mb-[env(safe-area-inset-bottom)]">
+              
+              {/* 하단 버튼들: 하단 메뉴바쪽으로 더 내려오도록 bottom 값 조정 (기존 32 -> 20) */}
+              <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-2 mb-[env(safe-area-inset-bottom)]">
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
                 <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button>
               </div>
               
-              <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-4 mb-[env(safe-area-inset-bottom)]">
+              <div className="absolute bottom-20 right-4 z-20 flex flex-col items-center gap-4 mb-[env(safe-area-inset-bottom)]">
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">재검색</span>
@@ -676,7 +679,13 @@ const Index = () => {
                   {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>}
                 </div>
               </div>
-              <div className={cn("absolute bottom-4 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}><TimeSlider value={timeValue} onChange={setTimeValue} /></div>
+              
+              {/* 타임슬라이더: 하단바에 거의 붙도록 bottom 조정 (기존 4 -> 0) */}
+              <div className={cn("absolute bottom-0 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out pb-[env(safe-area-inset-bottom)]", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}>
+                <div className="mb-2">
+                  <TimeSlider value={timeValue} onChange={setTimeValue} />
+                </div>
+              </div>
             </>
           )}
         </div>
