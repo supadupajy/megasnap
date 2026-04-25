@@ -46,7 +46,6 @@ const Write = () => {
   const [address, setAddress] = useState<string>('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  // ✅ 이미지 로드 완료 여부를 state로 관리
   const [imgLoaded, setImgLoaded] = useState(false);
 
   const initialLocation = location.state?.location;
@@ -97,7 +96,6 @@ const Write = () => {
 
   useEffect(() => {
     cropPixelRef.current = { x: 0, y: 0 };
-    // ✅ 슬라이드 변경 시 로드 상태 초기화
     setImgLoaded(false);
   }, [currentSlide]);
 
@@ -251,8 +249,6 @@ const Write = () => {
         uploadedUrls.push(publicUrl);
       }
 
-      // ✅ [FIX] 위치 정보(latitude, longitude)를 initialLocation에서 정확히 가져오도록 보장
-      // location.state에서 전달된 좌표를 최우선으로 사용
       const postLat = initialLocation?.lat || null;
       const postLng = initialLocation?.lng || null;
 
@@ -261,8 +257,8 @@ const Write = () => {
       const postData = {
         content: content.trim(),
         location_name: address || '위치 미지정',
-        latitude: postLat, // ✅ 확실한 변수 사용
-        longitude: postLng, // ✅ 확실한 변수 사용
+        latitude: postLat,
+        longitude: postLng,
         image_url: uploadedUrls[0], 
         images: uploadedUrls,
         user_id: authUser.id,
@@ -283,8 +279,6 @@ const Write = () => {
         throw insertError;
       }
 
-      // ✅ [FIX] 등록된 포스트의 실제 데이터를 포함하여 메인으로 이동
-      // Index.tsx에서 이 데이터를 기반으로 위치를 잡고 마커를 보여줌
       const mappedPost = {
         id: createdPost.id,
         isAd: createdPost.content?.startsWith('[AD]'),
@@ -312,7 +306,6 @@ const Write = () => {
       clear();
       postDraftStore.clear();
       
-      // ✅ [FIX] filterUserId: 'me'와 함께 실제 post 객체를 넘겨 위치 이동 보장
       navigate('/', { 
         state: { 
           triggerConfetti: true, 
@@ -333,17 +326,14 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div
           className="px-5 py-6 space-y-8 pb-32"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
         >
 
-          {/* 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
-          <div
-            className="mb-8"
-          >
+          {/* ✅ 수정된 헤더 - TrendingPosts와 동일한 스타일 적용 */}
+          <div className="mb-8 bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl border-2 border-indigo-600/20 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
@@ -353,12 +343,17 @@ const Write = () => {
                   <h2 className="text-lg font-black text-gray-900 tracking-tight">
                     {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
                   </h2>
-                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">
+                    Leave your trace
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {currentPage === 2 && (
-                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all"
+                  >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
@@ -376,7 +371,14 @@ const Write = () => {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                 </div>
-                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
+                <input
+                  type="file"
+                  ref={mediaInputRef}
+                  className="hidden"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleMediaSelect}
+                />
               </div>
 
               {mediaFiles.length > 0 ? (
@@ -405,7 +407,6 @@ const Write = () => {
                           x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
                           y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
                         };
-                        // ✅ 로드 완료 → 렌더링 트리거
                         setImgLoaded(true);
                       }}
                       style={{
@@ -416,7 +417,6 @@ const Write = () => {
                         height: '100%',
                         objectFit: 'cover',
                         objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                        // ✅ 로드 전엔 invisible, 로드 후 보임
                         opacity: imgLoaded ? 1 : 0,
                         transition: isDragging
                           ? 'none'
@@ -461,11 +461,23 @@ const Write = () => {
                   {/* 슬라이드 전환 + 인디케이터 */}
                   {mediaFiles.length > 1 && (
                     <>
-                      <button className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))} />
-                      <button className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))} />
+                      <button
+                        className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
+                        onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))}
+                      />
+                      <button
+                        className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0"
+                        onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))}
+                      />
                       <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
                         {mediaFiles.map((_, i) => (
-                          <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                          <div
+                            key={i}
+                            className={cn(
+                              "h-1.5 rounded-full transition-all",
+                              currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5"
+                            )}
+                          />
                         ))}
                       </div>
                     </>
@@ -478,7 +490,9 @@ const Write = () => {
                   style={{ aspectRatio: '1 / 1' }}
                 >
                   <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
-                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">
+                    사진 / 동영상 선택
+                  </span>
                 </div>
               )}
 
@@ -504,7 +518,10 @@ const Write = () => {
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                     <MapPin className="w-6 h-6 text-indigo-600" />
                   </div>
-                  <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
+                  <p className={cn(
+                    "font-bold truncate",
+                    address === '위치 미지정' ? "text-gray-400" : "text-gray-900"
+                  )}>
                     {address || '위치 미지정'}
                   </p>
                 </div>
@@ -522,11 +539,19 @@ const Write = () => {
                       onClick={() => setCategory(cat.key)}
                       className={cn(
                         "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
-                        category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
+                        category === cat.key
+                          ? "border-indigo-600 bg-indigo-50"
+                          : "border-gray-100 bg-white"
                       )}
                     >
-                      <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
+                      <cat.Icon className={cn(
+                        "w-6 h-6",
+                        category === cat.key ? "text-indigo-600" : "text-gray-400"
+                      )} />
+                      <span className={cn(
+                        "text-[10px] font-black mt-2",
+                        category === cat.key ? "text-indigo-600" : "text-gray-500"
+                      )}>
                         {cat.label}
                       </span>
                     </button>
