@@ -38,6 +38,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const postListStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
