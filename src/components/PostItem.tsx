@@ -77,6 +77,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
@@ -119,17 +121,36 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   }, [authUser]);
 
-  // Intersection Observer to track visibility
+  // Intersection Observer to track visibility and control playback
   useEffect(() => {
     if (!autoPlayVideo) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsVisible(entry.isIntersecting);
+        
+        // Native video element control
+        if (videoRef.current) {
+          if (entry.isIntersecting && isReadyToPlay) {
+            videoRef.current.play().catch(e => console.error("[PostItem] Video play error:", e));
+          } else {
+            videoRef.current.pause();
+          }
+        }
+
+        // YouTube iframe control via postMessage API
+        if (iframeRef.current && iframeRef.current.contentWindow) {
+          const command = entry.isIntersecting && isReadyToPlay ? 'playVideo' : 'pauseVideo';
+          iframeRef.current.contentWindow.postMessage(JSON.stringify({
+            event: 'command',
+            func: command,
+            args: []
+          }), '*');
+        }
       },
       {
-        threshold: 0.5,
-        rootMargin: '-30% 0px -30% 0px'
+        threshold: 0.6,
+        rootMargin: '0px'
       }
     );
 
@@ -142,7 +163,23 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         observer.unobserve(containerRef.current);
       }
     };
-  }, [autoPlayVideo]);
+  }, [autoPlayVideo, isReadyToPlay]);
+
+  // Handle manual trigger when visibility changes while ready
+  useEffect(() => {
+    if (isVisible && isReadyToPlay) {
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {});
+      }
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'playVideo',
+          args: []
+        }), '*');
+      }
+    }
+  }, [isVisible, isReadyToPlay]);
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
@@ -162,12 +199,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     // 1. 유튜브 영상 처리
     if (videoId) {
       const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-      // ✅ [FIX] mute=0 설정을 통해 소리가 나오도록 변경
-      // 오토플레이 정책상 사용자가 페이지와 한 번이라도 상호작용한 후에는 소리가 있는 자동재생이 허용됩니다.
       return (
         <div className="w-full h-full relative">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&showinfo=0`}
+            ref={iframeRef}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=1&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`}
             className="w-full h-full object-cover"
             allow="autoplay; encrypted-media"
             allowFullScreen
@@ -189,9 +225,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       return (
         <div className="w-full h-full relative">
           <video
+            ref={videoRef}
             src={post.videoUrl}
             className="w-full h-full object-cover"
-            autoPlay={autoPlayVideo && isVisible && isReadyToPlay}
             muted
             loop
             playsInline
