@@ -343,44 +343,52 @@ const MapContainer = ({
 useEffect(() => {
   const handleHighlight = (e: any) => {
     const postId = e.detail?.id;
-    const duration = e.detail?.duration || 6000;
-
-    // 모든 마커에서 highlighted 제거
-    overlaysRef.current.forEach((overlay, id) => {
-      const content = overlay.getContent() as HTMLElement;
-      if (!content) return;
-      if (content.classList.contains('highlighted')) {
-        content.classList.remove('highlighted');
-        // ZIndex 원복
-        const post = posts.find(p => p.id === id);
-        overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
-      }
-    });
+    const duration = e.detail?.duration || 2500;
 
     if (!postId) return;
 
-    // 해당 마커에 highlighted 추가
-    const overlay = overlaysRef.current.get(postId);
-    if (overlay) {
-      const content = overlay.getContent() as HTMLElement;
-      if (content) {
-        // 기존 상태 초기화
-        content.classList.remove('highlighted');
-        void content.offsetWidth; 
-        
-        content.classList.add('highlighted');
-        overlay.setZIndex(99999);
+    // ✅ [FIX] 마커가 아직 생성되지 않았을 경우를 대비해 약간의 지연 후 재시도하는 로직 추가
+    const tryHighlight = (retryCount = 0) => {
+      const overlay = overlaysRef.current.get(postId);
+      
+      if (overlay) {
+        const content = overlay.getContent() as HTMLElement;
+        if (content) {
+          // 모든 마커에서 highlighted 제거
+          overlaysRef.current.forEach((o, id) => {
+            const c = o.getContent() as HTMLElement;
+            if (c && c.classList.contains('highlighted')) {
+              c.classList.remove('highlighted');
+              const p = posts.find(item => item.id === id);
+              o.setZIndex(p?.isAd ? 500 : p?.borderType !== 'none' ? 400 : 300);
+            }
+          });
 
-        // 핑 효과 3번 (0.8s * 3 = 2.4s) 이후 원복
-        setTimeout(() => {
-          if (content.classList.contains('highlighted')) {
-            content.classList.remove('highlighted');
-            const post = posts.find(p => p.id === postId);
-            overlay.setZIndex(post?.isAd ? 500 : post?.borderType !== 'none' ? 400 : 300);
-          }
-        }, 2500);
+          // 해당 마커 강조
+          content.classList.remove('highlighted');
+          void content.offsetWidth; 
+          content.classList.add('highlighted');
+          overlay.setZIndex(99999);
+
+          // 2.5초 후 원복
+          setTimeout(() => {
+            if (content && content.classList.contains('highlighted')) {
+              content.classList.remove('highlighted');
+              const p = posts.find(item => item.id === postId);
+              overlay.setZIndex(p?.isAd ? 500 : p?.borderType !== 'none' ? 400 : 300);
+            }
+          }, duration);
+          return;
+        }
       }
-    }
+
+      // 마커를 찾지 못했으면 최대 5번까지 재시도 (200ms 간격)
+      if (retryCount < 5) {
+        setTimeout(() => tryHighlight(retryCount + 1), 200);
+      }
+    };
+
+    tryHighlight();
   };
 
   window.addEventListener('highlight-marker', handleHighlight);

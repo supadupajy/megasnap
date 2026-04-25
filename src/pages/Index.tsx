@@ -140,13 +140,14 @@ const Index = () => {
     setHighlightedPostId(null);
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-    // ✅ 하이라이트 이벤트 발송 시간 조정
+    // ✅ [FIX] 핑 효과(하이라이트) 이벤트 발송 시간을 지도 이동 애니메이션 완료 시점(약 1.2s)에 맞춰 조정
+    // 처음 클릭 시에도 마커가 생성된 후 충분한 시간이 흐른 뒤 실행되도록 1500ms로 설정
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('highlight-marker', { 
         detail: { id: post.id, duration: 2500 } 
       }));
       highlightTimeoutRef.current = null;
-    }, 1100);
+    }, 1500);
   }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
@@ -588,6 +589,17 @@ const Index = () => {
     navigate(location.pathname, { replace: true, state: null });
   }, [focusPostOnMap, location, navigate, triggerConfetti, mapData]);
 
+  // ✅ [FIX] 리스트에서 포스팅 클릭 시 즉시 하이라이트 트리거 (지도 이동 중이라도 마커가 이미 있다면 표시)
+  const handleTrendingPostClick = useCallback((post: Post) => {
+    setIsTrendingExpanded(false);
+    focusPostOnMap(post);
+    
+    // 마커가 이미 맵에 존재할 가능성이 높으므로 즉시 한 번 더 트리거 (보조용)
+    window.dispatchEvent(new CustomEvent('highlight-marker', { 
+      detail: { id: post.id, duration: 2500 } 
+    }));
+  }, [focusPostOnMap]);
+
   const handlePostDeleted = useCallback((id: string) => {
     setSelectedPostId(null);
     window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id } }));
@@ -626,7 +638,16 @@ const Index = () => {
           {!isSelectingLocation && (
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
-              <div className={cn("absolute top-20 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}><div className="w-full shrink-0 pointer-events-auto"><TrendingPosts posts={globalTrendingPosts} isExpanded={isTrendingExpanded} onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} onPostClick={p => { setIsTrendingExpanded(false); focusPostOnMap(p); }} /></div></div>
+              <div className={cn("absolute top-20 left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+                <div className="w-full shrink-0 pointer-events-auto">
+                  <TrendingPosts 
+                    posts={globalTrendingPosts} 
+                    isExpanded={isTrendingExpanded} 
+                    onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)} 
+                    onPostClick={handleTrendingPostClick} 
+                  />
+                </div>
+              </div>
               <div className="absolute bottom-24 left-4 z-20 flex flex-col gap-2"><button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button><button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button><button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button></div>
               <div className="absolute bottom-24 right-4 z-20 flex flex-col items-center gap-4">
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100"><RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} /><span className="text-[9px] font-black mt-1">재검색</span></button>
