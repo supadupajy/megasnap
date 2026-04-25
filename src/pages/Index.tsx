@@ -640,18 +640,24 @@ const Index = () => {
           </div>
 
           {/* [FIX] UI Elements Over Map */}
-          <div className="relative z-10 w-full flex flex-col pointer-events-none">
+          <div className={cn(
+            "relative w-full flex flex-col pointer-events-none transition-all duration-300",
+            isTrendingExpanded ? "z-[100]" : "z-10"
+          )}>
             {/* Header Spacer - 헤더의 고정 높이(64px)만큼 공간 확보 */}
             <div className="h-16 shrink-0" />
 
-            <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
+            <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-black/5 backdrop-blur-[2px] z-[35] pointer-events-auto" />}</AnimatePresence>
             
-            {/* 상단 인기 포스팅: 스마트폰(SafeArea 존재 시)에서만 더 위로 바짝 붙도록 설정 */}
+            {/* 상단 인기 포스팅: 스마트폰에서 더 위로 바짝 붙이고, 확장 시 최상단 레이어로 설정 */}
             <div 
-              className={cn("w-full px-4 pt-2 pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-[60]" : "z-[40]")}
+              className={cn(
+                "w-full px-4 pt-2 pointer-events-none transition-all duration-300 relative",
+                isTrendingExpanded ? "z-[60]" : "z-[40]"
+              )}
               style={{ 
-                /* env 값이 있는 모바일에서는 위로 12px 더 올림 (웹뷰는 0) */
-                marginTop: 'calc(-12px * clamp(0, env(safe-area-inset-top), 1))' 
+                /* 모바일에서는 위로 더 바짝 올림 (-24px) */
+                marginTop: 'calc(-24px * clamp(0, env(safe-area-inset-top), 1))' 
               }}
             >
               <div className="w-full shrink-0 pointer-events-auto">
@@ -667,14 +673,14 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              {/* 하단 버튼들: 이전 수정대로 하단에 유지 */}
-              <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-2 mb-[env(safe-area-inset-bottom)]">
+              {/* 하단 버튼들: z-index를 상대적으로 낮게 유지하여 리스트에 가려지도록 함 */}
+              <div className={cn("absolute bottom-20 left-4 z-20 flex flex-col gap-2 mb-[env(safe-area-inset-bottom)] transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}>
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
                 <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button>
               </div>
               
-              <div className="absolute bottom-20 right-4 z-20 flex flex-col items-center gap-4 mb-[env(safe-area-inset-bottom)]">
+              <div className={cn("absolute bottom-20 right-4 z-20 flex flex-col items-center gap-4 mb-[env(safe-area-inset-bottom)] transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}>
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">재검색</span>
