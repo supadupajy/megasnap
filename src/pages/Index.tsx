@@ -250,15 +250,18 @@ const Index = () => {
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
     try {
+      // ✅ [FIX] fetchPostsInBounds 내부의 필터링이 너무 엄격할 수 있으므로, 
+      // 클라이언트 측에서도 유연하게 처리하도록 모든 포스트를 가져옵니다.
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
-      const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         let borderType: any = 'none';
         if (Number(p.likes) >= 9000) borderType = 'popular';
         
+        // 이미지 URL이 없거나 깨진 경우를 대비해 폰백 이미지 설정
+        const finalImage = p.image_url || p.youtube_url ? getYoutubeThumbnail(p.youtube_url) : '';
+
         return {
           id: p.id,
           isAd,
@@ -268,17 +271,17 @@ const Index = () => {
           latitude: p.latitude,
           longitude: p.longitude,
           likes: Number(p.likes || 0),
-          image: p.image_url || '',
+          image: finalImage,
           image_url: p.image_url || '',
           youtubeUrl: p.youtube_url,
           videoUrl: p.video_url,
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
           borderType,
-          user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
+          user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || '' },
           content: p.content || '',
           location: p.location_name || '',
-          images: p.image_url ? [p.image_url] : [],
+          images: p.images || (p.image_url ? [p.image_url] : []),
           isLiked: false,
           commentsCount: 0,
           comments: []
@@ -286,25 +289,23 @@ const Index = () => {
       });
 
       setAllPosts(prev => {
-        const postsToDelete: Post[] = prev.filter(p => {
-          const inBounds = p.lat >= Math.min(sw.lat, ne.lat) && p.lat <= Math.max(sw.lat, ne.lat) && p.lng >= Math.min(sw.lng, ne.lng) && p.lng <= Math.max(sw.lng, ne.lng);
-          return inBounds && !validDbIds.has(p.id) && !p.isNewRealtime;
-        });
-        if (postsToDelete.length > 0) {
-          postsToDelete.forEach(p => window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } })));
-          setTimeout(() => {
-            const deletedIds = new Set(postsToDelete.map(p => p.id));
-            setAllPosts(current => current.filter(p => !deletedIds.has(p.id)));
-            setDisplayedMarkers(current => current.filter(p => !deletedIds.has(p.id)));
-          }, 450);
-        }
-        const existingIds = new Set(prev.map(p => p.id));
-        const combined = [...mappedPosts.filter(p => !existingIds.has(p.id)), ...prev].slice(0, 3000);
+        // 기존 포스트와 합치되, 중복 제거 및 최신 데이터 우선
+        const postMap = new Map();
+        // 기존 데이터 먼저 넣고
+        prev.forEach(p => postMap.set(p.id, p));
+        // DB에서 가져온 최신 데이터로 덮어쓰기
+        mappedPosts.forEach(p => postMap.set(p.id, p));
+        
+        const combined = Array.from(postMap.values());
         mapCache.posts = combined;
         return combined;
       });
-    } catch (err) { console.error(err); } finally { isSyncing.current = false; }
-  }, [mapData, currentZoom, mapDbToPost]);
+    } catch (err) { 
+      console.error('[Sync] DB Sync error:', err); 
+    } finally { 
+      isSyncing.current = false; 
+    }
+  }, [mapData, currentZoom]);
 
   useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
 
