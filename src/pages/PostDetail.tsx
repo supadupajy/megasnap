@@ -24,36 +24,50 @@ const PostDetail = () => {
 
   useEffect(() => {
     const fetchAllPosts = async () => {
-      // If no authUser, don't return "not found" immediately if we are still loading
-      if (!authUser?.id) return;
+      console.log("[PostDetail] fetchAllPosts started. ID:", id, "AuthUser:", authUser?.id);
+      
+      if (!authUser?.id) {
+        console.log("[PostDetail] No authUser.id yet.");
+        return;
+      }
       
       setLoading(true);
       try {
-        // Fetch specific post first to verify it exists and who it belongs to
         if (id) {
+          console.log("[PostDetail] Fetching target post info for ID:", id);
           const { data: targetPost, error: targetError } = await supabase
             .from('posts')
             .select('user_id')
             .eq('id', id)
             .maybeSingle();
             
+          if (targetError) {
+            console.error("[PostDetail] Error fetching target post:", targetError);
+          }
+
           if (targetPost) {
-            // Fetch all posts belonging to the owner of this post
+            console.log("[PostDetail] Found target post owner:", targetPost.user_id);
             const { data, error } = await supabase
               .from('posts')
               .select('*')
               .eq('user_id', targetPost.user_id)
               .order('created_at', { ascending: false });
 
-            if (!error && data) {
+            if (error) {
+              console.error("[PostDetail] Error fetching owner posts:", error);
+            } else if (data) {
+              console.log("[PostDetail] Found owner posts count:", data.length);
               const formattedPosts = await Promise.all(data.map(mapDbToPost));
               setAllPosts(formattedPosts);
+              setLoading(false);
               return;
             }
+          } else {
+            console.warn("[PostDetail] Target post not found in DB for ID:", id);
           }
         }
 
-        // Default: fetch my posts if no ID or target not found
+        console.log("[PostDetail] Falling back to current user posts for ID:", authUser.id);
         const { data: myData, error: myError } = await supabase
           .from('posts')
           .select('*')
@@ -62,11 +76,12 @@ const PostDetail = () => {
 
         if (myError) throw myError;
         if (myData) {
+          console.log("[PostDetail] Found current user posts count:", myData.length);
           const formattedPosts = await Promise.all(myData.map(mapDbToPost));
           setAllPosts(formattedPosts);
         }
       } catch (err) {
-        console.error('Error fetching posts:', err);
+        console.error('[PostDetail] Error in fetchAllPosts:', err);
       } finally {
         setLoading(false);
       }
