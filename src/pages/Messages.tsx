@@ -32,6 +32,12 @@ const Messages = () => {
   const { user: authUser } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -139,6 +145,77 @@ const Messages = () => {
     };
   }, [authUser]);
 
+  // 검색 필터링 로직
+  const filteredConversations = useMemo(() => {
+    if (!query.trim()) return conversations;
+    const lowerQuery = query.toLowerCase();
+    return conversations.filter(conv => 
+      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
+      conv.last_message?.toLowerCase().includes(lowerQuery)
+    );
+  }, [conversations, query]);
+
+  // 글로벌 유저 검색 (디바운스 적용)
+  useEffect(() => {
+    if (!query.trim() || query.length < 2) {
+      setGlobalSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingGlobal(true);
+      try {
+        const results = await searchProfilesByNickname(query);
+        // 이미 대화 중인 사람은 제외
+        const convIds = new Set(conversations.map(c => c.other_id));
+        setGlobalSearchResults(results.filter(r => !convIds.has(r.id) && r.id !== authUser?.id));
+      } catch (err) {
+        console.error('Global search error:', err);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [query, conversations, authUser?.id]);
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeleteTargetId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId || !authUser) return;
+    try {
+      // 1. DB 메시지 삭제
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`);
+      
+      if (error) throw error;
+
+      // 2. 로컬 스토어에서도 삭제
+      chatStore.deleteRoom(deleteTargetId);
+      
+      // 3. UI 업데이트
+      setConversations(prev => prev.filter(c => c.other_id !== deleteTargetId));
+      setSwipedId(null);
+      showSuccess('대화방이 삭제되었습니다.');
+    } catch (err) {
+      console.error('Delete chat error:', err);
+      showError('대화방 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+    }
+  };
+
+  const handleStartChat = (user: any) => {
+    navigate(`/chat/${user.id}`);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24">
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
@@ -220,7 +297,7 @@ const Messages = () => {
             </div>
           </div>
           {query.trim() && globalSearchResults.length > 0 && (<div className="space-y-4 pt-2 border-t border-gray-50"><h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2"><UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기</h2><div className="space-y-1">{globalSearchResults.map((user) => (<div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"><div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0"><Avatar className="w-full h-full border-2 border-white"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback></Avatar></div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900">{user.nickname}</p><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div></div>))}</div></div>)}
-          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
+          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !loading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed whitespace-pre-line">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
         </div>
       </div>
       <DeleteChatDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
