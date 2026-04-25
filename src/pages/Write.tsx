@@ -332,38 +332,38 @@ const Write = () => {
   const currentMedia = mediaFiles[currentSlide];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative overflow-hidden">
       {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
-      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div
+      <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
+        <div 
           className="px-5 py-6 space-y-8 pb-32"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
         >
-
-          {/* 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
-          <div
-            className="mb-8"
-          >
+          {/* 상단 타이틀 섹션 - 인기 포스팅 메뉴처럼 배경과 그림자 적용 */}
+          <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 mb-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                  <PenLine className="w-6 h-6 text-indigo-600" />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-indigo-50 rounded-[22px] flex items-center justify-center shadow-inner">
+                  <PenLine className="w-8 h-8 text-indigo-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight leading-none mb-1">
                     {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
                   </h2>
-                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Leave your trace</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {currentPage === 2 && (
-                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
-                    <ChevronLeft className="w-5 h-5" />
+                  <button 
+                    onClick={() => setCurrentPage(1)} 
+                    className="w-12 h-12 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center text-gray-800 active:scale-95 transition-all"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
                   </button>
                 )}
-                <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-                  <Send className="w-5 h-5 text-indigo-600" />
+                <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center">
+                  <Send className="w-6 h-6 text-indigo-600" />
                 </div>
               </div>
             </div>
@@ -474,7 +474,7 @@ const Write = () => {
               ) : (
                 <div
                   onClick={() => mediaInputRef.current?.click()}
-                  className="w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                  className="w-full rounded-[32px] overflow-hidden bg-white flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
                   style={{ aspectRatio: '1 / 1' }}
                 >
                   <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
@@ -499,9 +499,9 @@ const Write = () => {
                 </div>
                 <div
                   onClick={() => navigate('/', { state: { startSelection: true } })}
-                  className="p-3 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
+                  className="p-3 bg-white rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-all shadow-sm"
                 >
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center shadow-inner">
                     <MapPin className="w-6 h-6 text-indigo-600" />
                   </div>
                   <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
@@ -521,7 +521,7 @@ const Write = () => {
                       key={cat.key}
                       onClick={() => setCategory(cat.key)}
                       className={cn(
-                        "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
+                        "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all shadow-sm",
                         category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                       )}
                     >
@@ -541,7 +541,7 @@ const Write = () => {
                 </div>
                 <Textarea
                   placeholder="이 장소에서의 추억을 기록해보세요..."
-                  className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
+                  className="min-h-[120px] bg-white border-gray-100 shadow-sm rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                 />
