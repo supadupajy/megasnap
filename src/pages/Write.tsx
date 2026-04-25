@@ -333,12 +333,12 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 상단 헤더 - z-index를 높이고 시스템 영역과 겹치지 않게 패딩 수정 */}
-      <div
+      {/* [FIX] 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
+      <div 
         className="fixed top-0 inset-x-0 z-[100] bg-white border-b border-gray-100 shadow-sm"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="px-6 py-4 flex items-center justify-between">
+        <div className="pt-16 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
               <PenLine className="w-6 h-6 text-indigo-600" />
@@ -364,10 +364,10 @@ const Write = () => {
       </div>
 
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        {/* 상단 헤더 높이만큼 여백 확보 */}
-        <div
+        {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
+        <div 
           className="px-5 py-6 space-y-8 pb-40"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 140px)' }}
         >
           {currentPage === 1 ? (
             <div className="space-y-6">
