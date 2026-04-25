@@ -338,7 +338,7 @@ const Write = () => {
         <div className="bg-gray-50/50 border-y border-gray-100">
           <div
             className="px-5 py-6"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)' }}
+            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
