@@ -335,14 +335,10 @@ const Write = () => {
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       {/* 상단 헤더와 상태바 높이만큼 충분한 여백 확보 (약 160px) */}
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div
-          className="px-5 py-6 space-y-8 pb-32"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 80px)' }}
-        >
-
-          {/* 고정 상단 헤더 - fixed를 유지하되 시스템 영역과 완벽히 격리 */}
+        <div className="bg-gray-50/50 border-y border-gray-100">
           <div
-            className="mb-8"
+            className="px-5 py-6"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)' }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -368,6 +364,11 @@ const Write = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div
+          className="px-5 py-6 space-y-8 pb-32"
+        >
 
           {currentPage === 1 ? (
             <div className="space-y-6">
