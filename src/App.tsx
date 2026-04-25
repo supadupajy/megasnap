@@ -180,7 +180,7 @@ const AnimatedRoutes = () => {
       </main>
 
       {/* ✅ [FORCE] 하단 바 강제 노출: 복잡한 조건문을 제거하고 기본 필수 조건만 남김 */}
-      {!isFullPage && session && <BottomNav />}
+      {(!isFullPage || isWritePage) && session && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
