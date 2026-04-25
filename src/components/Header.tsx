@@ -15,9 +15,8 @@ const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때나 프로필 페이지('/profile')에서는 헤더를 숨깁니다.
-  // 프로필 페이지는 자체적인 헤더 영역을 가지고 있어 이중으로 보일 수 있습니다.
-  const isHiddenPage = (location.pathname === '/' && location.state?.startSelection) || location.pathname === '/profile';
+  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
+  const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
   if (isHiddenPage) return null;
 
   return (

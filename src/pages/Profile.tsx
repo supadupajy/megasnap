@@ -281,7 +281,7 @@ const Profile = () => {
   }
 
   return (
-    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
+    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar pt-16">
       <div className="pt-[env(safe-area-inset-top,0px)]">
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm"><UserIcon className="w-6 h-6 text-indigo-600" /></div><div><h2 className="text-lg font-black text-gray-900">내 프로필</h2><p className="text-[10px] text-gray-400 font-medium leading-none">나의 활동과 기록</p></div></div><button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><Settings className="w-5 h-5 text-gray-400" /></button></div></div>
         <div className="p-6">
