@@ -128,8 +128,8 @@ const Search = () => {
             {users.map((user) => {
               const isFollowing = followingIds.has(user.id);
               return (
-                <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
-                  <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
+                <div key={user.id} onClick={() => navigate(`/user-profile/${user.id}`)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all">
+                  <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0" onClick={(e) => { e.stopPropagation(); navigate(`/user-profile/${user.id}`); }}>
                     <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
                       <AvatarImage src={user.avatar_url} />
                       <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
