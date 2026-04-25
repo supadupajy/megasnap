@@ -33,52 +33,58 @@ const PostDetail = () => {
       
       setLoading(true);
       try {
-        if (id) {
-          console.log("[PostDetail] Fetching target post info for ID:", id);
-          const { data: targetPost, error: targetError } = await supabase
-            .from('posts')
-            .select('user_id')
-            .eq('id', id)
-            .maybeSingle();
-            
-          if (targetError) {
-            console.error("[PostDetail] Error fetching target post:", targetError);
-          }
-
-          if (targetPost) {
-            console.log("[PostDetail] Found target post owner:", targetPost.user_id);
-            const { data, error } = await supabase
-              .from('posts')
-              .select('*')
-              .eq('user_id', targetPost.user_id)
-              .order('created_at', { ascending: false });
-
-            if (error) {
-              console.error("[PostDetail] Error fetching owner posts:", error);
-            } else if (data) {
-              console.log("[PostDetail] Found owner posts count:", data.length);
-              const formattedPosts = await Promise.all(data.map(mapDbToPost));
-              setAllPosts(formattedPosts);
-              setLoading(false);
-              return;
-            }
-          } else {
-            console.warn("[PostDetail] Target post not found in DB for ID:", id);
-          }
-        }
-
-        console.log("[PostDetail] Falling back to current user posts for ID:", authUser.id);
-        const { data: myData, error: myError } = await supabase
+        // [FIX] Try to fetch ALL posts first without filtering by user_id
+        // Since we are having 500 errors on user_id filter, we'll filter client-side
+        // Or try to fetch only the specific post first
+        
+        console.log("[PostDetail] Fetching target post info for ID:", id);
+        const { data: targetPost, error: targetError } = await supabase
           .from('posts')
           .select('*')
-          .eq('user_id', authUser.id)
-          .order('created_at', { ascending: false });
+          .eq('id', id)
+          .maybeSingle();
+            
+        if (targetError) {
+          console.error("[PostDetail] Error fetching target post:", targetError);
+        }
 
-        if (myError) throw myError;
-        if (myData) {
-          console.log("[PostDetail] Found current user posts count:", myData.length);
-          const formattedPosts = await Promise.all(myData.map(mapDbToPost));
-          setAllPosts(formattedPosts);
+        if (targetPost) {
+          console.log("[PostDetail] Found target post owner:", targetPost.user_id);
+          
+          // Try to fetch posts without eq filter if it causes 500, but use it as a primary attempt
+          const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error("[PostDetail] Error fetching all posts:", error);
+          } else if (data) {
+            // Filter client-side to avoid 500 error on user_id filter
+            const filteredData = data.filter((p: any) => p.user_id === targetPost.user_id);
+            console.log("[PostDetail] Client-side filtered posts count:", filteredData.length);
+            
+            const formattedPosts = await Promise.all(filteredData.map(mapDbToPost));
+            setAllPosts(formattedPosts);
+            setLoading(false);
+            return;
+          }
+        } else {
+          console.warn("[PostDetail] Target post not found in DB for ID:", id);
+        }
+
+        // Final fallback: just fetch the single post if nothing else works
+        if (id) {
+          const { data: singlePost, error: singleError } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+          
+          if (singlePost) {
+            const formatted = await mapDbToPost(singlePost);
+            setAllPosts([formatted]);
+          }
         }
       } catch (err) {
         console.error('[PostDetail] Error in fetchAllPosts:', err);
