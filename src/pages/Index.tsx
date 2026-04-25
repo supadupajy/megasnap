@@ -647,9 +647,8 @@ const Index = () => {
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
               
-              {/* 상단 인기 포스팅: 헤더 광고바 바로 아래에 붙도록 top 위치를 대폭 상향 조정 */}
-              <div className={cn("absolute top-[16px] left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
-                {/* mt-0으로 설정하여 시스템 여백을 무시하고 헤더에 밀착 */}
+              {/* 상단 인기 포스팅: z-index를 60으로 올려서 헤더(50)보다 위에 오도록 설정 */}
+              <div className={cn("absolute top-[16px] left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-[60]" : "z-[60]")}>
                 <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,0px)]">
                   <TrendingPosts 
                     posts={globalTrendingPosts} 
