@@ -271,11 +271,26 @@ const MapContainer = ({
     // Get list of IDs currently in props
     const propPostIds = new Set(posts.map(p => p.id));
 
-    // Remove overlays that are no longer in the posts prop
+    // Remove overlays that are no longer in the posts prop with animation
     overlaysRef.current.forEach((overlay, id) => {
       if (!propPostIds.has(id)) {
-        overlay.setMap(null);
-        overlaysRef.current.delete(id);
+        const content = overlay.getContent() as HTMLElement;
+        if (content && !content.classList.contains('marker-disappear-animation')) {
+          content.classList.remove('marker-appear-animation');
+          content.classList.add('marker-disappear-animation');
+          content.style.pointerEvents = 'none';
+          
+          setTimeout(() => {
+            // Check again if it's still missing from props before actual removal
+            if (!propPostIds.has(id) && overlaysRef.current.has(id)) {
+              overlay.setMap(null);
+              overlaysRef.current.delete(id);
+            }
+          }, 450);
+        } else if (!content) {
+          overlay.setMap(null);
+          overlaysRef.current.delete(id);
+        }
       }
     });
 
