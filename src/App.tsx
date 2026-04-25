@@ -59,9 +59,11 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow"].includes(location.pathname);
+  const isFullPage = ["/splash", "/login", "/settings", "/profile/follow", "/write"].includes(location.pathname);
+  const isWritePage = location.pathname === "/write";
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
+
   const isMainTab = ["/", "/popular", "/search", "/messages", "/profile", "/write"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
@@ -126,7 +128,7 @@ const AnimatedRoutes = () => {
   return (
     <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
       <AnimatePresence>
-        {!isFullPage && session && (
+        {(!isFullPage || isWritePage) && session && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
