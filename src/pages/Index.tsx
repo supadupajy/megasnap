@@ -647,8 +647,9 @@ const Index = () => {
             <>
               <AnimatePresence>{isTrendingExpanded && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTrendingExpanded(false)} className="fixed inset-0 bg-transparent z-[35]" />}</AnimatePresence>
               
-              {/* 상단 인기 포스팅: 헤더 광고바에 더 밀착되도록 top과 mt 조정 */}
-              <div className={cn("absolute top-[68px] left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+              {/* 상단 인기 포스팅: 헤더 광고바 바로 아래에 붙도록 top 위치를 대폭 상향 조정 */}
+              <div className={cn("absolute top-[16px] left-0 right-0 px-4 flex items-start justify-between pointer-events-none transition-all duration-300", isTrendingExpanded ? "z-40" : "z-10")}>
+                {/* mt-0으로 설정하여 시스템 여백을 무시하고 헤더에 밀착 */}
                 <div className="w-full shrink-0 pointer-events-auto mt-[env(safe-area-inset-top,0px)]">
                   <TrendingPosts 
                     posts={globalTrendingPosts} 
@@ -659,7 +660,7 @@ const Index = () => {
                 </div>
               </div>
               
-              {/* 하단 버튼들: 하단 메뉴바쪽으로 더 내려오도록 bottom 값 조정 (기존 32 -> 20) */}
+              {/* 하단 버튼들: 이전 수정대로 하단에 유지 */}
               <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-2 mb-[env(safe-area-inset-bottom)]">
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
                 <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
