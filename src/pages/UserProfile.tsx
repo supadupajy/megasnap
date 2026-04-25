@@ -230,8 +230,12 @@ const UserProfile = () => {
           </div>
 
           <div className="flex border-b border-gray-100 mb-4">
-            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'grid' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Grid className="w-6 h-6" /></button>
-            <button onClick={() => setViewMode('list')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'list' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}><Grid className="w-6 h-6" /></button>
+            <button onClick={() => setViewMode('grid')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'grid' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}>
+              <Grid className="w-6 h-6" />
+            </button>
+            <button onClick={() => setViewMode('list')} className={cn("flex-1 py-3 flex justify-center", viewMode === 'list' ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-300")}>
+              <MapIcon className="w-6 h-6" />
+            </button>
           </div>
 
           <div className="flex flex-col -mx-6">
