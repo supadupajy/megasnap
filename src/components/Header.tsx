@@ -52,39 +52,56 @@ const Header = () => {
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
-    // 기존 채널이 있다면 먼저 제거 (Cleanup)
-    if (channelsRef.current.messages) supabase.removeChannel(channelsRef.current.messages);
-    if (channelsRef.current.notifications) supabase.removeChannel(channelsRef.current.notifications);
+    // Generate unique channel names to avoid overlap
+    const messagesChannelName = `header-messages-${user.id}-${Date.now()}`;
+    const notificationsChannelName = `header-notifications-${user.id}-${Date.now()}`;
 
-    // 채널 생성
-    const mChannel = supabase.channel(`header-messages-${user.id}`);
-    const nChannel = supabase.channel(`header-notifications-${user.id}`);
+    // 1. Create Channel
+    const mChannel = supabase.channel(messagesChannelName);
+    const nChannel = supabase.channel(notificationsChannelName);
 
-    // 핸들러 등록
+    // 2. Attach ALL postgres_changes BEFORE subscribe
     mChannel
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
         () => fetchUnreadCount()
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${user.id}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user.id}`
+        },
         () => fetchUnreadCount()
       );
 
     nChannel.on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      },
       () => fetchUnreadNotifCount()
     );
 
-    // 구독 시작
-    mChannel.subscribe();
-    nChannel.subscribe();
-
-    // Ref에 저장
-    channelsRef.current = { messages: mChannel, notifications: nChannel };
+    // 3. Subscribe ONLY after all .on() calls are finished
+    mChannel.subscribe((status) => {
+      console.log(`[Header] Messages channel (${messagesChannelName}) status:`, status);
+    });
+    
+    nChannel.subscribe((status) => {
+      console.log(`[Header] Notifications channel (${notificationsChannelName}) status:`, status);
+    });
 
     const handleRefresh = () => {
       fetchUnreadCount();
@@ -93,11 +110,12 @@ const Header = () => {
     window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
-      if (channelsRef.current.messages) supabase.removeChannel(channelsRef.current.messages);
-      if (channelsRef.current.notifications) supabase.removeChannel(channelsRef.current.notifications);
+      console.log('[Header] Cleaning up channels:', messagesChannelName, notificationsChannelName);
+      supabase.removeChannel(mChannel);
+      supabase.removeChannel(nChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
+  }, [user?.id]); // Minimal dependencies to prevent re-runs
 
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
