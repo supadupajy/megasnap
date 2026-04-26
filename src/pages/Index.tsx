@@ -77,7 +77,6 @@ const Index = () => {
   const { blockedIds } = useBlockedUsers();
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -343,17 +342,17 @@ const Index = () => {
 
     setSelectedPostId(null);
     setSearchResultLocation(null);
+
+    // 이전 타이머 취소
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
-    // null로 초기화하지 않고 바로 post.id로 설정 → 마커 useEffect가 isMine 상태를 유지한 채 렌더링
-    setHighlightedPostId(post.id);
+
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
+    // 지도 이동 후 핑 효과 (1회만)
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
       highlightTimeoutRef.current = null;
-      // setHighlightedPostId(null) 호출 안 함 → React 리렌더링으로 인한 HTML 덮어쓰기 방지
-      // highlighted 클래스 제거는 highlight-marker 핸들러의 setTimeout에서 DOM 직접 처리
-    }, 1800);
+    }, 800);
   }, []);
 
   // ── 마커 클릭 ────────────────────────────────────────────────
@@ -515,7 +514,7 @@ const Index = () => {
   const handleTrendingPostClick = useCallback((post: Post) => {
     setIsTrendingExpanded(false);
     focusPostOnMap(post);
-    window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
+    // 중복 dispatch 제거 - focusPostOnMap 내부에서 이미 처리
   }, [focusPostOnMap]);
 
   return (
@@ -535,7 +534,6 @@ const Index = () => {
             <MapContainer
               posts={spreadMarkers}
               viewedPostIds={viewedIds}
-              highlightedPostId={highlightedPostId}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
               center={mapCenter}

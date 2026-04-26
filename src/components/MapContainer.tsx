@@ -9,7 +9,6 @@ import { getFallbackImage } from '@/lib/utils';
 interface MapContainerProps {
   posts: any[];
   viewedPostIds: Set<any>;
-  highlightedPostId?: string | null;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
@@ -28,7 +27,6 @@ const BROKEN_UNSPLASH_IDS = new Set([
 const MapContainer = ({ 
   posts, 
   viewedPostIds, 
-  highlightedPostId,
   onMarkerClick, 
   onMapChange, 
   onMapClick,
@@ -41,7 +39,6 @@ const MapContainer = ({
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState<number>(5);
-  const [isMapMoving, setIsMapMoving] = useState(false);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
 
   const overlaysRef = useRef<Map<string, any>>(new Map());
@@ -49,10 +46,11 @@ const MapContainer = ({
   const searchOverlayRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isDragging = useRef(false);
-  const isProgrammaticMove = useRef(false);
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(5);
   const postsRef = useRef<any[]>(posts);
+  const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
+  const internalViewedIdsRef = useRef<Set<string>>(new Set());
 
   // 핀치 줌 원천 차단용
   const pinchStartDistRef = useRef<number | null>(null);
@@ -67,6 +65,7 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
+  // getMarkerInnerHtml을 ref로 관리 → highlight 핸들러에서 항상 최신 authUser 참조
   const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '');
   const authUserRef = useRef(authUser);
 
@@ -75,6 +74,8 @@ const MapContainer = ({
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
   useEffect(() => { postsRef.current = posts; }, [posts]);
   useEffect(() => { authUserRef.current = authUser; }, [authUser]);
+  useEffect(() => { viewedPostIdsRef.current = viewedPostIds; }, [viewedPostIds]);
+  useEffect(() => { internalViewedIdsRef.current = internalViewedIds; }, [internalViewedIds]);
 
   useEffect(() => {
     currentLevelRef.current = currentLevel;
@@ -90,14 +91,6 @@ const MapContainer = ({
     window.addEventListener('update-viewed-markers', handleUpdateViewedMarkers);
     return () => window.removeEventListener('update-viewed-markers', handleUpdateViewedMarkers);
   }, []);
-
-  // ✅ [FIX] 포스팅 생성 후 지도 데이터가 바뀌었을 때 오버레이를 강제로 갱신하도록 처리
-  useEffect(() => {
-    if (isMapReady && mapInstance.current) {
-      // posts가 바뀔 때 CustomOverlay의 state key를 체크하여 업데이트하도록 위쪽 useEffect가 이미 존재함
-      // 하지만 is_seed_data가 DB에서 갓 넘어온 경우를 위해 zIndex와 라벨을 재계산하도록 유도
-    }
-  }, [posts, isMapReady]);
 
   useEffect(() => {
     const handleAnimateDelete = (e: any) => {
@@ -181,7 +174,7 @@ const MapContainer = ({
     };
   }, []);
 
-  // 핀치 줌 원천 차단: document capture 단계에서 브라우저 터치 자체를 preventDefault로 취소
+  // 핀치 줌 원천 차단
   useEffect(() => {
     const getDistance = (touches: TouchList) => {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -209,7 +202,6 @@ const MapContainer = ({
       const level = map.getLevel();
       if (level <= 4) {
         const currentDist = getDistance(e.touches);
-        // pinch out(벌리기) = 거리가 늘어남 = 확대 시도 → 브라우저 터치 자체를 취소
         if (currentDist > pinchStartDistRef.current) {
           e.preventDefault();
           e.stopPropagation();
@@ -218,7 +210,6 @@ const MapContainer = ({
       }
     };
 
-    // document 레벨 capture에 등록하여 카카오맵보다 먼저 실행
     document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
     document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
 
@@ -275,7 +266,6 @@ const MapContainer = ({
       setIsMapReady(true);
       setIsLoading(false);
 
-      // 초기 zoom 클래스 즉시 설정 (마커가 클래스 없이 렌더링되는 것 방지)
       updateZoomClass();
 
       setTimeout(() => {
@@ -301,15 +291,12 @@ const MapContainer = ({
         }
       }, 500);
 
-      // ✅ [FIX] bounds_changed를 제거하고 idle만 남겨서 지도 이동 중에 발생하는 폭주하는 요청을 차단합니다.
       kakao.maps.event.addListener(map, 'idle', updateMapData);
       
-      kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; setIsMapMoving(true); });
-      kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; setIsMapMoving(false); lastDragEnd.current = Date.now(); });
+      kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
+      kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; lastDragEnd.current = Date.now(); });
       
-      // ✅ 지도 클릭 시 검색 결과 마커 제거 로직 추가
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
-        // 검색 마커 제거 (상태 초기화 트리거를 위해 부모에게 알림)
         if (onMapClickRef.current) {
           const latlng = mouseEvent.latLng;
           onMapClickRef.current({ lat: latlng.getLat(), lng: latlng.getLng() });
@@ -345,17 +332,18 @@ const MapContainer = ({
     }
   }, [level]);
 
-  // ✅ 마커 렌더링 통합 로직 (props 변화 및 internalViewedIds 변화 모두 감지)
+  // ── 마커 렌더링 통합 로직 ──────────────────────────────────
+  // highlightedPostId 제거 → contentStateKey에서 isHighlighted 없음
+  // 핑 효과는 오직 DOM 직접 조작으로만 처리 (React 리렌더링과 완전 분리)
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
 
-    // Get list of IDs currently in props
     const propPostIds = new Set(posts.map(p => p.id));
 
-    // Remove overlays that are no longer in the posts prop with animation
+    // 사라진 마커 제거 (애니메이션)
     overlaysRef.current.forEach((overlay, id) => {
       if (!propPostIds.has(id)) {
         const content = overlay.getContent() as HTMLElement;
@@ -365,7 +353,6 @@ const MapContainer = ({
           content.style.pointerEvents = 'none';
           
           setTimeout(() => {
-            // Check again if it's still missing from props before actual removal
             if (!propPostIds.has(id) && overlaysRef.current.has(id)) {
               overlay.setMap(null);
               overlaysRef.current.delete(id);
@@ -383,23 +370,20 @@ const MapContainer = ({
       const position = new kakao.maps.LatLng(post.lat, post.lng);
 
       const isViewed = combinedViewedIds.has(post.id);
-      const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // [CRITICAL FIX] is_seed_data 판별을 마커 상태 키에 포함하여 확실히 업데이트되도록 함
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const postUserId = (post as any).user_id || (post.user && post.user.id);
       const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
-      // isHighlighted를 key에 포함 → highlighted 상태 변화 시에만 HTML 재생성
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isHighlighted}`;
+      // isHighlighted를 key에서 제거 → 핑 중에도 React가 HTML을 덮어쓰지 않음
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
         const isAdPost = post.isAd || (post.content && post.content.includes('[AD]'));
         content.className = 'marker-container kakao-overlay marker-appear-animation';
         if (isAdPost) content.classList.add('is-ad');
-        if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         content.onclick = (e) => {
@@ -411,7 +395,7 @@ const MapContainer = ({
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: content,
-          zIndex: isHighlighted ? 10000 : (post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300))
+          zIndex: post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300)
         });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
@@ -421,19 +405,23 @@ const MapContainer = ({
           existingOverlay.setMap(mapInstance.current);
         }
         
-        // 상태가 변했으면 HTML 업데이트 (highlighted 중인 마커는 건드리지 않음)
-        if (content.getAttribute('data-content-state') !== contentStateKey && !content.classList.contains('highlighted')) {
-          content.innerHTML = getMarkerInnerHtml(post, isViewed);
-          content.setAttribute('data-content-state', contentStateKey);
-        } else if (content.getAttribute('data-content-state') !== contentStateKey) {
-          // highlighted 중이라면 state key만 업데이트해두고 HTML은 나중에 복원 시 반영
-          content.setAttribute('data-content-state', contentStateKey);
+        // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음
+        if (content.getAttribute('data-content-state') !== contentStateKey) {
+          if (!content.classList.contains('highlighted')) {
+            content.innerHTML = getMarkerInnerHtml(post, isViewed);
+            content.setAttribute('data-content-state', contentStateKey);
+          }
+          // highlighted 중이면 state key만 저장 → 핑 종료 후 복원 시 사용
+          else {
+            content.setAttribute('data-content-state', contentStateKey);
+          }
         }
       }
     });
-  }, [posts, viewedPostIds, internalViewedIds, highlightedPostId, isMapReady, authUser]);
+  }, [posts, viewedPostIds, internalViewedIds, isMapReady, authUser]);
 
-  // ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
+  // ── highlight-marker 이벤트 핸들러 ────────────────────────
+  // React state와 완전히 분리된 순수 DOM 조작
   useEffect(() => {
     const handleHighlight = (e: any) => {
       const postId = e.detail?.id;
@@ -447,21 +435,21 @@ const MapContainer = ({
         if (overlay) {
           const content = overlay.getContent() as HTMLElement;
           if (content) {
-            // 모든 마커에서 highlighted 제거 후 HTML 복원
+            // 이미 진행 중인 다른 마커의 핑 제거 후 올바르게 복원
             overlaysRef.current.forEach((o, id) => {
               const c = o.getContent() as HTMLElement;
-              if (c && c.classList.contains('highlighted')) {
+              if (c && c.classList.contains('highlighted') && id !== postId) {
                 c.classList.remove('highlighted');
                 const p = postsRef.current.find(item => item.id === id);
                 if (p) {
-                  const combinedViewedIds = new Set<string>();
-                  const isViewed = combinedViewedIds.has(id);
+                  // 저장된 state key에서 isViewed 읽기
+                  const stateKey = c.getAttribute('data-content-state') || '';
+                  const isViewed = stateKey.startsWith('true');
                   c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 }
                 o.setZIndex(
-                  (o as any)._isMine ? 450 :
-                  (postsRef.current.find(item => item.id === id)?.isAd ? 500 :
-                  (postsRef.current.find(item => item.id === id)?.borderType !== 'none' ? 400 : 300))
+                  postsRef.current.find(item => item.id === id)?.isAd ? 500 :
+                  (postsRef.current.find(item => item.id === id)?.borderType !== 'none' ? 400 : 300)
                 );
               }
             });
@@ -472,28 +460,32 @@ const MapContainer = ({
             content.classList.add('highlighted');
             overlay.setZIndex(99999);
 
-            // duration 후 원복 - HTML 재생성하여 MY 스타일 보장
+            // duration 후 원복
             setTimeout(() => {
-              if (content && content.classList.contains('highlighted')) {
-                content.classList.remove('highlighted');
-                const p = postsRef.current.find(item => item.id === postId);
-                if (p) {
-                  const stateKey = content.getAttribute('data-content-state') || '';
-                  const isViewed = stateKey.startsWith('true');
-                  // MY 스타일로 HTML 재생성
-                  content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-                  // data-content-state를 isHighlighted=false 기준으로 업데이트
-                  // → 이후 React 리렌더링이 와도 key가 같아서 HTML을 덮어쓰지 않음
-                  const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
-                  const postUserId = (p as any).user_id || (p.user && p.user.id);
-                  const currentAuthUser = authUserRef.current;
-                  const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
-                  const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-false`;
-                  content.setAttribute('data-content-state', newStateKey);
-                }
-                const p2 = postsRef.current.find(item => item.id === postId);
-                overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
+              if (!content || !content.classList.contains('highlighted')) return;
+              content.classList.remove('highlighted');
+
+              const p = postsRef.current.find(item => item.id === postId);
+              if (p) {
+                // 저장된 state key에서 isViewed 읽기 (viewedPostIdsRef + internalViewedIdsRef 사용)
+                const combinedViewed = new Set([
+                  ...Array.from(viewedPostIdsRef.current),
+                  ...Array.from(internalViewedIdsRef.current)
+                ]);
+                const isViewed = combinedViewed.has(postId);
+                content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+
+                // state key 재계산 후 저장 → 이후 React 리렌더링이 와도 key 일치로 HTML 덮어쓰기 방지
+                const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
+                const postUserId = (p as any).user_id || (p.user && p.user.id);
+                const currentAuthUser = authUserRef.current;
+                const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
+                const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
+                content.setAttribute('data-content-state', newStateKey);
               }
+
+              const p2 = postsRef.current.find(item => item.id === postId);
+              overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
             }, duration);
             return;
           }
@@ -517,18 +509,15 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
 
     const MIN_LEVEL = 4;
-    // 레벨 4일 때의 센터를 기억해두기 위한 변수
     let lastAllowedCenter: any = null;
 
     const handleZoom = () => {
       const level = map.getLevel();
 
-      // 레벨 4 미만(더 확대)이면 즉시 센터도 함께 복구하여 지도 이동 방지
       if (level < MIN_LEVEL) {
         const centerToRestore = lastAllowedCenter || map.getCenter();
         map.setLevel(MIN_LEVEL, { animate: false });
         map.setCenter(centerToRestore);
-        // zoom 클래스를 MIN_LEVEL로 강제 유지 (클래스 공백으로 마커 깜빡임 방지)
         const el = containerRef.current;
         if (el) {
           el.className = el.className.replace(/\bzoom-\d+\b/g, '');
@@ -537,7 +526,6 @@ const MapContainer = ({
         return;
       }
 
-      // 레벨 4일 때 센터를 저장
       if (level === MIN_LEVEL) {
         lastAllowedCenter = map.getCenter();
       }
@@ -549,7 +537,6 @@ const MapContainer = ({
       }
     };
 
-    // idle 이벤트로도 레벨 4 센터를 갱신 (드래그 후 센터 변경 반영)
     const handleIdle = () => {
       if (map.getLevel() === MIN_LEVEL) {
         lastAllowedCenter = map.getCenter();
@@ -667,17 +654,14 @@ const MapContainer = ({
     }
   }, [searchResultLocation, isMapReady]);
 
+  // getMarkerInnerHtml: authUser 클로저를 직접 사용 (렌더링 시점에 항상 최신)
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    // [FIXED] ReferenceError: isAd is not defined
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     
-    // [FINAL NUCLEAR FIX] 닉네임이 본인 실존 닉네임이고 시드 데이터가 아닐 때만 MY 표기
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
-    const postUserName = post.user?.name || post.user_name;
     
     let isMine = false;
     if (authUser) {
-      // 내 ID이면서, 시드 데이터가 아닌 경우에만 MY 표시
       const userId = post.user_id || (post.user && post.user.id);
       if (String(userId) === String(authUser.id) && !isSeed) {
         isMine = true;
@@ -695,12 +679,10 @@ const MapContainer = ({
       return false;
     };
 
-    // ✅ [FIX] 동영상 포스트인 경우, 썸네일 대신 실제 비디오 URL을 사용하여 브라우저가 첫 프레임을 보여줄 수 있게 함
     let displayImage = post.image;
     const isVideo = !!post.videoUrl || !!post.youtubeUrl;
 
     if (isVideo && post.videoUrl) {
-      // 일반 비디오 파일인 경우 비디오 URL 자체를 사용하여 <img> 태그의 에러를 방지하고 처리
       displayImage = post.videoUrl;
     } else if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
       displayImage = getFallbackImage(String(post.id));
@@ -711,12 +693,12 @@ const MapContainer = ({
     }
 
     let borderType = post.borderType || 'none';
-    let pinColor = ''; let labelText = ''; let labelBg = ''; let labelColor = 'white';
-    if (isMine) { pinColor = '#4f46e5'; labelText = 'MY'; labelBg = '#4f46e5'; }
-    else if (isAd) { pinColor = '#3b82f6'; labelText = 'AD'; labelBg = '#3b82f6'; }
-    else if (borderType === 'popular') { pinColor = '#ef4444'; labelText = 'HOT'; labelBg = '#ef4444'; }
-    else if (borderType === 'diamond') { pinColor = '#22d3ee'; labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; }
-    else if (borderType === 'gold') { pinColor = '#fbbf24'; labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; }
+    let labelText = ''; let labelBg = ''; let labelColor = 'white';
+    if (isMine) { labelText = 'MY'; labelBg = '#4f46e5'; }
+    else if (isAd) { labelText = 'AD'; labelBg = '#3b82f6'; }
+    else if (borderType === 'popular') { labelText = 'HOT'; labelBg = '#ef4444'; }
+    else if (borderType === 'diamond') { labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; }
+    else if (borderType === 'gold') { labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; }
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = labelText ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
@@ -743,8 +725,6 @@ const MapContainer = ({
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
-    // 광고 전용 글로우 래퍼: 이미지 박스(position:relative) 안에 inset:0으로 배치
-    // overflow:visible 이므로 바깥으로 퍼져나감
     const adGlowHtml = isAd ? `
       <div class="ad-glow-wrapper">
         <div class="ad-pulse-ring-1"></div>
@@ -773,21 +753,8 @@ const MapContainer = ({
     </div>`;
   };
 
-  // getMarkerInnerHtml ref를 항상 최신으로 유지 (highlight 핸들러에서 stale closure 방지)
+  // ref를 항상 최신으로 유지 (highlight 핸들러에서 stale closure 방지)
   getMarkerInnerHtmlRef.current = getMarkerInnerHtml;
-
-  const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
-    const timeoutId = removalTimeoutsRef.current.get(id);
-    if (timeoutId) {
-      window.clearTimeout(timeoutId);
-      removalTimeoutsRef.current.delete(id);
-    }
-    if (content) {
-      content.classList.remove('animate-marker-disappear');
-      content.style.opacity = "1";
-      content.style.visibility = "visible";
-    }
-  };
 
   return (
     <div
