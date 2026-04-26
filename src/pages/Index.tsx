@@ -107,6 +107,7 @@ const Index = () => {
 
   // ✅ [NEW] 이전 요청 위치를 저장하여 미세한 이동 시 중복 요청 방지
   const lastRequestRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
+  const globalTrendingPostsRef = useRef<Post[]>([]);
 
   useEffect(() => {
     if (session?.user) {
@@ -264,6 +265,7 @@ const Index = () => {
         const trending = sorted.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 }));
         
         setGlobalTrendingPosts(trending);
+        globalTrendingPostsRef.current = trending;
         
         // setAllPosts 내부 로직은 유지하되, 무한 리렌더링을 유발할 수 있는 조건을 체크
       }
@@ -354,10 +356,13 @@ const Index = () => {
         };
       });
 
+      // globalTrendingPosts의 ID 목록 - 이 포스트들은 절대 삭제하지 않음 (ref 사용으로 의존성 없이 최신값 참조)
+      const trendingIds = new Set(globalTrendingPostsRef.current.map(p => p.id));
+
       setAllPosts(prev => {
         const postsToDelete: Post[] = prev.filter(p => {
           const inBounds = p.lat >= Math.min(sw.lat, ne.lat) && p.lat <= Math.max(sw.lat, ne.lat) && p.lng >= Math.min(sw.lng, ne.lng) && p.lng <= Math.max(sw.lng, ne.lng);
-          return inBounds && !validDbIds.has(p.id) && !p.isNewRealtime;
+          return inBounds && !validDbIds.has(p.id) && !p.isNewRealtime && !trendingIds.has(p.id);
         });
         if (postsToDelete.length > 0) {
           postsToDelete.forEach(p => window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } })));
