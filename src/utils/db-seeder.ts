@@ -399,27 +399,28 @@ export const seedInBoundsPosts = async (
         userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
         borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
-        // [FIX] 인플루언서 포스팅은 다른 사람의 것으로 보이게 하기 위해 user_id를 랜덤하게 부여 (표시용)
-        // 실제 record owner는 RLS를 위해 currentUserId를 사용하지만, user_id 컬럼값을 다르게 설정하여 'MY' 라벨링 우회
+        // [FIX] user_id는 UUID 형식이어야 하므로, 다른 실제 사용자 ID가 있으면 그것을 사용
         if (randomProfile && randomProfile.id !== currentUserId) {
           userIdForRecord = randomProfile.id;
         } else {
-          // 마땅한 랜덤 ID가 없으면 'system_influencer' 등의 가상 ID 사용
-          userIdForRecord = 'influencer_' + Math.floor(Math.random() * 1000);
+          // 마땅한 랜덤 ID가 없으면 현재 사용자 ID를 유지 (MapContainer에서 is_seed_data로 'MY' 라벨 방지)
+          userIdForRecord = currentUserId;
         }
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
         borderType = 'popular';
-        // [FIX] 인기 포스팅도 랜덤 사용자의 것으로 설정
         if (randomProfile && randomProfile.id !== currentUserId) {
           userIdForRecord = randomProfile.id;
+        } else {
+          userIdForRecord = currentUserId;
         }
       } else if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
         content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
         likes = 0;
-        userIdForRecord = 'ad_account'; // 광고 전용 가상 ID
+        // [FIX] 광고 계정도 UUID 형식을 지켜야 하므로 현재 사용자 ID 사용
+        userIdForRecord = currentUserId;
       }
 
       // 4. 위치 랜덤화 (Bounds 내)
