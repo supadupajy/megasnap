@@ -333,15 +333,15 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
-      {/* 고정 헤더(Header.tsx) 높이 + 상단 여백 확보 */}
+      {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 */}
       <div 
         className="shrink-0 bg-white" 
-        style={{ height: 'calc(env(safe-area-inset-top, 0px) + 80px)' }} 
+        style={{ height: 'calc(env(safe-area-inset-top, 0px) + 64px)' }} 
       />
       
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="bg-gray-50/50 border-y border-gray-100">
-          <div className="px-5 py-6">
+          <div className="px-5 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
