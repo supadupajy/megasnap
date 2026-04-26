@@ -5,7 +5,7 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            def appName = "Chora"
+            def appName = "ChoraSnap"
             def buildType = variant.buildType.name
             def versionName = variant.versionName
 

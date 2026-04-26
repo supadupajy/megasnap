@@ -1,6 +1,6 @@
 {
-	"appId": "com.example.megasnap",
-	"appName": "Chora",
+	"appId": "com.example.chorasnap",
+	"appName": "ChoraSnap",
 	"webDir": "dist",
 	"plugins": {
 		"Keyboard": {
