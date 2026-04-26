@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
@@ -235,6 +235,71 @@ const Index = () => {
     setDisplayedMarkers(unique);
   }, [allPosts, selectedCategories, blockedIds, authUser, currentZoom]);
 
+  // ── 줌 레벨별 마커 겹침 방지 분산 ──────────────────────────
+  // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
+  // 너무 가까운 마커들을 방사형으로 분산시킴
+  const spreadMarkers = useMemo(() => {
+    if (displayedMarkers.length === 0) return displayedMarkers;
+
+    // 줌 레벨별 마커 60px이 차지하는 위도/경도 거리 (카카오 지도 기준)
+    // level 5: 1px ≈ 0.000135도, 60px ≈ 0.0081도 (약 900m)
+    // level 6: 1px ≈ 0.00027도,  60px ≈ 0.0162도
+    // level 7: 1px ≈ 0.00054도,  60px ≈ 0.0324도
+    const minDistByLevel: Record<number, number> = {
+      1: 0.0010, 2: 0.0015, 3: 0.0020, 4: 0.0040,
+      5: 0.0065, // 약 720m - 마커 크기보다 약간 작게 (살짝 겹쳐도 OK)
+      6: 0.0090, // 줌아웃 시 더 넓게
+      7: 0.0150,
+    };
+    const minDist = minDistByLevel[currentZoom] ?? 0.0065;
+
+    // 중요도 순 정렬 (중요한 마커가 원래 위치 유지)
+    const priority = (p: Post) => {
+      if (p.borderType === 'diamond') return 5;
+      if (p.borderType === 'gold') return 4;
+      if (p.borderType === 'popular') return 3;
+      if (p.isAd) return 2;
+      return 1;
+    };
+    const sorted = [...displayedMarkers].sort((a, b) => priority(b) - priority(a));
+
+    // 그리드 기반 빠른 겹침 감지 + 분산
+    const placed: { lat: number; lng: number; id: string }[] = [];
+    const result: Post[] = [];
+
+    for (const post of sorted) {
+      let lat = post.lat;
+      let lng = post.lng;
+
+      // 이미 배치된 마커들과 겹치는지 확인
+      let attempts = 0;
+      const maxAttempts = 8;
+      while (attempts < maxAttempts) {
+        const conflict = placed.find(p => {
+          const dlat = Math.abs(p.lat - lat);
+          const dlng = Math.abs(p.lng - lng);
+          return dlat < minDist && dlng < minDist * 1.3; // 경도는 위도보다 약간 넓게
+        });
+
+        if (!conflict) break;
+
+        // 충돌 시 방사형으로 밀어냄 (8방향 순환)
+        const angle = (attempts * Math.PI * 2) / maxAttempts;
+        lat = post.lat + Math.cos(angle) * minDist * 0.9;
+        lng = post.lng + Math.sin(angle) * minDist * 1.1;
+        attempts++;
+      }
+
+      placed.push({ lat, lng, id: post.id });
+      result.push(lat === post.lat && lng === post.lng
+        ? post
+        : { ...post, lat, lng }
+      );
+    }
+
+    return result;
+  }, [displayedMarkers, currentZoom]);
+
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
@@ -440,7 +505,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={displayedMarkers}
+              posts={spreadMarkers}
               viewedPostIds={viewedIds}
               highlightedPostId={highlightedPostId}
               onMarkerClick={handleMarkerClick}
