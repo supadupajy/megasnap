@@ -574,6 +574,9 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
+    // [FIXED] ReferenceError: isAd is not defined
+    const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
+    
     // [FINAL NUCLEAR FIX] 닉네임이 '비트코인떡락'이면 MY, 아니면 무조건 MY를 뺌
     // is_seed_data 플래그가 있으면 닉네임과 상관없이 MY를 뺌
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
