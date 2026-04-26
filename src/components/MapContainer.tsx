@@ -564,10 +564,9 @@ useEffect(() => {
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
-    // 시드 데이터이거나, 닉네임이 내가 아닌 경우는 MY 라벨을 표시하지 않음
-    // [FIX] authUser.id와 post.user_id 매칭 로직 보강
+    // 시드 데이터(is_seed_data)인 경우는 MY 라벨을 표시하지 않음
     const postUserId = post.user_id || (post.user && post.user.id);
-    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me');
+    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !post.is_seed_data;
                    
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 
