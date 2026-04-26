@@ -15,6 +15,7 @@ const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -29,10 +30,24 @@ const Header = () => {
     }
   }, [user]);
 
+  const fetchUnreadNotifCount = useCallback(async () => {
+    if (!user) return;
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+
+    if (!error) {
+      setUnreadNotifCount(count || 0);
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchUnreadCount();
+    fetchUnreadNotifCount();
 
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('header-messages')
       .on(
         'postgres_changes',
@@ -48,10 +63,27 @@ const Header = () => {
       )
       .subscribe();
 
+    const notificationsChannel = supabase
+      .channel('header-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user?.id}`
+        },
+        () => {
+          fetchUnreadNotifCount();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(notificationsChannel);
     };
-  }, [user, fetchUnreadCount]);
+  }, [user, fetchUnreadCount, fetchUnreadNotifCount]);
   
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
@@ -83,6 +115,11 @@ const Header = () => {
             onClick={() => navigate('/notifications')}
           >
             <Bell className="w-6 h-6 text-gray-600" />
+            {unreadNotifCount > 0 && (
+              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+                {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+              </span>
+            )}
           </button>
           <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
