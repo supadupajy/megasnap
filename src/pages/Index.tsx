@@ -344,12 +344,16 @@ const Index = () => {
     setSelectedPostId(null);
     setSearchResultLocation(null);
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
-    setHighlightedPostId(null);
+    // null로 초기화하지 않고 바로 post.id로 설정 → 마커 useEffect가 isMine 상태를 유지한 채 렌더링
+    setHighlightedPostId(post.id);
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
-      highlightTimeoutRef.current = null;
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedPostId(null);
+        highlightTimeoutRef.current = null;
+      }, 2500);
     }, 1800);
   }, []);
 
@@ -683,8 +687,10 @@ const Index = () => {
             onViewPost={markAsViewed}
             onLikeToggle={handleLikeToggle}
             onLocationClick={(lat, lng) => {
-              const post = allPosts.find(p => p.lat === lat && p.lng === lng);
-              if (post) focusPostOnMap(post, { lat, lng });
+              // lat/lng로 찾으면 spreadMarkers 분산 좌표와 불일치할 수 있으므로
+              // 현재 열린 포스트(selectedPostId)를 우선 사용
+              const post = allPosts.find(p => p.id === selectedPostId) || allPosts.find(p => p.lat === lat && p.lng === lng);
+              if (post) focusPostOnMap(post, { lat: post.lat, lng: post.lng });
               else setMapCenter({ lat, lng });
               setSelectedPostId(null);
             }}

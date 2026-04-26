@@ -389,7 +389,8 @@ const MapContainer = ({
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const postUserId = (post as any).user_id || (post.user && post.user.id);
       const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
+      // isHighlighted를 key에 포함 → highlighted 상태 변화 시에만 HTML 재생성
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isHighlighted}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
