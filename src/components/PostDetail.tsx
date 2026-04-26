@@ -385,14 +385,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           
           <div className="relative flex-1 flex flex-col min-h-0">
             {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
-              <button 
-                onClick={onClose}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all pointer-events-auto"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              
+            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-end px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
               <div className="flex items-center gap-2 pointer-events-auto">
                 {isMine && (
                   <button 
@@ -402,8 +395,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <Trash2 className="w-5 h-5" />
                   </button>
                 )}
-                <button className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all">
-                  <Share2 className="w-5 h-5" />
+                <button 
+                  onClick={onClose}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
+                >
+                  <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
