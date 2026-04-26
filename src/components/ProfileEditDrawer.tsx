@@ -163,7 +163,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
         BottomNav(z-2000)보다 아래에 위치하도록 z-index를 1500으로 조정하고,
         하단 바 높이만큼 여백을 주어 겹치지 않게 처리
       */}
-      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-30px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <DrawerContent className="h-[80vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-40px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         
