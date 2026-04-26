@@ -238,20 +238,6 @@ const Index = () => {
     setDisplayedMarkers(unique);
   }, [allPosts, selectedCategories, blockedIds, authUser, currentZoom]);
 
-  // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
-  // 뱃지 숫자 및 PostListOverlay에 사용 (실제 화면에 보이는 것과 일치)
-  // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
-  // (displayedMarkers 기준으로 하면 분산으로 bounds 밖으로 밀려난 마커가 포함되거나
-  //  bounds 안으로 들어온 마커가 누락되어 숫자가 달라짐)
-  const visibleMarkers = useMemo(() => {
-    if (!mapData?.bounds) return spreadMarkers;
-    const { sw, ne } = mapData.bounds;
-    return spreadMarkers.filter(p =>
-      p.lat >= sw.lat && p.lat <= ne.lat &&
-      p.lng >= sw.lng && p.lng <= ne.lng
-    );
-  }, [spreadMarkers, mapData?.bounds]);
-
   // ── 줌 레벨별 마커 겹침 방지 분산 ──────────────────────────
   // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
   // 너무 가까운 마커들을 방사형으로 분산시킴
@@ -316,6 +302,17 @@ const Index = () => {
 
     return result;
   }, [displayedMarkers, currentZoom]);
+
+  // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
+  // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
+  const visibleMarkers = useMemo(() => {
+    if (!mapData?.bounds) return spreadMarkers;
+    const { sw, ne } = mapData.bounds;
+    return spreadMarkers.filter(p =>
+      p.lat >= sw.lat && p.lat <= ne.lat &&
+      p.lng >= sw.lng && p.lng <= ne.lng
+    );
+  }, [spreadMarkers, mapData?.bounds]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   const handleMapChange = useCallback((data: any) => {
