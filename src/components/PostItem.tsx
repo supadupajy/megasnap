@@ -89,7 +89,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const { user, content, isAd } = post;
-  const isMine = authUser?.id === user.id;
+  
+  // [DEBUG] Check IDs to identify why isMine is failing
+  useEffect(() => {
+    if (authUser && user) {
+      console.log("[PostItem] Auth User ID:", authUser.id);
+      console.log("[PostItem] Post User ID:", user.id);
+      console.log("[PostItem] Is Mine:", authUser.id === user.id);
+    }
+  }, [authUser, user]);
+
+  const isMine = authUser?.id === user.id || user.id === 'me';
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
