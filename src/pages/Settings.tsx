@@ -284,8 +284,8 @@ const Settings = () => {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-indigo-600">현재 화면 내 포스팅 생성</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 새로운 포스팅을 즉시 생성합니다.</span>
+                    <span className="text-sm font-bold text-indigo-600">현재 화면 안에 포스팅 생성</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 다양한 포스팅을 랜덤하게 배치합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />

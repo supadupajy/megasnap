@@ -327,7 +327,7 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}`;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${post.is_seed_data}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -564,9 +564,11 @@ useEffect(() => {
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
+    const isSeed = post.is_seed_data === true;
+    
     // 시드 데이터(is_seed_data)인 경우는 MY 라벨을 표시하지 않음
     const postUserId = post.user_id || (post.user && post.user.id);
-    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !post.is_seed_data;
+    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !isSeed;
                    
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 

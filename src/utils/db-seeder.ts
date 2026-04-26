@@ -450,9 +450,9 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: userIdForRecord, // DB record owner (for RLS - note: usually this needs to be currentUserId, but for seeding we might have special bypass or we handle it in UI)
-        user_name: userName,    // 표시용 랜덤 닉네임
-        user_avatar: userAvatar, // 표시용 랜덤 아바타
+        user_id: userIdForRecord, 
+        user_name: userName,    
+        user_avatar: userAvatar, 
         likes: likes,
         category: category,
         borderType: borderType, 
@@ -461,40 +461,20 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    // [FIX] RLS INSERT 정책이 (auth.uid() = user_id)인 경우, 
-    // 위에서 userIdForRecord를 랜덤하게 바꾸면 삽입이 거부될 수 있습니다.
-    // 만약 에러가 발생하면 user_id를 currentUserId로 강제하고 UI에서 is_seed_data로 필터링하도록 보장해야 합니다.
-    
-    // 안전을 위해, user_id는 currentUserId로 넣고, 
-    // 표시 로직에서 is_seed_data가 true면 user_id를 무시하도록 설계되어 있는지 확인하거나,
-    // 여기서 user_id를 currentUserId로 유지하되, 별도의 fake_user_id 컬럼이 없다면 
-    // UI(MapContainer)에서 is_seed_data를 체크하게 합니다.
+    console.log("📤 [Seeder] Inserting into DB:", insertData);
 
-    // 현재 MapContainer.tsx 코드를 보면:
-    // const postUserId = post.user_id || (post.user && post.user.id);
-    // const isMine = authUser && (postUserId === authUser.id || postUserId === 'me');
-    // ...
-    // 시드 데이터이거나, 닉네임이 내가 아닌 경우는 MY 라벨을 표시하지 않음
-    
-    // MapContainer의 주석에 "시드 데이터이거나... MY 라벨을 표시하지 않음"이라고 되어있지만 
-    // 실제 코드는 isMine 변수에만 의존하고 있습니다.
-    
-    // 따라서 seedInBoundsPosts에서는 user_id를 currentUserId가 아닌 값으로 넣어야 합니다.
-    // 만약 RLS가 이를 막는다면, Supabase Admin SQL로 실행하거나 RLS 정책을 확인해야 합니다.
-    
-    // 사용자의 불만사항이 "죄다 내 포스팅으로 만들어진다"이므로, user_id를 currentUserId가 아닌 것으로 넣는 것이 핵심입니다.
-    
     const { error } = await supabase.from('posts').insert(insertData);
     
-    // RLS 에러 발생 시 fallback: user_id를 내 ID로 넣되, 
-    // post_type 같은 필드를 활용하거나 MapContainer에서 is_seed_data를 체크하게 수정해야 함.
-    if (error && error.code === '42501') { // RLS violation
-      console.warn("⚠️ [Seeder] RLS restriction encountered. Falling back to currentUserId but keeping is_seed_data=true.");
-      const fallbackData = insertData.map(d => ({ ...d, user_id: currentUserId }));
-      const { error: retryError } = await supabase.from('posts').insert(fallbackData);
-      if (retryError) throw retryError;
-    } else if (error) {
-      throw error;
+    if (error) {
+      console.error("❌ [Seeder] Insert error:", error);
+      if (error.code === '42501') { 
+        console.warn("⚠️ [Seeder] RLS restriction encountered. Falling back to currentUserId.");
+        const fallbackData = insertData.map(d => ({ ...d, user_id: currentUserId }));
+        const { error: retryError } = await supabase.from('posts').insert(fallbackData);
+        if (retryError) throw retryError;
+      } else {
+        throw error;
+      }
     }
 
     console.log(`✨ [Seeder] ${insertData.length}개의 다양한 타입 포스팅이 생성되었습니다.`);
