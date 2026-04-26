@@ -196,7 +196,6 @@ const MapContainer = ({
       };
 
       const updateMapData = () => {
-        if (isProgrammaticMove.current) return;
         try {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
@@ -491,8 +490,6 @@ useEffect(() => {
     const duration = Math.min(Math.max(dist * 800, 600), 1200);
     const startTime = performance.now();
 
-    isProgrammaticMove.current = true;
-
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -510,20 +507,7 @@ useEffect(() => {
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
-        isProgrammaticMove.current = false;
         animationFrameRef.current = null;
-        try {
-          const bounds = map.getBounds();
-          const mapLevel = map.getLevel();
-          onMapChangeRef.current({
-            bounds: {
-              sw: { lat: bounds.getSouthWest().getLat(), lng: bounds.getSouthWest().getLng() },
-              ne: { lat: bounds.getNorthEast().getLat(), lng: bounds.getNorthEast().getLng() }
-            },
-            center: { lat: targetLat, lng: targetLng },
-            level: mapLevel
-          });
-        } catch (e) {}
       }
     };
 

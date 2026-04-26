@@ -82,7 +82,7 @@ const Index = () => {
     } catch (e) { console.error('[Confetti] Confetti error:', e); }
   }, []);
 
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [allPosts, setAllPosts] = useState<Post[]>(() => mapCache.posts || []);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
@@ -283,11 +283,14 @@ const Index = () => {
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
-    const center = mapData?.center;
+    // forceBounds가 있을 때는 그 중심을 계산, 없으면 mapData.center 사용
+    const center = mapData?.center || (forceBounds ? {
+      lat: (forceBounds.sw.lat + forceBounds.ne.lat) / 2,
+      lng: (forceBounds.sw.lng + forceBounds.ne.lng) / 2,
+    } : null);
     const zoomToUse = forceZoom ?? currentZoom;
 
     if (!targetBounds || !center || isSyncing.current) return;
-    if (!isInitialLoadDone && !isFirstLoadRequested.current) return;
 
     if (lastRequestRef.current) {
       const { lat: lastLat, lng: lastLng, zoom: lastZoom } = lastRequestRef.current;
@@ -368,37 +371,26 @@ const Index = () => {
         return combined;
       });
     } catch (err) { console.error(err); } finally { isSyncing.current = false; }
-  }, [mapData, currentZoom, mapDbToPost]);
+  }, [mapData, currentZoom]);
 
-  useEffect(() => { 
-    if (mapData && isInitialLoadDone) {
-      syncPostsWithSupabase(); 
-    } else if (mapData && !isInitialLoadDone && !isFirstLoadRequested.current) {
-      // ✅ [FIX] 맵 데이터는 준비되었으나 초기 데이터 로딩(인기 포스팅)이 진행 중인 경우,
-      // 최초 한 번은 즉시 현재 영역의 데이터를 가져오도록 강제 실행합니다.
+  useEffect(() => {
+    if (mapData?.bounds) {
       isFirstLoadRequested.current = true;
-      syncPostsWithSupabase(mapData.bounds, currentZoom);
+      syncPostsWithSupabase();
     }
-  }, [mapData, isInitialLoadDone, syncPostsWithSupabase, currentZoom]);
+  }, [mapData, syncPostsWithSupabase]);
 
   const handleMapChange = useCallback((data: any) => {
-    const zoomChanged = data.level !== undefined && data.level !== currentZoom;
-    if (zoomChanged) {
-      if (throttleTimer.current) clearTimeout(throttleTimer.current);
-      setMapData(data); setCurrentZoom(data.level);
-      mapCache.lastCenter = data.center; mapCache.lastZoom = data.level;
-      if (isSelectingLocation) setTempSelectedLocation(data.center);
-      setTimeout(() => { syncPostsWithSupabase(data.bounds, data.level); }, 50);
-      return;
-    }
-    if (throttleTimer.current) return;
+    // throttle 없이 즉시 mapData 업데이트 - idle 이벤트는 이미 카카오 지도가 throttle함
+    if (throttleTimer.current) clearTimeout(throttleTimer.current);
     throttleTimer.current = setTimeout(() => {
-      setMapData(data); mapCache.lastCenter = data.center;
+      setMapData(data);
+      mapCache.lastCenter = data.center;
       if (data.level !== undefined) { setCurrentZoom(data.level); mapCache.lastZoom = data.level; }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 100);
-  }, [isSelectingLocation, currentZoom, syncPostsWithSupabase]);
+    }, 50);
+  }, [isSelectingLocation]);
 
   useEffect(() => {
     if (currentZoom >= 11) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
