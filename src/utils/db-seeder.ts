@@ -379,8 +379,6 @@ export const seedInBoundsPosts = async (
 
   try {
     await initializeYoutubePool();
-    // 1. 프로필 목록을 가져오지만, 닉네임은 무조건 랜덤 풀에서 섞어 사용
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     
     const count = 5; 
     const insertData = [];
@@ -390,16 +388,12 @@ export const seedInBoundsPosts = async (
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // 3. 사용자 정보 무조건 랜덤화 (본인 닉네임 절대 금지)
+      // 3. 닉네임 무조건 랜덤 생성 (RANDOM_NICKNAMES 풀 사용)
       const randomNick = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+      const randomAvatarSeed = Math.random().toString(36).substring(7);
       
-      // 아바타는 실제 유저 정보를 쓰거나 없으면 생성
-      const randomProfile = profiles && profiles.length > 0 
-        ? profiles[Math.floor(Math.random() * profiles.length)]
-        : null;
-      
-      let userName = randomNick; // [CRITICAL] 닉네임은 무조건 랜덤 풀에서 할당
-      let userAvatar = randomProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+      let userName = randomNick;
+      let userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomAvatarSeed}`;
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
       let borderType = 'none';

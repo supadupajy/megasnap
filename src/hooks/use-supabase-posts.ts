@@ -30,6 +30,10 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
+  // [CRITICAL FIX] 시드 데이터인 경우 DB에 저장된 user_name을 무조건 최우선 사용
+  const finalUserName = p.is_seed_data ? (p.user_name || '익명 탐험가') : (p.user_name || p.profiles?.nickname || '익명 사용자');
+  const finalUserAvatar = p.is_seed_data ? (p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`) : (p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`);
+
   return {
     id: p.id,
     isAd: p.is_ad || false,
@@ -37,9 +41,8 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
       id: p.user_id,
-      // [FIX] DB에 user_name이 직접 저장되어 있다면 (시드 데이터 등) 해당 이름을 우선 사용
-      name: p.user_name || p.profiles?.nickname || '익명 사용자',
-      avatar: p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`,
+      name: finalUserName,
+      avatar: finalUserAvatar,
     },
     content: p.content || '설명이 없는 포스팅입니다.',
     location: p.location_name || '알 수 없는 장소',
