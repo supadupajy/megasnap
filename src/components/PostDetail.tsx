@@ -51,6 +51,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  
+  // [FIX] youtubeId 변수 선언 위치를 상단으로 고정
+  const youtubeId = useMemo(() => {
+    if (!currentPost) return '';
+    return getYoutubeId(currentPost.youtubeUrl || '');
+  }, [currentPost]);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   
