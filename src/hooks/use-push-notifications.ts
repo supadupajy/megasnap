@@ -60,16 +60,38 @@ export const usePushNotifications = () => {
     const addListeners = () => {
       PushNotifications.addListener('registration', async (token) => {
         console.log('Push registration success, token: ' + token.value);
-        // 토큰 갱신 로그 (추적용)
-        console.log('[Push] Updating token in DB for user:', authUser.id);
         
-        const { error } = await supabase
-          .from('profiles')
-          .update({ push_token: token.value })
-          .eq('id', authUser.id);
+        try {
+          // 현재 저장된 토큰 가져오기
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('push_token')
+            .eq('id', authUser.id)
+            .single();
 
-        if (error) console.error('[Push] Token update failed:', error);
-        else console.log('[Push] Token successfully saved to DB');
+          if (fetchError) {
+            console.error('[Push] Failed to fetch current token:', fetchError);
+          }
+
+          // 토큰이 이미 동일하면 업데이트 스킵
+          if (profile?.push_token === token.value) {
+            console.log('[Push] Token is already up to date. Skipping DB update.');
+            return;
+          }
+
+          // 토큰 갱신 로그 (추적용)
+          console.log('[Push] Updating token in DB for user:', authUser.id);
+          
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ push_token: token.value })
+            .eq('id', authUser.id);
+
+          if (updateError) console.error('[Push] Token update failed:', updateError);
+          else console.log('[Push] Token successfully saved to DB');
+        } catch (err) {
+          console.error('[Push] Unexpected error during token update:', err);
+        }
       });
 
       PushNotifications.addListener('registrationError', (error) => {
