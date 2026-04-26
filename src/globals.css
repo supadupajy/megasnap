@@ -252,3 +252,95 @@
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* =============================================
+   광고 마커 전용: 펄스 글로우 링 + 외부 헤일로
+   ============================================= */
+
+/* 1. 펄스 글로우 링 - 파란 빛이 바깥으로 퍼져나가는 동심원 */
+@keyframes ad-pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* 2. 헤일로 숨쉬기 - 뒤에서 빛이 새어나오는 효과 */
+@keyframes ad-halo-breathe {
+  0%, 100% {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* 광고 마커 전용 래퍼 - 링과 헤일로를 담는 컨테이너
+   marker-content-wrapper 안에서 마커 이미지 박스(60px) 중앙에 정렬 */
+.ad-glow-wrapper {
+  position: absolute;
+  /* labelHtml(약 22px) + 마커 박스 절반(30px) = 약 52px 아래가 이미지 중앙 */
+  top: 52px;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 3. 외부 헤일로: 항상 켜져 있는 은은한 블러 원형 배경 */
+.ad-glow-wrapper::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.55) 0%, rgba(99, 102, 241, 0.25) 50%, transparent 75%);
+  filter: blur(6px);
+  animation: ad-halo-breathe 2.2s ease-in-out infinite;
+  transform: translate(-50%, -50%);
+}
+
+/* 4. 펄스 링 1번째 */
+.ad-pulse-ring-1 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.5);
+  animation: ad-pulse-ring 2.2s ease-out infinite;
+}
+
+/* 5. 펄스 링 2번째 (0.7s 딜레이로 엇갈리게) */
+.ad-pulse-ring-2 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.4);
+  animation: ad-pulse-ring 2.2s ease-out 0.7s infinite;
+}
+
+/* 6. 펄스 링 3번째 (1.4s 딜레이) */
+.ad-pulse-ring-3 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(147, 197, 253, 0.3);
+  animation: ad-pulse-ring 2.2s ease-out 1.4s infinite;
+}

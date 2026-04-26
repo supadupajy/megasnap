@@ -710,8 +710,16 @@ useEffect(() => {
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
+    const adGlowHtml = isAd ? `
+      <div class="ad-glow-wrapper">
+        <div class="ad-pulse-ring-1"></div>
+        <div class="ad-pulse-ring-2"></div>
+        <div class="ad-pulse-ring-3"></div>
+      </div>` : '';
+
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
+      ${adGlowHtml}
       <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
