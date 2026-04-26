@@ -480,38 +480,50 @@ const Chat = () => {
   }
 
   return (
-    <div className="bg-white overflow-hidden flex flex-col h-screen relative" style={{ paddingTop: '88px' }}>
+    <div className="bg-white overflow-hidden flex flex-col h-screen relative">
       <header
         ref={headerRef}
-        className="fixed top-[88px] left-0 right-0 h-14 z-[100] bg-white flex items-center px-4 border-b border-gray-50 will-change-transform"
+        className="fixed top-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-b border-gray-50 pt-[env(safe-area-inset-top,0px)] will-change-transform"
       >
-        <div className="flex items-center w-full relative">
+        <div className="h-16 px-4 flex items-center w-full relative">
           <button
             onClick={handleBack}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all z-10"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all z-10 shrink-0"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           
-          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight leading-none">
-              {otherUser?.nickname || '사용자'}
-            </h2>
-            <div className="flex items-center gap-1 mt-0.5">
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                isOnline ? "bg-green-500 animate-pulse" : "bg-gray-300"
-              )} />
-              <span className={cn(
-                "text-[10px] font-black uppercase tracking-tight",
-                isOnline ? "text-green-500" : "text-gray-400"
-              )}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 max-w-[60%]">
+            <div 
+              className="w-10 h-10 rounded-full p-[1.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer"
+              onClick={() => navigate(`/profile/${chatId}`)}
+            >
+              <img
+                src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`}
+                alt="user"
+                className="w-full h-full rounded-full object-cover border-2 border-white"
+              />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-sm font-black text-gray-900 tracking-tight leading-none truncate">
+                {otherUser?.nickname || '사용자'}
+              </h2>
+              <div className="flex items-center gap-1 mt-1">
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  isOnline ? "bg-green-500 animate-pulse" : "bg-gray-300"
+                )} />
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-tight",
+                  isOnline ? "text-green-500" : "text-gray-400"
+                )}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-1 z-10">
+          <div className="ml-auto flex items-center gap-0.5 z-10 shrink-0">
             <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><Phone className="w-5 h-5" /></button>
             <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><MoreVertical className="w-5 h-5" /></button>
           </div>
@@ -522,7 +534,7 @@ const Chat = () => {
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
-          paddingTop: '64px',
+          paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))',
           paddingBottom: '220px',
         }}
       >
