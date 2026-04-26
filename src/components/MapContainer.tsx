@@ -223,6 +223,11 @@ const MapContainer = ({
           const ne = bounds.getNorthEast();
           const mapLevel = mapInstance.current.getLevel();
           
+          // ✅ [FIX] relayout()을 호출하여 지도의 크기와 줌 레벨을 재계산하도록 합니다.
+          // 지도가 처음에 0,0 좌표로 쏠리는 현상을 방지합니다.
+          mapInstance.current.relayout();
+          mapInstance.current.setCenter(currentCenter);
+
           onMapChangeRef.current({
             bounds: {
               sw: { lat: sw.getLat(), lng: sw.getLng() },
@@ -232,7 +237,7 @@ const MapContainer = ({
             level: mapLevel,
           });
         }
-      }, 300);
+      }, 500);
 
       // ✅ [FIX] bounds_changed를 제거하고 idle만 남겨서 지도 이동 중에 발생하는 폭주하는 요청을 차단합니다.
       kakao.maps.event.addListener(map, 'idle', updateMapData);
