@@ -42,7 +42,7 @@ const getFallbackImage = (postId: string) => {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser, profile: authProfile } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -282,12 +282,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return "https://www.coca-cola.co.kr/";
   }, [currentPost]);
 
-  // [CRITICAL FIX] 닉네임 표시 로직을 Post 객체에 들어있는 name 그대로 사용하도록 보장
-  // 여기서 currentPost.user.name은 use-supabase-posts.ts의 mapDbToPost에서 이미 가공된 값입니다.
-  const postDisplayName = currentPost.user.name;
+  // [CRITICAL FIX] 닉네임 표시 로직
+  // use-supabase-posts.ts에서 이미 p.user_name을 우선하도록 가공된 currentPost.user.name을 그대로 사용합니다.
+  const postDisplayName = useMemo(() => {
+    if (!currentPost) return '익명';
+    return currentPost.user.name;
+  }, [currentPost]);
   
-  const isSeed = currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
-  const isMine = !!(authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed);
+  const isSeed = useMemo(() => {
+    if (!currentPost) return false;
+    return currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
+  }, [currentPost]);
+
+  const isMine = useMemo(() => {
+    if (!currentPost || !authUser) return false;
+    // 시드 데이터가 아니고, ID가 일치할 때만 본인 포스팅으로 간주
+    return (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed;
+  }, [currentPost, authUser, isSeed]);
+
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -300,7 +312,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
-    // [FIX] isMine 변수를 여기서도 사용할 수 있도록 위에서 정의했습니다.
+    // [FIX] isMine 판정을 사용하여 본인 프로필로 갈지 타인 프로필로 갈지 결정
     if (isMine) navigate('/profile');
     else navigate(`/profile/${currentPost.user.id}`);
   };
@@ -354,13 +366,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!commentInput.trim() || !authUser) return;
     setIsSubmittingComment(true);
     const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    const displayName = authProfile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     try {
       const savedComment = await insertComment({
         postId: currentPost.id,
         userId: authUser.id,
         userName: displayName,
-        userAvatar: profile?.avatar_url,
+        userAvatar: authProfile?.avatar_url,
         content: newCommentText,
       });
       setLocalComments((prev) => [...prev, savedComment]);

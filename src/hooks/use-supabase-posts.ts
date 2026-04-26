@@ -30,21 +30,24 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
-  // [ULTIMATE ATOMIC FIX]
-  // 닉네임 결정 로직을 극도로 단순화하고 명확하게 합니다.
-  
-  // 1. 기본값 설정
-  let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
-  let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
-
-  // 2. [CRITICAL] 본인 닉네임 덮어쓰기 방지
-  // p.is_seed_data가 설정되어 있다면, p.user_id가 본인이라 할지라도 
-  // p.user_name (랜덤 닉네임)이 있으면 그것을 '강제로' 사용합니다.
+  // [FINAL ATOMIC FIX]
+  // DB의 user_name 필드 존재 여부와 is_seed_data 여부를 결합하여 닉네임을 결정합니다.
   const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
   
+  let finalUserName = '';
+  let finalUserAvatar = '';
+
   if (isSeed && p.user_name) {
-    console.log('[use-supabase-posts] Seed data detected, enforcing randomized name:', p.user_name);
+    // 1. 시드 데이터이면서 랜덤 닉네임이 저장되어 있다면 무조건 그것을 사용 (본인 프로필 덮어쓰기 완전 방지)
     finalUserName = p.user_name;
+    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
+  } else if (p.profiles?.nickname) {
+    // 2. 일반 게시물이면 프로필 조인 정보를 사용
+    finalUserName = p.profiles.nickname;
+    finalUserAvatar = p.profiles.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id}`;
+  } else {
+    // 3. 둘 다 없으면 기본값
+    finalUserName = p.user_name || '익명 사용자';
     finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
   }
 

@@ -396,28 +396,22 @@ export const seedInBoundsPosts = async (
       
       let userName = "";
       let userAvatar = "";
-      let userIdForRecord = currentUserId;
 
       if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
       } else if (otherProfiles && otherProfiles.length > 0) {
-        // [ULTIMATE FIX] 실존하는 타인의 정보를 무작위 선택하고
-        // 그 사용자의 실제 ID를 user_id 필드에 넣습니다.
         const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
         userName = p.nickname;
         userAvatar = p.avatar_url;
-        userIdForRecord = p.id;
       } else {
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
-        // 타인 ID가 없으면 어쩔 수 없이 내 ID를 쓰지만 닉네임은 랜덤
-        userIdForRecord = currentUserId;
       }
 
-      // [FIX] 닉네임이 '비트코인떡락'이면 강제로 랜덤 풀에서 변경
+      // [CRITICAL] 본인 닉네임이 절대 들어가지 않도록 강제 필터링
       if (userName === '비트코인떡락') {
-        userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        userName = RANDOM_NICKNAMES.find(n => n !== '비트코인떡락') || '익명탐험가';
       }
 
       let likes = Math.floor(Math.random() * 500);
@@ -459,8 +453,8 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, // [CRITICAL] 403 에러 방지를 위해 ID는 본인 것으로 고정
-        user_name: userName,    // [CRITICAL] 하지만 닉네임 필드에 랜덤 닉네임 저장
+        user_id: currentUserId, 
+        user_name: userName, // [VITAL] 이 값이 DB의 user_name 컬럼에 정확히 꽂혀야 함
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -470,17 +464,13 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    console.log("📤 [Seeder] Inserting into DB with is_seed_data=true:", insertData);
+    // [DEBUG] 인서트 전 데이터 최종 확인
+    console.log("📤 [Seeder] Final Check - insertData nicknames:", insertData.map(d => d.user_name));
 
-    // [FIX] RLS(403) 에러를 피하기 위해 항상 본인 ID로 인서트합니다.
     const { error } = await supabase.from('posts').insert(insertData);
-    
-    if (error) {
-      console.error("❌ [Seeder] Insert error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log(`✨ [Seeder] ${insertData.length}개의 다양한 랜덤 포스팅 생성 완료`);
+    console.log(`✨ [Seeder] ${insertData.length}개의 포스팅 생성 완료`);
     return insertData.length;
   } catch (err) {
     console.error("❌ [Seeder] 화면 내 데이터 생성 실패:", err);
