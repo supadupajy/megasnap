@@ -156,21 +156,9 @@ const Index = () => {
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
     if (!rawPost || !rawPost.id) return null as any;
     try {
-      // ✅ [FIX] rawPost에 이미 필요한 정보가 대부분 있는 경우, 불필요한 단일 조회를 건너뛰거나
-      // 정보가 부족할 때만 fetch하도록 로직 개선
-      let p = rawPost;
-      
-      // 만약 닉네임이나 이미지 URL 등이 없는 요약본인 경우 상세 데이터 fetch
-      if (!p.user_name || !p.location_name || !p.content) {
-        const { data: fullData, error: postError } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('id', rawPost.id)
-          .single();
-        if (!postError && fullData) {
-          p = fullData;
-        }
-      }
+      // ✅ [OPTIMIZATION] 이제 fetchPostsInBounds에서 모든 정보를 가져오므로, 
+      // 추가적인 서버 요청(single() 조회 등)을 모두 제거하여 서버 부하를 줄입니다.
+      const p = rawPost;
 
       const contentText = p.content || '';
       const isAd = contentText.trim().startsWith('[AD]');
@@ -210,12 +198,9 @@ const Index = () => {
         if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
       }
       
-      let userName = p.user_name || '탐험가';
-      let userAvatar = p.user_avatar || '';
-      if (p.user_id) {
-        const { data: profileData } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', p.user_id).maybeSingle();
-        if (profileData) { userName = profileData.nickname || userName; userAvatar = profileData.avatar_url || userAvatar; }
-      }
+      // ✅ [FIX] 이미 상위에서 조인된 유저 정보를 사용하므로, 별도의 Profiles 조회를 하지 않습니다.
+      const userName = p.user_name || '탐험가';
+      const userAvatar = p.user_avatar || '';
 
       return {
         id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
@@ -234,11 +219,28 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      // 1. 최신/인기 포스트 100개 가져오기
-      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(100);
+      // ✅ [OPTIMIZATION] 인기 포스팅 조회 시에도 프로필을 Join하여 한 번에 가져옵니다.
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            nickname,
+            avatar_url
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
       if (!error && data) {
-        // 2. [FIX] 가져온 100개 중 실제로 데이터가 유효한지 확인하고 상세 매핑
-        const mappedRaw = await Promise.all(data.map(mapDbToPost));
+        // 조인된 데이터를 평면 구조로 정규화
+        const normalizedData = data.map(p => ({
+          ...p,
+          user_name: p.profiles?.nickname || p.user_name || '탐험가',
+          user_avatar: p.profiles?.avatar_url || p.user_avatar || ''
+        }));
+
+        const mappedRaw = await Promise.all(normalizedData.map(mapDbToPost));
         const validMapped = mappedRaw.filter(p => p !== null && p.id);
         
         // 3. 좋아요 순으로 정렬하여 상위 20개 선정

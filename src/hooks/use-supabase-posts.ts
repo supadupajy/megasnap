@@ -87,16 +87,23 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  // 줌 레벨에 따라 limit 조정 (데이터 절약을 위해 최대치 하향 조정)
   let limit = 200; 
   if (currentLevel >= 8) limit = 300;
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [FIX] user_name, user_avatar 추가하여 초기 렌더링 시에도 유저 정보 표시 가능하도록 수정
+    // ✅ [OPTIMIZATION] profiles 테이블을 Join하여 N+1 쿼리 문제를 근본적으로 해결합니다.
+    // user_id를 통해 profiles의 nickname과 avatar_url을 한 번에 가져옵니다.
     let query = supabase
       .from('posts')
-      .select('id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, user_name, user_avatar, location_name')
+      .select(`
+        id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, 
+        user_id, user_name, user_avatar, location_name,
+        profiles:user_id (
+          nickname,
+          avatar_url
+        )
+      `)
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -107,7 +114,13 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    
+    // ✅ [FIX] 조인된 데이터를 기존 UI가 기대하는 평면 구조로 변환하여 사이드 이펙트를 방지합니다.
+    return (data || []).map(p => ({
+      ...p,
+      user_name: p.profiles?.nickname || p.user_name || '탐험가',
+      user_avatar: p.profiles?.avatar_url || p.user_avatar || ''
+    }));
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
     return [];
