@@ -235,7 +235,7 @@ const Settings = () => {
       </div>
       
       <div className="pt-16">
-        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100 sticky top-0 z-[90]">
+        <header className="h-[64px] bg-white/80 backdrop-blur-md flex items-center px-4 border-b border-gray-100 sticky top-0 z-[90]">
           <div className="flex items-center gap-3">
             <button 
               onClick={(e) => {
