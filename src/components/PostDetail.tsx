@@ -43,7 +43,7 @@ const getFallbackImage = (postId: string) => {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -280,7 +280,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
   const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
-  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !currentPost.is_seed_data;
+  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
+  const [isLiked, setIsLiked] = useState(currentPost.isLiked);
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
