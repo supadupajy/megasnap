@@ -185,7 +185,6 @@ const MapContainer = ({
         level: 5
       });
       map.setMaxLevel(11);
-      map.setMinLevel(4);
       mapInstance.current = map;
 
       const updateZoomClass = () => {
@@ -432,15 +431,17 @@ useEffect(() => {
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
 
+    const MIN_LEVEL = 4;
+
     const handleZoom = () => {
       const level = map.getLevel();
-      let scale = 1.0;
-      if (level === 6) scale = 0.7;
-      else if (level === 7) scale = 0.45;
-      else if (level >= 8) scale = 0;
 
-      // REMOVED: manual scale adjustment here. 
-      // We rely on CSS classes (zoom-X) added to the map container.
+      // 레벨 4 미만(더 확대)이면 즉시 애니메이션 없이 강제로 4로 되돌림
+      if (level < MIN_LEVEL) {
+        map.setLevel(MIN_LEVEL, { animate: false });
+        return;
+      }
+
       const el = containerRef.current;
       if (el) {
         el.className = el.className.replace(/\bzoom-\d+\b/g, '');
