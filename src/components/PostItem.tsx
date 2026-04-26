@@ -554,7 +554,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </div>
             <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
               <MapPin className="w-3 h-3" />
-              <span className="text-[10px] font-medium">{post.location || '위치 정보 없음'}</span>
+              <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
             </div>
           </div>
         </div>

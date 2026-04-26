@@ -41,7 +41,8 @@ const ObservedPostItem = ({
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
   useEffect(() => {
     const fetchFullData = async () => {
-      if (fullPost.user.name === '...') {
+      // ✅ [FIX] user.name이 '...'이거나 location이 없으면 데이터를 새로 불러옴
+      if (fullPost.user.name === '...' || !fullPost.location || fullPost.location === '알 수 없는 장소') {
         try {
           const { data: p, error } = await supabase
             .from('posts')
@@ -69,7 +70,8 @@ const ObservedPostItem = ({
             setFullPost(prev => ({
               ...prev,
               user: { ...prev.user, name: userName, avatar: userAvatar },
-              content: p.content?.replace(/^\[AD\]\s*/, '') || ''
+              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+              location: p.location_name || '알 수 없는 장소' // ✅ [FIX] location_name 매핑 추가
             }));
           }
         } catch (err) {
