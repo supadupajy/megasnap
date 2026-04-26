@@ -281,22 +281,22 @@ const Profile = () => {
   }
 
   return (
-    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar pt-16">
+    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-[env(safe-area-inset-top,0px)]">
         {/* 내 프로필 상단 메뉴 바 - 스크롤 시에도 고정 */}
-        <div className="sticky top-0 z-40 px-4 py-4 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
+        <div className="sticky top-0 z-40 px-4 h-14 bg-white border-b border-gray-50 flex items-center pt-[env(safe-area-inset-top,20px)]">
+          <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <UserIcon className="w-6 h-6 text-indigo-600" />
+              <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shadow-sm">
+                <UserIcon className="w-5 h-5 text-indigo-600" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-gray-900">내 프로필</h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none">나의 활동과 기록</p>
+                <h2 className="text-base font-black text-gray-900 leading-tight">내 프로필</h2>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">My Activity</p>
               </div>
             </div>
-            <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <Settings className="w-5 h-5 text-gray-400" />
+            <button onClick={() => navigate('/settings')} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+              <Settings className="w-6 h-6 text-gray-400" />
             </button>
           </div>
         </div>
