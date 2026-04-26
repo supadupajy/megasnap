@@ -418,9 +418,12 @@ const MapContainer = ({
           existingOverlay.setMap(mapInstance.current);
         }
         
-        // 상태가 변했으면 HTML 업데이트
-        if (content.getAttribute('data-content-state') !== contentStateKey) {
+        // 상태가 변했으면 HTML 업데이트 (highlighted 중인 마커는 건드리지 않음)
+        if (content.getAttribute('data-content-state') !== contentStateKey && !content.classList.contains('highlighted')) {
           content.innerHTML = getMarkerInnerHtml(post, isViewed);
+          content.setAttribute('data-content-state', contentStateKey);
+        } else if (content.getAttribute('data-content-state') !== contentStateKey) {
+          // highlighted 중이라면 state key만 업데이트해두고 HTML은 나중에 복원 시 반영
           content.setAttribute('data-content-state', contentStateKey);
         }
       }
@@ -466,19 +469,19 @@ const MapContainer = ({
             content.classList.add('highlighted');
             overlay.setZIndex(99999);
 
-            // duration 후 원복 - HTML도 재생성하여 MY 스타일 보장
+            // duration 후 원복 - HTML 재생성하여 MY 스타일 보장
             setTimeout(() => {
               if (content && content.classList.contains('highlighted')) {
                 content.classList.remove('highlighted');
                 const p = postsRef.current.find(item => item.id === postId);
                 if (p) {
-                  const isViewed = content.getAttribute('data-content-state')?.startsWith('true') || false;
+                  // data-content-state의 첫 번째 값(isViewed)을 파싱
+                  const stateKey = content.getAttribute('data-content-state') || '';
+                  const isViewed = stateKey.startsWith('true');
                   content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 }
-                overlay.setZIndex(
-                  postsRef.current.find(item => item.id === postId)?.isAd ? 500 :
-                  postsRef.current.find(item => item.id === postId)?.borderType !== 'none' ? 400 : 300
-                );
+                const p2 = postsRef.current.find(item => item.id === postId);
+                overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
               }
             }, duration);
             return;
