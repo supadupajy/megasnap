@@ -162,12 +162,13 @@ const Popular = () => {
           <div className="flex flex-col">
             {filteredPosts.map((post) => (
               <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <PostItem 
-                  post={post} 
-                  onLikeToggle={() => handleLikeToggle(post.id)} 
-                  onLocationClick={handleLocationClick} 
+                <PostItem
+                  post={post}
+                  onLikeToggle={() => handleLikeToggle(post.id)}
+                  onLocationClick={handleLocationClick}
                   onDelete={handlePostDelete}
                   autoPlayVideo={true}
+                  disablePulse={true}
                 />
               </div>
             ))}

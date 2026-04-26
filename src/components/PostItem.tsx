@@ -533,11 +533,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={cn(
         "bg-white transition-none",
-        isMine && "ring-2 ring-indigo-600 ring-offset-2 rounded-2xl mb-2",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
