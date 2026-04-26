@@ -55,10 +55,14 @@ const Header = () => {
     const messagesChannelName = `header-messages-${user.id}`;
     const notificationsChannelName = `header-notifications-${user.id}`;
 
-    let mChannel = supabase.channel(messagesChannelName);
-    let nChannel = supabase.channel(notificationsChannelName);
+    // 이전에 생성된 채널이 있다면 제거하여 충돌 방지
+    const existingChannels = supabase.getChannels();
+    const mOld = existingChannels.find(c => c.topic === `realtime:${messagesChannelName}`);
+    const nOld = existingChannels.find(c => c.topic === `realtime:${notificationsChannelName}`);
+    if (mOld) supabase.removeChannel(mOld);
+    if (nOld) supabase.removeChannel(nOld);
 
-    mChannel
+    const mChannel = supabase.channel(messagesChannelName)
       .on(
         'postgres_changes',
         {
@@ -78,10 +82,9 @@ const Header = () => {
           filter: `sender_id=eq.${user.id}`
         },
         () => fetchUnreadCount()
-      )
-      .subscribe();
+      );
 
-    nChannel
+    const nChannel = supabase.channel(notificationsChannelName)
       .on(
         'postgres_changes',
         {
@@ -91,8 +94,10 @@ const Header = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => fetchUnreadNotifCount()
-      )
-      .subscribe();
+      );
+
+    mChannel.subscribe();
+    nChannel.subscribe();
 
     const handleRefresh = () => {
       fetchUnreadCount();
@@ -101,6 +106,8 @@ const Header = () => {
     window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
+      mChannel.unsubscribe();
+      nChannel.unsubscribe();
       supabase.removeChannel(mChannel);
       supabase.removeChannel(nChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
