@@ -122,7 +122,7 @@ export const fetchPostsInBounds = async (
   try {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
+      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType, profiles:user_id(nickname, avatar_url)')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))

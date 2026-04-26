@@ -119,8 +119,14 @@ const Index = () => {
       else if (v < 0.08) borderType = 'gold';
     }
     const isSeed = p.is_seed_data === true || p.is_seed_data === 'true';
-    const userName = isSeed ? (p.user_name || '탐험가') : (p.user_name || p.profiles?.nickname || '탐험가');
-    const userAvatar = isSeed ? (p.user_avatar || '') : (p.user_avatar || p.profiles?.avatar_url || '');
+    // is_seed_data=false인 실제 유저 포스트는 profiles.nickname을 우선 사용
+    // posts.user_name에는 "탐험가" 같은 기본값이 저장되어 있을 수 있으므로 신뢰하지 않음
+    const userName = isSeed
+      ? (p.user_name || '탐험가')
+      : (p.profiles?.nickname || p.user_name || '탐험가');
+    const userAvatar = isSeed
+      ? (p.user_avatar || '')
+      : (p.profiles?.avatar_url || p.user_avatar || '');
     const img = p.image_url || '';
     return {
       id: p.id,
@@ -156,7 +162,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar, is_seed_data, borderType')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar, is_seed_data, borderType, profiles:user_id(nickname, avatar_url)')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
@@ -367,8 +373,7 @@ const Index = () => {
       if (!error && data) {
         const full = mapRawToPost({
           ...data,
-          user_name: (data.is_seed_data || data.user_name) ? data.user_name : (data.profiles?.nickname || '탐험가'),
-          user_avatar: (data.is_seed_data || data.user_avatar) ? data.user_avatar : (data.profiles?.avatar_url || ''),
+          // profiles 조인 결과를 그대로 전달 → mapRawToPost에서 isSeed 여부에 따라 올바르게 처리
         });
         setAllPosts(prev => {
           const idx = prev.findIndex(p => p.id === full.id);
