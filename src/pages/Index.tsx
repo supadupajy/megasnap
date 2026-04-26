@@ -442,24 +442,33 @@ const Index = () => {
   }, [fetchGlobalTrending, mapData, mapDbToPost]);
 
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
-    // 1. 즉시 ID 설정하여 모달 오픈 시도
+    // 1. 즉시 ID 설정하여 모달 오픈 시도 (UI는 즉시 응답)
     setSelectedPostId(lightPost.id);
     
-    // 2. 이미 모든 정보가 있다면 추가 fetch 불필요
-    if (lightPost.user && lightPost.user.name !== '...' && lightPost.location && lightPost.content) {
-      return;
-    }
-
-    // 3. 정보가 부족한 경우 (MapContainer에서 최소 데이터만 받은 경우) 상세 정보 로드
+    // 2. [FIX] 지도의 마커 정보(lightPost)는 최소 데이터만 있으므로, 
+    // 상세 정보가 필요한 시점(클릭 시)에만 서버에서 조인된 전체 데이터를 가져옵니다.
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            nickname,
+            avatar_url
+          )
+        `)
         .eq('id', lightPost.id)
         .single();
         
       if (!error && data) {
-        const full = await mapDbToPost(data);
+        // 조인된 유저 정보를 기존 구조로 매핑
+        const normalizedData = {
+          ...data,
+          user_name: data.profiles?.nickname || data.user_name || '탐험가',
+          user_avatar: data.profiles?.avatar_url || data.user_avatar || ''
+        };
+
+        const full = await mapDbToPost(normalizedData);
         if (full) {
           setAllPosts(prev => {
             const index = prev.findIndex(p => p.id === full.id);
@@ -479,7 +488,7 @@ const Index = () => {
         }
       }
     } catch (err) { 
-      console.error('[Index] Failed to fetch full post data:', err); 
+      console.error('[Index] Failed to fetch full post data on click:', err); 
     }
   }, [mapDbToPost]);
 

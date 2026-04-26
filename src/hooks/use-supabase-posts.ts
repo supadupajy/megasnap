@@ -92,18 +92,11 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] profiles 테이블을 Join하여 N+1 쿼리 문제를 근본적으로 해결합니다.
-    // user_id를 통해 profiles의 nickname과 avatar_url을 한 번에 가져옵니다.
+    // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
+    // 마커를 지도에 그리는 데 꼭 필요한 최소 정보만 조회합니다. (본문, 이미지 배열, 프로필 조인 제외)
     let query = supabase
       .from('posts')
-      .select(`
-        id, content, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, 
-        user_id, user_name, user_avatar, location_name,
-        profiles:user_id (
-          nickname,
-          avatar_url
-        )
-      `)
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -114,13 +107,7 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
-    
-    // ✅ [FIX] 조인된 데이터를 기존 UI가 기대하는 평면 구조로 변환하여 사이드 이펙트를 방지합니다.
-    return (data || []).map(p => ({
-      ...p,
-      user_name: p.profiles?.nickname || p.user_name || '탐험가',
-      user_avatar: p.profiles?.avatar_url || p.user_avatar || ''
-    }));
+    return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
     return [];
