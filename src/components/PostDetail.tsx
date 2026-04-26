@@ -278,6 +278,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // [CRITICAL FIX] 닉네임 표시 로직을 Post 객체에 들어있는 name 그대로 사용하도록 보장
   // 여기서 currentPost.user.name은 use-supabase-posts.ts의 mapDbToPost에서 이미 가공된 값입니다.
   const postDisplayName = currentPost.user.name;
+  
+  const isSeed = currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
+  const isMine = !!(authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed);
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return;
@@ -289,6 +293,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    // [FIX] isMine 변수를 여기서도 사용할 수 있도록 위에서 정의했습니다.
     if (isMine) navigate('/profile');
     else navigate(`/profile/${currentPost.user.id}`);
   };
