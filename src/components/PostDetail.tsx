@@ -394,15 +394,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-end px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
               <div className="flex items-center gap-2 pointer-events-auto">
-                {isMine && (
-                  <button 
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="w-10 h-10 flex items-center justify-center rounded-full bg-rose-500/20 backdrop-blur-md text-rose-500 border border-rose-500/20 active:scale-90 transition-all"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
-                <button 
+                <button
                   onClick={onClose}
                   className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
                 >
