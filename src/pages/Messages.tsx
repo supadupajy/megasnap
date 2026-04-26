@@ -96,38 +96,34 @@ const Messages = () => {
     fetchConversations();
     if (!authUser) return;
     
-    // 로컬 스토리지 변경 감지 (Chat 페이지에서 나가거나 들어올 때 뱃지 즉시 갱신)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'activeChatId') {
         fetchConversations();
       }
     };
     window.addEventListener('storage', handleStorageChange);
-    // Custom 이벤트로도 동작하게 (같은 창에서는 storage 이벤트가 발생하지 않으므로)
+
     const handleRefreshEvent = () => {
-      console.log('[Messages] Refreshing list from custom event');
       fetchConversations();
     };
     window.addEventListener('refresh-messages-list', handleRefreshEvent);
 
-    // 메시지 실시간 업데이트
+    // 메시지 실시간 업데이트 - 내가 관련된 메시지만 구독
     const channel = supabase.channel('messages_list_updates')
       .on(
         'postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages' }, 
-        (payload) => {
-          // INSERT 시점에 현재 내가 해당 채팅방에 있는지 다시 확인하여 뱃지 카운트 결정
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `receiver_id=eq.${authUser.id}`
+        }, 
+        () => {
+          // 새 메시지 수신 시에만 재fetch (UPDATE/DELETE 제외)
           fetchConversations();
         }
       )
       .subscribe();
-
-    // Header에서 발생하는 'refresh-messages-list' 이벤트 리스너 추가 (내가 보낸 메시지 동기화 보강)
-    const handleRefreshEvent2 = () => {
-      console.log('[Messages] Refreshing list from custom event');
-      fetchConversations();
-    };
-    window.addEventListener('refresh-messages-list', handleRefreshEvent2);
 
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     

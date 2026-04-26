@@ -109,10 +109,11 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  // 줌 레벨에 따라 limit 조정
-  let limit = 1000;
-  if (currentLevel >= 8) limit = 1500;
-  if (currentLevel >= 10) limit = 2000;
+  // 줌 레벨에 따라 limit 조정 (기존 대비 대폭 축소)
+  // 줌아웃(넓은 영역)일수록 더 적게 가져와서 egress 절약
+  let limit = 200;
+  if (currentLevel >= 7) limit = 300;
+  if (currentLevel >= 9) limit = 500;
 
   try {
     const { data, error } = await supabase

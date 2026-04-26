@@ -155,9 +155,9 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles:user_id(nickname, avatar_url)')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar, is_seed_data, borderType')
         .order('likes', { ascending: false })
-        .limit(50);
+        .limit(20);
       if (!error && data) {
         const mapped = data.map(mapRawToPost);
         const trending = mapped.slice(0, 20).map((p, i) => ({ ...p, rank: i + 1 }));
@@ -323,7 +323,7 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 50);
+    }, 800); // 50ms → 800ms: 지도 이동이 완전히 멈춘 후에만 fetch
   }, [isSelectingLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────

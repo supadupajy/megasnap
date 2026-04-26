@@ -64,20 +64,18 @@ const Profile = () => {
     return 'none';
   };
 
-  const mapDbToPost = async (p: any): Promise<Post> => {
+  const mapDbToPost = async (p: any, isLiked = false, isSaved = false): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
 
     const isValidUrl = (url: any) => {
       if (!url || typeof url !== 'string') return false;
       const clean = url.trim();
-      // [FIX] 'Content 0'과 같은 잘못된 플레이스홀더 텍스트나 비정상적인 URL 필터링
       if (/content\s*\d+/i.test(clean)) return false;
       if (/post\s*content/i.test(clean)) return false;
       if (!clean.startsWith('http')) return false;
       return true;
     };
 
-    // 데이터 클렌징: 이미지가 유효하지 않으면 폴백 이미지 사용
     let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
     let rawImages = Array.isArray(p.images) && p.images.length > 0 
       ? p.images.filter(isValidUrl)
@@ -85,14 +83,12 @@ const Profile = () => {
       
     if (rawImages.length === 0) rawImages = [rawImage];
 
-    // 정제된 데이터를 바탕으로 sanitize 진행
     const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
     const isAd = sanitized.content?.trim().startsWith('[AD]');
     
     let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
     const likesCountNum = Number(sanitized.likes || 0);
     
-    // [FIX] 인기 포스팅 기준을 좋아요 9,000개 이상으로 설정
     if (likesCountNum >= 9000) {
       borderType = 'popular';
     } else if (!isAd) {
@@ -109,18 +105,6 @@ const Profile = () => {
       ? sanitized.images.filter(isValidUrl)
       : [finalImage];
 
-    let isLiked = false;
-    let isSaved = false;
-    
-    if (authUser?.id) {
-      const [{ data: likeData }, { data: saveData }] = await Promise.all([
-        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
-        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
-      ]);
-      isLiked = !!likeData;
-      isSaved = !!saveData;
-    }
-
     return {
       id: sanitized.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
       user: { 
@@ -128,15 +112,17 @@ const Profile = () => {
         name: sanitized.user_id === authUser?.id ? displayName : (sanitized.user_name || '탐험가'), 
         avatar: sanitized.user_id === authUser?.id ? avatarUrl : (sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`)
       },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', 
-      location: sanitized.location_name || '알 수 없는 장소', 
-      lat: sanitized.latitude, 
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: sanitized.location_name || '알 수 없는 장소',
+      lat: sanitized.latitude,
       lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), 
+      latitude: sanitized.latitude,
+      longitude: sanitized.longitude,
+      likes: Number(sanitized.likes || 0),
       commentsCount: 0, 
       comments: [], 
       image: finalImage, 
-      image_url: finalImage, // 명시적 추가
+      image_url: finalImage,
       images: finalImages.length > 0 ? finalImages : [finalImage], 
       youtubeUrl: sanitized.youtube_url, 
       videoUrl: sanitized.video_url,
@@ -151,22 +137,19 @@ const Profile = () => {
   const loadProfileData = useCallback(async (uid: string) => {
     setIsDataLoading(true);
     try {
-      // 1. Fetch My Posts (Optimize: limit query scope and use simple select)
+      // 1. Fetch My Posts
       const { data: myData, error: myPostsError } = await supabase
         .from('posts')
         .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id')
         .eq('user_id', uid)
         .order('created_at', { ascending: false })
-        .limit(50); // Add safety limit for initial load
+        .limit(50);
 
       if (myPostsError) {
         console.error('[Profile] My Posts fetch error:', myPostsError);
-      } else if (myData) {
-        const formattedMyPosts = await Promise.all(myData.map(mapDbToPost));
-        setMyPosts(formattedMyPosts);
       }
 
-      // 2. Fetch Saved Posts with optimized join
+      // 2. Fetch Saved Posts
       const { data: savedData, error: savedError } = await supabase
         .from('saved_posts')
         .select(`
@@ -179,18 +162,43 @@ const Profile = () => {
       if (savedError) {
         console.error('[Profile] Saved Posts fetch error:', savedError);
       }
-      
-      if (savedData) {
-        // Extract the nested post objects and format them
-        const validPosts = savedData
-          .filter((item: any) => item.posts)
-          .map((item: any) => item.posts);
-          
-        const formattedSavedPosts = await Promise.all(validPosts.map(mapDbToPost));
+
+      // 3. 일괄로 likes/saved 상태 조회 (N+1 쿼리 제거)
+      const myPostIds = (myData || []).map(p => p.id);
+      const savedPostObjects = (savedData || []).filter((item: any) => item.posts).map((item: any) => item.posts);
+      const savedPostIds = savedPostObjects.map((p: any) => p.id);
+      const allPostIds = [...new Set([...myPostIds, ...savedPostIds])];
+
+      let likedPostIds = new Set<string>();
+      let savedPostIdSet = new Set<string>();
+
+      if (authUser?.id && allPostIds.length > 0) {
+        const [{ data: likesData }, { data: savedPostsData }] = await Promise.all([
+          supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds),
+          supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds)
+        ]);
+        likedPostIds = new Set((likesData || []).map(l => l.post_id));
+        savedPostIdSet = new Set((savedPostsData || []).map(s => s.post_id));
+      }
+
+      if (myData) {
+        const formattedMyPosts = await Promise.all(
+          myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)))
+        );
+        setMyPosts(formattedMyPosts);
+      }
+
+      if (savedPostObjects.length > 0) {
+        const formattedSavedPosts = await Promise.all(
+          savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)))
+        );
         setSavedPosts(formattedSavedPosts);
       }
       
-      const [followersRes, followingRes] = await Promise.all([supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid), supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)]);
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)
+      ]);
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
     } catch (err) { hasFetched.current = false; } finally { setIsDataLoading(false); }

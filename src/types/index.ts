@@ -38,6 +38,7 @@ export interface Post {
   image_url: string;
   images: string[];
   isLiked: boolean;
+  isSaved?: boolean;
   youtubeUrl?: string;
   videoUrl?: string;
   category: string;
