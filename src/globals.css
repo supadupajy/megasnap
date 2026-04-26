@@ -82,7 +82,8 @@
   z-index: 10;
   width: 60px;
   height: 60px;
-  transition: transform 0.2s ease-out !important;
+  /* transition 제거: zoom 전환 중 깜빡임 방지 */
+  transition: none;
   /* 기본값: zoom 클래스가 없어도 마커가 올바른 위치에 표시되도록 */
   transform: translate(-50%, -100%) scale(1) !important;
   transform-origin: 50% 100%;
@@ -106,6 +107,11 @@
 #kakao-map.zoom-7 .marker-container {
   transform: translate(-50%, -100%) scale(0.45) !important;
   transform-origin: 50% 100%;
+}
+
+/* zoom 클래스가 없는 전환 순간에도 마커가 보이도록 기본 보장 */
+#kakao-map .marker-container {
+  display: block !important;
 }
 
 #kakao-map.zoom-8 .marker-container,

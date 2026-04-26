@@ -493,6 +493,12 @@ useEffect(() => {
         const centerToRestore = lastAllowedCenter || map.getCenter();
         map.setLevel(MIN_LEVEL, { animate: false });
         map.setCenter(centerToRestore);
+        // zoom 클래스를 MIN_LEVEL로 강제 유지 (클래스 공백으로 마커 깜빡임 방지)
+        const el = containerRef.current;
+        if (el) {
+          el.className = el.className.replace(/\bzoom-\d+\b/g, '');
+          el.classList.add(`zoom-${MIN_LEVEL}`);
+        }
         return;
       }
 
