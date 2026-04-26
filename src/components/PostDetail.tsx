@@ -405,7 +405,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/95 overflow-hidden flex flex-col z-[1000]">
+        <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/50 overflow-hidden flex flex-col z-[1000]">
           <VisuallyHidden.Root>
             <DialogTitle>포스트 상세 보기</DialogTitle>
             <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
@@ -413,7 +413,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           
           <div className="relative flex-1 flex flex-col min-h-0">
             {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-end px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
+            <div className="absolute top-0 left-0 right-0 z-50 flex items-end justify-end px-4 h-24 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
               <div className="flex items-center gap-2 pointer-events-auto">
                 <button
                   onClick={onClose}
