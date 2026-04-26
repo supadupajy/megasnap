@@ -95,10 +95,10 @@ const Search = () => {
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 고정 상단 헤더 - z-index와 배경색 명시하여 확실히 노출 */}
-      <div className="fixed top-0 inset-x-0 z-[100] bg-white">
-        <div className="h-[env(safe-area-inset-top,0px)] w-full bg-white" />
-        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
+      {/* 고정 상단 헤더 - z-index 최상위로 설정하고 fixed 대신 flex 구조 활용 고려 */}
+      <div className="shrink-0 bg-white z-[100] border-b border-gray-100">
+        <div className="h-[env(safe-area-inset-top,0px)] w-full" />
+        <div className="px-4 py-4 bg-gray-50/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
@@ -116,9 +116,9 @@ const Search = () => {
         </div>
       </div>
 
-      {/* 검색 입력창 영역 - 헤더 바로 아래에서 시작하도록 pt 조정 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+100px)]">
-        <div className="px-4 pb-2">
+      {/* 검색 입력창 영역 */}
+      <div className="shrink-0 bg-white z-[90]">
+        <div className="px-4 py-4">
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input 
