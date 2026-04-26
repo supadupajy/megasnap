@@ -227,14 +227,22 @@ const Settings = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar relative">
-      <Header />
+      <div className="fixed top-0 left-0 right-0 z-[100]">
+        <Header />
+      </div>
       
       <div className="pt-16">
-        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
+        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100 sticky top-0 z-[90]">
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => navigate('/profile')} 
-              className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[Settings] Back button clicked - Navigating to /profile');
+                navigate('/profile');
+              }} 
+              className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95 cursor-pointer relative z-[110]"
+              style={{ pointerEvents: 'auto' }}
             >
               <ChevronLeft className="w-6 h-6 text-gray-400" />
             </button>
