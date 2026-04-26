@@ -99,7 +99,7 @@ const Index = () => {
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(48); 
+  const [timeValue, setTimeValue] = useState(168);
   const { session } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);

@@ -109,27 +109,27 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  // 줌 레벨에 따라 limit 조정 (더 넓은 범위 = 더 많은 포스트)
-  let limit = 500; 
-  if (currentLevel >= 8) limit = 800;
-  if (currentLevel >= 10) limit = 1000;
+  // 줌 레벨에 따라 limit 조정
+  let limit = 1000;
+  if (currentLevel >= 8) limit = 1500;
+  if (currentLevel >= 10) limit = 2000;
+
+  // 7일 이내 데이터만 가져옴 (timeValue 최대값과 일치)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    let query = supabase
+    const { data, error } = await supabase
       .from('posts')
       .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
-      .lte('longitude', Math.max(sw.lng, ne.lng));
-
-    // 좋아요 순으로 정렬하여 인기 포스트가 먼저 로드되도록
-    const { data, error } = await query
+      .lte('longitude', Math.max(sw.lng, ne.lng))
+      .gte('created_at', sevenDaysAgo)
       .order('likes', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    
     return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
