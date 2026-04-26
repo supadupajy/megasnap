@@ -16,17 +16,17 @@ export const usePushNotifications = () => {
     const register = async () => {
       try {
         // 1. 커스텀 사운드를 위한 알림 채널 생성 (Android 8.0+)
-        // 캐시를 무효화하고 새 사운드를 강제 적용하기 위해 ID를 'messages_v3'로 업그레이드
+        // 캐시를 무효화하고 설정을 강제 적용하기 위해 ID를 'messages_v4'로 업그레이드
         await PushNotifications.createChannel({
-          id: 'messages_v3',
+          id: 'messages_v4', // ID 변경으로 설정 갱신 유도
           name: 'Chat Messages',
           description: '채팅 메시지 알림',
-          sound: 'message_pop', // res/raw/message_pop.mp3 (스샷에서 강조된 파일로 변경 시도)
-          importance: 5,
+          sound: 'default', // 커스텀 파일이 없을 경우를 대비해 기본음으로 설정하거나 'message_pop' 유지
+          importance: 5, // 최고 중요도 (헤드업 알림 + 소리)
           visibility: 1,
           vibration: true,
         });
-        console.log('[Push] Notification channel created: messages_v3 (pop sound)');
+        console.log('[Push] Notification channel created/updated: messages_v4');
 
         let permStatus = await PushNotifications.checkPermissions();
 

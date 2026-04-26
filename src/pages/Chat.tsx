@@ -62,7 +62,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
-  const [canPlaySound, setCanPlaySound] = useState(true);
+  const [canPlaySound, setCanPlaySound] = useState(false); // 초기값을 false로 변경하여 상호작용 유도
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -114,22 +114,23 @@ const Chat = () => {
 
   // 사운드 재생 함수
   const playNotificationSound = useCallback((inChat: boolean) => {
-    if (!canPlaySound) return;
+    if (!canPlaySound) {
+      console.log('[Chat] Audio not enabled yet by user interaction');
+      return;
+    }
     
     try {
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
-      audio.volume = inChat ? 0.2 : 0.5; // [CLEANUP] 볼륨 미세 조정
+      audio.volume = inChat ? 0.4 : 0.8; // 볼륨 상향 조정
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          if (e.name !== 'NotAllowedError') {
-            // [CLEANUP] 불필요한 로그 삭제
-          }
+          console.warn('[Chat] Audio play blocked:', e.message);
         });
       }
     } catch (e) {
-      // [CLEANUP] 에러 처리 단순화
+      console.error('[Chat] Audio error:', e);
     }
   }, [canPlaySound]);
 
