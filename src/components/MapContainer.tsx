@@ -213,6 +213,11 @@ const MapContainer = ({
       setIsMapReady(true);
       setIsLoading(false);
 
+      // ✅ [FIX] 초기 로딩 시 부모에게 영역 정보를 확실히 전달하기 위해 명시적 호출
+      setTimeout(() => {
+        updateMapData();
+      }, 100);
+
       // ✅ [FIX] bounds_changed를 제거하고 idle만 남겨서 지도 이동 중에 발생하는 폭주하는 요청을 차단합니다.
       kakao.maps.event.addListener(map, 'idle', updateMapData);
       
