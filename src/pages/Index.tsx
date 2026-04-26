@@ -360,7 +360,7 @@ const Index = () => {
     } catch (err) { console.error(err); } finally { isSyncing.current = false; }
   }, [mapData, currentZoom, mapDbToPost]);
 
-  useEffect(() => { if (mapData) syncPostsWithSupabase(); }, [mapData, syncPostsWithSupabase]);
+  useEffect(() => { if (mapData && isInitialLoadDone) syncPostsWithSupabase(); }, [mapData, isInitialLoadDone, syncPostsWithSupabase]);
 
   const handleMapChange = useCallback((data: any) => {
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;
