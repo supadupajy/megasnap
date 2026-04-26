@@ -347,13 +347,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!commentInput.trim() || !authUser) return;
     setIsSubmittingComment(true);
     const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    // profile fetch logic might be missing or in parent, but let's use authUser fallback
+    const displayName = authUser.email?.split('@')[0] || '탐험가';
     try {
       const savedComment = await insertComment({
         postId: currentPost.id,
         userId: authUser.id,
         userName: displayName,
-        userAvatar: profile?.avatar_url,
         content: newCommentText,
       });
       setLocalComments((prev) => [...prev, savedComment]);
@@ -386,7 +386,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
       <AnimatePresence>
-        {isVisible && currentPost && (
+        {isOpen && currentPost && (
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
