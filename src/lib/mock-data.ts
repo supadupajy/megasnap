@@ -160,8 +160,27 @@ const WEB_SEARCHED_IMAGES = [
   'https://images.pexels.com/photos/15286/pexels-photo.jpg'
 ];
 
-const getStableWebImage = (id: string) => {
-  if (!id) return WEB_SEARCHED_IMAGES[0];
+// 음식 전용 이미지 풀 (Pexels 음식 사진)
+const FOOD_WEB_IMAGES = [
+  'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+  'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg',
+  'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg',
+  'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg',
+  'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg',
+  'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg',
+  'https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg',
+  'https://images.pexels.com/photos/1410235/pexels-photo-1410235.jpeg',
+  'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg',
+  'https://images.pexels.com/photos/1565982/pexels-photo-1565982.jpeg',
+  'https://images.pexels.com/photos/3184183/pexels-photo-3184183.jpeg',
+  'https://images.pexels.com/photos/1633578/pexels-photo-1633578.jpeg',
+  'https://images.pexels.com/photos/2664216/pexels-photo-2664216.jpeg',
+  'https://images.pexels.com/photos/1437267/pexels-photo-1437267.jpeg',
+  'https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg',
+];
+
+const getStableWebImage = (id: string, variant: 'food' | 'general' = 'general') => {
+  if (!id) return variant === 'food' ? FOOD_WEB_IMAGES[0] : WEB_SEARCHED_IMAGES[0];
 
   // 블랙리스트 체크 (ID 포함 여부 또는 전체 URL 일치)
   const isBlacklisted = BLACKLISTED_IMAGES.some(url => 
@@ -171,15 +190,17 @@ const getStableWebImage = (id: string) => {
     (typeof url === 'string' && url.includes(id))
   );
 
+  const pool = variant === 'food' ? FOOD_WEB_IMAGES : WEB_SEARCHED_IMAGES;
+
   if (isBlacklisted) {
-    return WEB_SEARCHED_IMAGES[0];
+    return pool[0];
   }
 
   // ID 기반으로 안정적인 이미지 인덱스 생성
   const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const index = Math.abs(hash) % WEB_SEARCHED_IMAGES.length;
+  const index = Math.abs(hash) % pool.length;
   
-  return WEB_SEARCHED_IMAGES[index];
+  return pool[index];
 };
 
 /**
@@ -289,14 +310,8 @@ export const getDiverseUnsplashUrl = (
   variant: 'general' | 'food' | 'accident' | 'place' | 'animal' = 'general',
   salt = 0,
 ) => {
-  const typeMap: Record<string, 'scenery' | 'food' | 'animal'> = {
-    general: 'scenery',
-    place: 'scenery',
-    accident: 'scenery',
-    food: 'food',
-    animal: 'animal'
-  };
-  return getStableWebImage(`${seed}:${salt}`);
+  const webVariant = variant === 'food' ? 'food' : 'general';
+  return getStableWebImage(`${seed}:${salt}`, webVariant);
 };
 
 export const remapUnsplashDisplayUrl = (

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
 import { getYoutubeThumbnail } from "@/lib/utils";
-import { remapUnsplashDisplayUrl } from "@/lib/mock-data";
+import { remapUnsplashDisplayUrl, getDiverseUnsplashUrl } from "@/lib/mock-data";
 import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
 
 const getTierFromId = (id: string) => {
@@ -28,7 +28,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   
   const finalImage = p.youtube_url
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
+    : isAd
+      ? getDiverseUnsplashUrl(p.id, 'food')
+      : remapUnsplashDisplayUrl(p.image_url, p.id, p.category || 'general') || p.image_url;
 
   // [FINAL ATOMIC FIX]
   // DB의 user_name 필드 존재 여부와 is_seed_data 여부를 결합하여 닉네임을 결정합니다.
@@ -70,9 +72,11 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     likes: Number(p.likes || 0),
     commentsCount: 0,
     comments: [],
-    image: p.image_url || '',
-    image_url: p.image_url || '',
-    images: p.images || (p.image_url ? [p.image_url] : []),
+    image: finalImage || '',
+    image_url: finalImage || '',
+    images: isAd
+      ? [finalImage || '']
+      : (p.images || (p.image_url ? [p.image_url] : [])),
     isLiked: false,
     youtubeUrl: p.youtube_url,
     videoUrl: p.video_url,
