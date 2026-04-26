@@ -53,6 +53,9 @@ const MapContainer = ({
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(5);
 
+  // 핀치 줌 원천 차단용
+  const pinchStartDistRef = useRef<number | null>(null);
+
   const centerRef = useRef(center);
   const levelRef = useRef(5);
   useEffect(() => { centerRef.current = center; }, [center]);
@@ -170,6 +173,53 @@ const MapContainer = ({
         const events = ['mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend', 'contextmenu', 'selectstart', 'dragstart'];
         events.forEach(evt => container.removeEventListener(evt, preventSelectionError, { capture: true } as any));
       }
+    };
+  }, []);
+
+  // 핀치 줌 원천 차단: document capture 단계에서 브라우저 터치 자체를 preventDefault로 취소
+  useEffect(() => {
+    const getDistance = (touches: TouchList) => {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      const el = containerRef.current;
+      if (!el || !el.contains(e.target as Node)) return;
+      if (e.touches.length === 2) {
+        pinchStartDistRef.current = getDistance(e.touches);
+      } else {
+        pinchStartDistRef.current = null;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const el = containerRef.current;
+      if (!el || !el.contains(e.target as Node)) return;
+      if (e.touches.length !== 2 || pinchStartDistRef.current === null) return;
+      const map = mapInstance.current;
+      if (!map) return;
+
+      const level = map.getLevel();
+      if (level <= 4) {
+        const currentDist = getDistance(e.touches);
+        // pinch out(벌리기) = 거리가 늘어남 = 확대 시도 → 브라우저 터치 자체를 취소
+        if (currentDist > pinchStartDistRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          pinchStartDistRef.current = currentDist;
+        }
+      }
+    };
+
+    // document 레벨 capture에 등록하여 카카오맵보다 먼저 실행
+    document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
+      document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
     };
   }, []);
 
