@@ -410,11 +410,12 @@ const MapContainer = ({
         // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음 (highlightingIdsRef로 추적)
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           if (!highlightingIdsRef.current.has(post.id)) {
+            console.log(`[MARKER-UPDATE] id=${post.id} isMineKey=${isMineKey} isViewed=${isViewed} oldKey="${content.getAttribute('data-content-state')}" newKey="${contentStateKey}"`);
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
           }
-          // 핑 중이면 state key만 저장 → 핑 종료 후 복원 시 사용
           else {
+            console.log(`[MARKER-SKIP-HIGHLIGHTING] id=${post.id} key updated only`);
             content.setAttribute('data-content-state', contentStateKey);
           }
         }
@@ -471,20 +472,18 @@ const MapContainer = ({
 
               const p = postsRef.current.find(item => item.id === postId);
               if (p) {
-                // 저장된 state key에서 isViewed 읽기 (viewedPostIdsRef + internalViewedIdsRef 사용)
                 const combinedViewed = new Set([
                   ...Array.from(viewedPostIdsRef.current),
                   ...Array.from(internalViewedIdsRef.current)
                 ]);
                 const isViewed = combinedViewed.has(postId);
-                content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-
-                // state key 재계산 후 저장 → 이후 React 리렌더링이 와도 key 일치로 HTML 덮어쓰기 방지
                 const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
                 const postUserId = (p as any).user_id || (p.user && p.user.id);
                 const currentAuthUser = authUserRef.current;
                 const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
+                console.log(`[PING-END] id=${postId} isMineKey=${isMineKey} isViewed=${isViewed} authUser=${currentAuthUser?.id} postUserId=${postUserId} newStateKey="${newStateKey}"`);
+                content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 content.setAttribute('data-content-state', newStateKey);
               }
 
