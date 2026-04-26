@@ -36,7 +36,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
   let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
 
-  if (p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1 || p.user_name) {
+  // [CRITICAL] 이 조건문이 본인의 실제 프로필로 덮어씌워지는 것을 막는 핵심입니다.
+  if (p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1) {
+    // 시드 데이터는 user_id가 누구든 상관없이 DB에 저장된 user_name/avatar를 강제로 사용합니다.
     finalUserName = p.user_name || '탐험가';
     finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
   }

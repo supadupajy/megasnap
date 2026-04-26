@@ -459,8 +459,8 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: userIdForRecord, // [CRITICAL] 본인 ID가 아닌 다른 유저의 ID를 할당
-        user_name: userName,    
+        user_id: currentUserId, // [CRITICAL] 403 에러 방지를 위해 ID는 본인 것으로 고정
+        user_name: userName,    // [CRITICAL] 하지만 닉네임 필드에 랜덤 닉네임 저장
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -470,25 +470,14 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    console.log("📤 [Seeder] Inserting into DB with diverse user_ids:", insertData);
+    console.log("📤 [Seeder] Inserting into DB with is_seed_data=true:", insertData);
 
-    // [CRITICAL] RLS 정책이 막을 수 있으므로 RPC를 사용하거나, 
-    // 정책이 허용한다면 일반 insert를 시도합니다. 
-    // 현재 정책은 (auth.uid() = user_id)이므로 일반 유저는 본인 ID로만 인서트 가능합니다.
-    // 하지만 관리자라면 정책에 의해 다른 ID로도 인서트가 가능하도록 설정되어 있을 수 있습니다.
+    // [FIX] RLS(403) 에러를 피하기 위해 항상 본인 ID로 인서트합니다.
     const { error } = await supabase.from('posts').insert(insertData);
     
     if (error) {
       console.error("❌ [Seeder] Insert error:", error);
-      // RLS 에러 발생 시 최후의 수단: 본인 ID로 넣되 프론트엔드에서 닉네임을 보호함 (이미 구현됨)
-      if (error.code === '42501') {
-        console.warn("⚠️ [Seeder] RLS restriction. Using currentUserId as fallback.");
-        const fallbackData = insertData.map(d => ({ ...d, user_id: currentUserId }));
-        const { error: retryError } = await supabase.from('posts').insert(fallbackData);
-        if (retryError) throw retryError;
-      } else {
-        throw error;
-      }
+      throw error;
     }
 
     console.log(`✨ [Seeder] ${insertData.length}개의 다양한 랜덤 포스팅 생성 완료`);
