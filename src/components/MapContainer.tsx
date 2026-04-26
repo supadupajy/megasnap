@@ -565,9 +565,10 @@ useEffect(() => {
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
     // 시드 데이터이거나, 닉네임이 내가 아닌 경우는 MY 라벨을 표시하지 않음
-    const isMine = authUser && (post.user_id === authUser.id || post.user_id === 'me') &&
-                   !post.is_seed_data &&
-                   (!post.user_name || post.user_name === authUser.user_metadata?.nickname || post.user_name === '탐험가');
+    // [FIX] authUser.id와 post.user_id 매칭 로직 보강
+    const postUserId = post.user_id || (post.user && post.user.id);
+    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me');
+                   
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 
     const isBrokenUrl = (url: string) => {
@@ -618,7 +619,10 @@ useEffect(() => {
     let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
     let influencerClass = "";
 
-    if (isMine) { inlineBorderStyle = "border: 4.5px solid #4f46e5;"; inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; }
+    if (isMine) { 
+      inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
+      inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; 
+    }
     else if (isAd) { inlineBorderStyle = "border: 4.5px solid #3b82f6;"; inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)"; }
     else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
