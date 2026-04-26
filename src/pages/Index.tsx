@@ -103,6 +103,7 @@ const Index = () => {
   const { session } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+  const isFirstLoadRequested = useRef(false);
 
   // ✅ [NEW] 이전 요청 위치를 저장하여 미세한 이동 시 중복 요청 방지
   const lastRequestRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
@@ -266,15 +267,16 @@ const Index = () => {
     }
   }, [mapDbToPost]);
 
-  useEffect(() => { if (authUser) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending]);
+  useEffect(() => { fetchGlobalTrending(); }, [fetchGlobalTrending]);
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
 
-    // ✅ [FIX] 초기 데이터 로딩(인기 포스팅)이 완료되지 않았으면 지도 요청을 잠시 미룹니다.
-    if (!targetBounds || !center || isSyncing.current || !isInitialLoadDone) return;
+    // ✅ [FIX] 초기 로딩 중에도 firstLoadRequested가 true이면 요청을 허용하도록 로직 수정
+    if (!targetBounds || !center || isSyncing.current) return;
+    if (!isInitialLoadDone && !isFirstLoadRequested.current) return;
 
     if (lastRequestRef.current) {
       const { lat: lastLat, lng: lastLng, zoom: lastZoom } = lastRequestRef.current;
@@ -360,7 +362,16 @@ const Index = () => {
     } catch (err) { console.error(err); } finally { isSyncing.current = false; }
   }, [mapData, currentZoom, mapDbToPost]);
 
-  useEffect(() => { if (mapData && isInitialLoadDone) syncPostsWithSupabase(); }, [mapData, isInitialLoadDone, syncPostsWithSupabase]);
+  useEffect(() => { 
+    if (mapData && isInitialLoadDone) {
+      syncPostsWithSupabase(); 
+    } else if (mapData && !isInitialLoadDone && !isFirstLoadRequested.current) {
+      // ✅ [FIX] 맵 데이터는 준비되었으나 초기 데이터 로딩(인기 포스팅)이 진행 중인 경우,
+      // 최초 한 번은 즉시 현재 영역의 데이터를 가져오도록 강제 실행합니다.
+      isFirstLoadRequested.current = true;
+      syncPostsWithSupabase(mapData.bounds, currentZoom);
+    }
+  }, [mapData, isInitialLoadDone, syncPostsWithSupabase, currentZoom]);
 
   const handleMapChange = useCallback((data: any) => {
     const zoomChanged = data.level !== undefined && data.level !== currentZoom;

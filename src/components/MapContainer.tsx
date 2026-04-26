@@ -217,9 +217,22 @@ const MapContainer = ({
       // 약간의 지연을 주어 지도가 완전히 안정된 후 데이터를 요청하게 함
       setTimeout(() => {
         if (mapInstance.current) {
-          updateMapData();
+          const bounds = mapInstance.current.getBounds();
+          const currentCenter = mapInstance.current.getCenter();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const mapLevel = mapInstance.current.getLevel();
+          
+          onMapChangeRef.current({
+            bounds: {
+              sw: { lat: sw.getLat(), lng: sw.getLng() },
+              ne: { lat: ne.getLat(), lng: ne.getLng() }
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            level: mapLevel,
+          });
         }
-      }, 500);
+      }, 300);
 
       // ✅ [FIX] bounds_changed를 제거하고 idle만 남겨서 지도 이동 중에 발생하는 폭주하는 요청을 차단합니다.
       kakao.maps.event.addListener(map, 'idle', updateMapData);
