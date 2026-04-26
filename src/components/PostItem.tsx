@@ -93,10 +93,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   // [DEBUG] Force direct evaluation and add visual marker for testing
   const isMine = useMemo(() => {
     if (!authUser?.id || !user?.id) return false;
-    const mine = authUser.id === user.id || user.id === 'me';
-    console.log("[PostItem] Render Debug - PostID:", post.id, "isMine:", mine);
-    return mine;
-  }, [authUser?.id, user?.id, post.id]);
+    return authUser.id === user.id || user.id === 'me';
+  }, [authUser?.id, user?.id]);
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -537,11 +535,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   return (
     <div 
       ref={containerRef}
-      id={`post-${post.id}`}
-      data-is-mine={isMine}
       className={cn(
         "bg-white transition-none",
-        isMine && "ring-4 ring-indigo-600 ring-offset-4 rounded-2xl mb-4 shadow-2xl relative z-10",
+        isMine && "ring-2 ring-indigo-600 ring-offset-2 rounded-2xl mb-2",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
@@ -549,13 +545,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
           <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
-            <img 
-              src={user.avatar} 
-              alt={user.name} 
+            <img
+              src={user.avatar}
+              alt={user.name}
               className="w-full h-full rounded-full object-cover border-2 border-white"
             />
             {isMine && (
-              <div className="absolute -top-2 -left-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-xl z-[30] animate-bounce">
+              <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[8px] font-black px-1 rounded-sm border border-indigo-600 shadow-sm z-10">
                 MY
               </div>
             )}
