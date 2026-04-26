@@ -183,13 +183,12 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
             duration: 0.2,
             ease: "easeOut"
           }}
-          className="fixed inset-0 z-[40] bg-white flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[110] bg-white flex flex-col overflow-hidden"
           style={{ 
-            marginTop: '88px',
-            marginBottom: '80px',
-            height: isKeyboardOpen 
-              ? `calc(100dvh - 88px - ${keyboardHeight}px)` 
-              : 'calc(100dvh - 88px - 80px)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 74px)',
+            paddingBottom: isKeyboardOpen 
+              ? `${keyboardHeight}px` 
+              : 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
             touchAction: 'auto'
           }}
         >
