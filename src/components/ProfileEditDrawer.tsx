@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Camera, User, Sparkles, Loader2, Type, AlignLeft, Check } from 'lucide-react';
+import { Camera, User, Sparkles, Loader2, Type, AlignLeft, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { cn } from '@/lib/utils';
 
 interface ProfileEditDrawerProps {
   isOpen: boolean;
@@ -25,14 +26,73 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  
+  // Nickname availability states
+  const [isCheckingNickname, setIsCheckingNickname] = useState(false);
+  const [nicknameStatus, setNicknameStatus] = useState<'none' | 'available' | 'taken' | 'invalid'>('none');
+  const [nicknameMessage, setNicknameMessage] = useState('');
 
   useEffect(() => {
     if (isOpen && profile) {
       setNickname(profile.nickname || '');
       setBio(profile.bio || '');
       setAvatarUrl(profile.avatar_url);
+      setNicknameStatus('none');
+      setNicknameMessage('');
     }
   }, [isOpen, profile]);
+
+  // Debounced nickname check
+  useEffect(() => {
+    let isMounted = true;
+    const checkNickname = async () => {
+      const trimmed = nickname.trim();
+      
+      // Don't check if it's the current nickname or empty
+      if (!trimmed || trimmed === profile?.nickname) {
+        setNicknameStatus('none');
+        setNicknameMessage('');
+        return;
+      }
+
+      if (trimmed.length < 2) {
+        setNicknameStatus('invalid');
+        setNicknameMessage('닉네임은 2자 이상이어야 합니다.');
+        return;
+      }
+
+      setIsCheckingNickname(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('nickname', trimmed)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (isMounted) {
+          if (data) {
+            setNicknameStatus('taken');
+            setNicknameMessage('이미 사용 중인 닉네임입니다.');
+          } else {
+            setNicknameStatus('available');
+            setNicknameMessage('사용 가능한 닉네임입니다.');
+          }
+        }
+      } catch (err) {
+        console.error('Error checking nickname:', err);
+      } finally {
+        if (isMounted) setIsCheckingNickname(false);
+      }
+    };
+
+    const timer = setTimeout(checkNickname, 500);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [nickname, profile?.nickname]);
 
   const takePhoto = async () => {
     try {
@@ -55,8 +115,20 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   const handleSave = async () => {
     if (!user) return;
-    if (!nickname.trim()) {
+    const trimmedNickname = nickname.trim();
+    
+    if (!trimmedNickname) {
       showError('닉네임을 입력해주세요.');
+      return;
+    }
+
+    if (nicknameStatus === 'taken') {
+      showError('이미 사용 중인 닉네임입니다.');
+      return;
+    }
+
+    if (nicknameStatus === 'invalid') {
+      showError('유효하지 않은 닉네임입니다.');
       return;
     }
 
@@ -66,7 +138,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
         .from('profiles')
         .upsert({
           id: user.id,
-          nickname: nickname.trim(),
+          nickname: trimmedNickname,
           bio: bio.trim(),
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString()
@@ -133,17 +205,45 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
             {/* Nickname Section */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <Type className="w-4 h-4 text-gray-400" />
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임</p>
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-gray-400" />
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임</p>
+                </div>
+                {isCheckingNickname && (
+                  <Loader2 className="w-3 h-3 text-indigo-600 animate-spin" />
+                )}
               </div>
-              <Input 
-                placeholder="새로운 닉네임을 입력하세요"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="h-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-bold shadow-inner"
-                maxLength={15}
-              />
+              <div className="relative">
+                <Input 
+                  placeholder="새로운 닉네임을 입력하세요"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className={cn(
+                    "h-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 text-base font-bold shadow-inner transition-all",
+                    nicknameStatus === 'available' ? "focus-visible:ring-green-500" : 
+                    nicknameStatus === 'taken' || nicknameStatus === 'invalid' ? "focus-visible:ring-red-500" : 
+                    "focus-visible:ring-indigo-600"
+                  )}
+                  maxLength={15}
+                />
+                {nicknameStatus !== 'none' && (
+                  <div className={cn(
+                    "absolute right-4 top-1/2 -translate-y-1/2",
+                    nicknameStatus === 'available' ? "text-green-500" : "text-red-500"
+                  )}>
+                    {nicknameStatus === 'available' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                  </div>
+                )}
+              </div>
+              {nicknameMessage && (
+                <p className={cn(
+                  "text-[11px] font-bold px-1 animate-in fade-in slide-in-from-top-1",
+                  nicknameStatus === 'available' ? "text-green-600" : "text-red-600"
+                )}>
+                  {nicknameMessage}
+                </p>
+              )}
             </div>
 
             {/* Bio Section */}
