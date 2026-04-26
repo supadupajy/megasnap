@@ -52,6 +52,7 @@ const MapContainer = ({
   const isProgrammaticMove = useRef(false);
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(5);
+  const postsRef = useRef<any[]>(posts);
 
   // 핀치 줌 원천 차단용
   const pinchStartDistRef = useRef<number | null>(null);
@@ -66,10 +67,12 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
+  const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '');
 
   useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { postsRef.current = posts; }, [posts]);
 
   useEffect(() => {
     currentLevelRef.current = currentLevel;
@@ -424,61 +427,75 @@ const MapContainer = ({
     });
   }, [posts, viewedPostIds, internalViewedIds, highlightedPostId, isMapReady, authUser]);
 
-// ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
-useEffect(() => {
-  const handleHighlight = (e: any) => {
-    const postId = e.detail?.id;
-    const duration = e.detail?.duration || 2500;
+  // ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
+  useEffect(() => {
+    const handleHighlight = (e: any) => {
+      const postId = e.detail?.id;
+      const duration = e.detail?.duration || 2500;
 
-    if (!postId) return;
+      if (!postId) return;
 
-    // ✅ [FIX] 마커가 아직 생성되지 않았을 경우를 대비해 약간의 지연 후 재시도하는 로직 추가
-    const tryHighlight = (retryCount = 0) => {
-      const overlay = overlaysRef.current.get(postId);
-      
-      if (overlay) {
-        const content = overlay.getContent() as HTMLElement;
-        if (content) {
-          // 모든 마커에서 highlighted 제거
-          overlaysRef.current.forEach((o, id) => {
-            const c = o.getContent() as HTMLElement;
-            if (c && c.classList.contains('highlighted')) {
-              c.classList.remove('highlighted');
-              const p = posts.find(item => item.id === id);
-              o.setZIndex(p?.isAd ? 500 : p?.borderType !== 'none' ? 400 : 300);
-            }
-          });
+      const tryHighlight = (retryCount = 0) => {
+        const overlay = overlaysRef.current.get(postId);
+        
+        if (overlay) {
+          const content = overlay.getContent() as HTMLElement;
+          if (content) {
+            // 모든 마커에서 highlighted 제거 후 HTML 복원
+            overlaysRef.current.forEach((o, id) => {
+              const c = o.getContent() as HTMLElement;
+              if (c && c.classList.contains('highlighted')) {
+                c.classList.remove('highlighted');
+                const p = postsRef.current.find(item => item.id === id);
+                if (p) {
+                  const combinedViewedIds = new Set<string>();
+                  const isViewed = combinedViewedIds.has(id);
+                  c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                }
+                o.setZIndex(
+                  (o as any)._isMine ? 450 :
+                  (postsRef.current.find(item => item.id === id)?.isAd ? 500 :
+                  (postsRef.current.find(item => item.id === id)?.borderType !== 'none' ? 400 : 300))
+                );
+              }
+            });
 
-          // 해당 마커 강조
-          content.classList.remove('highlighted');
-          void content.offsetWidth; 
-          content.classList.add('highlighted');
-          overlay.setZIndex(99999);
+            // 해당 마커 강조
+            content.classList.remove('highlighted');
+            void content.offsetWidth; 
+            content.classList.add('highlighted');
+            overlay.setZIndex(99999);
 
-          // 2.5초 후 원복
-          setTimeout(() => {
-            if (content && content.classList.contains('highlighted')) {
-              content.classList.remove('highlighted');
-              const p = posts.find(item => item.id === postId);
-              overlay.setZIndex(p?.isAd ? 500 : p?.borderType !== 'none' ? 400 : 300);
-            }
-          }, duration);
-          return;
+            // duration 후 원복 - HTML도 재생성하여 MY 스타일 보장
+            setTimeout(() => {
+              if (content && content.classList.contains('highlighted')) {
+                content.classList.remove('highlighted');
+                const p = postsRef.current.find(item => item.id === postId);
+                if (p) {
+                  const isViewed = content.getAttribute('data-content-state')?.startsWith('true') || false;
+                  content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                }
+                overlay.setZIndex(
+                  postsRef.current.find(item => item.id === postId)?.isAd ? 500 :
+                  postsRef.current.find(item => item.id === postId)?.borderType !== 'none' ? 400 : 300
+                );
+              }
+            }, duration);
+            return;
+          }
         }
-      }
 
-      // 마커를 찾지 못했으면 최대 15번까지 재시도 (200ms 간격, 총 3초)
-      if (retryCount < 15) {
-        setTimeout(() => tryHighlight(retryCount + 1), 200);
-      }
+        if (retryCount < 15) {
+          setTimeout(() => tryHighlight(retryCount + 1), 200);
+        }
+      };
+
+      tryHighlight();
     };
 
-    tryHighlight();
-  };
-
-  window.addEventListener('highlight-marker', handleHighlight);
-  return () => window.removeEventListener('highlight-marker', handleHighlight);
-}, [posts]);
+    window.addEventListener('highlight-marker', handleHighlight);
+    return () => window.removeEventListener('highlight-marker', handleHighlight);
+  }, []);
 
   useEffect(() => {
     if (!mapInstance.current || !isMapReady) return;
@@ -741,6 +758,9 @@ useEffect(() => {
       </div>
     </div>`;
   };
+
+  // getMarkerInnerHtml ref를 항상 최신으로 유지 (highlight 핸들러에서 stale closure 방지)
+  getMarkerInnerHtmlRef.current = getMarkerInnerHtml;
 
   const cancelPendingRemoval = (id: string, content?: HTMLElement | null) => {
     const timeoutId = removalTimeoutsRef.current.get(id);
