@@ -284,7 +284,7 @@ const Profile = () => {
     <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
       <div className="pt-16">
         {/* 내 프로필 상단 메뉴 바 - 스크롤 시에도 고정 */}
-        <div className="sticky top-0 z-40 px-4 py-4 bg-white border-b border-gray-100 flex items-center">
+        <div className="sticky top-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
