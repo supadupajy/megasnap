@@ -481,9 +481,23 @@ const Chat = () => {
 
   return (
     <div className="bg-white overflow-hidden flex flex-col h-screen relative">
+      {/* 글로벌 헤더 (ChoraSnap 로고 영역) */}
+      <div className="fixed top-0 left-0 right-0 z-[110] bg-white border-b border-gray-100 h-16 flex items-center px-4 max-w-lg mx-auto">
+        <div 
+          className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+          onClick={() => navigate('/')}
+        >
+          <h1 className="text-2xl font-black tracking-tighter italic">
+            <span className="text-gray-900">Chora</span>
+            <span className="text-indigo-600">Snap</span>
+          </h1>
+        </div>
+      </div>
+
+      {/* 채팅 상세 헤더 (프로필 및 뒤로가기) */}
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-b border-gray-50 pt-[env(safe-area-inset-top,0px)] will-change-transform"
+        className="fixed top-16 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-b border-gray-50 pt-[env(safe-area-inset-top,0px)] will-change-transform"
       >
         <div className="h-16 px-4 flex items-center w-full relative">
           <button
@@ -534,7 +548,7 @@ const Chat = () => {
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
         style={{
-          paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))',
+          paddingTop: 'calc(128px + env(safe-area-inset-top, 0px))',
           paddingBottom: '220px',
         }}
       >
