@@ -861,7 +861,7 @@ const Index = () => {
                     </div>
                     <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러 닫기</span>
                   </div>
-                
+                </motion.div>
               )}
             </AnimatePresence>
 
