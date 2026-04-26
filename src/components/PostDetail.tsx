@@ -416,7 +416,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           
           <div className="relative flex-1 flex flex-col min-h-0">
             {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-end justify-end px-4 h-24 pb-3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
+            <div className="absolute top-0 left-0 right-0 z-50 flex items-start justify-end px-4 pt-3 pointer-events-none">
               <div className="flex items-center gap-2 pointer-events-auto">
                 <button
                   onClick={onClose}
