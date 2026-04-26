@@ -370,68 +370,81 @@ export const seedInBoundsPosts = async (
   console.log("📍 [Seeder] 화면 내 데이터 생성을 시작합니다...", bounds);
 
   try {
-    // 1. RLS 우회를 위해 currentUserId는 DB 저장용으로 사용하되, 
-    // 표시되는 정보(nickname, avatar)는 userPool에서 랜덤하게 가져옴
     await initializeYoutubePool();
+    // 1. 프로필 목록을 가져와서 랜덤 사용자 정보를 구성
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
     
-    // 기본 닉네임 풀
-    const NICKNAMES = ['여행가', '맛집탐험대', '사진작가', '동네주민', '미식가', '프로산책러', '트렌드세터'];
-    
-    const count = 5; // 5개로 복구
+    const count = 5; 
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
-      // 랜덤 프로필 정보 (표시용)
+      // 2. 포스팅 타입 정의 (influencer, popular, normal, ad)
+      const postTypes = ['influencer', 'popular', 'normal', 'ad'];
+      const type = postTypes[Math.floor(Math.random() * postTypes.length)];
+      
+      // 3. 사용자 정보 랜덤화
       const randomProfile = profiles && profiles.length > 0 
         ? profiles[Math.floor(Math.random() * profiles.length)]
         : null;
       
-      const randomNickname = randomProfile?.nickname || NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)];
-      const randomAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
+      let userName = randomProfile?.nickname || "탐험가";
+      let userAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
+      let likes = Math.floor(Math.random() * 500);
+      let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
+      
+      // 타입별 특성 부여
+      if (type === 'influencer') {
+        userName = `${userName} ✨`; // 인플루언서 표시
+        likes = Math.floor(Math.random() * 10000) + 5000;
+      } else if (type === 'popular') {
+        likes = Math.floor(Math.random() * 4000) + 1000;
+      } else if (type === 'ad') {
+        userName = "sponsored";
+        userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
+        content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
+        likes = 0;
+      }
 
-      // Random lat/lng within bounds
+      // 4. 위치 랜덤화 (Bounds 내)
       const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
+      const detailedLocation = resolveOfflineLocationName(lat, lng);
       
-      // 영상 vs 이미지 랜덤 (70% 확률로 영상 - 더 다이내믹한 화면을 위해)
-      const isYoutube = Math.random() > 0.3;
+      // 5. 콘텐츠 랜덤화 (유튜브/이미지)
       const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
-      
       let finalYoutubeUrl = null;
       let finalImage = "";
 
+      // 광고는 주로 이미지, 인플루언서/인기는 주로 영상
+      const isYoutube = (type === 'ad') ? Math.random() > 0.8 : Math.random() > 0.4;
+
       if (isYoutube) {
-        // 검증된 유튜브 풀에서 랜덤하게 선택
         finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(Math.floor(Math.random() * 80));
-        const ytThumbnail = getYoutubeThumbnail(finalYoutubeUrl);
-        finalImage = ytThumbnail || `https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80`;
+        finalImage = getYoutubeThumbnail(finalYoutubeUrl) || getDiverseUnsplashUrl(`v_${i}`, category);
       } else {
         finalImage = getDiverseUnsplashUrl(`inbounds_${i}_${Date.now()}`, category);
       }
 
-      const detailedLocation = resolveOfflineLocationName(lat, lng);
-
       insertData.push({
-        content: REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)],
+        content: content,
         location_name: detailedLocation,
         latitude: lat,
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, // DB 저장 권한을 위해 내 ID 사용 (RLS 통과)
-        user_name: randomNickname, // 표시되는 이름은 랜덤
-        user_avatar: randomAvatar, // 표시되는 아바타는 랜덤
-        likes: Math.floor(Math.random() * 15000) + 100, // 좋아요 수도 랜덤
+        user_id: currentUserId, // RLS 통과를 위한 실제 소유자 ID
+        user_name: userName,    // 표시용 랜덤 닉네임
+        user_avatar: userAvatar, // 표시용 랜덤 아바타
+        likes: likes,
         category: category,
-        created_at: new Date(Date.now() - Math.random() * 24 * 3600000).toISOString() // 생성 시간도 최근 24시간 내 랜덤
+        created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
       });
     }
 
     const { error } = await supabase.from('posts').insert(insertData);
     if (error) throw error;
 
-    console.log(`✨ [Seeder] 화면 내 특별 포스팅 ${insertData.length}개가 성공적으로 생성되었습니다.`);
+    console.log(`✨ [Seeder] ${insertData.length}개의 다양한 타입 포스팅이 생성되었습니다.`);
     return insertData.length;
   } catch (err) {
     console.error("❌ [Seeder] 화면 내 데이터 생성 실패:", err);
