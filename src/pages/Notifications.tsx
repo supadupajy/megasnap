@@ -195,92 +195,93 @@ const Notifications = () => {
     >
       <div className="pt-16">
         {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
-      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-  <button
-    onClick={handleBack}
-    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-  >
-    <ChevronLeft className="w-6 h-6" />
-  </button>
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
-  </div>
-</div>
-
-      <div className="flex flex-col">
-        {isLoading ? (
-          <div className="py-20 flex justify-center">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+          <button
+            onClick={handleBack}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
           </div>
-        ) : (
-          <div className="py-4">
-            <div className="flex flex-col">
-              <AnimatePresence initial={false}>
-                {notifications.map((notif) => {
-                  const isSwiped = swipedId === notif.id;
-                  return (
-                    <div key={notif.id} className="relative group overflow-hidden">
-                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
-                        <button 
+        </div>
+
+        <div className="flex flex-col">
+          {isLoading ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+            </div>
+          ) : (
+            <div className="py-4">
+              <div className="flex flex-col">
+                <AnimatePresence initial={false}>
+                  {notifications.map((notif) => {
+                    const isSwiped = swipedId === notif.id;
+                    return (
+                      <div key={notif.id} className="relative group overflow-hidden">
+                        <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(notif.id);
+                            }}
+                            className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+                          >
+                            <Trash2 className="w-6 h-6" />
+                            <span className="text-[10px] font-bold">삭제</span>
+                          </button>
+                        </div>
+
+                        <motion.div
+                          drag="x"
+                          dragConstraints={{ left: -80, right: 0 }}
+                          dragElastic={0.1}
+                          animate={{ x: isSwiped ? -80 : 0 }}
+                          onDragEnd={(_, info) => {
+                            if (info.offset.x < -40) {
+                              setSwipedId(notif.id);
+                            } else {
+                              setSwipedId(null);
+                            }
+                          }}
+                          className={cn(
+                            "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors",
+                            notif.is_read ? "bg-white" : "bg-white"
+                          )}
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteNotification(notif.id);
-                          }} 
-                          className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+                            handleNotifClick(notif);
+                          }}
                         >
-                          <Trash2 className="w-6 h-6" />
-                          <span className="text-[10px] font-bold">삭제</span>
-                        </button>
+                          <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
+                            <AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} />
+                            <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 text-sm leading-tight">
+                            <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
+                            <span className="text-gray-700"> {getNotificationText(notif)}</span>
+                            <span className="text-[10px] text-gray-400 ml-2 block mt-1">
+                              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
+                            </span>
+                          </div>
+                        </motion.div>
                       </div>
-
-                      <motion.div 
-                        drag="x" 
-                        dragConstraints={{ left: -80, right: 0 }} 
-                        dragElastic={0.1}
-                        animate={{ x: isSwiped ? -80 : 0 }}
-                        onDragEnd={(_, info) => {
-                          if (info.offset.x < -40) {
-                            setSwipedId(notif.id);
-                          } else {
-                            setSwipedId(null);
-                          }
-                        }}
-                        className={cn(
-                          "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors", 
-                          notif.is_read ? "bg-white" : "bg-white"
-                        )} 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNotifClick(notif);
-                        }}
-                      >
-                        <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
-                          <AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} />
-                          <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-sm leading-tight">
-                          <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
-                          <span className="text-gray-700"> {getNotificationText(notif)}</span>
-                          <span className="text-[10px] text-gray-400 ml-2 block mt-1">
-                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
-                          </span>
-                        </div>
-                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+                {notifications.length === 0 && (
+                  <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <Bell className="w-8 h-8 text-gray-200" />
                     </div>
-                  );
-                })}
-              </AnimatePresence>
-              {notifications.length === 0 && (
-                <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <Bell className="w-8 h-8 text-gray-200" />
+                    <p className="text-sm text-gray-400 font-bold leading-relaxed">새로운 알림이 없습니다.</p>
                   </div>
-                  <p className="text-sm text-gray-400 font-bold leading-relaxed">새로운 알림이 없습니다.</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
