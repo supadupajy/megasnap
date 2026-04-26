@@ -83,9 +83,21 @@
   width: 60px;
   height: 60px;
   transition: transform 0.2s ease-out !important;
+  /* 기본값: zoom 클래스가 없어도 마커가 올바른 위치에 표시되도록 */
+  transform: translate(-50%, -100%) scale(1) !important;
+  transform-origin: 50% 100%;
 }
 
-/* 줌 레벨에 따른 스케일 조정 - transform-origin을 bottom center(50% 100%)로 고정 */
+/* 줌 레벨에 따른 스케일 조정 */
+#kakao-map.zoom-1 .marker-container,
+#kakao-map.zoom-2 .marker-container,
+#kakao-map.zoom-3 .marker-container,
+#kakao-map.zoom-4 .marker-container,
+#kakao-map.zoom-5 .marker-container {
+  transform: translate(-50%, -100%) scale(1) !important;
+  transform-origin: 50% 100%;
+}
+
 #kakao-map.zoom-6 .marker-container {
   transform: translate(-50%, -100%) scale(0.7) !important;
   transform-origin: 50% 100%;
@@ -93,15 +105,6 @@
 
 #kakao-map.zoom-7 .marker-container {
   transform: translate(-50%, -100%) scale(0.45) !important;
-  transform-origin: 50% 100%;
-}
-
-#kakao-map.zoom-1 .marker-container,
-#kakao-map.zoom-2 .marker-container,
-#kakao-map.zoom-3 .marker-container,
-#kakao-map.zoom-4 .marker-container,
-#kakao-map.zoom-5 .marker-container {
-  transform: translate(-50%, -100%) scale(1) !important;
   transform-origin: 50% 100%;
 }
 
@@ -130,8 +133,6 @@
 .marker-container.highlighted .marker-content-wrapper,
 .marker-container.highlighted .marker-scaling-target {
   animation: none !important;
-  /* scale(1)을 강제하지 않고 상속받되, wrapper 차원에서의 변형만 방지 */
-  transform: none !important;
 }
 
 @keyframes marker-fade-in {

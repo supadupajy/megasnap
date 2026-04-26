@@ -220,20 +220,20 @@ const MapContainer = ({
       setIsMapReady(true);
       setIsLoading(false);
 
-      // ✅ [FIX] 초기 로딩 시 부모에게 영역 정보를 확실히 전달하기 위해 명시적 호출
-      // 약간의 지연을 주어 지도가 완전히 안정된 후 데이터를 요청하게 함
+      // 초기 zoom 클래스 즉시 설정 (마커가 클래스 없이 렌더링되는 것 방지)
+      updateZoomClass();
+
       setTimeout(() => {
         if (mapInstance.current) {
-          const bounds = mapInstance.current.getBounds();
+          mapInstance.current.relayout();
           const currentCenter = mapInstance.current.getCenter();
+          mapInstance.current.setCenter(currentCenter);
+          updateZoomClass();
+
+          const bounds = mapInstance.current.getBounds();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
           const mapLevel = mapInstance.current.getLevel();
-          
-          // ✅ [FIX] relayout()을 호출하여 지도의 크기와 줌 레벨을 재계산하도록 합니다.
-          // 지도가 처음에 0,0 좌표로 쏠리는 현상을 방지합니다.
-          mapInstance.current.relayout();
-          mapInstance.current.setCenter(currentCenter);
 
           onMapChangeRef.current({
             bounds: {
