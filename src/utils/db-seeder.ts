@@ -454,7 +454,7 @@ export const seedInBoundsPosts = async (
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
         user_id: currentUserId, 
-        user_name: userName, // [VITAL] 이 값이 DB의 user_name 컬럼에 정확히 꽂혀야 함
+        user_name: userName,    // [CRITICAL CHECK] 이 값이 DB의 user_name 컬럼에 정확히 저장되는지 확인
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -464,11 +464,14 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    // [DEBUG] 인서트 전 데이터 최종 확인
-    console.log("📤 [Seeder] Final Check - insertData nicknames:", insertData.map(d => d.user_name));
+    console.log("📤 [Seeder] Inserting with explicit user_name:", insertData.map(d => d.user_name));
 
     const { error } = await supabase.from('posts').insert(insertData);
-    if (error) throw error;
+    
+    if (error) {
+      console.error("❌ [Seeder] Insert error:", error);
+      throw error;
+    }
 
     console.log(`✨ [Seeder] ${insertData.length}개의 포스팅 생성 완료`);
     return insertData.length;
