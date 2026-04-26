@@ -90,16 +90,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const { user, content, isAd } = post;
   
-  // [DEBUG] Check IDs to identify why isMine is failing
-  useEffect(() => {
-    if (authUser && user) {
-      console.log("[PostItem] Auth User ID:", authUser.id);
-      console.log("[PostItem] Post User ID:", user.id);
-      console.log("[PostItem] Is Mine:", authUser.id === user.id);
-    }
-  }, [authUser, user]);
-
-  const isMine = authUser?.id === user.id || user.id === 'me';
+  // [DEBUG] Force direct evaluation and add visual marker for testing
+  const isMine = useMemo(() => {
+    if (!authUser?.id || !user?.id) return false;
+    const mine = authUser.id === user.id || user.id === 'me';
+    console.log("[PostItem] Render Debug - PostID:", post.id, "isMine:", mine);
+    return mine;
+  }, [authUser?.id, user?.id, post.id]);
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -540,9 +537,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   return (
     <div 
       ref={containerRef}
+      id={`post-${post.id}`}
+      data-is-mine={isMine}
       className={cn(
         "bg-white transition-none",
-        isMine && "ring-2 ring-indigo-600 ring-offset-2 rounded-2xl mb-2",
+        isMine && "ring-4 ring-indigo-600 ring-offset-4 rounded-2xl mb-4 shadow-2xl relative z-10",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
@@ -556,7 +555,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               className="w-full h-full rounded-full object-cover border-2 border-white"
             />
             {isMine && (
-              <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[8px] font-black px-1 rounded-sm border border-white shadow-sm z-10">
+              <div className="absolute -top-2 -left-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-xl z-[30] animate-bounce">
                 MY
               </div>
             )}
