@@ -44,13 +44,13 @@ const Header = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return; // user가 없으면 실행 안 함
+    if (!user?.id) return;
 
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
     const messagesChannel = supabase
-      .channel('header-messages')
+      .channel(`header-messages-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -76,11 +76,8 @@ const Header = () => {
         }
       );
 
-    // .subscribe()를 모든 .on() 설정이 끝난 후에 호출합니다.
-    messagesChannel.subscribe();
-
     const notificationsChannel = supabase
-      .channel('header-notifications')
+      .channel(`header-notifications-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -94,9 +91,10 @@ const Header = () => {
         }
       );
 
+    // Subscribe both channels
+    messagesChannel.subscribe();
     notificationsChannel.subscribe();
 
-    // Listen for custom events from other components
     const handleRefresh = () => {
       fetchUnreadCount();
       fetchUnreadNotifCount();
@@ -108,7 +106,7 @@ const Header = () => {
       supabase.removeChannel(notificationsChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user, fetchUnreadCount, fetchUnreadNotifCount]);
+  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
   
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
