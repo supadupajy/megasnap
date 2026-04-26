@@ -391,13 +391,19 @@ export const seedInBoundsPosts = async (
       let userAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
+      let borderType = 'none';
+      let userIdForRecord = currentUserId; // RLS를 위해 저장 시에는 내 ID 사용
       
       // 타입별 특성 부여
       if (type === 'influencer') {
-        userName = `${userName} ✨`; // 인플루언서 표시
+        userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
+        borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
+        // 인플루언서 느낌을 내기 위해, DB 저장 시에도 다른 (랜덤) ID를 사용하면 좋겠지만 RLS가 막으므로 
+        // 렌더링 시 user_id를 체크하는 로직이 있다면 그 부분을 속여야 함.
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
+        borderType = 'popular';
       } else if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
@@ -432,11 +438,13 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, // RLS 통과를 위한 실제 소유자 ID
+        user_id: userIdForRecord, // DB record owner (for RLS)
         user_name: userName,    // 표시용 랜덤 닉네임
         user_avatar: userAvatar, // 표시용 랜덤 아바타
         likes: likes,
         category: category,
+        borderType: borderType, // [CRITICAL] borderType을 명시적으로 추가하여 'MY' 라벨이 붙지 않게 함
+        is_seed_data: true,     // [FIX] 시드 데이터임을 명시하여 UI에서 'MY' 라벨링을 피함
         created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
       });
     }
