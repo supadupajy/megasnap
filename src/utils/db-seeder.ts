@@ -380,6 +380,13 @@ export const seedInBoundsPosts = async (
   try {
     await initializeYoutubePool();
     
+    // [CRITICAL] DB에서 실제 존재하는 다른 사용자들의 프로필을 먼저 가져옵니다.
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, nickname, avatar_url')
+      .neq('id', currentUserId) // 본인 제외
+      .limit(50);
+    
     const count = 5; 
     const insertData = [];
 
@@ -388,16 +395,30 @@ export const seedInBoundsPosts = async (
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // 3. 닉네임 무조건 랜덤 생성 (RANDOM_NICKNAMES 풀 사용)
-      const randomNick = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
-      const randomAvatarSeed = Math.random().toString(36).substring(7);
+      // 3. 사용자 정보 랜덤화 (DB 실존 인물 우선)
+      const randomProfile = profiles && profiles.length > 0 
+        ? profiles[Math.floor(Math.random() * profiles.length)]
+        : null;
       
-      let userName = randomNick;
-      let userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomAvatarSeed}`;
+      let userName = "";
+      let userAvatar = "";
+      
+      if (type === 'ad') {
+        userName = "sponsored";
+        userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
+      } else if (randomProfile) {
+        // [FIX] DB에 실존하는 닉네임과 아바타를 그대로 사용
+        userName = randomProfile.nickname || RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        userAvatar = randomProfile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomProfile.id}`;
+      } else {
+        // DB에 다른 유저가 없는 극단적인 경우에만 랜덤 풀 사용
+        userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+      }
+
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
       let borderType = 'none';
-      let userIdForRecord = currentUserId; 
       
       if (type === 'influencer') {
         userName = `${userName} ✨`; 
@@ -407,8 +428,6 @@ export const seedInBoundsPosts = async (
         likes = Math.floor(Math.random() * 4000) + 1000;
         borderType = 'popular';
       } else if (type === 'ad') {
-        userName = "sponsored";
-        userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
         content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
         likes = 0;
       }
@@ -440,9 +459,9 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: userIdForRecord, 
-        user_name: userName,    
-        user_avatar: userAvatar, 
+        user_id: currentUserId, // RLS 때문에 생성자는 본인이어야 함
+        user_name: userName,    // [CRITICAL] 하지만 닉네임은 실존하는 타인의 것으로 저장
+        user_avatar: userAvatar, // [CRITICAL] 아바타도 실존하는 타인의 것으로 저장
         likes: likes,
         category: category,
         borderType: borderType, 
