@@ -388,7 +388,9 @@ const MapContainer = ({
 
       if (!existingOverlay) {
         const content = document.createElement('div');
+        const isAdPost = post.isAd || (post.content && post.content.includes('[AD]'));
         content.className = 'marker-container kakao-overlay marker-appear-animation';
+        if (isAdPost) content.classList.add('is-ad');
         if (isHighlighted) content.classList.add('highlighted');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);

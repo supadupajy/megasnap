@@ -104,14 +104,20 @@
   transform-origin: 50% 100%;
 }
 
-#kakao-map.zoom-7 .marker-container {
-  transform: translate(-50%, -100%) scale(0.45) !important;
-  transform-origin: 50% 100%;
-}
-
 /* zoom 클래스가 없는 전환 순간에도 마커가 보이도록 기본 보장 */
 #kakao-map .marker-container {
   display: block !important;
+}
+
+/* zoom-7: 광고 마커만 표시 */
+#kakao-map.zoom-7 .marker-container {
+  display: none !important;
+}
+
+#kakao-map.zoom-7 .marker-container.is-ad {
+  display: block !important;
+  transform: translate(-50%, -100%) scale(0.45) !important;
+  transform-origin: 50% 100%;
 }
 
 #kakao-map.zoom-8 .marker-container,
