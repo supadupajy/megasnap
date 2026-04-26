@@ -165,6 +165,9 @@ const Chat = () => {
 
       if (error) throw error;
       chatStore.markAsRead(chatId);
+      
+      // ✅ [수정] 헤더의 뱃지 카운트를 즉시 갱신하기 위한 이벤트 발생
+      window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
     } catch (err) {
       console.error('[Chat] Failed to mark as read:', err);
     }

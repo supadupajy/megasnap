@@ -88,6 +88,9 @@ const Notifications = () => {
             .update({ is_read: true })
             .eq('user_id', authUser.id)
             .eq('is_read', false);
+            
+          // ✅ [수정] 헤더의 알림 뱃지 카운트를 즉시 0으로 갱신하기 위한 이벤트 발생
+          window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
         }
       } else {
         setNotifications([]);

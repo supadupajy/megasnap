@@ -61,7 +61,31 @@ const Header = () => {
           fetchUnreadCount();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${user?.id}`
+        },
+        (payload) => {
+          // If the message I sent was read by the other person, 
+          // although this doesn't affect my unread count (receiver_id is not me),
+          // for safety or if we want to track something else we can call fetchUnreadCount.
+          // But actually, when I read someone's message, the DB update has receiver_id = my_id.
+          // So the first filter `receiver_id=eq.${user?.id}` with event '*' should cover it.
+          fetchUnreadCount();
+        }
+      )
       .subscribe();
+
+    // Listen for custom events from other components (like Chat.tsx)
+    const handleRefresh = () => {
+      fetchUnreadCount();
+      fetchUnreadNotifCount();
+    };
+    window.addEventListener('refresh-unread-counts', handleRefresh);
 
     const notificationsChannel = supabase
       .channel('header-notifications')
@@ -82,6 +106,7 @@ const Header = () => {
     return () => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(notificationsChannel);
+      window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
   }, [user, fetchUnreadCount, fetchUnreadNotifCount]);
   

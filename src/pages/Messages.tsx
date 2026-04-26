@@ -86,6 +86,9 @@ const Messages = () => {
 
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);
+
+      // ✅ [수정] 대화 목록을 불러온 후, 헤더의 메시지 뱃지 카운트도 갱신
+      window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
     } catch (err) {} finally { setIsLoading(false); }
   };
 
