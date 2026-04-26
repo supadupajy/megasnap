@@ -203,10 +203,10 @@ const Index = () => {
       }
       
       // ✅ [FIX] 이미 상위에서 조인된 유저 정보를 사용하므로, 별도의 Profiles 조회를 하지 않습니다.
-      const userName = p.user_name || '탐험가';
-      const userAvatar = p.user_avatar || '';
+    const userName = p.user_name || p.profiles?.nickname || '탐험가';
+    const userAvatar = p.user_avatar || p.profiles?.avatar_url || '';
 
-      return {
+    return {
         id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
         user: { id: p.user_id || '', name: userName, avatar: userAvatar },
         content: contentText.replace(/^\[AD\]\s*/, '') || '',
@@ -302,6 +302,14 @@ const Index = () => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         let borderType: any = 'none';
         if (Number(p.likes) >= 9000) borderType = 'popular';
+        else if (!isAd) {
+          // ✅ [FIX] 마커 렌더링을 위해 borderType 계산 로직 동기화 (ID 기반 해시)
+          let h = 0;
+          const idStr = p.id.toString();
+          for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
+          const val = Math.abs(h % 1000) / 1000;
+          if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
+        }
         
         return {
           id: p.id,
@@ -319,6 +327,7 @@ const Index = () => {
           category: p.category || 'none',
           createdAt: new Date(p.created_at),
           borderType,
+          isInfluencer: ['gold', 'diamond'].includes(borderType),
           user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
           content: p.content || '',
           location: p.location_name || '',
@@ -402,7 +411,7 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
     // ✅ 필터링 및 거리순 정렬 로직 최적화
-    const uniquePosts = Array.from(new Map(allPosts.filter(post => {
+      const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       
       const margin = 0.002;
@@ -419,11 +428,18 @@ const Index = () => {
       if (!isWithinTime) return false;
       
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
-      if (selectedCategories.includes('all')) return true;
       
+      // ✅ [FIX] 카테고리 필터 로직: 'hot'이나 'influencer'가 선택되었을 때의 조건을 명확히 합니다.
+      const isHot = post.borderType === 'popular' || post.likes >= 9000;
+      const isInfluencer = post.isInfluencer || ['gold', 'diamond'].includes(post.borderType || 'none');
+      const isAd = post.isAd;
+
+      if (selectedCategories.includes('all')) return true;
+
       return selectedCategories.includes(post.category || 'none') ||
-             (selectedCategories.includes('hot') && post.borderType === 'popular') ||
-             (selectedCategories.includes('influencer') && ['gold', 'diamond'].includes(post.borderType || 'none'));
+             (selectedCategories.includes('hot') && isHot) ||
+             (selectedCategories.includes('influencer') && isInfluencer) ||
+             isAd; // 광고는 항상 노출되거나 'all'에서 노출되도록 보장
     }).map(p => {
       const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
       return [p.id, { ...p, _dist: dist }];
