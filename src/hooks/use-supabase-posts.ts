@@ -26,7 +26,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
   
-  const finalImage = p.youtube_url
+  const finalImage = (!isAd && p.youtube_url)
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : isAd
       ? getDiverseUnsplashUrl(p.id, 'food')
@@ -78,7 +78,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
       ? [finalImage || '']
       : (p.images || (p.image_url ? [p.image_url] : [])),
     isLiked: false,
-    youtubeUrl: p.youtube_url,
+    youtubeUrl: isAd ? undefined : p.youtube_url,
     videoUrl: p.video_url,
     category: p.category || 'none',
     createdAt: new Date(p.created_at),

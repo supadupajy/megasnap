@@ -196,7 +196,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     return match ? match[1] : null;
   };
 
-  const videoId = getYouTubeId(post.youtubeUrl);
+  // Ad 포스팅은 유튜브 영상 무시, 항상 이미지로 표시
+  const videoId = isAd ? null : getYouTubeId(post.youtubeUrl);
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
   const renderMedia = () => {
