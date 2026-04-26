@@ -222,7 +222,7 @@ const PostDetail = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
+      <div className="pt-16">
         {/* Header */}
         <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button

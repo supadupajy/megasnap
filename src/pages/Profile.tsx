@@ -282,7 +282,7 @@ const Profile = () => {
 
   return (
     <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
+      <div className="pt-16">
         {/* 내 프로필 상단 메뉴 바 - 스크롤 시에도 고정 */}
         <div className="sticky top-0 z-40 px-4 py-4 bg-white border-b border-gray-100 flex items-center">
           <div className="flex items-center justify-between w-full">

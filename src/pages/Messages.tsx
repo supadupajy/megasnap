@@ -192,11 +192,9 @@ const Messages = () => {
     <div
       className="min-h-screen bg-white pb-24 no-scrollbar"
       onClick={() => setSwipedId(null)}
-      style={{
-        paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))',
-      }}
     >
-      {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="pt-16">
+        {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
       <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
   <button
     onClick={handleBack}
