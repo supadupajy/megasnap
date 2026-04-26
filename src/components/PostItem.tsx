@@ -549,11 +549,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               alt={user.name}
               className="w-full h-full rounded-full object-cover border-2 border-white"
             />
-            {isMine && (
-              <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[8px] font-black px-1 rounded-sm border border-indigo-600 shadow-sm z-10">
-                MY
-              </div>
-            )}
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
