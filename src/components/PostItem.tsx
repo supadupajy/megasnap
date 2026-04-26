@@ -532,18 +532,24 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       ref={containerRef}
       className={cn(
         "bg-white transition-none",
+        isMine && "ring-2 ring-indigo-600 ring-offset-2 rounded-2xl mb-2",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
       {/* Header Section */}
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0">
+          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
             <img 
               src={user.avatar} 
               alt={user.name} 
               className="w-full h-full rounded-full object-cover border-2 border-white"
             />
+            {isMine && (
+              <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[8px] font-black px-1 rounded-sm border border-white shadow-sm z-10">
+                MY
+              </div>
+            )}
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
