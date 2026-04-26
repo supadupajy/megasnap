@@ -37,8 +37,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
       id: p.user_id,
-      name: p.user_name || '익명 사용자',
-      avatar: p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`,
+      // [FIX] DB에 user_name이 직접 저장되어 있다면 (시드 데이터 등) 해당 이름을 우선 사용
+      name: p.user_name || p.profiles?.nickname || '익명 사용자',
+      avatar: p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`,
     },
     content: p.content || '설명이 없는 포스팅입니다.',
     location: p.location_name || '알 수 없는 장소',
@@ -97,7 +98,7 @@ export const fetchPostsInBounds = async (
     // [FIX] is_seed_data 컬럼을 select에 포함하여 지도 마커에서 MY 라벨을 끌 수 있도록 합니다.
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data')
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))

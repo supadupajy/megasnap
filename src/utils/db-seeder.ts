@@ -39,6 +39,14 @@ const AD_COMMENTS = [
 
 const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
 
+// [NEW] 랜덤 닉네임 풀 추가
+const RANDOM_NICKNAMES = [
+  '서울방랑자', '맛집사냥꾼', '사진여행가', '등산마니아', '카페순례자',
+  '바이크족', '산책의달인', '감성캠퍼', '강아지집사', '야경수집가',
+  '여행에미치다', '혼자놀기', '탐험대장', '초보운전', '오늘의코디',
+  '미니멀리스트', '빵지순례', '운동하는남자', '필라테스퀸', '낚시왕'
+];
+
 /**
  * Generates a truly random like count between 0 and 10000 with flat distribution.
  */
@@ -371,48 +379,44 @@ export const seedInBoundsPosts = async (
 
   try {
     await initializeYoutubePool();
-    // 1. 프로필 목록을 가져와서 랜덤 사용자 정보를 구성
-    // [FIX] 닉네임과 아바타를 실제 DB에 있는 다양한 사용자들로부터 가져오도록 수정
+    // 1. 프로필 목록을 가져오지만, 닉네임은 무조건 랜덤 풀에서 섞어 사용
     const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     
     const count = 5; 
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
-      // 2. 포스팅 타입 정의 (influencer, popular, normal, ad)
+      // 2. 포스팅 타입 정의
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // 3. 사용자 정보 랜덤화
-      // [FIX] 내가 아닌 다른 사용자의 닉네임과 아바타를 우선적으로 선택
-      const otherProfiles = profiles?.filter(p => p.id !== currentUserId) || [];
-      const randomProfile = otherProfiles.length > 0 
-        ? otherProfiles[Math.floor(Math.random() * otherProfiles.length)]
-        : (profiles && profiles.length > 0 ? profiles[Math.floor(Math.random() * profiles.length)] : null);
+      // 3. 사용자 정보 무조건 랜덤화 (본인 닉네임 절대 금지)
+      const randomNick = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
       
-      let userName = randomProfile?.nickname || "탐험가";
+      // 아바타는 실제 유저 정보를 쓰거나 없으면 생성
+      const randomProfile = profiles && profiles.length > 0 
+        ? profiles[Math.floor(Math.random() * profiles.length)]
+        : null;
+      
+      let userName = randomNick; // [CRITICAL] 닉네임은 무조건 랜덤 풀에서 할당
       let userAvatar = randomProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
       let borderType = 'none';
       let userIdForRecord = currentUserId; 
       
-      // 타입별 특성 부여
       if (type === 'influencer') {
         userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
         borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
-        userIdForRecord = currentUserId;
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
         borderType = 'popular';
-        userIdForRecord = currentUserId;
       } else if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
         content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
         likes = 0;
-        userIdForRecord = currentUserId;
       }
 
       // 4. 위치 랜덤화 (Bounds 내)
