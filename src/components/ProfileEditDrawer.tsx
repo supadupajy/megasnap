@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { showSuccess, showError } from '@/utils/toast';
-import { Camera as CapCamera, CameraResultType } from '@capacitor/camera';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,6 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
     const checkNickname = async () => {
       const trimmed = nickname.trim();
       
-      // Don't check if it's the current nickname or empty
       if (!trimmed || trimmed === profile?.nickname) {
         setNicknameStatus('none');
         setNicknameMessage('');
@@ -94,20 +93,72 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
     };
   }, [nickname, profile?.nickname]);
 
+  // Base64 DataUrl → Blob 변환 헬퍼
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const [header, data] = dataUrl.split(',');
+    const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const binary = atob(data);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+    return new Blob([array], { type: mime });
+  };
+
   const takePhoto = async () => {
+    if (!user) return;
     try {
       setIsTakingPhoto(true);
+
+      // Base64로 받아서 Storage에 업로드
       const image = await CapCamera.getPhoto({
-        quality: 90,
+        quality: 70,          // 품질 낮춰서 파일 크기 절약
         allowEditing: true,
-        resultType: CameraResultType.DataUrl
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Prompt,
       });
-      
-      if (image.dataUrl) {
-        setAvatarUrl(image.dataUrl);
+
+      if (!image.base64String) return;
+
+      const dataUrl = `data:image/jpeg;base64,${image.base64String}`;
+      const blob = dataUrlToBlob(dataUrl);
+
+      // 파일 크기 체크 (2MB 초과 시 거부)
+      if (blob.size > 2 * 1024 * 1024) {
+        showError('이미지 크기가 너무 큽니다. 2MB 이하의 이미지를 선택해주세요.');
+        return;
       }
-    } catch (error) {
+
+      const fileName = `avatars/${user.id}_${Date.now()}.jpg`;
+
+      // Supabase Storage에 업로드
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        // Storage 버킷이 없을 경우 fallback: dicebear URL 사용
+        console.error('Storage upload error:', uploadError);
+        showError('이미지 업로드에 실패했습니다. 기본 아바타를 사용합니다.');
+        setAvatarUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}_${Date.now()}`);
+        return;
+      }
+
+      // Public URL 가져오기
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      if (urlData?.publicUrl) {
+        setAvatarUrl(urlData.publicUrl);
+        showSuccess('프로필 사진이 업로드되었습니다.');
+      }
+    } catch (error: any) {
+      // 사용자가 취소한 경우 무시
+      if (error?.message?.includes('cancelled') || error?.message?.includes('cancel')) return;
       console.error('Camera error:', error);
+      showError('사진을 가져오는 중 오류가 발생했습니다.');
     } finally {
       setIsTakingPhoto(false);
     }
@@ -132,6 +183,11 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
       return;
     }
 
+    // Base64가 avatarUrl에 들어오는 것을 최종 방어
+    const safeAvatarUrl = avatarUrl?.startsWith('data:image')
+      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+      : avatarUrl;
+
     setIsSubmitting(true);
     try {
       const { error } = await supabase
@@ -140,7 +196,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
           id: user.id,
           nickname: trimmedNickname,
           bio: bio.trim(),
-          avatar_url: avatarUrl,
+          avatar_url: safeAvatarUrl,
           updated_at: new Date().toISOString()
         });
 
@@ -159,10 +215,6 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* 
-        BottomNav(z-2000)보다 아래에 위치하도록 z-index를 1500으로 조정하고,
-        하단 바 높이만큼 여백을 주어 겹치지 않게 처리
-      */}
       <DrawerContent className="h-[85vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-45px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
