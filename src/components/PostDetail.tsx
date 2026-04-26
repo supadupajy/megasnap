@@ -375,167 +375,184 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/95 overflow-hidden flex flex-col z-[1000]">
-        <VisuallyHidden.Root>
-          <DialogTitle>포스트 상세 보기</DialogTitle>
-          <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
-        </VisuallyHidden.Root>
-        
-        <div className="relative flex-1 flex flex-col min-h-0">
-          <div
-            className="absolute top-8 right-6 z-[1100] transition-all duration-500"
-            style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
-          >
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} className="rounded-2xl bg-white/80 backdrop-blur-xl hover:bg-white text-indigo-600 shadow-xl border border-white/40 w-11 h-11 active:scale-90 transition-all">
-              <X className="w-6 h-6 stroke-[2.5px]" />
-            </Button>
-          </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/95 overflow-hidden flex flex-col z-[1000]">
+          <VisuallyHidden.Root>
+            <DialogTitle>포스트 상세 보기</DialogTitle>
+            <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
+          </VisuallyHidden.Root>
+          
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all pointer-events-auto"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <div className="flex items-center gap-2 pointer-events-auto">
+                {isMine && (
+                  <button 
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-rose-500/20 backdrop-blur-md text-rose-500 border border-rose-500/20 active:scale-90 transition-all"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+                <button className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all">
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
 
-          <div
-            className="relative w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
-            style={{
-              paddingTop: '16px',
-              paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
-              transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
-            }}
-          >
-            <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
-              <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
-                <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-                  {/* 헤더 고정 영역 */}
-                  <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
-                    <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                        <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+            <div
+              className="relative w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
+              style={{
+                paddingTop: '16px',
+                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
+                transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
+              }}
+            >
+              <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
+                <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
+                  <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
+                    {/* 헤더 고정 영역 */}
+                    <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
+                      <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+                        <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                          <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
+                            {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+                          </div>
+                          <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                            <MapPin className="w-3 h-3" />
+                            <span className="text-[10px] font-medium">{currentPost.location}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
-                          {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-                        </div>
-                        <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
-                          <MapPin className="w-3 h-3" />
-                          <span className="text-[10px] font-medium">{currentPost.location}</span>
-                        </div>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
+                              <MoreHorizontal className="w-5 h-5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
+                            {isMine ? (
+                              <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                                <span className="text-sm font-bold text-red-600">삭제하기</span>
+                              </DropdownMenuItem>
+                            ) : (
+                              <>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+                                  <AlertCircle className="w-4 h-4 text-gray-600" />
+                                  <span className="text-sm font-bold text-gray-700">신고</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                                  <Ban className="w-4 h-4 text-red-600" />
+                                  <span className="text-sm font-bold text-red-600">차단</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
-                            <MoreHorizontal className="w-5 h-5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                          {isMine ? (
-                            <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                              <span className="text-sm font-bold text-red-600">삭제하기</span>
-                            </DropdownMenuItem>
-                          ) : (
-                            <>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                                <AlertCircle className="w-4 h-4 text-gray-600" />
-                                <span className="text-sm font-bold text-gray-700">신고</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                <Ban className="w-4 h-4 text-red-600" />
-                                <span className="text-sm font-bold text-red-600">차단</span>
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
 
-                  <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
-                    <div className="flex flex-col">
-                      {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
-                      <div className="px-4 mt-2">
-                        <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                          {youtubeId ? (
-                            <iframe
-                              className="w-full h-full"
-                              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-                              title="YouTube video player"
-                              frameBorder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : currentPost.videoUrl ? (
-                            <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
-                          ) : (
-                            <div className="absolute inset-0 w-full h-full z-10">
-                              {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
-                              <div
-                                ref={imageScrollRef}
-                                className={cn(
-                                  "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-                                  isDragging && "cursor-grabbing snap-none"
-                                )}
-                                onScroll={handleImageScroll}
-                                onMouseDown={onMouseDown}
-                                onMouseUp={onMouseUp}
-                                onMouseLeave={onMouseUp}
-                                onMouseMove={onMouseMove}
-                              >
-                                {displayImages.map((img, index) => {
-                                  const isAdSlide = img === COCA_COLA_IMAGE;
-                                  if (isAdSlide) {
+                    <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
+                      <div className="flex flex-col">
+                        {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
+                        <div className="px-4 mt-2">
+                          <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+                            {youtubeId ? (
+                              <iframe
+                                className="w-full h-full"
+                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : currentPost.videoUrl ? (
+                              <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+                            ) : (
+                              <div className="absolute inset-0 w-full h-full z-10">
+                                {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
+                                <div
+                                  ref={imageScrollRef}
+                                  className={cn(
+                                    "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+                                    isDragging && "cursor-grabbing snap-none"
+                                  )}
+                                  onScroll={handleImageScroll}
+                                  onMouseDown={onMouseDown}
+                                  onMouseUp={onMouseUp}
+                                  onMouseLeave={onMouseUp}
+                                  onMouseMove={onMouseMove}
+                                >
+                                  {displayImages.map((img, index) => {
+                                    const isAdSlide = img === COCA_COLA_IMAGE;
+                                    if (isAdSlide) {
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="w-full h-full shrink-0 snap-center relative cursor-pointer"
+                                          style={{ scrollSnapStop: 'always' }}
+                                          onClick={handleAdClick}
+                                        >
+                                          <img
+                                            src={img}
+                                            alt="Advertisement"
+                                            className="w-full h-full object-cover pointer-events-none"
+                                            draggable={false}
+                                          />
+                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                                            <ExternalLink className="w-3.5 h-3.5" />
+                                            <span className="font-bold">AD</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
                                     return (
                                       <div
                                         key={index}
-                                        className="w-full h-full shrink-0 snap-center relative cursor-pointer"
+                                        className="w-full h-full shrink-0 snap-center relative"
                                         style={{ scrollSnapStop: 'always' }}
-                                        onClick={handleAdClick}
+                                        onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
                                       >
                                         <img
                                           src={img}
-                                          alt="Advertisement"
+                                          alt={`Post content ${index + 1}`}
                                           className="w-full h-full object-cover pointer-events-none"
                                           draggable={false}
                                         />
-                                        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                          <ExternalLink className="w-3.5 h-3.5" />
-                                          <span className="font-bold">AD</span>
-                                        </div>
                                       </div>
                                     );
-                                  }
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="w-full h-full shrink-0 snap-center relative"
-                                      style={{ scrollSnapStop: 'always' }}
-                                      onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-                                    >
-                                      <img
-                                        src={img}
-                                        alt={`Post content ${index + 1}`}
-                                        className="w-full h-full object-cover pointer-events-none"
-                                        draggable={false}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-
-                              {/* 인디케이터 */}
-                              {displayImages.length > 1 && (
-                                <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-                                  {displayImages.map((_, i) => (
-                                    <div
-                                      key={i}
-                                      className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-                                    />
-                                  ))}
+                                  })}
                                 </div>
-                              )}
-                            </div>
-                          )}
+
+                                {/* 인디케이터 */}
+                                {displayImages.length > 1 && (
+                                  <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+                                    {displayImages.map((_, i) => (
+                                      <div
+                                        key={i}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -657,15 +674,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
-    <DeleteConfirmDialog
-      isOpen={isDeleteDialogOpen}
-      onClose={() => setIsDeleteDialogOpen(false)}
-      onConfirm={confirmDelete}
-    />
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
+    </>
   );
 };
 
