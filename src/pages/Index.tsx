@@ -785,12 +785,15 @@ const Index = () => {
       
       {/* 실시간 인기 포스팅 리스트 - 상단 헤더 바로 밑으로 이동 (여백 추가) */}
       <AnimatePresence>
-        {!isPostListOpen && !isCategoryOpen && !isSearchOpen && (
+        {!isPostListOpen && !isSearchOpen && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none"
+            className={cn(
+              "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
+              isCategoryOpen && "opacity-50 blur-[1px]"
+            )}
           >
             <div className="max-w-md mx-auto pointer-events-auto">
               <TrendingPosts
