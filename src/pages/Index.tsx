@@ -722,6 +722,15 @@ const Index = () => {
         </div>
       </motion.div>
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
+      
+      {/* 실시간 인기 포스팅 리스트 */}
+      <TrendingPosts
+        posts={globalTrendingPosts}
+        onPostClick={handleTrendingPostClick}
+        isExpanded={isTrendingExpanded}
+        onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+      />
+
       <AnimatePresence>
         {isPostListOpen && (
           <PostListOverlay 
