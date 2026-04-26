@@ -404,15 +404,15 @@ export const seedInBoundsPosts = async (
       } else if (otherProfiles && otherProfiles.length > 0) {
         // 실존하는 타인의 정보를 무작위 선택
         const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
-        userName = p.nickname;
-        userAvatar = p.avatar_url;
+        userName = p.nickname || RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        userAvatar = p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
       } else {
         // 타인 프로필이 없는 경우에만 랜덤 풀 사용
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
       }
 
-      // [FIX] 닉네임이 본인과 같으면 강제로 랜덤 풀에서 변경 (이중 방어)
+      // [CRITICAL] 닉네임이 '비트코인떡락'이면 무조건 랜덤 풀에서 변경하여 절대 중복되지 않게 함
       if (userName === '비트코인떡락') {
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
       }

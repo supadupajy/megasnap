@@ -30,17 +30,11 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
-  // [FINAL ATOMIC FIX]
-  // 1. is_seed_data인 경우 DB에 저장된 user_name을 "무조건" 사용하고 profiles 조인을 무시함
-  // 2. is_seed_data가 아니더라도 DB에 user_name이 있으면 우선순위를 높게 잡음
-  let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
-  let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
-
-  if (p.is_seed_data) {
-    // 시드 데이터는 닉네임 덮어쓰기 방지를 위해 하드코딩된 user_name 필드만 신뢰
-    finalUserName = p.user_name || '탐험가';
-    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
-  }
+  // [ULTIMATE ATOMIC FIX]
+  // DB에 저장된 user_name을 무조건 최우선으로 사용하도록 합니다.
+  // profiles 조인을 통해 넘어오는 정보가 현재 로그인한 유저 정보로 덮어쓰기되는 현상을 완전히 방지합니다.
+  const finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
+  const finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
 
   return {
     id: p.id,
@@ -49,6 +43,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
       id: p.user_id,
+      // [FIX] 여기서도 p.user_name이 있으면 profiles의 정보보다 무조건 우선합니다.
       name: finalUserName,
       avatar: finalUserAvatar,
     },
@@ -105,7 +100,8 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // [CRITICAL] 모든 필요한 필드를 명시적으로 가져오는지 재확인
+    // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
+    // [CRITICAL FIX] user_name과 user_avatar를 반드시 포함해야 랜덤 닉네임이 표시됩니다.
     let query = supabase
       .from('posts')
       .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')

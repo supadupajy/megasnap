@@ -279,7 +279,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
   const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
-  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
+  // [CRITICAL FIX] 시드 데이터인 경우 본인 포스팅이더라도 내 프로필로 덮어씌워지지 않도록 isMine 판정 수정
+  const isSeed = currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
+  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed;
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
