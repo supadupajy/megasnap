@@ -583,10 +583,9 @@ useEffect(() => {
     
     let isMine = false;
     if (authUser) {
-      // 내 ID이면서, 시드 데이터가 아니고, 닉네임이 '비트코인떡락'인 경우에만 MY
-      // [FIX] post.user_id 가 uuid 객체인 경우와 비교 호환성 보장
+      // 내 ID이면서, 시드 데이터가 아닌 경우에만 MY 표시
       const userId = post.user_id || (post.user && post.user.id);
-      if (String(userId) === String(authUser.id) && !isSeed && postUserName === '비트코인떡락') {
+      if (String(userId) === String(authUser.id) && !isSeed) {
         isMine = true;
       }
     }
