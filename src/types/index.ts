@@ -17,30 +17,32 @@ export interface Comment {
 
 export interface Post {
   id: string;
-  user: User;
+  isAd?: boolean;
+  isGif?: boolean;
+  isInfluencer?: boolean;
+  user: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
   content: string;
   location: string;
-  location_name?: string;
-  latitude?: number;
-  longitude?: number;
-  lat?: number; // legacy/calculated field
-  lng?: number; // legacy/calculated field
+  lat: number;
+  lng: number;
+  latitude: number;
+  longitude: number;
   likes: number;
   commentsCount: number;
   comments: Comment[];
   image: string;
-  image_url?: string;
+  image_url: string;
   images: string[];
   isLiked: boolean;
-  isAd: boolean;
-  isGif: boolean;
-  isInfluencer?: boolean;
-  borderType?: 'gold' | 'silver' | 'none' | 'popular' | 'diamond';
   youtubeUrl?: string;
   videoUrl?: string;
-  category?: string;
-  isSaved?: boolean;
-  rank?: number; // for trending/popular lists
+  category: string;
   createdAt: Date;
+  borderType?: string;
   isNewRealtime?: boolean;
+  is_seed_data?: boolean; // [NEW] 시드 데이터 여부 추가
 }

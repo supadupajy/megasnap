@@ -58,6 +58,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     category: p.category || 'none',
     createdAt: new Date(p.created_at),
     borderType: borderType,
+    is_seed_data: p.is_seed_data
   };
 };
 
@@ -93,11 +94,10 @@ export const fetchPostsInBounds = async (
 
   try {
     // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
-    // 마커를 지도에 그리는 데 꼭 필요한 최소 정보만 조회합니다. (본문, 이미지 배열, 프로필 조인 제외)
-    // content가 [AD]로 시작하는지 확인하기 위해 content 필드도 포함합니다.
+    // [FIX] is_seed_data 컬럼을 select에 포함하여 지도 마커에서 MY 라벨을 끌 수 있도록 합니다.
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content')
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))

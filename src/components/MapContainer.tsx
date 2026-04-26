@@ -336,7 +336,7 @@ const MapContainer = ({
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // [CRITICAL FIX] is_seed_data 판별 로직 강화
+      // [CRITICAL FIX] is_seed_data 판별 로직 강화 (post.is_seed_data 가 undefined면 안됨)
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
 
