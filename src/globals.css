@@ -257,14 +257,14 @@
    광고 마커 전용: 펄스 글로우 링 + 외부 헤일로
    ============================================= */
 
-/* 1. 펄스 글로우 링 - 파란 빛이 바깥으로 퍼져나가는 동심원 */
+/* 1. 펄스 글로우 링 - translate(-50%,-50%) 유지하면서 scale만 변화 */
 @keyframes ad-pulse-ring {
   0% {
-    transform: translate(-50%, -50%) scale(0.6);
-    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
   }
   100% {
-    transform: translate(-50%, -50%) scale(2.6);
+    transform: translate(-50%, -50%) scale(2.8);
     opacity: 0;
   }
 }
@@ -282,16 +282,16 @@
 }
 
 /* 광고 마커 전용 래퍼 - 링과 헤일로를 담는 컨테이너
-   marker-content-wrapper 안에서 마커 이미지 박스(60px) 중앙에 정렬 */
+   이미지 박스(60x60) 안에서 inset:0으로 꽉 채우고,
+   overflow:visible로 바깥으로 퍼지게 함 */
 .ad-glow-wrapper {
   position: absolute;
-  /* labelHtml(약 22px) + 마커 박스 절반(30px) = 약 52px 아래가 이미지 중앙 */
-  top: 52px;
-  left: 50%;
-  width: 60px;
-  height: 60px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
+  overflow: visible;
 }
 
 /* 3. 외부 헤일로: 항상 켜져 있는 은은한 블러 원형 배경 */
@@ -300,16 +300,16 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 80px;
-  height: 80px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.55) 0%, rgba(99, 102, 241, 0.25) 50%, transparent 75%);
-  filter: blur(6px);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, rgba(99, 102, 241, 0.3) 50%, transparent 75%);
+  filter: blur(8px);
   animation: ad-halo-breathe 2.2s ease-in-out infinite;
   transform: translate(-50%, -50%);
 }
 
-/* 4. 펄스 링 1번째 */
+/* 4. 펄스 링 1번째 - 이미지 박스 중앙(50%,50%) 기준 */
 .ad-pulse-ring-1 {
   position: absolute;
   top: 50%;
@@ -318,6 +318,7 @@
   height: 60px;
   border-radius: 50%;
   background: rgba(59, 130, 246, 0.5);
+  transform: translate(-50%, -50%);
   animation: ad-pulse-ring 2.2s ease-out infinite;
 }
 
@@ -330,6 +331,7 @@
   height: 60px;
   border-radius: 50%;
   background: rgba(99, 102, 241, 0.4);
+  transform: translate(-50%, -50%);
   animation: ad-pulse-ring 2.2s ease-out 0.7s infinite;
 }
 
@@ -342,5 +344,6 @@
   height: 60px;
   border-radius: 50%;
   background: rgba(147, 197, 253, 0.3);
+  transform: translate(-50%, -50%);
   animation: ad-pulse-ring 2.2s ease-out 1.4s infinite;
 }

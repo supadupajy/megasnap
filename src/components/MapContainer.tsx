@@ -710,6 +710,8 @@ useEffect(() => {
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
+    // 광고 전용 글로우 래퍼: 이미지 박스(position:relative) 안에 inset:0으로 배치
+    // overflow:visible 이므로 바깥으로 퍼져나감
     const adGlowHtml = isAd ? `
       <div class="ad-glow-wrapper">
         <div class="ad-pulse-ring-1"></div>
@@ -719,11 +721,11 @@ useEffect(() => {
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      ${adGlowHtml}
       <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
         ${labelHtml}
-        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} overflow: hidden; box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
-          <div style="width: 100%; height: 100%; overflow: hidden; position: relative;" class="${shineClass}">
+        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: visible;">
+          ${adGlowHtml}
+          <div style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: 16px;" class="${shineClass}">
             ${isVideo && post.videoUrl ? 
               `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}"></video>` : 
               `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}" />`
