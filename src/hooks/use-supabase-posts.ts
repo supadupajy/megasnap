@@ -109,30 +109,27 @@ export const fetchPostsInBounds = async (
   currentLevel: number = 6,
   center?: { lat: number; lng: number }
 ) => {
-  let limit = 200; 
-  if (currentLevel >= 8) limit = 300;
-  if (currentLevel >= 10) limit = 500;
+  // 줌 레벨에 따라 limit 조정 (더 넓은 범위 = 더 많은 포스트)
+  let limit = 500; 
+  if (currentLevel >= 8) limit = 800;
+  if (currentLevel >= 10) limit = 1000;
 
   try {
-    // [ULTIMATE FIX] 'posts' 테이블 대신 'posts_with_profiles' 뷰를 조회하지 않고
-    // posts 테이블에서 필요한 모든 정보를 직접 가져오며,
-    // JOIN된 profile 닉네임이 랜덤하게 저장된 user_name을 덮어쓰지 못하게 합니다.
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
+      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
       .lte('longitude', Math.max(sw.lng, ne.lng));
 
+    // 좋아요 순으로 정렬하여 인기 포스트가 먼저 로드되도록
     const { data, error } = await query
-      .order('created_at', { ascending: false })
+      .order('likes', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
     
-    // [CRITICAL] 이미 데이터 매핑 로직에서 p.is_seed_data 체크를 통해 닉네임을 보호하고 있으므로
-    // 여기서 반환된 데이터는 안전합니다.
     return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);

@@ -286,7 +286,6 @@ const Index = () => {
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
 
-    // ✅ [FIX] 초기 로딩 중에도 firstLoadRequested가 true이면 요청을 허용하도록 로직 수정
     if (!targetBounds || !center || isSyncing.current) return;
     if (!isInitialLoadDone && !isFirstLoadRequested.current) return;
 
@@ -295,8 +294,8 @@ const Index = () => {
       const latDiff = Math.abs(center.lat - lastLat);
       const lngDiff = Math.abs(center.lng - lastLng);
       
-      // 줌 레벨이 같고, 이동 거리가 매우 작으면(약 10~20m 이내) 요청 스킵
-      if (zoomToUse === lastZoom && latDiff < 0.0001 && lngDiff < 0.0001) {
+      // 줌 레벨이 같고, 이동 거리가 극히 미세한 경우(약 1~2m)만 스킵
+      if (zoomToUse === lastZoom && latDiff < 0.00001 && lngDiff < 0.00001) {
         return;
       }
     }
@@ -307,15 +306,12 @@ const Index = () => {
     const { sw, ne } = targetBounds;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
-      const validDbIds = new Set(dbPosts.map(p => p.id));
       
-      // ✅ [OPTIMIZATION] 마커용 데이터는 최소한의 매핑만 수행 (Full mapping은 상세 페이지에서 수행)
       const mappedPosts: Post[] = dbPosts.map(p => {
         const isAd = p.content?.trim().startsWith('[AD]') || false;
         let borderType: any = 'none';
         if (Number(p.likes) >= 9000) borderType = 'popular';
         else if (!isAd) {
-          // ✅ [FIX] 마커 렌더링을 위해 borderType 계산 로직 동기화 (ID 기반 해시)
           let h = 0;
           const idStr = p.id.toString();
           for(let i = 0; i < idStr.length; i++) h = Math.imul(31, h) + idStr.charCodeAt(i) | 0;
@@ -340,7 +336,6 @@ const Index = () => {
           createdAt: new Date(p.created_at),
           borderType,
           isInfluencer: ['gold', 'diamond'].includes(borderType),
-          // [FIX] DB에 저장된 user_name/user_avatar를 즉시 활용 (지연 로딩 제거)
           user: {
             id: p.user_id,
             name: p.user_name || '탐험가',
@@ -356,28 +351,10 @@ const Index = () => {
         };
       });
 
-      // globalTrendingPosts의 ID 목록 - 이 포스트들은 절대 삭제하지 않음 (ref 사용으로 의존성 없이 최신값 참조)
-      const trendingIds = new Set(globalTrendingPostsRef.current.map(p => p.id));
-
+      // 기존 포스트는 절대 삭제하지 않고, 새 포스트만 추가(누적)
       setAllPosts(prev => {
-        const postsToDelete: Post[] = prev.filter(p => {
-          const inBounds = p.lat >= Math.min(sw.lat, ne.lat) && p.lat <= Math.max(sw.lat, ne.lat) && p.lng >= Math.min(sw.lng, ne.lng) && p.lng <= Math.max(sw.lng, ne.lng);
-          return inBounds && !validDbIds.has(p.id) && !p.isNewRealtime && !trendingIds.has(p.id);
-        });
-        if (postsToDelete.length > 0) {
-          postsToDelete.forEach(p => window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } })));
-          setTimeout(() => {
-            const deletedIds = new Set(postsToDelete.map(p => p.id));
-            setAllPosts(current => current.filter(p => !deletedIds.has(p.id)));
-            setDisplayedMarkers(current => current.filter(p => !deletedIds.has(p.id)));
-          }, 450);
-        }
-        
-        // ✅ [FIX] mappedPosts가 최소 정보만 가지고 있으므로, 
-        // 기존에 이미 Full 정보를 가지고 있던 포스트가 덮어씌워지지 않도록 merge 로직 개선
         const mergedPosts = mappedPosts.map(newP => {
           const existing = prev.find(p => p.id === newP.id);
-          // 기존 데이터가 더 상세한 정보를 가지고 있다면 유지하되, user 정보는 newP의 것이 우선
           if (existing && existing.content) {
             return { ...existing, ...newP, content: existing.content, location: existing.location };
           }
@@ -385,7 +362,8 @@ const Index = () => {
         });
 
         const existingIds = new Set(prev.map(p => p.id));
-        const combined = [...mergedPosts.filter(p => !existingIds.has(p.id)), ...prev].slice(0, 3000);
+        const newOnly = mergedPosts.filter(p => !existingIds.has(p.id));
+        const combined = [...newOnly, ...prev].slice(0, 5000);
         mapCache.posts = combined;
         return combined;
       });
