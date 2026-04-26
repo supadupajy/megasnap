@@ -49,8 +49,12 @@ const Header = () => {
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
-    const messagesChannel = supabase
-      .channel(`header-messages-${user.id}`)
+    // Create channels
+    const messagesChannel = supabase.channel(`header-messages-${user.id}`);
+    const notificationsChannel = supabase.channel(`header-notifications-${user.id}`);
+
+    // Register ALL handlers BEFORE calling subscribe()
+    messagesChannel
       .on(
         'postgres_changes',
         {
@@ -76,22 +80,20 @@ const Header = () => {
         }
       );
 
-    const notificationsChannel = supabase
-      .channel(`header-notifications-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadNotifCount();
-        }
-      );
+    notificationsChannel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      },
+      () => {
+        fetchUnreadNotifCount();
+      }
+    );
 
-    // Subscribe both channels
+    // Call subscribe() as the VERY LAST step
     messagesChannel.subscribe();
     notificationsChannel.subscribe();
 
@@ -106,7 +108,7 @@ const Header = () => {
       supabase.removeChannel(notificationsChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
+  }, [user?.id]); // Omit fetch functions from deps to avoid re-renders re-subscribing
   
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
