@@ -21,6 +21,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface PostDetailProps {
   posts: any[];
@@ -382,24 +383,71 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/95 overflow-hidden flex flex-col z-[1000]">
-          <VisuallyHidden.Root>
-            <DialogTitle>포스트 상세 보기</DialogTitle>
-            <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
-          </VisuallyHidden.Root>
-          
-          <div className="relative flex-1 flex flex-col min-h-0">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
+      <AnimatePresence>
+        {isVisible && currentPost && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={cn(
+              "w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden pointer-events-auto max-h-[92vh] flex flex-col border-t sm:border border-gray-100 mb-safe",
+              isMine && "ring-2 ring-indigo-500 ring-offset-2"
+            )}
+          >
             {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-end px-4 h-16 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <button
-                  onClick={onClose}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+            <div className="flex items-center justify-between p-5 border-b border-gray-50 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-11 h-11 rounded-full p-[2px] relative",
+                  isMine ? "bg-indigo-600" : "bg-gradient-to-tr from-yellow-400 to-indigo-600"
+                )}>
+                  <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                  {isMine && (
+                    <div className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[8px] font-black px-1.5 rounded-full border border-white shadow-sm z-10">
+                      MY
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
+                    {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
+                  </div>
+                  <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
+                    <MapPin className="w-3 h-3" />
+                    <span className="text-[10px] font-medium hover:underline">{currentPost.location}</span>
+                  </div>
+                </div>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-gray-400 p-1 outline-none hover:bg-gray-100 rounded-full transition-colors">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
+                    {isMine ? (
+                      <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <span className="text-sm font-bold text-red-600">삭제하기</span>
+                      </DropdownMenuItem>
+                    ) : (
+                      <>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+                          <AlertCircle className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm font-bold text-gray-700">신고</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                          <Ban className="w-4 h-4 text-red-600" />
+                          <span className="text-sm font-bold text-red-600">차단</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -668,16 +716,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                 </div>
               </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <DeleteConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
-    </>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
