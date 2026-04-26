@@ -378,7 +378,7 @@ export const seedInBoundsPosts = async (
     // 기본 닉네임 풀
     const NICKNAMES = ['여행가', '맛집탐험대', '사진작가', '동네주민', '미식가', '프로산책러', '트렌드세터'];
     
-    const count = 10; // 5개에서 10개로 증가 (더 풍성한 테스트를 위해)
+    const count = 5; // 5개로 복구
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
