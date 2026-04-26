@@ -233,7 +233,7 @@ const Settings = () => {
         <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => navigate(-1)} 
+              onClick={() => navigate('/profile')} 
               className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95"
             >
               <ChevronLeft className="w-6 h-6 text-gray-400" />
