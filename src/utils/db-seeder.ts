@@ -399,27 +399,18 @@ export const seedInBoundsPosts = async (
         userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
         borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
-        // [FIX] user_id는 UUID 형식이어야 하므로, 다른 실제 사용자 ID가 있으면 그것을 사용
-        if (randomProfile && randomProfile.id !== currentUserId) {
-          userIdForRecord = randomProfile.id;
-        } else {
-          // 마땅한 랜덤 ID가 없으면 현재 사용자 ID를 유지 (MapContainer에서 is_seed_data로 'MY' 라벨 방지)
-          userIdForRecord = currentUserId;
-        }
+        // [FIX] RLS 위반을 방지하기 위해 user_id는 항상 currentUserId로 유지하되,
+        // UI에서 is_seed_data 플래그를 통해 'MY' 라벨을 가림
+        userIdForRecord = currentUserId;
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
         borderType = 'popular';
-        if (randomProfile && randomProfile.id !== currentUserId) {
-          userIdForRecord = randomProfile.id;
-        } else {
-          userIdForRecord = currentUserId;
-        }
+        userIdForRecord = currentUserId;
       } else if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
         content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
         likes = 0;
-        // [FIX] 광고 계정도 UUID 형식을 지켜야 하므로 현재 사용자 ID 사용
         userIdForRecord = currentUserId;
       }
 
@@ -467,14 +458,7 @@ export const seedInBoundsPosts = async (
     
     if (error) {
       console.error("❌ [Seeder] Insert error:", error);
-      if (error.code === '42501') { 
-        console.warn("⚠️ [Seeder] RLS restriction encountered. Falling back to currentUserId.");
-        const fallbackData = insertData.map(d => ({ ...d, user_id: currentUserId }));
-        const { error: retryError } = await supabase.from('posts').insert(fallbackData);
-        if (retryError) throw retryError;
-      } else {
-        throw error;
-      }
+      throw error;
     }
 
     console.log(`✨ [Seeder] ${insertData.length}개의 다양한 타입 포스팅이 생성되었습니다.`);

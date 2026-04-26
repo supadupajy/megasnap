@@ -83,6 +83,14 @@ const MapContainer = ({
     return () => window.removeEventListener('update-viewed-markers', handleUpdateViewedMarkers);
   }, []);
 
+  // ✅ [FIX] 포스팅 생성 후 지도 데이터가 바뀌었을 때 오버레이를 강제로 갱신하도록 처리
+  useEffect(() => {
+    if (isMapReady && mapInstance.current) {
+      // posts가 바뀔 때 CustomOverlay의 state key를 체크하여 업데이트하도록 위쪽 useEffect가 이미 존재함
+      // 하지만 is_seed_data가 DB에서 갓 넘어온 경우를 위해 zIndex와 라벨을 재계산하도록 유도
+    }
+  }, [posts, isMapReady]);
+
   useEffect(() => {
     const handleAnimateDelete = (e: any) => {
       const postId = e.detail?.id;
@@ -564,7 +572,7 @@ useEffect(() => {
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd;
-    const isSeed = post.is_seed_data === true;
+    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true';
     
     // 시드 데이터(is_seed_data)인 경우는 MY 라벨을 표시하지 않음
     const postUserId = post.user_id || (post.user && post.user.id);

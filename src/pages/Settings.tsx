@@ -188,12 +188,15 @@ const Settings = () => {
     }
 
     setIsProcessing(true);
-    const toastId = showLoading('현재 화면 내에 포스팅을 생성 중입니다...');
+    const toastId = showLoading('현재 화면 안에 포스팅을 생성 중입니다...');
     try {
       const bounds = JSON.parse(storedBounds);
       const count = await seedInBoundsPosts(user.id, bounds);
       dismissToast(toastId);
-      showSuccess(`현재 화면 범위 내에 ${count}개의 포스팅이 생성되었습니다! 📍`);
+      showSuccess(`현재 화면 안에 ${count}개의 포스팅이 생성되었습니다! 📍`);
+      
+      // ✅ [FIX] 포스팅 생성 후 지도 데이터를 즉시 새로고침하기 위해 커스텀 이벤트 발생
+      window.dispatchEvent(new CustomEvent('refresh-map-data'));
     } catch (err: any) {
       dismissToast(toastId);
       showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
