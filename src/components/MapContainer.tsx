@@ -377,7 +377,7 @@ const MapContainer = ({
       
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const postUserId = (post as any).user_id || (post.user && post.user.id);
-      const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
+      const isMineKey = !!(authUser && String(postUserId) === String(authUser.id));
       // isHighlighted를 key에서 제거 → 핑 중에도 React가 HTML을 덮어쓰지 않음
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
 
@@ -438,7 +438,7 @@ const MapContainer = ({
       if (!p) return;
       const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
       const postUserId = (p as any).user_id || (p.user && p.user.id);
-      const isMineKey = !!(authUserRef.current && String(postUserId) === String(authUserRef.current.id) && !isSeed);
+      const isMineKey = !!(authUserRef.current && String(postUserId) === String(authUserRef.current.id));
       const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
       content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
       content.setAttribute('data-content-state', newStateKey);
@@ -504,7 +504,7 @@ const MapContainer = ({
                 const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
                 const postUserId = (p as any).user_id || (p.user && p.user.id);
                 const currentAuthUser = authUserRef.current;
-                const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
+                const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id));
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
                 // HTML 재생성 완료 후 마지막에 가드 해제 → React 리렌더링 타이밍 경쟁 완전 차단
                 content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
@@ -693,7 +693,7 @@ const MapContainer = ({
     const currentUser = authUserRef.current;
     if (currentUser) {
       const userId = post.user_id || (post.user && post.user.id);
-      if (String(userId) === String(currentUser.id) && !isSeed) {
+      if (String(userId) === String(currentUser.id)) {
         isMine = true;
       }
     }
