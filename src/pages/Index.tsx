@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
-import TimeSlider from '@/components/TimeSlider';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
@@ -99,7 +98,6 @@ const Index = () => {
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeValue, setTimeValue] = useState(168);
   const { session } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
@@ -395,21 +393,11 @@ const Index = () => {
   useEffect(() => {
     if (currentZoom >= 11) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     
-    const now = Date.now();
-    const timeLimitMs = timeValue * 60 * 60 * 1000;
     const trendingIdsForFilter = new Set(globalTrendingPostsRef.current.map(p => p.id));
     const center = mapData?.center || mapCache.lastCenter;
 
     const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
-
-      const isTrendingPost = trendingIdsForFilter.has(post.id);
-
-      // trending 포스트는 시간 필터 건너뜀
-      if (!isTrendingPost) {
-        const postTime = new Date(post.createdAt).getTime();
-        if ((now - postTime) > timeLimitMs) return false;
-      }
 
       if (selectedCategories.includes('mine')) return !!(authUser && post.user.id === authUser.id);
 
@@ -432,7 +420,7 @@ const Index = () => {
 
     const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
     setDisplayedMarkers(sortedPosts);
-  }, [mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+  }, [mapData?.center, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;
@@ -797,13 +785,6 @@ const Index = () => {
                   {displayedMarkers.length > 0 && currentZoom < 9 && <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">{displayedMarkers.length}</div>}
                 </div>
               </div>
-              
-              {/* 타임슬라이더: 하단바에 거의 붙도록 bottom 조정 (기존 4 -> 0) */}
-              <div className={cn("absolute bottom-0 left-0 right-0 z-10 flex justify-center transition-all duration-500 ease-out pb-[env(safe-area-inset-bottom)]", (isTrendingExpanded || isPostListOpen) ? "opacity-0 translate-y-8 pointer-events-none" : "opacity-100 translate-y-0 pointer-events-auto")}>
-                <div className="mb-2">
-                  <TimeSlider value={timeValue} onChange={setTimeValue} />
-                </div>
-              </div>
             </>
           )}
         </div>
@@ -870,9 +851,8 @@ const Index = () => {
               sw: { lat: 33, lng: 124 }, 
               ne: { lat: 39, lng: 132 } 
             }}
-            selectedCategories={selectedCategories} 
-            timeValueHours={timeValue} 
-            authUserId={authUser?.id} 
+            selectedCategories={selectedCategories}
+            authUserId={authUser?.id}
             onDeletePost={handlePostDeleted} 
           />
         )}

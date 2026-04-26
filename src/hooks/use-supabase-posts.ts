@@ -114,9 +114,6 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 8) limit = 1500;
   if (currentLevel >= 10) limit = 2000;
 
-  // 7일 이내 데이터만 가져옴 (timeValue 최대값과 일치)
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
   try {
     const { data, error } = await supabase
       .from('posts')
@@ -125,7 +122,6 @@ export const fetchPostsInBounds = async (
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
       .lte('longitude', Math.max(sw.lng, ne.lng))
-      .gte('created_at', sevenDaysAgo)
       .order('likes', { ascending: false })
       .limit(limit);
 

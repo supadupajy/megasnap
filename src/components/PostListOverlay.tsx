@@ -156,7 +156,6 @@ interface PostListOverlayProps {
   mapCenter: { lat: number; lng: number };
   currentBounds?: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
   selectedCategories: string[];
-  timeValueHours: number;
   authUserId?: string | null;
   onDeletePost?: (id: string) => void;
 }
@@ -167,8 +166,7 @@ const PostListOverlay = ({
   initialPosts, 
   mapCenter, 
   currentBounds, 
-  selectedCategories, 
-  timeValueHours,
+  selectedCategories,
   authUserId,
   onDeletePost
 }: PostListOverlayProps) => {
