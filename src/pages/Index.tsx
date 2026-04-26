@@ -401,41 +401,26 @@ const Index = () => {
   }, [isSelectingLocation, currentZoom, syncPostsWithSupabase]);
 
   useEffect(() => {
-    if (!mapData?.bounds) return;
     if (currentZoom >= 11) { if (displayedMarkers.length > 0) setDisplayedMarkers([]); return; }
     
-    const { sw, ne } = mapData.bounds;
-    const center = mapData.center;
     const now = Date.now();
     const timeLimitMs = timeValue * 60 * 60 * 1000;
-
-    // ✅ 필터링 및 거리순 정렬 로직 최적화
     const trendingIdsForFilter = new Set(globalTrendingPostsRef.current.map(p => p.id));
-      const uniquePosts = Array.from(new Map(allPosts.filter(post => {
+    const center = mapData?.center || mapCache.lastCenter;
+
+    const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
-      
-      // trending 포스트는 bounds 체크 없이 항상 포함 (지도 이동 중에도 마커 유지)
+
       const isTrendingPost = trendingIdsForFilter.has(post.id);
-      
-      if (!isTrendingPost) {
-        const margin = 0.002;
-        const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin &&
-                         post.lat <= Math.max(sw.lat, ne.lat) + margin &&
-                         post.lng >= Math.min(sw.lng, ne.lng) - margin &&
-                         post.lng <= Math.max(sw.lng, ne.lng) + margin;
-        if (!inBounds) return false;
-      }
-      
-      // trending 포스트는 시간 필터도 건너뜀 (오래된 인기 포스트도 항상 표시)
+
+      // trending 포스트는 시간 필터 건너뜀
       if (!isTrendingPost) {
         const postTime = new Date(post.createdAt).getTime();
-        const isWithinTime = (now - postTime) <= timeLimitMs;
-        if (!isWithinTime) return false;
+        if ((now - postTime) > timeLimitMs) return false;
       }
-      
-      if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
-      
-      // ✅ [FIX] 카테고리 필터 로직: 'hot'이나 'influencer'가 선택되었을 때의 조건을 명확히 합니다.
+
+      if (selectedCategories.includes('mine')) return !!(authUser && post.user.id === authUser.id);
+
       const isHot = post.borderType === 'popular' || post.likes >= 9000;
       const isInfluencer = post.isInfluencer || ['gold', 'diamond'].includes(post.borderType || 'none');
       const isAd = post.isAd;
@@ -445,16 +430,17 @@ const Index = () => {
       return selectedCategories.includes(post.category || 'none') ||
              (selectedCategories.includes('hot') && isHot) ||
              (selectedCategories.includes('influencer') && isInfluencer) ||
-             isAd; // 광고는 항상 노출되거나 'all'에서 노출되도록 보장
+             isAd;
     }).map(p => {
-      const dist = Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2));
+      const dist = center
+        ? Math.sqrt(Math.pow(p.lat - center.lat, 2) + Math.pow(p.lng - center.lng, 2))
+        : 0;
       return [p.id, { ...p, _dist: dist }];
     })).values());
 
     const sortedPosts = (uniquePosts as any[]).sort((a, b) => a._dist - b._dist);
-    
     setDisplayedMarkers(sortedPosts);
-  }, [mapData?.bounds, mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
+  }, [mapData?.center, timeValue, selectedCategories, allPosts, blockedIds, authUser, currentZoom]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     const updater = (post: Post) => post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post;

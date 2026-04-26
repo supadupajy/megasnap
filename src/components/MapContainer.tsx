@@ -296,8 +296,6 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
-    const bounds = mapInstance.current.getBounds();
-    const currentPostIds = new Set(posts.map(p => p.id));
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
 
     // Get list of IDs currently in props
@@ -329,7 +327,6 @@ const MapContainer = ({
     posts.forEach(post => {
       if (!post) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
-      if (!bounds.contain(position)) return;
 
       const isViewed = combinedViewedIds.has(post.id);
       const isHighlighted = highlightedPostId === post.id;
