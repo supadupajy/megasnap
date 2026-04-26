@@ -229,12 +229,12 @@ const Settings = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-white no-scrollbar relative">
-      <div className="flex-none">
+    <div className="h-screen bg-white relative flex flex-col">
+      <div className="flex-none h-16">
         <Header />
       </div>
 
-      <header className="flex-none h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none h-16 bg-white flex items-center px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <button 
             onClick={(e) => {
@@ -252,9 +252,9 @@ const Settings = () => {
         <div className="flex-1 flex justify-center -ml-10">
           <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
         </div>
-      </header>
+      </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-20 no-scrollbar">
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
