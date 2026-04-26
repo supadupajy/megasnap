@@ -771,16 +771,25 @@ const Index = () => {
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
       
       {/* 실시간 인기 포스팅 리스트 - 상단 헤더 바로 밑으로 이동 (여백 추가) */}
-      <div className="fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[100] pointer-events-none">
-        <div className="max-w-md mx-auto pointer-events-auto">
-          <TrendingPosts
-            posts={globalTrendingPosts}
-            onPostClick={handleTrendingPostClick}
-            isExpanded={isTrendingExpanded}
-            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-          />
-        </div>
-      </div>
+      <AnimatePresence>
+        {!isPostListOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[100] pointer-events-none"
+          >
+            <div className="max-w-md mx-auto pointer-events-auto">
+              <TrendingPosts
+                posts={globalTrendingPosts}
+                onPostClick={handleTrendingPostClick}
+                isExpanded={isTrendingExpanded}
+                onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isPostListOpen && (
