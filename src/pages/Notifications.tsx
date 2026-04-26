@@ -147,7 +147,6 @@ const Notifications = () => {
       .subscribe();
 
     return () => { 
-      channel.unsubscribe();
       supabase.removeChannel(channel); 
     };
   }, [authUser, fetchNotifications]);

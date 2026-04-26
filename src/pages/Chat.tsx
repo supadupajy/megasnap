@@ -213,7 +213,10 @@ const Chat = () => {
       setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
       setTimeout(scrollToBottom, 10);
     }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
   }, [authUser.id, chatId, isPageVisible, markAsRead, playNotificationSound, scrollToBottom]);
 
   const handleSend = async () => {
