@@ -163,12 +163,13 @@
 }
 
 @keyframes ad-spin {
-  0% { transform: rotateY(0deg); }
+  0%   { transform: rotateY(0deg); }
+  75%  { transform: rotateY(0deg); }
   100% { transform: rotateY(360deg); }
 }
 
 .animate-ad-breathing {
-  animation: ad-spin 4s linear infinite;
+  animation: ad-spin 4s ease-in-out infinite;
   transform-origin: center center;
   transform-style: preserve-3d;
 }
