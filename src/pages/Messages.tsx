@@ -195,81 +195,82 @@ const Messages = () => {
     >
       <div className="pt-16">
         {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
-      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-  <button
-    onClick={handleBack}
-    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-  >
-    <ChevronLeft className="w-6 h-6" />
-  </button>
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
-  </div>
-  <button
-    onClick={() => navigate('/friends')}
-    className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
-  >
-    <Edit className="w-6 h-6 text-indigo-600" />
-  </button>
-</div>
-
-      <div className="flex flex-col">
-        <div className="bg-white px-4 py-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input 
-              placeholder="대화 상대 또는 메시지 검색" 
-              className="pl-12 h-11 bg-gray-50/50 border-2 border-indigo-600 rounded-full focus-visible:ring-0 font-bold placeholder:text-gray-400" 
-              value={query} 
-              onChange={(e) => setQuery(e.target.value)} 
-            />
-            {isSearchingGlobal && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+          <button
+            onClick={handleBack}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
           </div>
+          <button
+            onClick={() => navigate('/friends')}
+            className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <Edit className="w-6 h-6 text-indigo-600" />
+          </button>
         </div>
-        
-        <div className="space-y-6 px-4 pt-4">
-          <div className="space-y-4">
-            <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">{query ? '대화 목록 검색 결과' : '최근 메시지'}</h2>
-            <div className="divide-y divide-gray-50 border-t border-gray-50">
-              <AnimatePresence initial={false}>{filteredConversations.map((conv) => {
-                const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const isSwiped = swipedId === conv.other_id;
-                const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 5;
-                
-                return (
-                  <div key={conv.other_id} className="relative group overflow-hidden">
-                    <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={(e) => handleDeleteClick(e, conv.other_id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
-                    <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} animate={{ x: isSwiped ? -80 : 0 }} onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(conv.other_id); else setSwipedId(null); }} onClick={() => { if (!swipedId) navigate(`/chat/${conv.other_id}`); }} className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10">
-                      <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
-                        <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
-                        <div className={cn(
-                          "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
-                          isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
-                        )} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <p className={`text-sm truncate ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
-                            {isOnline && (
-                              <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px] shrink-0">Online</span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-gray-400 font-medium shrink-0">{time}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
-                          {conv.unread_count > 0 && <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
-                );
-              })}</AnimatePresence>
+
+        <div className="flex flex-col">
+          <div className="bg-white px-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                placeholder="대화 상대 또는 메시지 검색"
+                className="w-full pl-12 h-11 bg-gray-50/50 border-2 border-indigo-600 rounded-full outline-none font-bold placeholder:text-gray-400"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {isSearchingGlobal && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
             </div>
           </div>
-          {query.trim() && globalSearchResults.length > 0 && (<div className="space-y-4 pt-2 border-t border-gray-50"><h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2"><UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기</h2><div className="space-y-1">{globalSearchResults.map((user) => (<div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"><div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0"><Avatar className="w-full h-full border-2 border-white"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback></Avatar></div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900">{user.nickname}</p><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div></div>))}</div></div>)}
-          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
+          
+          <div className="space-y-6 px-4 pt-4">
+            <div className="space-y-4">
+              <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">{query ? '대화 목록 검색 결과' : '최근 메시지'}</h2>
+              <div className="divide-y divide-gray-50 border-t border-gray-50">
+                <AnimatePresence initial={false}>{filteredConversations.map((conv) => {
+                  const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const isSwiped = swipedId === conv.other_id;
+                  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 5;
+                  
+                  return (
+                    <div key={conv.other_id} className="relative group overflow-hidden">
+                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={(e) => handleDeleteClick(e, conv.other_id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
+                      <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} animate={{ x: isSwiped ? -80 : 0 }} onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(conv.other_id); else setSwipedId(null); }} onClick={() => { if (!swipedId) navigate(`/chat/${conv.other_id}`); }} className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10">
+                        <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
+                          <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
+                          <div className={cn(
+                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
+                            isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <p className={`text-sm truncate ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
+                              {isOnline && (
+                                <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px] shrink-0">Online</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400 font-medium shrink-0">{time}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
+                            {conv.unread_count > 0 && <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </div>
+                  );
+                })}</AnimatePresence>
+              </div>
+            </div>
+            {query.trim() && globalSearchResults.length > 0 && (<div className="space-y-4 pt-2 border-t border-gray-50"><h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2"><UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기</h2><div className="space-y-1">{globalSearchResults.map((user) => (<div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"><div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0"><Avatar className="w-full h-full border-2 border-white"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback></Avatar></div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900">{user.nickname}</p><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div></div>))}</div></div>)}
+            {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
+          </div>
         </div>
       </div>
       <DeleteChatDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
