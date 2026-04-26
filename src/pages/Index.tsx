@@ -202,9 +202,14 @@ const Index = () => {
         if (val < 0.03) borderType = 'diamond'; else if (val < 0.08) borderType = 'gold';
       }
       
-      // ✅ [FIX] 이미 상위에서 조인된 유저 정보를 사용하므로, 별도의 Profiles 조회를 하지 않습니다.
-    const userName = p.user_name || p.profiles?.nickname || '탐험가';
-    const userAvatar = p.user_avatar || p.profiles?.avatar_url || '';
+      // [CRITICAL FIX] is_seed_data인 경우 DB의 user_name을 절대 prof로 덮어쓰지 않음
+      const isSeed = p.is_seed_data === true || p.is_seed_data === 'true';
+      const userName = isSeed
+        ? (p.user_name || '탐험가')
+        : (p.user_name || p.profiles?.nickname || '탐험가');
+      const userAvatar = isSeed
+        ? (p.user_avatar || '')
+        : (p.user_avatar || p.profiles?.avatar_url || '');
 
     return {
         id: p.id, isAd, isGif: false, isInfluencer: ['gold', 'diamond'].includes(borderType),
@@ -244,8 +249,9 @@ const Index = () => {
       if (!error && data) {
         const normalizedData = data.map(p => ({
           ...p,
-          user_name: p.profiles?.nickname || p.user_name || '탐험가',
-          user_avatar: p.profiles?.avatar_url || p.user_avatar || ''
+          // [CRITICAL FIX] 시드 데이터는 user_name 우선, 아닐 때만 profiles.nickname 사용
+          user_name: (p.is_seed_data || p.user_name) ? p.user_name : (p.profiles?.nickname || '탐험가'),
+          user_avatar: (p.is_seed_data || p.user_avatar) ? p.user_avatar : (p.profiles?.avatar_url || '')
         }));
 
         const mappedRaw = await Promise.all(normalizedData.map(mapDbToPost));
@@ -329,7 +335,13 @@ const Index = () => {
           createdAt: new Date(p.created_at),
           borderType,
           isInfluencer: ['gold', 'diamond'].includes(borderType),
-          user: { id: p.user_id, name: '...', avatar: '' }, // 지연 로딩용 플레이스홀더
+          // [FIX] DB에 저장된 user_name/user_avatar를 즉시 활용 (지연 로딩 제거)
+          user: {
+            id: p.user_id,
+            name: p.user_name || '탐험가',
+            avatar: p.user_avatar || ''
+          },
+          is_seed_data: p.is_seed_data,
           content: p.content || '',
           location: p.location_name || '',
           images: p.image_url ? [p.image_url] : [],
@@ -357,9 +369,9 @@ const Index = () => {
         // 기존에 이미 Full 정보를 가지고 있던 포스트가 덮어씌워지지 않도록 merge 로직 개선
         const mergedPosts = mappedPosts.map(newP => {
           const existing = prev.find(p => p.id === newP.id);
-          // 기존 데이터가 더 상세한 정보(user.name이 실제 이름인 경우 등)를 가지고 있다면 유지
-          if (existing && existing.user && existing.user.name !== '...' && existing.content) {
-            return { ...existing, ...newP, user: existing.user, content: existing.content, location: existing.location };
+          // 기존 데이터가 더 상세한 정보를 가지고 있다면 유지하되, user 정보는 newP의 것이 우선
+          if (existing && existing.content) {
+            return { ...existing, ...newP, content: existing.content, location: existing.location };
           }
           return newP;
         });
@@ -491,11 +503,11 @@ const Index = () => {
         .single();
         
       if (!error && data) {
-        // 조인된 유저 정보를 기존 구조로 매핑
+        // [CRITICAL FIX] 시드 데이터(is_seed_data) 또는 user_name이 저장되어 있으면 그것을 우선 사용
         const normalizedData = {
           ...data,
-          user_name: data.profiles?.nickname || data.user_name || '탐험가',
-          user_avatar: data.profiles?.avatar_url || data.user_avatar || ''
+          user_name: (data.is_seed_data || data.user_name) ? data.user_name : (data.profiles?.nickname || '탐험가'),
+          user_avatar: (data.is_seed_data || data.user_avatar) ? data.user_avatar : (data.profiles?.avatar_url || '')
         };
 
         const full = await mapDbToPost(normalizedData);
