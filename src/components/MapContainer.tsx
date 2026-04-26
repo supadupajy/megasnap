@@ -336,8 +336,12 @@ const MapContainer = ({
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // [CRITICAL FIX] is_seed_data 판별 로직 강화 (post.is_seed_data 가 undefined면 안됨)
-      const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
+      // [FINAL CRITICAL FIX] 모든 가능한 필드 조합을 통해 시드 데이터 판별
+      const isSeed = post.is_seed_data === true || 
+                     post.is_seed_data === 'true' || 
+                     post.is_seed_data === 1 ||
+                     (post.user_name && post.user_name !== '비트코인떡락' && post.user_id === authUser?.id);
+
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
 
       if (!existingOverlay) {
@@ -574,11 +578,15 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    // [FIX] post.is_ad 필드 대신 borderType이나 content 내의 [AD] 텍스트로 광고 여부 판단
+    // [FINAL CRITICAL FIX] 시드 데이터 판별 로직을 마커 렌더링에 직접 적용
+    const isSeed = post.is_seed_data === true || 
+                   post.is_seed_data === 'true' || 
+                   post.is_seed_data === 1 ||
+                   (post.user_name && post.user_name !== authUser?.user_metadata?.nickname && post.user_id === authUser?.id);
+
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
-    // [CRITICAL FIX] is_seed_data가 설정된 경우 무조건 isMine을 false로 만듦
-    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
+    // 시드 데이터인 경우 무조건 isMine을 false로 강제하여 MY 라벨을 제거
     const postUserId = post.user_id || (post.user && post.user.id);
     const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !isSeed;
                    

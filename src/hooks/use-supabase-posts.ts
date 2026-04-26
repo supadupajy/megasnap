@@ -36,7 +36,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
 
   return {
     id: p.id,
-    isAd: p.is_ad || false,
+    isAd: isAd || p.is_ad || false,
     isGif: false,
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
@@ -61,7 +61,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     videoUrl: p.video_url,
     category: p.category || 'none',
     createdAt: new Date(p.created_at),
-    borderType: borderType,
+    borderType: p.borderType || borderType,
     is_seed_data: p.is_seed_data
   };
 };
@@ -97,11 +97,10 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
-    // [FIX] is_seed_data 컬럼을 select에 포함하여 지도 마커에서 MY 라벨을 끌 수 있도록 합니다.
+    // [CRITICAL] 모든 필요한 필드를 명시적으로 가져오는지 재확인
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar')
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
