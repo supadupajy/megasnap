@@ -476,10 +476,17 @@ const MapContainer = ({
                 content.classList.remove('highlighted');
                 const p = postsRef.current.find(item => item.id === postId);
                 if (p) {
-                  // data-content-state의 첫 번째 값(isViewed)을 파싱
                   const stateKey = content.getAttribute('data-content-state') || '';
                   const isViewed = stateKey.startsWith('true');
+                  // MY 스타일로 HTML 재생성
                   content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                  // data-content-state를 isHighlighted=false 기준으로 업데이트
+                  // → 이후 React 리렌더링이 와도 key가 같아서 HTML을 덮어쓰지 않음
+                  const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
+                  const postUserId = (p as any).user_id || (p.user && p.user.id);
+                  const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
+                  const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-false`;
+                  content.setAttribute('data-content-state', newStateKey);
                 }
                 const p2 = postsRef.current.find(item => item.id === postId);
                 overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);

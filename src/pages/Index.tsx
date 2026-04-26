@@ -350,10 +350,9 @@ const Index = () => {
 
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
-      highlightTimeoutRef.current = window.setTimeout(() => {
-        setHighlightedPostId(null);
-        highlightTimeoutRef.current = null;
-      }, 2500);
+      highlightTimeoutRef.current = null;
+      // setHighlightedPostId(null) 호출 안 함 → React 리렌더링으로 인한 HTML 덮어쓰기 방지
+      // highlighted 클래스 제거는 highlight-marker 핸들러의 setTimeout에서 DOM 직접 처리
     }, 1800);
   }, []);
 
