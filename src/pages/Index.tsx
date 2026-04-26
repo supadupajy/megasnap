@@ -486,10 +486,32 @@ const Index = () => {
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 찾는 중...');
     try {
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
-      setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      dismissToast(toastId); showSuccess('현재 위치로 이동했습니다.');
-    } catch (err) { dismissToast(toastId); showError('위치 정보를 가져올 수 없습니다.'); }
+      // ✅ [OPTIMIZATION] 정밀도 옵션을 완화하고 타임아웃을 늘려 'LocationUnknown' 에러 가능성을 줄입니다.
+      const pos = await Geolocation.getCurrentPosition({ 
+        enableHighAccuracy: false, // 실내나 신호가 약한 곳을 위해 일반 정밀도 허용
+        timeout: 15000,            // 15초로 연장
+        maximumAge: 30000          // 30초 이내의 캐시된 위치 정보 허용
+      });
+      
+      if (pos.coords) {
+        setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        dismissToast(toastId); 
+        showSuccess('현재 위치로 이동했습니다.');
+      } else {
+        throw new Error('No coordinates');
+      }
+    } catch (err: any) { 
+      console.warn('[Geolocation] Error details:', err);
+      dismissToast(toastId); 
+      
+      // 위치 정보 실패 시 마지막 캐시된 위치로 이동하거나 안내 메시지 표시
+      if (mapCache.lastCenter) {
+        setMapCenter(mapCache.lastCenter);
+        showError('위치 정보를 정확히 잡을 수 없어 마지막 위치로 이동합니다.');
+      } else {
+        showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
+      }
+    }
   };
 
   useEffect(() => {
