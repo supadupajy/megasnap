@@ -135,7 +135,10 @@ const Follow = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white no-scrollbar">
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
+      {/* 상단 상태바 여백 확보 */}
+      <div className="h-[env(safe-area-inset-top,0px)] w-full bg-white fixed top-0 z-[60]" />
+      
+      <header className="fixed top-[env(safe-area-inset-top,0px)] left-0 right-0 h-16 bg-white z-50 flex items-center px-4 border-b border-gray-100">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
           <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
@@ -145,8 +148,8 @@ const Follow = () => {
         </div>
       </header>
 
-      <div className="pt-[88px]">
-        <div className="flex border-b border-gray-100 sticky top-[88px] bg-white z-40">
+      <div className="pt-[calc(64px+env(safe-area-inset-top,0px))]">
+        <div className="flex border-b border-gray-100 sticky top-[calc(64px+env(safe-area-inset-top,0px))] bg-white z-40">
           <button 
             onClick={() => setActiveTab('followers')}
             className={cn(

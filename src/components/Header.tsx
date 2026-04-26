@@ -91,8 +91,8 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white border-b border-gray-100">
-      {/* 안드로이드 상단 상태바 여백 - Index와의 간격을 위해 높이를 최소화하거나 Index에서 조절 */}
-      <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
+      {/* 안드로이드 상단 상태바 여백 - index.html의 meta viewport fit-cover와 함께 동작 */}
+      <div className="h-[env(safe-area-inset-top,0px)] w-full bg-white" />
       
       <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
         <div 

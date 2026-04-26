@@ -96,7 +96,8 @@ const Search = () => {
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
       {/* 고정 상단 헤더 - z-index와 배경색 명시하여 확실히 노출 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+      <div className="fixed top-0 inset-x-0 z-[100] bg-white">
+        <div className="h-[env(safe-area-inset-top,0px)] w-full bg-white" />
         <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -116,7 +117,7 @@ const Search = () => {
       </div>
 
       {/* 검색 입력창 영역 - 헤더 바로 아래에서 시작하도록 pt 조정 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+148px)]">
+      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+84px)]">
         <div className="px-4 pb-2">
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />

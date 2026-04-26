@@ -222,9 +222,12 @@ const PostDetail = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
+      {/* 상단 상태바 여백 확보 */}
+      <div className="h-[env(safe-area-inset-top,0px)] w-full bg-white fixed top-0 z-[50]" />
+      
+      <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Header */}
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+        <div className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
