@@ -30,10 +30,17 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
-  // [ULTIMATE FIX] 시드 데이터인 경우 무조건 DB에 저장된 user_name/user_avatar를 최우선으로 사용합니다.
-  // 기존에는 p.profiles?.nickname이 있으면 그걸 덮어씌웠는데, 시드 데이터는 이를 무시해야 합니다.
-  const finalUserName = p.is_seed_data ? (p.user_name || '익명 탐험가') : (p.user_name || p.profiles?.nickname || '익명 사용자');
-  const finalUserAvatar = p.is_seed_data ? (p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`) : (p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`);
+  // [FINAL ATOMIC FIX]
+  // 1. is_seed_data인 경우 DB에 저장된 user_name을 "무조건" 사용하고 profiles 조인을 무시함
+  // 2. is_seed_data가 아니더라도 DB에 user_name이 있으면 우선순위를 높게 잡음
+  let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
+  let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
+
+  if (p.is_seed_data) {
+    // 시드 데이터는 닉네임 덮어쓰기 방지를 위해 하드코딩된 user_name 필드만 신뢰
+    finalUserName = p.user_name || '탐험가';
+    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
+  }
 
   return {
     id: p.id,

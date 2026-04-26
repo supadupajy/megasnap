@@ -380,40 +380,41 @@ export const seedInBoundsPosts = async (
   try {
     await initializeYoutubePool();
     
-    // [CRITICAL] DB에서 실제 존재하는 다른 사용자들의 프로필을 먼저 가져옵니다.
-    const { data: profiles } = await supabase
+    // [FIX] 실제 DB에서 본인을 제외한 다른 유저들의 프로필을 최대한 많이 가져옴
+    const { data: otherProfiles } = await supabase
       .from('profiles')
-      .select('id, nickname, avatar_url')
-      .neq('id', currentUserId) // 본인 제외
-      .limit(50);
-    
+      .select('nickname, avatar_url')
+      .neq('id', currentUserId)
+      .limit(100);
+
     const count = 5; 
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
-      // 2. 포스팅 타입 정의
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // 3. 사용자 정보 랜덤화 (DB 실존 인물 우선)
-      const randomProfile = profiles && profiles.length > 0 
-        ? profiles[Math.floor(Math.random() * profiles.length)]
-        : null;
-      
+      // [CRITICAL] 닉네임 결정 로직
       let userName = "";
       let userAvatar = "";
-      
+
       if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
-      } else if (randomProfile) {
-        // [FIX] DB에 실존하는 닉네임과 아바타를 그대로 사용
-        userName = randomProfile.nickname || RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
-        userAvatar = randomProfile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomProfile.id}`;
+      } else if (otherProfiles && otherProfiles.length > 0) {
+        // 실존하는 타인의 정보를 무작위 선택
+        const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
+        userName = p.nickname;
+        userAvatar = p.avatar_url;
       } else {
-        // DB에 다른 유저가 없는 극단적인 경우에만 랜덤 풀 사용
+        // 타인 프로필이 없는 경우에만 랜덤 풀 사용
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+      }
+
+      // [FIX] 닉네임이 본인과 같으면 강제로 랜덤 풀에서 변경 (이중 방어)
+      if (userName === '비트코인떡락') {
+        userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
       }
 
       let likes = Math.floor(Math.random() * 500);
@@ -432,17 +433,13 @@ export const seedInBoundsPosts = async (
         likes = 0;
       }
 
-      // 4. 위치 랜덤화 (Bounds 내)
+      // 위치 및 미디어 랜덤화
       const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
       const detailedLocation = resolveOfflineLocationName(lat, lng);
-      
-      // 5. 콘텐츠 랜덤화 (유튜브/이미지)
       const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       let finalYoutubeUrl = null;
       let finalImage = "";
-
-      // 광고는 주로 이미지, 인플루언서/인기는 주로 영상
       const isYoutube = (type === 'ad') ? Math.random() > 0.8 : Math.random() > 0.4;
 
       if (isYoutube) {
@@ -459,9 +456,9 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, // RLS 때문에 생성자는 본인이어야 함
-        user_name: userName,    // [CRITICAL] 하지만 닉네임은 실존하는 타인의 것으로 저장
-        user_avatar: userAvatar, // [CRITICAL] 아바타도 실존하는 타인의 것으로 저장
+        user_id: currentUserId, 
+        user_name: userName,    // [CRITICAL] 닉네임 필드에 직접 랜덤 닉네임 주입
+        user_avatar: userAvatar, 
         likes: likes,
         category: category,
         borderType: borderType, 
@@ -470,16 +467,10 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    console.log("📤 [Seeder] Inserting into DB with is_seed_data=true:", insertData);
-
     const { error } = await supabase.from('posts').insert(insertData);
-    
-    if (error) {
-      console.error("❌ [Seeder] Insert error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log(`✨ [Seeder] ${insertData.length}개의 다양한 타입 포스팅이 생성되었습니다.`);
+    console.log(`✨ [Seeder] ${insertData.length}개의 다양한 랜덤 포스팅 생성 완료`);
     return insertData.length;
   } catch (err) {
     console.error("❌ [Seeder] 화면 내 데이터 생성 실패:", err);
