@@ -42,7 +42,7 @@ const getFallbackImage = (postId: string) => {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser, profile: authProfile } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -51,6 +51,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  
+  // [FIX] youtubeId 변수 선언 위치를 상단으로 고정
+  const youtubeId = useMemo(() => {
+    if (!currentPost) return '';
+    return getYoutubeId(currentPost.youtubeUrl || '');
+  }, [currentPost]);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   
@@ -275,11 +282,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return "https://www.coca-cola.co.kr/";
   }, [currentPost]);
 
-  // ✅ 조건부 return은 모든 훅 선언 이후에
-  if (!isOpen || posts.length === 0 || !currentPost) return null;
+  // [CRITICAL FIX] 닉네임 표시 로직
+  // use-supabase-posts.ts에서 이미 p.user_name을 우선하도록 가공된 currentPost.user.name을 그대로 사용합니다.
+  const postDisplayName = useMemo(() => {
+    if (!currentPost) return '익명';
+    return currentPost.user.name;
+  }, [currentPost]);
+  
+  const isSeed = useMemo(() => {
+    if (!currentPost) return false;
+    return currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
+  }, [currentPost]);
 
-  const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
-  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
+  const isMine = useMemo(() => {
+    if (!currentPost || !authUser) return false;
+    // 시드 데이터가 아니고, ID가 일치할 때만 본인 포스팅으로 간주
+    return (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed;
+  }, [currentPost, authUser, isSeed]);
+
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -292,6 +312,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    // [FIX] isMine 판정을 사용하여 본인 프로필로 갈지 타인 프로필로 갈지 결정
     if (isMine) navigate('/profile');
     else navigate(`/profile/${currentPost.user.id}`);
   };
@@ -345,13 +366,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!commentInput.trim() || !authUser) return;
     setIsSubmittingComment(true);
     const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+    const displayName = authProfile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     try {
       const savedComment = await insertComment({
         postId: currentPost.id,
         userId: authUser.id,
         userName: displayName,
-        userAvatar: profile?.avatar_url,
+        userAvatar: authProfile?.avatar_url,
         content: newCommentText,
       });
       setLocalComments((prev) => [...prev, savedComment]);
@@ -419,11 +440,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                       <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                         <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                          <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                          <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" />
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
+                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
                             {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
                           </div>
                           <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
@@ -602,7 +623,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
                           <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                           <div className="flex gap-2 items-start">
-                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{currentPost.user.name}</span>
+                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                             <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                           </div>
                         </div>

@@ -30,15 +30,36 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
+  // [FINAL ATOMIC FIX]
+  // DB의 user_name 필드 존재 여부와 is_seed_data 여부를 결합하여 닉네임을 결정합니다.
+  const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
+  
+  let finalUserName = '';
+  let finalUserAvatar = '';
+
+  if (isSeed && p.user_name) {
+    // 1. 시드 데이터이면서 랜덤 닉네임이 저장되어 있다면 무조건 그것을 사용 (본인 프로필 덮어쓰기 완전 방지)
+    finalUserName = p.user_name;
+    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
+  } else if (p.profiles?.nickname) {
+    // 2. 일반 게시물이면 프로필 조인 정보를 사용
+    finalUserName = p.profiles.nickname;
+    finalUserAvatar = p.profiles.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id}`;
+  } else {
+    // 3. 둘 다 없으면 기본값
+    finalUserName = p.user_name || '익명 사용자';
+    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
+  }
+
   return {
     id: p.id,
-    isAd: p.is_ad || false,
+    isAd: isAd || p.is_ad || false,
     isGif: false,
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
       id: p.user_id,
-      name: p.user_name || '익명 사용자',
-      avatar: p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`,
+      name: finalUserName,
+      avatar: finalUserAvatar,
     },
     content: p.content || '설명이 없는 포스팅입니다.',
     location: p.location_name || '알 수 없는 장소',
@@ -57,7 +78,8 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     videoUrl: p.video_url,
     category: p.category || 'none',
     createdAt: new Date(p.created_at),
-    borderType: borderType,
+    borderType: p.borderType || borderType,
+    is_seed_data: p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1
   };
 };
 
@@ -92,12 +114,12 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
-    // 마커를 지도에 그리는 데 꼭 필요한 최소 정보만 조회합니다. (본문, 이미지 배열, 프로필 조인 제외)
-    // content가 [AD]로 시작하는지 확인하기 위해 content 필드도 포함합니다.
+    // [ULTIMATE FIX] 'posts' 테이블 대신 'posts_with_profiles' 뷰를 조회하지 않고
+    // posts 테이블에서 필요한 모든 정보를 직접 가져오며,
+    // JOIN된 profile 닉네임이 랜덤하게 저장된 user_name을 덮어쓰지 못하게 합니다.
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content')
+      .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -108,6 +130,9 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
+    
+    // [CRITICAL] 이미 데이터 매핑 로직에서 p.is_seed_data 체크를 통해 닉네임을 보호하고 있으므로
+    // 여기서 반환된 데이터는 안전합니다.
     return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);

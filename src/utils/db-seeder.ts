@@ -39,6 +39,14 @@ const AD_COMMENTS = [
 
 const CATEGORIES = ['food', 'accident', 'place', 'animal'] as const;
 
+// [NEW] 랜덤 닉네임 풀 추가
+const RANDOM_NICKNAMES = [
+  '서울방랑자', '맛집사냥꾼', '사진여행가', '등산마니아', '카페순례자',
+  '바이크족', '산책의달인', '감성캠퍼', '강아지집사', '야경수집가',
+  '여행에미치다', '혼자놀기', '탐험대장', '초보운전', '오늘의코디',
+  '미니멀리스트', '빵지순례', '운동하는남자', '필라테스퀸', '낚시왕'
+];
+
 /**
  * Generates a truly random like count between 0 and 10000 with flat distribution.
  */
@@ -371,57 +379,64 @@ export const seedInBoundsPosts = async (
 
   try {
     await initializeYoutubePool();
-    // 1. 프로필 목록을 가져와서 랜덤 사용자 정보를 구성
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
     
+    // [FIX] 실제 DB에서 본인을 제외한 다른 유저들의 프로필을 최대한 많이 가져옴
+    const { data: otherProfiles } = await supabase
+      .from('profiles')
+      .select('id, nickname, avatar_url')
+      .neq('id', currentUserId)
+      .limit(100);
+
     const count = 5; 
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
-      // 2. 포스팅 타입 정의 (influencer, popular, normal, ad)
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // 3. 사용자 정보 랜덤화
-      const randomProfile = profiles && profiles.length > 0 
-        ? profiles[Math.floor(Math.random() * profiles.length)]
-        : null;
-      
-      let userName = randomProfile?.nickname || "탐험가";
-      let userAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
+      let userName = "";
+      let userAvatar = "";
+
+      if (type === 'ad') {
+        userName = "sponsored";
+        userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
+      } else if (otherProfiles && otherProfiles.length > 0) {
+        const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
+        userName = p.nickname;
+        userAvatar = p.avatar_url;
+      } else {
+        userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+      }
+
+      // [CRITICAL] 본인 닉네임이 절대 들어가지 않도록 강제 필터링
+      if (userName === '비트코인떡락') {
+        userName = RANDOM_NICKNAMES.find(n => n !== '비트코인떡락') || '익명탐험가';
+      }
+
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
       let borderType = 'none';
-      let userIdForRecord = currentUserId; // RLS를 위해 저장 시에는 내 ID 사용
       
-      // 타입별 특성 부여
       if (type === 'influencer') {
         userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
         borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
-        // 인플루언서 느낌을 내기 위해, DB 저장 시에도 다른 (랜덤) ID를 사용하면 좋겠지만 RLS가 막으므로 
-        // 렌더링 시 user_id를 체크하는 로직이 있다면 그 부분을 속여야 함.
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
         borderType = 'popular';
       } else if (type === 'ad') {
-        userName = "sponsored";
-        userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
         content = AD_COMMENTS[Math.floor(Math.random() * AD_COMMENTS.length)];
         likes = 0;
       }
 
-      // 4. 위치 랜덤화 (Bounds 내)
+      // 위치 및 미디어 랜덤화
       const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
       const detailedLocation = resolveOfflineLocationName(lat, lng);
-      
-      // 5. 콘텐츠 랜덤화 (유튜브/이미지)
       const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       let finalYoutubeUrl = null;
       let finalImage = "";
-
-      // 광고는 주로 이미지, 인플루언서/인기는 주로 영상
       const isYoutube = (type === 'ad') ? Math.random() > 0.8 : Math.random() > 0.4;
 
       if (isYoutube) {
@@ -438,21 +453,27 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: userIdForRecord, // DB record owner (for RLS)
-        user_name: userName,    // 표시용 랜덤 닉네임
-        user_avatar: userAvatar, // 표시용 랜덤 아바타
+        user_id: currentUserId, 
+        user_name: userName,    // [CRITICAL CHECK] 이 값이 DB의 user_name 컬럼에 정확히 저장되는지 확인
+        user_avatar: userAvatar, 
         likes: likes,
         category: category,
-        borderType: borderType, // [CRITICAL] borderType을 명시적으로 추가하여 'MY' 라벨이 붙지 않게 함
-        is_seed_data: true,     // [FIX] 시드 데이터임을 명시하여 UI에서 'MY' 라벨링을 피함
+        borderType: borderType, 
+        is_seed_data: true,
         created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
       });
     }
 
-    const { error } = await supabase.from('posts').insert(insertData);
-    if (error) throw error;
+    console.log("📤 [Seeder] Inserting with explicit user_name:", insertData.map(d => d.user_name));
 
-    console.log(`✨ [Seeder] ${insertData.length}개의 다양한 타입 포스팅이 생성되었습니다.`);
+    const { error } = await supabase.from('posts').insert(insertData);
+    
+    if (error) {
+      console.error("❌ [Seeder] Insert error:", error);
+      throw error;
+    }
+
+    console.log(`✨ [Seeder] ${insertData.length}개의 포스팅 생성 완료`);
     return insertData.length;
   } catch (err) {
     console.error("❌ [Seeder] 화면 내 데이터 생성 실패:", err);

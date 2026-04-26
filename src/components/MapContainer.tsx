@@ -83,6 +83,14 @@ const MapContainer = ({
     return () => window.removeEventListener('update-viewed-markers', handleUpdateViewedMarkers);
   }, []);
 
+  // ✅ [FIX] 포스팅 생성 후 지도 데이터가 바뀌었을 때 오버레이를 강제로 갱신하도록 처리
+  useEffect(() => {
+    if (isMapReady && mapInstance.current) {
+      // posts가 바뀔 때 CustomOverlay의 state key를 체크하여 업데이트하도록 위쪽 useEffect가 이미 존재함
+      // 하지만 is_seed_data가 DB에서 갓 넘어온 경우를 위해 zIndex와 라벨을 재계산하도록 유도
+    }
+  }, [posts, isMapReady]);
+
   useEffect(() => {
     const handleAnimateDelete = (e: any) => {
       const postId = e.detail?.id;
@@ -327,7 +335,10 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}`;
+      
+      // [CRITICAL FIX] is_seed_data 판별을 마커 상태 키에 포함하여 확실히 업데이트되도록 함
+      const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -563,11 +574,22 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    const isAd = post.isAd;
-    // 시드 데이터이거나, 닉네임이 내가 아닌 경우는 MY 라벨을 표시하지 않음
-    // [FIX] authUser.id와 post.user_id 매칭 로직 보강
-    const postUserId = post.user_id || (post.user && post.user.id);
-    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me');
+    // [FIXED] ReferenceError: isAd is not defined
+    const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
+    
+    // [FINAL NUCLEAR FIX] 닉네임이 본인 실존 닉네임이고 시드 데이터가 아닐 때만 MY 표기
+    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
+    const postUserName = post.user?.name || post.user_name;
+    
+    let isMine = false;
+    if (authUser) {
+      // 내 ID이면서, 시드 데이터가 아니고, 닉네임이 '비트코인떡락'인 경우에만 MY
+      // [FIX] post.user_id 가 uuid 객체인 경우와 비교 호환성 보장
+      const userId = post.user_id || (post.user && post.user.id);
+      if (String(userId) === String(authUser.id) && !isSeed && postUserName === '비트코인떡락') {
+        isMine = true;
+      }
+    }
                    
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 

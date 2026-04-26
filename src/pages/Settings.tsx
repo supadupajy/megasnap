@@ -188,12 +188,15 @@ const Settings = () => {
     }
 
     setIsProcessing(true);
-    const toastId = showLoading('현재 화면 내에 포스팅을 생성 중입니다...');
+    const toastId = showLoading('현재 화면 안에 포스팅을 생성 중입니다...');
     try {
       const bounds = JSON.parse(storedBounds);
       const count = await seedInBoundsPosts(user.id, bounds);
       dismissToast(toastId);
-      showSuccess(`현재 화면 범위 내에 ${count}개의 포스팅이 생성되었습니다! 📍`);
+      showSuccess(`현재 화면 안에 ${count}개의 포스팅이 생성되었습니다! 📍`);
+      
+      // ✅ [FIX] 포스팅 생성 후 지도 데이터를 즉시 새로고침하기 위해 커스텀 이벤트 발생
+      window.dispatchEvent(new CustomEvent('refresh-map-data'));
     } catch (err: any) {
       dismissToast(toastId);
       showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
@@ -226,32 +229,32 @@ const Settings = () => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar relative">
-      <div className="fixed top-0 left-0 right-0 z-[100]">
+    <div className="h-screen bg-white relative flex flex-col">
+      <div className="flex-none h-16">
         <Header />
       </div>
-      
-      <div className="pt-16">
-        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100 sticky top-0 z-[90]">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('[Settings] Back button clicked - Navigating to /profile');
-                navigate('/profile');
-              }} 
-              className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95 cursor-pointer relative z-[110]"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-400" />
-            </button>
-          </div>
-          <div className="flex-1 flex justify-center -ml-10">
-            <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
-          </div>
-        </header>
 
+      <div className="flex-none h-16 bg-white flex items-center px-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[Settings] Back button clicked - Navigating to /profile');
+              navigate('/profile');
+            }} 
+            className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95 cursor-pointer relative z-[110]"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-400" />
+          </button>
+        </div>
+        <div className="flex-1 flex justify-center -ml-10">
+          <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-20 no-scrollbar">
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -284,8 +287,8 @@ const Settings = () => {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-indigo-600">현재 화면 내 포스팅 생성</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 새로운 포스팅을 즉시 생성합니다.</span>
+                    <span className="text-sm font-bold text-indigo-600">현재 화면 안에 포스팅 생성</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 다양한 포스팅을 랜덤하게 배치합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
