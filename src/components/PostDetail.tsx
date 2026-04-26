@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogOverlay, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
@@ -375,15 +375,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} >
-        <DialogOverlay className="bg-black/60 backdrop-blur-sm z-[1000]" />
-        <DialogContent className="border-none bg-transparent shadow-none p-0 max-w-none w-full h-full flex items-center justify-center z-[1050] outline-none focus:ring-0">
-          <VisuallyHidden.Root>
-            <DialogTitle>포스팅 상세 보기</DialogTitle>
-            <DialogDescription>선택한 포스팅의 상세 내용, 이미지, 댓글을 확인하고 소통할 수 있는 화면입니다.</DialogDescription>
-          </VisuallyHidden.Root>
-          
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/95 overflow-hidden flex flex-col z-[1000]">
+        <VisuallyHidden.Root>
+          <DialogTitle>포스트 상세 보기</DialogTitle>
+          <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
+        </VisuallyHidden.Root>
+        
+        <div className="relative flex-1 flex flex-col min-h-0">
           <div
             className="absolute top-8 right-6 z-[1100] transition-all duration-500"
             style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight - 40}px)` : 'translateY(0)' }}
@@ -658,15 +657,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </DialogContent>
+    </Dialog>
 
-      <DeleteConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
-    </>
+    <DeleteConfirmDialog
+      isOpen={isDeleteDialogOpen}
+      onClose={() => setIsDeleteDialogOpen(false)}
+      onConfirm={confirmDelete}
+    />
   );
 };
 

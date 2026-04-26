@@ -24,6 +24,8 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import confetti from 'canvas-confetti';
+import { DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
 const fireConfetti = (options: any) => {
   try {
@@ -775,15 +777,29 @@ const Index = () => {
           />
         )}
       </AnimatePresence>
-      <AnimatePresence>{selectedPostId && <PostDetail key="post-detail-modal" posts={allPosts} initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} isOpen={true} onClose={() => setSelectedPostId(null)} onDelete={handlePostDeleted} onViewPost={markAsViewed} onLikeToggle={handleLikeToggle} onLocationClick={(lat, lng) => { 
-        const post = allPosts.find(p => p.lat === lat && p.lng === lng);
-        if (post) {
-          focusPostOnMap(post, { lat, lng });
-        } else {
-          setMapCenter({ lat, lng }); 
-        }
-        setSelectedPostId(null); 
-      }} />}</AnimatePresence>
+      <AnimatePresence>
+        {selectedPostId && (
+          <PostDetail 
+            key="post-detail-modal" 
+            posts={allPosts} 
+            initialIndex={allPosts.findIndex(p => p.id === selectedPostId)} 
+            isOpen={true} 
+            onClose={() => setSelectedPostId(null)} 
+            onDelete={handlePostDeleted} 
+            onViewPost={markAsViewed} 
+            onLikeToggle={handleLikeToggle} 
+            onLocationClick={(lat, lng) => { 
+              const post = allPosts.find(p => p.lat === lat && p.lng === lng);
+              if (post) {
+                focusPostOnMap(post, { lat, lng });
+              } else {
+                setMapCenter({ lat, lng }); 
+              }
+              setSelectedPostId(null); 
+            }} 
+          />
+        )}
+      </AnimatePresence>
       <PlaceSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }} />
     </>
   );
