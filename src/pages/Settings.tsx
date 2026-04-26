@@ -19,6 +19,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
@@ -226,17 +227,19 @@ const Settings = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-10 no-scrollbar relative">
-      <header className="fixed top-0 left-0 right-0 h-[64px] bg-white/80 backdrop-blur-md z-[100] flex items-center px-4 border-b border-gray-100">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">설정</h1>
-      </header>
+      <Header />
+      
+      <div className="pt-16">
+        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-800" />
+          </button>
+          <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">설정</h1>
+        </header>
 
-      <div className="pt-[64px]">
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
