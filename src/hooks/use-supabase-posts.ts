@@ -80,7 +80,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     isLiked: false,
     youtubeUrl: isAd ? undefined : p.youtube_url,
     videoUrl: p.video_url,
-    category: p.category || 'none',
+    category: isAd ? 'food' : (p.category || 'none'),
     createdAt: new Date(p.created_at),
     borderType: p.borderType || borderType,
     is_seed_data: p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1

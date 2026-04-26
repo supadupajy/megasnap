@@ -372,12 +372,12 @@ export const createMockPosts = (
       isAd,
       isGif: false,
       isInfluencer,
-      category, // 카테고리 추가
       user: {
         id: isAd ? 'ad_partner' : (specificUserId || id),
         name: isAd ? 'Partner' : '탐험가',
         avatar: `https://i.pravatar.cc/150?u=${isAd ? 'ad' : id}`,
       },
+      category: isAd ? 'food' : category,
       content: isAd ? '특별한 혜택을 만나보세요! ✨' : '오늘의 멋진 순간을 기록합니다. 📍',
       location: resolveOfflineLocationName(lat, lng),
       lat,
