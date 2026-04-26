@@ -484,32 +484,34 @@ const Index = () => {
   }, [mapDbToPost]);
 
   const handleCurrentLocation = async () => {
-    const toastId = showLoading('현재 위치를 찾는 중...');
+    // 이미 찾는 중이면 중복 실행 방지
+    if (isRefreshing) return;
+    
+    const toastId = showLoading('현재 위치를 확인 중입니다...');
     try {
-      // ✅ [OPTIMIZATION] 정밀도 옵션을 완화하고 타임아웃을 늘려 'LocationUnknown' 에러 가능성을 줄입니다.
+      // ✅ [FIX] 타임아웃을 더 짧게 잡고, 실패 시 즉시 중단하여 시스템 부하를 줄입니다.
       const pos = await Geolocation.getCurrentPosition({ 
-        enableHighAccuracy: false, // 실내나 신호가 약한 곳을 위해 일반 정밀도 허용
-        timeout: 15000,            // 15초로 연장
-        maximumAge: 30000          // 30초 이내의 캐시된 위치 정보 허용
+        enableHighAccuracy: false, 
+        timeout: 8000,             // 8초로 단축 (너무 오래 기다리지 않게 함)
+        maximumAge: 60000          // 1분 이내의 캐시 정보 적극 활용
       });
       
-      if (pos.coords) {
+      if (pos && pos.coords) {
         setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         dismissToast(toastId); 
         showSuccess('현재 위치로 이동했습니다.');
-      } else {
-        throw new Error('No coordinates');
       }
     } catch (err: any) { 
-      console.warn('[Geolocation] Error details:', err);
+      // ✅ [CLEANUP] 반복적인 시스템 에러 메시지는 콘솔에 한 번만 요약해서 출력
+      console.warn('[Geolocation] 위치 정보를 사용할 수 없는 환경입니다. (Error Code 2)');
       dismissToast(toastId); 
       
-      // 위치 정보 실패 시 마지막 캐시된 위치로 이동하거나 안내 메시지 표시
+      // 사용자에게 브라우저 설정을 확인하도록 안내
+      showError('위치 정보를 사용할 수 없습니다. 브라우저의 위치 권한과 GPS 설정을 확인해주세요.');
+      
+      // 실패 시 마지막 위치로 부드럽게 복구
       if (mapCache.lastCenter) {
         setMapCenter(mapCache.lastCenter);
-        showError('위치 정보를 정확히 잡을 수 없어 마지막 위치로 이동합니다.');
-      } else {
-        showError('위치 정보를 가져올 수 없습니다. GPS 설정을 확인해주세요.');
       }
     }
   };
