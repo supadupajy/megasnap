@@ -333,6 +333,9 @@ const Write = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+      {/* 고정 헤더(Header.tsx) 높이만큼 여백을 주어 타이틀이 가려지지 않게 함 */}
+      <div className="h-16 shrink-0" />
+      
       <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="bg-gray-50/50 border-y border-gray-100">
           <div
