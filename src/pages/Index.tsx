@@ -91,7 +91,8 @@ const Index = () => {
 
   const highlightTimeoutRef = useRef<number | null>(null);
   const throttleTimer = useRef<any>(null);
-  const fetchingRef = useRef(false); // 동시 fetch 방지용 (단순 플래그)
+  const fetchingRef = useRef(false);
+  const mapDataRef = useRef<any>(null);
   const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
   const triggerConfettiRef = useRef(triggerConfetti);
   useEffect(() => { triggerConfettiRef.current = triggerConfetti; }, [triggerConfetti]);
@@ -314,6 +315,8 @@ const Index = () => {
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
+    // ref는 즉시 업데이트 (throttle 없이) → handleRefresh가 항상 최신 bounds 참조 가능
+    mapDataRef.current = data;
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
@@ -323,7 +326,7 @@ const Index = () => {
       }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 800); // 50ms → 800ms: 지도 이동이 완전히 멈춘 후에만 fetch
+    }, 800);
   }, [isSelectingLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
@@ -379,23 +382,33 @@ const Index = () => {
 
   // ── 새로고침 ─────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
+    // ref에서 최신 mapData를 읽음 → stale closure 문제 해결
+    const currentMapData = mapDataRef.current;
+
     setIsRefreshing(true);
     await fetchGlobalTrending();
-    if (mapData?.bounds) {
-      fetchingRef.current = false; // 강제 리셋
-      const raw = await fetchPostsInBounds(mapData.bounds.sw, mapData.bounds.ne, currentZoom, mapData.center);
-      const mapped = raw.map(mapRawToPost);
-      setAllPosts(prev => {
-        const existingMap = new Map(prev.map(p => [p.id, p]));
-        mapped.forEach(p => existingMap.set(p.id, p));
-        const combined = Array.from(existingMap.values()).slice(0, 5000);
-        mapCache.posts = combined;
-        return combined;
-      });
+
+    if (currentMapData?.bounds) {
+      const { sw, ne } = currentMapData.bounds;
+      const zoom = currentMapData.level ?? 6;
+      const center = currentMapData.center;
+
+      const raw = await fetchPostsInBounds(sw, ne, zoom, center);
+      if (raw.length > 0) {
+        const mapped = raw.map(mapRawToPost);
+        setAllPosts(prev => {
+          const existingMap = new Map(prev.map(p => [p.id, p]));
+          mapped.forEach(p => existingMap.set(p.id, p));
+          const combined = Array.from(existingMap.values()).slice(0, 5000);
+          mapCache.posts = combined;
+          return combined;
+        });
+      }
     }
+
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
-  }, [fetchGlobalTrending, mapData, currentZoom]);
+  }, [fetchGlobalTrending]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
   const handleCurrentLocation = async () => {
