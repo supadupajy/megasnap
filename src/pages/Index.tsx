@@ -125,6 +125,7 @@ const Index = () => {
     const img = p.image_url || '';
     return {
       id: p.id,
+      user_id: p.user_id || '',
       isAd,
       isGif: false,
       isInfluencer: ['gold', 'diamond'].includes(borderType),

@@ -384,7 +384,9 @@ const MapContainer = ({
       
       // [CRITICAL FIX] is_seed_data 판별을 마커 상태 키에 포함하여 확실히 업데이트되도록 함
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
+      const postUserId = (post as any).user_id || (post.user && post.user.id);
+      const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -420,7 +422,7 @@ const MapContainer = ({
         }
       }
     });
-  }, [posts, viewedPostIds, internalViewedIds, highlightedPostId, isMapReady]);
+  }, [posts, viewedPostIds, internalViewedIds, highlightedPostId, isMapReady, authUser]);
 
 // ✅ highlight-marker 이벤트로 직접 DOM 조작 (React 리렌더링 없이)
 useEffect(() => {

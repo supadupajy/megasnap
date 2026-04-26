@@ -17,6 +17,7 @@ export interface Comment {
 
 export interface Post {
   id: string;
+  user_id?: string;
   isAd?: boolean;
   isGif?: boolean;
   isInfluencer?: boolean;
