@@ -305,19 +305,12 @@ const Index = () => {
 
   // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
   // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
-  // 카카오 지도는 bounds 경계 근처 마커를 자체 클리핑하므로
-  // bounds를 약간 안쪽으로 줄여서(inset) 경계 마커가 뱃지에 포함되지 않도록 함
   const visibleMarkers = useMemo(() => {
     if (!mapData?.bounds) return spreadMarkers;
     const { sw, ne } = mapData.bounds;
-    const latSpan = ne.lat - sw.lat;
-    const lngSpan = ne.lng - sw.lng;
-    // 전체 bounds의 약 3% 안쪽으로 줄임 (경계 마커 제외)
-    const latInset = latSpan * 0.03;
-    const lngInset = lngSpan * 0.03;
     return spreadMarkers.filter(p =>
-      p.lat >= sw.lat + latInset && p.lat <= ne.lat - latInset &&
-      p.lng >= sw.lng + lngInset && p.lng <= ne.lng - lngInset
+      p.lat >= sw.lat && p.lat <= ne.lat &&
+      p.lng >= sw.lng && p.lng <= ne.lng
     );
   }, [spreadMarkers, mapData?.bounds]);
 
