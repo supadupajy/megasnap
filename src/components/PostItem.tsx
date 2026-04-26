@@ -309,14 +309,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   // 이미지 슬라이더 데이터 준비
   const displayImages = useMemo(() => {
-    const baseImages = Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image];
+    // Ad 포스팅은 image_url(이미 음식 이미지로 교체됨)만 사용, images 배열 무시
+    const baseImages = isAd
+      ? [post.image_url || post.image]
+      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
     
-    // [FIX] 광고를 삽입하되 원본 이미지가 누락되지 않도록 로직 수정
     const newImages = [...baseImages];
     // 두 번째 슬라이드(index 1) 위치에 코카콜라 광고 삽입
     newImages.splice(1, 0, COCA_COLA_AD);
     return newImages;
-  }, [post.images, post.image, post.image_url]);
+  }, [post.images, post.image, post.image_url, isAd]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return; // 드래그 중에는 스크롤 이벤트에 의한 인덱스 업데이트 방지 (선택 사항)

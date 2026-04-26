@@ -21,7 +21,7 @@ const getTierFromId = (id: string) => {
 const mapDbToPost = async (rawPost: any): Promise<Post> => {
   const p = await sanitizeYoutubeMedia(rawPost);
   const likes = Number(p.likes || 0);
-  const isAd = p.content?.trim().startsWith('[AD]');
+  const isAd = p.is_ad === true || p.content?.trim().startsWith('[AD]');
   const borderType = isAd ? 'none' : getTierFromId(p.id);
   
   const cleanContent = p.content?.replace(/^\[AD\]\s*/, '') || '';
