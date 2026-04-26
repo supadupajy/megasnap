@@ -335,7 +335,10 @@ const MapContainer = ({
       const isHighlighted = highlightedPostId === post.id;
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${post.is_seed_data}`;
+      
+      // [CRITICAL FIX] is_seed_data 판별 로직 강화
+      const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -571,10 +574,11 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    const isAd = post.isAd;
-    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true';
+    // [FIX] post.is_ad 필드나 content 내의 [AD] 텍스트로 광고 여부 판단
+    const isAd = post.isAd || post.is_ad || (post.content && post.content.includes('[AD]'));
+    // [CRITICAL FIX] is_seed_data가 설정된 경우 무조건 isMine을 false로 만듦
+    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
-    // 시드 데이터(is_seed_data)인 경우는 MY 라벨을 표시하지 않음
     const postUserId = post.user_id || (post.user && post.user.id);
     const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !isSeed;
                    

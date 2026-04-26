@@ -447,12 +447,13 @@ export const seedInBoundsPosts = async (
         likes: likes,
         category: category,
         borderType: borderType, 
-        is_seed_data: true,     
+        is_seed_data: true, // [CRITICAL] 이 값이 DB에 확실히 저장되어야 함
+        is_ad: type === 'ad', // 명시적 광고 플래그 추가
         created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
       });
     }
 
-    console.log("📤 [Seeder] Inserting into DB:", insertData);
+    console.log("📤 [Seeder] Inserting into DB with is_seed_data=true:", insertData);
 
     const { error } = await supabase.from('posts').insert(insertData);
     
