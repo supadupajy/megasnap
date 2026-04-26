@@ -236,7 +236,16 @@ const Profile = () => {
 
   const handleGridItemClick = (postId: string) => {
     setViewMode('list');
-    setTimeout(() => { const element = document.getElementById(`post-${postId}`); if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+    setTimeout(() => {
+      const element = document.getElementById(`post-${postId}`);
+      const container = scrollRef.current;
+      if (element && container) {
+        const containerTop = container.getBoundingClientRect().top;
+        const elementTop = element.getBoundingClientRect().top;
+        const offset = elementTop - containerTop + container.scrollTop - 120;
+        container.scrollTo({ top: offset, behavior: 'smooth' });
+      }
+    }, 150);
   };
 
   const handleImageError = useCallback((postId: string) => { setMyPosts(prev => prev.filter(p => p.id !== postId)); setSavedPosts(prev => prev.filter(p => p.id !== postId)); }, []);
@@ -373,7 +382,7 @@ const Profile = () => {
                       <div
                         key={post.id}
                         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
-                        onClick={() => navigate(`/post/${post.id}`)}
+                        onClick={() => handleGridItemClick(post.id)}
                       >
                         {post.videoUrl ? (
                           <video
