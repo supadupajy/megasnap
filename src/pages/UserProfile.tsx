@@ -182,8 +182,8 @@ const UserProfile = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-[env(safe-area-inset-top,0px)]">
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50 pt-[env(safe-area-inset-top,20px)]">
+      <div style={{ paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))' }}>
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"

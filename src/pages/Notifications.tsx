@@ -192,9 +192,12 @@ const Notifications = () => {
     <div
       className="min-h-screen bg-white pb-24 no-scrollbar"
       onClick={() => setSwipedId(null)}
+      style={{
+        paddingTop: 'calc(64px + env(safe-area-inset-top, 0px))',
+      }}
     >
-      {/* 다시 추가된 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
-      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50 pt-[env(safe-area-inset-top,20px)]">
+      {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
+      <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
   <button
     onClick={handleBack}
     className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
