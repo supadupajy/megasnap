@@ -13,7 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
@@ -405,7 +406,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-black/50 overflow-hidden flex flex-col z-[1000]">
+        <DialogPortal>
+        <DialogOverlay className="bg-black/40" />
+        <DialogPrimitive.Content className="fixed inset-0 z-50 max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
           <VisuallyHidden.Root>
             <DialogTitle>포스트 상세 보기</DialogTitle>
             <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
@@ -690,7 +693,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               </div>
             </div>
           </div>
-        </DialogContent>
+        </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
 
       <DeleteConfirmDialog
