@@ -760,11 +760,11 @@ const Index = () => {
                   </motion.div>
                 </div>
                 
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  exit={{ opacity: 0, y: 20 }} 
-                  className="absolute bottom-10 left-0 right-0 px-6 pointer-events-auto"
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="absolute bottom-24 left-0 right-0 px-6 pb-[env(safe-area-inset-bottom)] pointer-events-auto"
                 >
                   <div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-indigo-100 flex flex-col items-center gap-3">
                     <div className="flex items-center gap-2">
