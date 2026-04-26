@@ -855,7 +855,7 @@ const Index = () => {
                   className="fixed inset-0 z-[49] bg-black/40 backdrop-blur-[2px]"
                   onClick={() => setIsTrendingExpanded(false)}
                 >
-                  <div className="absolute bottom-29 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none">
+                  <div className="absolute bottom-27 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none">
                     <div className="w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </div>
