@@ -16,6 +16,9 @@ const Header = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  
+  // Realtime 채널을 useRef로 관리하여 중복 생성을 방지합니다.
+  const channelsRef = useRef<{ messages: any; notifications: any }>({ messages: null, notifications: null });
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -49,53 +52,39 @@ const Header = () => {
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
-    // Create channels
-    const messagesChannel = supabase.channel(`header-messages-${user.id}`);
-    const notificationsChannel = supabase.channel(`header-notifications-${user.id}`);
+    // 기존 채널이 있다면 먼저 제거 (Cleanup)
+    if (channelsRef.current.messages) supabase.removeChannel(channelsRef.current.messages);
+    if (channelsRef.current.notifications) supabase.removeChannel(channelsRef.current.notifications);
 
-    // Register ALL handlers BEFORE calling subscribe()
-    messagesChannel
+    // 채널 생성
+    const mChannel = supabase.channel(`header-messages-${user.id}`);
+    const nChannel = supabase.channel(`header-notifications-${user.id}`);
+
+    // 핸들러 등록
+    mChannel
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-        }
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
+        () => fetchUnreadCount()
       )
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `sender_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-        }
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `sender_id=eq.${user.id}` },
+        () => fetchUnreadCount()
       );
 
-    notificationsChannel.on(
+    nChannel.on(
       'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      },
-      () => {
-        fetchUnreadNotifCount();
-      }
+      { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      () => fetchUnreadNotifCount()
     );
 
-    // Call subscribe() as the VERY LAST step
-    messagesChannel.subscribe();
-    notificationsChannel.subscribe();
+    // 구독 시작
+    mChannel.subscribe();
+    nChannel.subscribe();
+
+    // Ref에 저장
+    channelsRef.current = { messages: mChannel, notifications: nChannel };
 
     const handleRefresh = () => {
       fetchUnreadCount();
@@ -104,12 +93,12 @@ const Header = () => {
     window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(notificationsChannel);
+      if (channelsRef.current.messages) supabase.removeChannel(channelsRef.current.messages);
+      if (channelsRef.current.notifications) supabase.removeChannel(channelsRef.current.notifications);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id]); // Omit fetch functions from deps to avoid re-renders re-subscribing
-  
+  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
+
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
   if (isHiddenPage) return null;
