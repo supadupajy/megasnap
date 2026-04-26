@@ -279,7 +279,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   if (!isOpen || posts.length === 0 || !currentPost) return null;
 
   const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
-  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me');
+  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !currentPost.is_seed_data;
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {

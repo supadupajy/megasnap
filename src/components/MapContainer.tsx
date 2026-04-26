@@ -566,8 +566,7 @@ useEffect(() => {
     const isAd = post.isAd;
     // 시드 데이터이거나, 닉네임이 내가 아닌 경우는 MY 라벨을 표시하지 않음
     const isMine = authUser && (post.user_id === authUser.id || post.user_id === 'me') &&
-                   !post.is_seed_data &&
-                   (!post.user_name || post.user_name === authUser.user_metadata?.nickname || post.user_name === '탐험가');
+                   !post.is_seed_data;
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 
     const isBrokenUrl = (url: string) => {

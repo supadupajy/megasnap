@@ -89,7 +89,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const { user, content, isAd } = post;
-  const isMine = authUser?.id === user.id;
+  const isMine = authUser && (user.id === authUser.id || user.id === 'me') && !post.is_seed_data;
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
