@@ -52,15 +52,12 @@ const Header = () => {
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
-    // ✅ [OPTIMIZATION] Date.now()를 제거하여 불필요한 고유 채널 생성을 방지하고 고정된 채널명을 사용합니다.
     const messagesChannelName = `header-messages-${user.id}`;
     const notificationsChannelName = `header-notifications-${user.id}`;
 
-    // 1. Create Channel
-    const mChannel = supabase.channel(messagesChannelName);
-    const nChannel = supabase.channel(notificationsChannelName);
+    let mChannel = supabase.channel(messagesChannelName);
+    let nChannel = supabase.channel(notificationsChannelName);
 
-    // 2. Attach ALL postgres_changes BEFORE subscribe
     mChannel
       .on(
         'postgres_changes',
@@ -81,22 +78,21 @@ const Header = () => {
           filter: `sender_id=eq.${user.id}`
         },
         () => fetchUnreadCount()
-      );
+      )
+      .subscribe();
 
-    nChannel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      },
-      () => fetchUnreadNotifCount()
-    );
-
-    // 3. Subscribe ONLY after all .on() calls are finished
-    mChannel.subscribe();
-    nChannel.subscribe();
+    nChannel
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => fetchUnreadNotifCount()
+      )
+      .subscribe();
 
     const handleRefresh = () => {
       fetchUnreadCount();
@@ -109,7 +105,7 @@ const Header = () => {
       supabase.removeChannel(nChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]); // ✅ fetch 함수들을 포함하여 최신 상태 유지
+  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
 
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
