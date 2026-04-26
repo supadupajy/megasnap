@@ -383,7 +383,7 @@ export const seedInBoundsPosts = async (
     // [FIX] 실제 DB에서 본인을 제외한 다른 유저들의 프로필을 최대한 많이 가져옴
     const { data: otherProfiles } = await supabase
       .from('profiles')
-      .select('nickname, avatar_url')
+      .select('id, nickname, avatar_url')
       .neq('id', currentUserId)
       .limit(100);
 
@@ -394,25 +394,28 @@ export const seedInBoundsPosts = async (
       const postTypes = ['influencer', 'popular', 'normal', 'ad'];
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
-      // [CRITICAL] 닉네임 결정 로직
       let userName = "";
       let userAvatar = "";
+      let userIdForRecord = currentUserId;
 
       if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
       } else if (otherProfiles && otherProfiles.length > 0) {
-        // 실존하는 타인의 정보를 무작위 선택
+        // [ULTIMATE FIX] 실존하는 타인의 정보를 무작위 선택하고
+        // 그 사용자의 실제 ID를 user_id 필드에 넣습니다.
         const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
-        userName = p.nickname || RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
-        userAvatar = p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+        userName = p.nickname;
+        userAvatar = p.avatar_url;
+        userIdForRecord = p.id;
       } else {
-        // 타인 프로필이 없는 경우에만 랜덤 풀 사용
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+        // 타인 ID가 없으면 어쩔 수 없이 내 ID를 쓰지만 닉네임은 랜덤
+        userIdForRecord = currentUserId;
       }
 
-      // [CRITICAL] 닉네임이 '비트코인떡락'이면 무조건 랜덤 풀에서 변경하여 절대 중복되지 않게 함
+      // [FIX] 닉네임이 '비트코인떡락'이면 강제로 랜덤 풀에서 변경
       if (userName === '비트코인떡락') {
         userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
       }
@@ -456,8 +459,8 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, 
-        user_name: userName,    // [CRITICAL] 닉네임 필드에 직접 랜덤 닉네임 주입
+        user_id: userIdForRecord, // [CRITICAL] 본인 ID가 아닌 다른 유저의 ID를 할당
+        user_name: userName,    
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -467,8 +470,26 @@ export const seedInBoundsPosts = async (
       });
     }
 
+    console.log("📤 [Seeder] Inserting into DB with diverse user_ids:", insertData);
+
+    // [CRITICAL] RLS 정책이 막을 수 있으므로 RPC를 사용하거나, 
+    // 정책이 허용한다면 일반 insert를 시도합니다. 
+    // 현재 정책은 (auth.uid() = user_id)이므로 일반 유저는 본인 ID로만 인서트 가능합니다.
+    // 하지만 관리자라면 정책에 의해 다른 ID로도 인서트가 가능하도록 설정되어 있을 수 있습니다.
     const { error } = await supabase.from('posts').insert(insertData);
-    if (error) throw error;
+    
+    if (error) {
+      console.error("❌ [Seeder] Insert error:", error);
+      // RLS 에러 발생 시 최후의 수단: 본인 ID로 넣되 프론트엔드에서 닉네임을 보호함 (이미 구현됨)
+      if (error.code === '42501') {
+        console.warn("⚠️ [Seeder] RLS restriction. Using currentUserId as fallback.");
+        const fallbackData = insertData.map(d => ({ ...d, user_id: currentUserId }));
+        const { error: retryError } = await supabase.from('posts').insert(fallbackData);
+        if (retryError) throw retryError;
+      } else {
+        throw error;
+      }
+    }
 
     console.log(`✨ [Seeder] ${insertData.length}개의 다양한 랜덤 포스팅 생성 완료`);
     return insertData.length;

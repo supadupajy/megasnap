@@ -31,10 +31,15 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
   // [ULTIMATE ATOMIC FIX]
-  // DB에 저장된 user_name을 무조건 최우선으로 사용하도록 합니다.
-  // profiles 조인을 통해 넘어오는 정보가 현재 로그인한 유저 정보로 덮어쓰기되는 현상을 완전히 방지합니다.
-  const finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
-  const finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
+  // 닉네임 결정 로직을 극도로 단순화하고 명확하게 합니다.
+  // 시드 데이터이거나 DB에 사용자 이름이 명시된 경우, 프로필 조인 데이터를 완전히 무시합니다.
+  let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
+  let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
+
+  if (p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1 || p.user_name) {
+    finalUserName = p.user_name || '탐험가';
+    finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
+  }
 
   return {
     id: p.id,
@@ -43,7 +48,6 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     isInfluencer: borderType === 'gold' || borderType === 'diamond',
     user: {
       id: p.user_id,
-      // [FIX] 여기서도 p.user_name이 있으면 profiles의 정보보다 무조건 우선합니다.
       name: finalUserName,
       avatar: finalUserAvatar,
     },
@@ -100,8 +104,9 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 10) limit = 500;
 
   try {
-    // ✅ [OPTIMIZATION] "데이터 다이어트" 적용
-    // [CRITICAL FIX] user_name과 user_avatar를 반드시 포함해야 랜덤 닉네임이 표시됩니다.
+    // [ULTIMATE FIX] 'posts' 테이블 대신 'posts_with_profiles' 뷰를 조회하지 않고
+    // posts 테이블에서 필요한 모든 정보를 직접 가져오며,
+    // JOIN된 profile 닉네임이 랜덤하게 저장된 user_name을 덮어쓰지 못하게 합니다.
     let query = supabase
       .from('posts')
       .select('id, latitude, longitude, category, likes, created_at, video_url, youtube_url, image_url, user_id, content, is_seed_data, user_name, user_avatar, borderType')
@@ -115,6 +120,9 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
+    
+    // [CRITICAL] 이미 데이터 매핑 로직에서 p.is_seed_data 체크를 통해 닉네임을 보호하고 있으므로
+    // 여기서 반환된 데이터는 안전합니다.
     return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
