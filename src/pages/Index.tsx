@@ -842,24 +842,41 @@ const Index = () => {
       {/* 실시간 인기 포스팅 리스트 - 상단 헤더 바로 밑으로 이동 (여백 추가) */}
       <AnimatePresence>
         {!isPostListOpen && !isSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={cn(
-              "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
-              isCategoryOpen && "opacity-50 blur-[1px]"
-            )}
-          >
-            <div className="max-w-md mx-auto pointer-events-auto">
-              <TrendingPosts
-                posts={globalTrendingPosts}
-                onPostClick={handleTrendingPostClick}
-                isExpanded={isTrendingExpanded}
-                onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-              />
-            </div>
-          </motion.div>
+          <>
+            {/* 반투명 배경 레이어 - 펼쳐졌을 때만 표시 */}
+            <AnimatePresence>
+              {isTrendingExpanded && (
+                <motion.div
+                  key="trending-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="fixed inset-0 z-[49] bg-black/40 backdrop-blur-[2px]"
+                  onClick={() => setIsTrendingExpanded(false)}
+                />
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={cn(
+                "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
+                isCategoryOpen && "opacity-50 blur-[1px]"
+              )}
+            >
+              <div className="max-w-md mx-auto pointer-events-auto">
+                <TrendingPosts
+                  posts={globalTrendingPosts}
+                  onPostClick={handleTrendingPostClick}
+                  isExpanded={isTrendingExpanded}
+                  onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+                />
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
