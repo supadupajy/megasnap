@@ -432,22 +432,32 @@ const Index = () => {
     const timeLimitMs = timeValue * 60 * 60 * 1000;
 
     // ✅ 필터링 및 거리순 정렬 로직 최적화
+    const trendingIdsForFilter = new Set(globalTrendingPostsRef.current.map(p => p.id));
       const uniquePosts = Array.from(new Map(allPosts.filter(post => {
       if (!post || post.lat === null || post.lng === null || blockedIds.has(post.user.id)) return false;
       
-      const margin = 0.002;
-      const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin &&
-                       post.lat <= Math.max(sw.lat, ne.lat) + margin &&
-                       post.lng >= Math.min(sw.lng, ne.lng) - margin &&
-                       post.lng <= Math.max(sw.lng, ne.lng) + margin;
+      // trending 포스트는 bounds 체크 없이 항상 포함 (지도 이동 중에도 마커 유지)
+      const isTrendingPost = trendingIdsForFilter.has(post.id);
       
-      if (!inBounds) return false;
+      if (!isTrendingPost) {
+        const margin = 0.002;
+        const inBounds = post.lat >= Math.min(sw.lat, ne.lat) - margin &&
+                         post.lat <= Math.max(sw.lat, ne.lat) + margin &&
+                         post.lng >= Math.min(sw.lng, ne.lng) - margin &&
+                         post.lng <= Math.max(sw.lng, ne.lng) + margin;
+        if (!inBounds) return false;
+      }
       
-      const postTime = new Date(post.createdAt).getTime();
-      const isWithinTime = (now - postTime) <= timeLimitMs;
+      // trending 포스트는 시간 필터도 건너뜀 (오래된 인기 포스트도 항상 표시)
+      if (!isTrendingPost) {
+        const postTime = new Date(post.createdAt).getTime();
+        const isWithinTime = (now - postTime) <= timeLimitMs;
+        if (!isWithinTime) return false;
+      }
       
-      if (!isWithinTime) return false;
-      
+      // trending 포스트는 카테고리 필터도 건너뜀 (항상 표시)
+      if (isTrendingPost) return true;
+
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       
       // ✅ [FIX] 카테고리 필터 로직: 'hot'이나 'influencer'가 선택되었을 때의 조건을 명확히 합니다.
