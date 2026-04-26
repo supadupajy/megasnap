@@ -432,14 +432,23 @@ useEffect(() => {
     const kakao = (window as any).kakao;
 
     const MIN_LEVEL = 4;
+    // 레벨 4일 때의 센터를 기억해두기 위한 변수
+    let lastAllowedCenter: any = null;
 
     const handleZoom = () => {
       const level = map.getLevel();
 
-      // 레벨 4 미만(더 확대)이면 즉시 애니메이션 없이 강제로 4로 되돌림
+      // 레벨 4 미만(더 확대)이면 즉시 센터도 함께 복구하여 지도 이동 방지
       if (level < MIN_LEVEL) {
+        const centerToRestore = lastAllowedCenter || map.getCenter();
         map.setLevel(MIN_LEVEL, { animate: false });
+        map.setCenter(centerToRestore);
         return;
+      }
+
+      // 레벨 4일 때 센터를 저장
+      if (level === MIN_LEVEL) {
+        lastAllowedCenter = map.getCenter();
       }
 
       const el = containerRef.current;
@@ -449,8 +458,19 @@ useEffect(() => {
       }
     };
 
+    // idle 이벤트로도 레벨 4 센터를 갱신 (드래그 후 센터 변경 반영)
+    const handleIdle = () => {
+      if (map.getLevel() === MIN_LEVEL) {
+        lastAllowedCenter = map.getCenter();
+      }
+    };
+
     kakao.maps.event.addListener(map, 'zoom_changed', handleZoom);
-    return () => kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
+    kakao.maps.event.addListener(map, 'idle', handleIdle);
+    return () => {
+      kakao.maps.event.removeListener(map, 'zoom_changed', handleZoom);
+      kakao.maps.event.removeListener(map, 'idle', handleIdle);
+    };
   }, [isMapReady]);
 
   useEffect(() => {
