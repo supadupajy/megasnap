@@ -336,240 +336,238 @@ const Write = () => {
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
       <div className="pt-16">
         <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="bg-gray-50/50 border-y border-gray-100">
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                  <PenLine className="w-6 h-6 text-indigo-600" />
+          <div className="bg-gray-50/50 border-y border-gray-100">
+            <div className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                    <PenLine className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                      {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+                    </h2>
+                    <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-black text-gray-900 tracking-tight">
-                    {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-                  </h2>
-                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {currentPage === 2 && (
-                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                )}
-                <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-                  <Send className="w-5 h-5 text-indigo-600" />
+                <div className="flex items-center gap-2">
+                  {currentPage === 2 && (
+                    <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                  )}
+                  <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
+                    <Send className="w-5 h-5 text-indigo-600" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div
-          className="px-5 py-6 space-y-8 pb-32"
-        >
-
-          {currentPage === 1 ? (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
-                </div>
-                <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
-              </div>
-
-              {mediaFiles.length > 0 ? (
-                <div
-                  ref={containerRef}
-                  className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  {currentMedia?.type === 'image' ? (
-                    <img
-                      ref={imgRef}
-                      src={currentMedia.url}
-                      className="pointer-events-none"
-                      onLoad={(e) => {
-                        const img = e.currentTarget;
-                        const container = containerRef.current;
-                        if (!container) return;
-                        const conW = container.offsetWidth;
-                        const conH = container.offsetHeight;
-                        const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
-                        const renderedW = img.naturalWidth * scale;
-                        const renderedH = img.naturalHeight * scale;
-                        const cropX = currentMedia.crop?.x ?? 50;
-                        const cropY = currentMedia.crop?.y ?? 50;
-                        cropPixelRef.current = {
-                          x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-                          y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-                        };
-                        // ✅ 로드 완료 → 렌더링 트리거
-                        setImgLoaded(true);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                        // ✅ 로드 전엔 invisible, 로드 후 보임
-                        opacity: imgLoaded ? 1 : 0,
-                        transition: isDragging
-                          ? 'none'
-                          : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
-                      }}
-                    />
-                  ) : (
-                    <video
-                      src={currentMedia?.url}
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                      autoPlay muted loop playsInline
-                    />
-                  )}
-
-                  {/* 드래그 오버레이 */}
-                  <div
-                    className="absolute inset-0 z-10"
-                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                    onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
-                    onMouseUp={handleDragEnd}
-                    onMouseLeave={handleDragEnd}
-                    onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
-                    onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
-                    onTouchEnd={handleDragEnd}
-                  />
-
-                  {/* 삭제 버튼 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const newFiles = [...mediaFiles];
-                      newFiles.splice(currentSlide, 1);
-                      setMediaFiles(newFiles);
-                      setCurrentSlide(prev => Math.min(prev, Math.max(0, newFiles.length - 1)));
-                    }}
-                    className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-
-                  {/* 슬라이드 전환 + 인디케이터 */}
-                  {mediaFiles.length > 1 && (
-                    <>
-                      <button className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))} />
-                      <button className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))} />
-                      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                        {mediaFiles.map((_, i) => (
-                          <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div
-                  onClick={() => mediaInputRef.current?.click()}
-                  className="w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
-                  <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
-                </div>
-              )}
-
-              <Button
-                className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
-                onClick={() => setCurrentPage(2)}
-                disabled={mediaFiles.length === 0}
-              >
-                다음 단계로
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-5 pb-20">
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
-                </div>
-                <div
-                  onClick={() => navigate('/', { state: { startSelection: true } })}
-                  className="p-3 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
-                >
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                    <MapPin className="w-6 h-6 text-indigo-600" />
+          <div className="px-5 py-6 space-y-8 pb-32">
+            {currentPage === 1 ? (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
+                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                   </div>
-                  <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
-                    {address || '위치 미지정'}
-                  </p>
+                  <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">카테고리</p>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {CATEGORIES.map((cat) => (
+                {mediaFiles.length > 0 ? (
+                  <div
+                    ref={containerRef}
+                    className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
+                    style={{ aspectRatio: '1 / 1' }}
+                  >
+                    {currentMedia?.type === 'image' ? (
+                      <img
+                        ref={imgRef}
+                        src={currentMedia.url}
+                        className="pointer-events-none"
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          const container = containerRef.current;
+                          if (!container) return;
+                          const conW = container.offsetWidth;
+                          const conH = container.offsetHeight;
+                          const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+                          const renderedW = img.naturalWidth * scale;
+                          const renderedH = img.naturalHeight * scale;
+                          const cropX = currentMedia.crop?.x ?? 50;
+                          const cropY = currentMedia.crop?.y ?? 50;
+                          cropPixelRef.current = {
+                            x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+                            y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+                          };
+                          // ✅ 로드 완료 → 렌더링 트리거
+                          setImgLoaded(true);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                          // ✅ 로드 전엔 invisible, 로드 후 보임
+                          opacity: imgLoaded ? 1 : 0,
+                          transition: isDragging
+                            ? 'none'
+                            : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
+                        }}
+                      />
+                    ) : (
+                      <video
+                        src={currentMedia?.url}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        autoPlay muted loop playsInline
+                      />
+                    )}
+
+                    {/* 드래그 오버레이 */}
+                    <div
+                      className="absolute inset-0 z-10"
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                      onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
+                      onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
+                      onMouseUp={handleDragEnd}
+                      onMouseLeave={handleDragEnd}
+                      onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+                      onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                      onTouchEnd={handleDragEnd}
+                    />
+
+                    {/* 삭제 버튼 */}
                     <button
-                      key={cat.key}
-                      onClick={() => setCategory(cat.key)}
-                      className={cn(
-                        "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
-                        category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
-                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newFiles = [...mediaFiles];
+                        newFiles.splice(currentSlide, 1);
+                        setMediaFiles(newFiles);
+                        setCurrentSlide(prev => Math.min(prev, Math.max(0, newFiles.length - 1)));
+                      }}
+                      className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
                     >
-                      <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                      <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
-                        {cat.label}
-                      </span>
+                      <X className="w-4 h-4" />
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-1.5 px-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
-                </div>
-                <Textarea
-                  placeholder="이 장소에서의 추억을 기록해보세요..."
-                  className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
-              </div>
+                    {/* 슬라이드 전환 + 인디케이터 */}
+                    {mediaFiles.length > 1 && (
+                      <>
+                        <button className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))} />
+                        <button className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))} />
+                        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                          {mediaFiles.map((_, i) => (
+                            <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => mediaInputRef.current?.click()}
+                    className="w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                    style={{ aspectRatio: '1 / 1' }}
+                  >
+                    <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
+                    <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                  </div>
+                )}
 
-              <div className="flex flex-col gap-2">
                 <Button
-                  className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
-                  onClick={handlePost}
-                  disabled={isSubmitting}
+                  className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
+                  onClick={() => setCurrentPage(2)}
+                  disabled={mediaFiles.length === 0}
                 >
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
-                  게시물 등록하기
+                  다음 단계로
                 </Button>
-                {!content.trim() && (
-                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                    내용을 입력해주세요
-                  </p>
-                )}
-                {mediaFiles.length === 0 && (
-                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                    사진이나 동영상을 선택해주세요
-                  </p>
-                )}
               </div>
-            </div>
-          )}
-        </div>
-      </main>
+            ) : (
+              <div className="space-y-5 pb-20">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
+                  </div>
+                  <div
+                    onClick={() => navigate('/', { state: { startSelection: true } })}
+                    className="p-3 bg-gray-50 rounded-3xl border border-gray-100 flex items-center gap-4 cursor-pointer hover:bg-gray-100 active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                      <MapPin className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
+                      {address || '위치 미지정'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">카테고리</p>
+                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.key}
+                        onClick={() => setCategory(cat.key)}
+                        className={cn(
+                          "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
+                          category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
+                        )}
+                      >
+                        <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
+                        <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
+                          {cat.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
+                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+                  </div>
+                  <Textarea
+                    placeholder="이 장소에서의 추억을 기록해보세요..."
+                    className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold focus-visible:ring-2 focus-visible:ring-indigo-600"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
+                    onClick={handlePost}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
+                    게시물 등록하기
+                  </Button>
+                  {!content.trim() && (
+                    <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                      내용을 입력해주세요
+                    </p>
+                  )}
+                  {mediaFiles.length === 0 && (
+                    <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                      사진이나 동영상을 선택해주세요
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
