@@ -30,9 +30,9 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
     : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : (p.category || 'general')) || p.image_url;
 
-  // [CRITICAL FIX] 시드 데이터인 경우 DB에 저장된 user_name을 무조건 최우선 사용
-  const finalUserName = p.is_seed_data ? (p.user_name || '익명 탐험가') : (p.user_name || p.profiles?.nickname || '익명 사용자');
-  const finalUserAvatar = p.is_seed_data ? (p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`) : (p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`);
+  // [CRITICAL] 닉네임을 확실하게 Post 객체로 전달
+  const finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
+  const finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
 
   return {
     id: p.id,
@@ -62,7 +62,7 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     category: p.category || 'none',
     createdAt: new Date(p.created_at),
     borderType: p.borderType || borderType,
-    is_seed_data: p.is_seed_data
+    is_seed_data: p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1
   };
 };
 

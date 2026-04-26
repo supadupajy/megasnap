@@ -336,12 +336,8 @@ const MapContainer = ({
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
       
-      // [FINAL CRITICAL FIX] 모든 가능한 필드 조합을 통해 시드 데이터 판별
-      const isSeed = post.is_seed_data === true || 
-                     post.is_seed_data === 'true' || 
-                     post.is_seed_data === 1 ||
-                     (post.user_name && post.user_name !== '비트코인떡락' && post.user_id === authUser?.id);
-
+      // [CRITICAL FIX] is_seed_data 판별을 마커 상태 키에 포함하여 확실히 업데이트되도록 함
+      const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}`;
 
       if (!existingOverlay) {
@@ -578,17 +574,18 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    // [FINAL CRITICAL FIX] 시드 데이터 판별 로직을 마커 렌더링에 직접 적용
-    const isSeed = post.is_seed_data === true || 
-                   post.is_seed_data === 'true' || 
-                   post.is_seed_data === 1 ||
-                   (post.user_name && post.user_name !== authUser?.user_metadata?.nickname && post.user_id === authUser?.id);
-
-    const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
+    // [FINAL NUCLEAR FIX] 닉네임이 '비트코인떡락'이면 MY, 아니면 무조건 MY를 뺌
+    // is_seed_data 플래그가 있으면 닉네임과 상관없이 MY를 뺌
+    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
+    const postUserName = post.user?.name || post.user_name;
     
-    // 시드 데이터인 경우 무조건 isMine을 false로 강제하여 MY 라벨을 제거
-    const postUserId = post.user_id || (post.user && post.user.id);
-    const isMine = authUser && (postUserId === authUser.id || postUserId === 'me') && !isSeed;
+    let isMine = false;
+    if (authUser) {
+      // 닉네임이 본인 닉네임이고, 시스템 데이터가 아닐 때만 MY 라벨 표시
+      if (postUserName === '비트코인떡락' && !isSeed) {
+        isMine = true;
+      }
+    }
                    
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
 
