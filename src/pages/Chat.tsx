@@ -483,50 +483,38 @@ const Chat = () => {
     <div className="bg-white overflow-hidden flex flex-col h-screen relative" style={{ paddingTop: '88px' }}>
       <header
         ref={headerRef}
-        className="fixed top-[88px] left-0 right-0 h-14 z-[100] bg-white flex items-center justify-between px-4 border-b border-gray-100 will-change-transform"
+        className="fixed top-[88px] left-0 right-0 h-14 z-[100] bg-white flex items-center px-4 border-b border-gray-50 will-change-transform"
       >
-        <div className="flex items-center gap-3">
-          <div 
+        <div className="flex items-center w-full relative">
+          <button
             onClick={handleBack}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors active:scale-95 cursor-pointer"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all z-10"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer relative"
-              onClick={() => navigate(`/profile/${chatId}`)}
-            >
-              <img
-                src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`}
-                alt="user"
-                className="w-full h-full rounded-full object-cover border-2 border-white"
-              />
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight leading-none">
+              {otherUser?.nickname || '사용자'}
+            </h2>
+            <div className="flex items-center gap-1 mt-0.5">
               <div className={cn(
-                "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white z-10 transition-colors duration-300",
-                isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-400"
+                "w-1.5 h-1.5 rounded-full",
+                isOnline ? "bg-green-500 animate-pulse" : "bg-gray-300"
               )} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-black text-gray-900">
-                {otherUser?.nickname || '사용자'}
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-tight",
+                isOnline ? "text-green-500" : "text-gray-400"
+              )}>
+                {isOnline ? 'Online' : 'Offline'}
               </span>
-              <div className="flex items-center gap-1">
-                <span className={cn(
-                  "text-[9px] font-black uppercase tracking-tight transition-colors duration-300",
-                  isOnline ? "text-green-500" : "text-gray-400"
-                )}>
-                  {isOnline ? 'Online' : 'Offline'}
-                </span>
-              </div>
             </div>
           </div>
 
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="p-1 text-gray-600"><Phone className="w-5 h-5" /></button>
-          <button className="p-1 text-gray-600"><Video className="w-5 h-5" /></button>
-          <button className="p-1 text-gray-600"><MoreVertical className="w-5 h-5" /></button>
+          <div className="ml-auto flex items-center gap-1 z-10">
+            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><Phone className="w-5 h-5" /></button>
+            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><MoreVertical className="w-5 h-5" /></button>
+          </div>
         </div>
       </header>
 
