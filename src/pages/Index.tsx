@@ -455,9 +455,6 @@ const Index = () => {
         if (!isWithinTime) return false;
       }
       
-      // trending 포스트는 카테고리 필터도 건너뜀 (항상 표시)
-      if (isTrendingPost) return true;
-
       if (selectedCategories.includes('mine')) return authUser && post.user.id === authUser.id;
       
       // ✅ [FIX] 카테고리 필터 로직: 'hot'이나 'influencer'가 선택되었을 때의 조건을 명확히 합니다.
