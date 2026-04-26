@@ -28,7 +28,7 @@ const ObservedPostItem = ({
   onVisible: (id: string) => void, 
   isViewed: boolean, 
   onLikeToggle: (id: string) => void, 
-  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void,
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number, fullPost: Post) => void,
   onDelete: (id: string) => void,
   isPlaying: boolean,
   onPlayingChange: (id: string, isIntersecting: boolean) => void
@@ -139,7 +139,7 @@ const ObservedPostItem = ({
         post={fullPost}
         isViewed={isViewed} 
         onLikeToggle={onLikeToggle}
-        onLocationClick={onLocationClick}
+        onLocationClick={(e, lat, lng) => onLocationClick(e, lat, lng, fullPost)}
         onDelete={onDelete}
         autoPlayVideo={isCurrentlyVisible}
       />
@@ -422,8 +422,8 @@ const PostListOverlay = ({
                 isViewed={viewedIds.has(post.id)}
                 onVisible={(id) => markAsViewed(id)}
                 onLikeToggle={() => {}}
-                onLocationClick={(e, lat, lng) => {
-                  window.dispatchEvent(new CustomEvent('focus-post', { detail: { post, lat, lng } }));
+                onLocationClick={(e, lat, lng, fullPost) => {
+                  window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
                 }}
                 onDelete={(id) => onDeletePost?.(id)}
                 isPlaying={playingPostId === post.id}

@@ -594,12 +594,16 @@ const Index = () => {
   useEffect(() => {
     const handleFocusPost = (e: any) => {
       const { post, lat, lng } = e.detail;
-      setIsPostListOpen(false); focusPostOnMap(post, { lat, lng });
-      setTimeout(() => setSelectedPostId(post.id), 300);
+      setIsPostListOpen(false); 
+      
+      // ✅ [FIX] '여기보기'를 통해 위치 정보를 불러올 때도 상세 데이터를 동기화하기 위해 handleMarkerClick 활용
+      handleMarkerClick(post);
+      
+      focusPostOnMap(post, { lat, lng });
     };
     window.addEventListener('focus-post', handleFocusPost);
     return () => window.removeEventListener('focus-post', handleFocusPost);
-  }, [focusPostOnMap]);
+  }, [focusPostOnMap, handleMarkerClick]);
 
   useEffect(() => {
     const handleCloseOverlay = () => { if (isPostListOpen) setIsPostListOpen(false); };

@@ -186,6 +186,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return clean.startsWith('http') && !/post\s*content/i.test(clean);
   };
 
+  const handleLocationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentPost.lat !== undefined && currentPost.lng !== undefined) {
+      onLocationClick?.(currentPost.lat, currentPost.lng);
+    }
+  };
+
   const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
   const handleImageError = (postId: string) => {
@@ -427,9 +434,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
                             {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
                           </div>
-                          <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5">
+                          <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
                             <MapPin className="w-3 h-3" />
-                            <span className="text-[10px] font-medium">{currentPost.location}</span>
+                            <span className="text-[10px] font-medium hover:underline">{currentPost.location}</span>
                           </div>
                         </div>
                       </div>
