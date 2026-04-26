@@ -44,6 +44,8 @@ const Header = () => {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return; // user가 없으면 실행 안 함
+
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
@@ -55,7 +57,7 @@ const Header = () => {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${user?.id}`
+          filter: `receiver_id=eq.${user.id}`
         },
         () => {
           fetchUnreadCount();
@@ -67,25 +69,15 @@ const Header = () => {
           event: 'UPDATE',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${user?.id}`
+          filter: `sender_id=eq.${user.id}`
         },
-        (payload) => {
-          // If the message I sent was read by the other person, 
-          // although this doesn't affect my unread count (receiver_id is not me),
-          // for safety or if we want to track something else we can call fetchUnreadCount.
-          // But actually, when I read someone's message, the DB update has receiver_id = my_id.
-          // So the first filter `receiver_id=eq.${user?.id}` with event '*' should cover it.
+        () => {
           fetchUnreadCount();
         }
-      )
-      .subscribe();
+      );
 
-    // Listen for custom events from other components (like Chat.tsx)
-    const handleRefresh = () => {
-      fetchUnreadCount();
-      fetchUnreadNotifCount();
-    };
-    window.addEventListener('refresh-unread-counts', handleRefresh);
+    // .subscribe()를 모든 .on() 설정이 끝난 후에 호출합니다.
+    messagesChannel.subscribe();
 
     const notificationsChannel = supabase
       .channel('header-notifications')
@@ -95,13 +87,21 @@ const Header = () => {
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user?.id}`
+          filter: `user_id=eq.${user.id}`
         },
         () => {
           fetchUnreadNotifCount();
         }
-      )
-      .subscribe();
+      );
+
+    notificationsChannel.subscribe();
+
+    // Listen for custom events from other components
+    const handleRefresh = () => {
+      fetchUnreadCount();
+      fetchUnreadNotifCount();
+    };
+    window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
       supabase.removeChannel(messagesChannel);
