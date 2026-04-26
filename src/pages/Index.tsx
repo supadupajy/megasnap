@@ -39,8 +39,8 @@ const fireConfetti = (options: any) => {
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
 const Index = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser } = useAuth();
   
   const [showCssConfetti, setShowCssConfetti] = useState(false);
@@ -558,9 +558,18 @@ const Index = () => {
   // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
   const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
 
-  useEffect(() => {
-    if (!authUser) return;
+  // ✅ [OPTIMIZATION] 의존성 배열 최소화를 위한 refs
+  const mapDbToPostRef = useRef(mapDbToPost);
+  const triggerConfettiRef = useRef(triggerConfetti);
 
+  // refs 업데이트
+  useEffect(() => {
+    mapDbToPostRef.current = mapDbToPost;
+    triggerConfettiRef.current = triggerConfetti;
+  }, [mapDbToPost, triggerConfetti]);
+
+  useEffect(() => {
+    // ✅ [OPTIMIZATION] authUser 외의 의존성을 제거하여 불필요한 구독 재시작 방지
     const channel = supabase
       .channel(channelIdRef.current)
       .on(
@@ -572,10 +581,10 @@ const Index = () => {
         },
         async (payload) => {
           console.log('[Index] Realtime INSERT:', payload);
-          const newPost = await mapDbToPost(payload.new);
+          // ref를 통해 최신 함수 참조
+          const newPost = await mapDbToPostRef.current(payload.new);
           if (newPost) {
             setAllPosts(prev => {
-              // 중복 방지 체크
               if (prev.some(p => p.id === newPost.id)) return prev;
               const updated = [newPost, ...prev];
               mapCache.posts = updated;
@@ -588,7 +597,7 @@ const Index = () => {
             });
 
             if (newPost.user_id === authUser?.id) {
-              triggerConfetti();
+              triggerConfettiRef.current();
             }
           }
         }
@@ -604,12 +613,10 @@ const Index = () => {
           console.log('[Index] Realtime DELETE:', payload);
           const deletedId = payload.old.id;
           
-          // ✅ [FADE OUT] 마커 삭제 애니메이션 트리거 (MapContainer에서 처리)
           window.dispatchEvent(new CustomEvent('animate-marker-delete', { 
             detail: { id: deletedId } 
           }));
 
-          // 애니메이션 시간(약 400~500ms) 후 상태에서 실제 제거
           setTimeout(() => {
             setAllPosts(prev => {
               const filtered = prev.filter(p => p.id !== deletedId);
@@ -623,11 +630,10 @@ const Index = () => {
       .subscribe();
 
     return () => {
-      // ✅ [CLEANUP] unsubscribe와 removeChannel을 모두 호출하여 자원 점유 해제
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [authUser, mapData, mapDbToPost, triggerConfetti]);
+  }, [authUser?.id]); // ✅ authUser.id만 의존성으로 유지 (불필요한 재구독 방지)
 
   useEffect(() => {
     const handleFocusPost = (e: any) => {
