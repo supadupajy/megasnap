@@ -201,7 +201,6 @@ const MapContainer = ({
             ne: { lat: ne.getLat(), lng: ne.getLng() }
           };
           
-          // ✅ 브라우저 탭 활성화 상태가 아닐 때는 업데이트 스킵하지 않도록 보장
           localStorage.setItem('map_bounds', JSON.stringify(boundsData));
           onMapChangeRef.current({
             bounds: boundsData,
@@ -211,13 +210,12 @@ const MapContainer = ({
         } catch (e) {}
       };
 
-      updateMapData();
       setIsMapReady(true);
       setIsLoading(false);
 
-      // ✅ idle 이벤트 추가하여 지도 이동이 끝난 후 확실하게 데이터 갱신
+      // ✅ [FIX] bounds_changed를 제거하고 idle만 남겨서 지도 이동 중에 발생하는 폭주하는 요청을 차단합니다.
       kakao.maps.event.addListener(map, 'idle', updateMapData);
-      kakao.maps.event.addListener(map, 'bounds_changed', updateMapData);
+      
       kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; setIsMapMoving(true); });
       kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; setIsMapMoving(false); lastDragEnd.current = Date.now(); });
       

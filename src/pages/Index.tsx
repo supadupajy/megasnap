@@ -101,6 +101,9 @@ const Index = () => {
   const { session } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
+  // ✅ [NEW] 이전 요청 위치를 저장하여 미세한 이동 시 중복 요청 방지
+  const lastRequestRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
@@ -261,11 +264,27 @@ const Index = () => {
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
-    if (!targetBounds || isSyncing.current) return;
-    isSyncing.current = true;
-    const { sw, ne } = targetBounds;
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
+
+    if (!targetBounds || !center || isSyncing.current) return;
+
+    // ✅ [OPTIMIZATION] 이전 요청 위치와 현재 위치 비교 (미세한 이동은 캐시된 데이터 활용)
+    if (lastRequestRef.current) {
+      const { lat: lastLat, lng: lastLng, zoom: lastZoom } = lastRequestRef.current;
+      const latDiff = Math.abs(center.lat - lastLat);
+      const lngDiff = Math.abs(center.lng - lastLng);
+      
+      // 줌 레벨이 같고, 이동 거리가 매우 작으면(약 10~20m 이내) 요청 스킵
+      if (zoomToUse === lastZoom && latDiff < 0.0001 && lngDiff < 0.0001) {
+        return;
+      }
+    }
+
+    isSyncing.current = true;
+    lastRequestRef.current = { lat: center.lat, lng: center.lng, zoom: zoomToUse };
+
+    const { sw, ne } = targetBounds;
     try {
       const dbPosts = await fetchPostsInBounds(sw, ne, zoomToUse, center);
       const validDbIds = new Set(dbPosts.map(p => p.id));
