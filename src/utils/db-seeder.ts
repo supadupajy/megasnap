@@ -370,30 +370,42 @@ export const seedInBoundsPosts = async (
   console.log("📍 [Seeder] 화면 내 데이터 생성을 시작합니다...", bounds);
 
   try {
+    // 1. RLS 우회를 위해 currentUserId는 DB 저장용으로 사용하되, 
+    // 표시되는 정보(nickname, avatar)는 userPool에서 랜덤하게 가져옴
     await initializeYoutubePool();
-    const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').limit(10);
-    const userPool = (profiles && profiles.length > 0) ? profiles : [{ id: currentUserId, avatar_url: null }];
-
-    const count = 5;
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
+    
+    // 기본 닉네임 풀
+    const NICKNAMES = ['여행가', '맛집탐험대', '사진작가', '동네주민', '미식가', '프로산책러', '트렌드세터'];
+    
+    const count = 10; // 5개에서 10개로 증가 (더 풍성한 테스트를 위해)
     const insertData = [];
 
     for (let i = 0; i < count; i++) {
-      const randomUser = userPool[Math.floor(Math.random() * userPool.length)];
+      // 랜덤 프로필 정보 (표시용)
+      const randomProfile = profiles && profiles.length > 0 
+        ? profiles[Math.floor(Math.random() * profiles.length)]
+        : null;
       
+      const randomNickname = randomProfile?.nickname || NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)];
+      const randomAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
+
       // Random lat/lng within bounds
       const lat = bounds.sw.lat + Math.random() * (bounds.ne.lat - bounds.sw.lat);
       const lng = bounds.sw.lng + Math.random() * (bounds.ne.lng - bounds.sw.lng);
       
-      const isYoutube = Math.random() > 0.5;
+      // 영상 vs 이미지 랜덤 (70% 확률로 영상 - 더 다이내믹한 화면을 위해)
+      const isYoutube = Math.random() > 0.3;
       const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       
       let finalYoutubeUrl = null;
       let finalImage = "";
 
       if (isYoutube) {
-        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(Math.floor(Math.random() * 50));
+        // 검증된 유튜브 풀에서 랜덤하게 선택
+        finalYoutubeUrl = getVerifiedYoutubeUrlByIndex(Math.floor(Math.random() * 80));
         const ytThumbnail = getYoutubeThumbnail(finalYoutubeUrl);
-        finalImage = ytThumbnail || "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+        finalImage = ytThumbnail || `https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80`;
       } else {
         finalImage = getDiverseUnsplashUrl(`inbounds_${i}_${Date.now()}`, category);
       }
@@ -407,12 +419,12 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, // [FIX] RLS INSERT 정책 (auth.uid() = user_id)를 준수하기 위해 currentUserId 사용
-        user_name: "탐험가",
-        user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
-        likes: Math.floor(Math.random() * 8000) + 500,
+        user_id: currentUserId, // DB 저장 권한을 위해 내 ID 사용 (RLS 통과)
+        user_name: randomNickname, // 표시되는 이름은 랜덤
+        user_avatar: randomAvatar, // 표시되는 아바타는 랜덤
+        likes: Math.floor(Math.random() * 15000) + 100, // 좋아요 수도 랜덤
         category: category,
-        created_at: new Date().toISOString()
+        created_at: new Date(Date.now() - Math.random() * 24 * 3600000).toISOString() // 생성 시간도 최근 24시간 내 랜덤
       });
     }
 
