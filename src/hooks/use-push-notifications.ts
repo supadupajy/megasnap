@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { isMobilePlatform } from '@/lib/utils';
 
+const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+
 export const usePushNotifications = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
@@ -15,18 +17,25 @@ export const usePushNotifications = () => {
 
     const register = async () => {
       try {
-        // 1. 커스텀 사운드를 위한 알림 채널 생성 (Android 8.0+)
-        // 캐시를 무효화하고 설정을 강제 적용하기 위해 ID를 'messages_v4'로 업그레이드
+        // 1. 알림 채널 생성/업데이트 (Android 8.0+)
+        // messages_v5로 업데이트하여 시스템 설정 강제 갱신
         await PushNotifications.createChannel({
-          id: 'messages_v4', // ID 변경으로 설정 갱신 유도
-          name: 'Chat Messages',
-          description: '채팅 메시지 알림',
-          sound: 'default', // 커스텀 파일이 없을 경우를 대비해 기본음으로 설정하거나 'message_pop' 유지
-          importance: 5, // 최고 중요도 (헤드업 알림 + 소리)
-          visibility: 1,
+          id: 'messages_v5',
+          name: 'Important Chat Messages',
+          description: '새 메시지 도착 알림음',
+          sound: 'default', 
+          importance: 5, // IMPORTANCE_HIGH
+          visibility: 1, // VISIBILITY_PUBLIC
           vibration: true,
         });
-        console.log('[Push] Notification channel created/updated: messages_v4');
+        console.log('[Push] Notification channel updated to v5');
+
+        // Capacitor PushNotifications는 네이티브 앱 환경에서만 작동함
+        // 웹 브라우저 환경이라면 여기서 중단됨
+        if (!isMobilePlatform()) {
+          console.log('[Push] Native Push is not supported on this platform (Web).');
+          return;
+        }
 
         let permStatus = await PushNotifications.checkPermissions();
 
@@ -66,6 +75,16 @@ export const usePushNotifications = () => {
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('Push received: ', notification);
+        
+        // 포그라운드 수신 시 직접 사운드 재생 시도
+        try {
+          const audio = new Audio(NOTIFICATION_SOUND_URL);
+          audio.volume = 0.5;
+          audio.play().catch(e => console.warn('[Push] Audio play blocked in foreground:', e));
+        } catch (e) {
+          console.error('[Push] Audio error:', e);
+        }
+
         // 포그라운드 수신 시 상단 팝업을 수동으로 띄우거나 앱 내 UI 업데이트
         showSuccess(`${notification.title || '새 알림'}: ${notification.body}`);
       });
