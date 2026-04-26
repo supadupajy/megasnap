@@ -577,15 +577,14 @@ useEffect(() => {
     // [FIXED] ReferenceError: isAd is not defined
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     
-    // [FINAL NUCLEAR FIX] 닉네임이 '비트코인떡락'이면 MY, 아니면 무조건 MY를 뺌
-    // is_seed_data 플래그가 있으면 닉네임과 상관없이 MY를 뺌
+    // [FINAL NUCLEAR FIX] 닉네임이 본인 실존 닉네임이고 시드 데이터가 아닐 때만 MY 표기
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     const postUserName = post.user?.name || post.user_name;
     
     let isMine = false;
     if (authUser) {
-      // 닉네임이 본인 닉네임이고, 시스템 데이터가 아닐 때만 MY 라벨 표시
-      if (postUserName === '비트코인떡락' && !isSeed) {
+      // 내 ID이면서, 시드 데이터가 아니고, 닉네임이 '비트코인떡락'인 경우에만 MY
+      if (post.user_id === authUser.id && !isSeed && postUserName === '비트코인떡락') {
         isMine = true;
       }
     }

@@ -275,14 +275,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return "https://www.coca-cola.co.kr/";
   }, [currentPost]);
 
-  // ✅ 조건부 return은 모든 훅 선언 이후에
-  if (!isOpen || posts.length === 0 || !currentPost) return null;
-
-  const youtubeId = getYoutubeId(currentPost.youtubeUrl || '');
-  // [CRITICAL FIX] 시드 데이터인 경우 본인 포스팅이더라도 내 프로필로 덮어씌워지지 않도록 isMine 판정 수정
-  const isSeed = currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
-  const isMine = authUser && (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed;
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+  // [CRITICAL FIX] 닉네임 표시 로직을 Post 객체에 들어있는 name 그대로 사용하도록 보장
+  // 여기서 currentPost.user.name은 use-supabase-posts.ts의 mapDbToPost에서 이미 가공된 값입니다.
+  const postDisplayName = currentPost.user.name;
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return;
@@ -421,11 +416,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                       <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                         <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                          <img src={currentPost.user.avatar} alt={currentPost.user.name} className="w-full h-full rounded-full object-cover border-2 border-white" />
+                          <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" />
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{currentPost.user.name}</p>
+                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
                             {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
                           </div>
                           <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
@@ -604,7 +599,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
                           <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                           <div className="flex gap-2 items-start">
-                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{currentPost.user.name}</span>
+                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                             <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                           </div>
                         </div>

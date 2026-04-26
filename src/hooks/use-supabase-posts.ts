@@ -32,14 +32,19 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
 
   // [ULTIMATE ATOMIC FIX]
   // 닉네임 결정 로직을 극도로 단순화하고 명확하게 합니다.
-  // 시드 데이터이거나 DB에 사용자 이름이 명시된 경우, 프로필 조인 데이터를 완전히 무시합니다.
+  
+  // 1. 기본값 설정
   let finalUserName = p.user_name || p.profiles?.nickname || '익명 사용자';
   let finalUserAvatar = p.user_avatar || p.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id || p.id}`;
 
-  // [CRITICAL] 이 조건문이 본인의 실제 프로필로 덮어씌워지는 것을 막는 핵심입니다.
-  if (p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1) {
-    // 시드 데이터는 user_id가 누구든 상관없이 DB에 저장된 user_name/avatar를 강제로 사용합니다.
-    finalUserName = p.user_name || '탐험가';
+  // 2. [CRITICAL] 본인 닉네임 덮어쓰기 방지
+  // p.is_seed_data가 설정되어 있다면, p.user_id가 본인이라 할지라도 
+  // p.user_name (랜덤 닉네임)이 있으면 그것을 '강제로' 사용합니다.
+  const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
+  
+  if (isSeed && p.user_name) {
+    console.log('[use-supabase-posts] Seed data detected, enforcing randomized name:', p.user_name);
+    finalUserName = p.user_name;
     finalUserAvatar = p.user_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`;
   }
 
