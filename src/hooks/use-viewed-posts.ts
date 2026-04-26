@@ -1,30 +1,41 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
 export function useViewedPosts() {
   const { user } = useAuth();
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+  const fetchControllerRef = useRef<AbortController | null>(null);
 
   // 서버에서 조회 기록 가져오기
   const fetchViewedHistory = useCallback(async () => {
     if (!user) return;
 
+    // 이전 요청이 진행 중이면 취소
+    if (fetchControllerRef.current) {
+      fetchControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    fetchControllerRef.current = controller;
+
     try {
       const { data, error } = await supabase
         .from('viewed_posts')
         .select('post_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .abortSignal(controller.signal);
 
+      if (controller.signal.aborted) return;
       if (error) throw error;
 
       if (data) {
         const ids = new Set(data.map(item => item.post_id));
         setViewedIds(ids);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || err?.message?.includes('AbortError')) return;
       console.error('[useViewedPosts] Failed to fetch viewed history:', err);
     }
   }, [user]);
@@ -35,6 +46,9 @@ export function useViewedPosts() {
     } else {
       setViewedIds(new Set());
     }
+    return () => {
+      fetchControllerRef.current?.abort();
+    };
   }, [user, fetchViewedHistory]);
 
   // 조회 기록 저장
@@ -45,7 +59,6 @@ export function useViewedPosts() {
     setViewedIds(prev => new Set(prev).add(postId));
 
     try {
-      // 서버에 저장 (upsert로 중복 방지)
       const { error } = await supabase
         .from('viewed_posts')
         .upsert(

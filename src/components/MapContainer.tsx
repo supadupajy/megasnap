@@ -68,11 +68,13 @@ const MapContainer = ({
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
   const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '');
+  const authUserRef = useRef(authUser);
 
   useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
   useEffect(() => { postsRef.current = posts; }, [posts]);
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
 
   useEffect(() => {
     currentLevelRef.current = currentLevel;
@@ -484,7 +486,8 @@ const MapContainer = ({
                   // → 이후 React 리렌더링이 와도 key가 같아서 HTML을 덮어쓰지 않음
                   const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
                   const postUserId = (p as any).user_id || (p.user && p.user.id);
-                  const isMineKey = !!(authUser && String(postUserId) === String(authUser.id) && !isSeed);
+                  const currentAuthUser = authUserRef.current;
+                  const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
                   const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-false`;
                   content.setAttribute('data-content-state', newStateKey);
                 }
