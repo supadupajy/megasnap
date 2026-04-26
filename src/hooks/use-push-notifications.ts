@@ -8,6 +8,9 @@ import { isMobilePlatform } from '@/lib/utils';
 
 const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
+// 미리 오디오 객체를 생성해둠 (일부 브라우저에서 유리)
+const foregroundAudio = new Audio(NOTIFICATION_SOUND_URL);
+
 export const usePushNotifications = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
@@ -76,16 +79,22 @@ export const usePushNotifications = () => {
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('Push received: ', notification);
         
-        // 포그라운드 수신 시 직접 사운드 재생 시도
+        // 포그라운드 수신 시 직접 사운드 재생
         try {
-          const audio = new Audio(NOTIFICATION_SOUND_URL);
-          audio.volume = 0.5;
-          audio.play().catch(e => console.warn('[Push] Audio play blocked in foreground:', e));
+          foregroundAudio.currentTime = 0;
+          foregroundAudio.volume = 0.8;
+          const playPromise = foregroundAudio.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(e => {
+              console.warn('[Push] Foreground audio play blocked. Interaction might be needed.', e.message);
+            });
+          }
         } catch (e) {
           console.error('[Push] Audio error:', e);
         }
 
-        // 포그라운드 수신 시 상단 팝업을 수동으로 띄우거나 앱 내 UI 업데이트
+        // 포그라운드 수신 시 상단 팝업
         showSuccess(`${notification.title || '새 알림'}: ${notification.body}`);
       });
 

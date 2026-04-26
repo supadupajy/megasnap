@@ -88,12 +88,24 @@ const Chat = () => {
     }
   }, []);
 
-  // 사용자 상호작용 감지 (오디오 권한 획득)
+  // 사용자 상호작용 감지 (오디오 권한 획득 및 잠금 해제)
   useEffect(() => {
     const enableAudio = () => {
-      setCanPlaySound(true);
-      window.removeEventListener('click', enableAudio);
-      window.removeEventListener('touchstart', enableAudio);
+      console.log('[Chat] User interacted, unlocking audio...');
+      
+      // 무음 오디오를 재생하여 브라우저 오디오 컨텍스트 잠금 해제
+      const unlockAudio = new Audio(IN_CHAT_SOUND);
+      unlockAudio.volume = 0; // 무음
+      unlockAudio.play()
+        .then(() => {
+          console.log('[Chat] Audio unlocked successfully');
+          setCanPlaySound(true);
+          window.removeEventListener('click', enableAudio);
+          window.removeEventListener('touchstart', enableAudio);
+        })
+        .catch(e => {
+          console.warn('[Chat] Audio unlock failed, retrying on next interaction:', e);
+        });
     };
     window.addEventListener('click', enableAudio);
     window.addEventListener('touchstart', enableAudio);
@@ -114,23 +126,25 @@ const Chat = () => {
 
   // 사운드 재생 함수
   const playNotificationSound = useCallback((inChat: boolean) => {
-    if (!canPlaySound) {
-      console.log('[Chat] Audio not enabled yet by user interaction');
-      return;
-    }
+    // canPlaySound 체크를 제거하거나 로그를 남겨 강제 재생 시도
+    console.log('[Chat] Attempting to play sound. canPlaySound:', canPlaySound);
     
     try {
       const audio = new Audio(inChat ? IN_CHAT_SOUND : OUT_CHAT_SOUND);
-      audio.volume = inChat ? 0.4 : 0.8; // 볼륨 상향 조정
+      audio.volume = inChat ? 0.5 : 1.0; // 볼륨 최대치로 테스트
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          console.warn('[Chat] Audio play blocked:', e.message);
+          console.error('[Chat] Playback failed ERROR:', e.name, e.message);
+          // 만약 NotAllowedError가 나면 사용자 상호작용이 더 필요하다는 뜻
+          if (e.name === 'NotAllowedError') {
+            setCanPlaySound(false); 
+          }
         });
       }
     } catch (e) {
-      console.error('[Chat] Audio error:', e);
+      console.error('[Chat] Audio creation error:', e);
     }
   }, [canPlaySound]);
 
