@@ -410,18 +410,40 @@ const MapContainer = ({
         // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음 (highlightingIdsRef로 추적)
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           if (!highlightingIdsRef.current.has(post.id)) {
-            console.log(`[MARKER-UPDATE] id=${post.id} isMineKey=${isMineKey} isViewed=${isViewed} oldKey="${content.getAttribute('data-content-state')}" newKey="${contentStateKey}"`);
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
           }
           else {
-            console.log(`[MARKER-SKIP-HIGHLIGHTING] id=${post.id} key updated only`);
             content.setAttribute('data-content-state', contentStateKey);
           }
         }
       }
     });
-  }, [posts, viewedPostIds, internalViewedIds, isMapReady, authUser]);
+  }, [posts, isMapReady, authUser]);
+
+  // viewed 상태 변경 전용 useEffect - 핑 중인 마커는 건드리지 않음
+  useEffect(() => {
+    if (!isMapReady) return;
+    const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
+    overlaysRef.current.forEach((overlay, id) => {
+      if (highlightingIdsRef.current.has(id)) return; // 핑 중이면 절대 건드리지 않음
+      const content = overlay.getContent() as HTMLElement;
+      if (!content) return;
+      const stateKey = content.getAttribute('data-content-state') || '';
+      const isViewed = combinedViewedIds.has(id);
+      const currentIsViewed = stateKey.startsWith('true');
+      if (isViewed === currentIsViewed) return; // 변화 없으면 스킵
+      // viewed 상태만 바뀐 경우 HTML 업데이트
+      const p = postsRef.current.find(item => item.id === id);
+      if (!p) return;
+      const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
+      const postUserId = (p as any).user_id || (p.user && p.user.id);
+      const isMineKey = !!(authUserRef.current && String(postUserId) === String(authUserRef.current.id) && !isSeed);
+      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
+      content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+      content.setAttribute('data-content-state', newStateKey);
+    });
+  }, [viewedPostIds, internalViewedIds, isMapReady]);
 
   // ── highlight-marker 이벤트 핸들러 ────────────────────────
   // React state와 완전히 분리된 순수 DOM 조작
@@ -466,8 +488,10 @@ const MapContainer = ({
 
             // duration 후 원복
             setTimeout(() => {
-              highlightingIdsRef.current.delete(postId);
-              if (!content || !content.classList.contains('highlighted')) return;
+              if (!content || !content.classList.contains('highlighted')) {
+                highlightingIdsRef.current.delete(postId);
+                return;
+              }
               content.classList.remove('highlighted');
 
               const p = postsRef.current.find(item => item.id === postId);
@@ -482,10 +506,12 @@ const MapContainer = ({
                 const currentAuthUser = authUserRef.current;
                 const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id) && !isSeed);
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
-                console.log(`[PING-END] id=${postId} isMineKey=${isMineKey} isViewed=${isViewed} authUser=${currentAuthUser?.id} postUserId=${postUserId} newStateKey="${newStateKey}"`);
+                // HTML 재생성 완료 후 마지막에 가드 해제 → React 리렌더링 타이밍 경쟁 완전 차단
                 content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 content.setAttribute('data-content-state', newStateKey);
               }
+              // HTML/key 업데이트 완전히 끝난 후에 가드 해제
+              highlightingIdsRef.current.delete(postId);
 
               const p2 = postsRef.current.find(item => item.id === postId);
               overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
