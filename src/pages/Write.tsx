@@ -68,7 +68,11 @@ const Write = () => {
       geocoder.coord2Address(lng, lat, (result: any, status: any) => {
         if (status === kakao.maps.services.Status.OK) {
           const addr = result[0].address;
-          resolve(`${addr.region_1depth_name} ${addr.region_2depth_name}`);
+          const city = addr.region_1depth_name || '';
+          const gu = addr.region_2depth_name || '';
+          const dong = addr.region_3depth_name || '';
+          const parts = [city, gu, dong].filter(Boolean);
+          resolve(parts.join(' '));
         } else {
           resolve(resolveOfflineLocationName(lat, lng));
         }

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
+import { useLocationDisplay } from "@/hooks/use-location-display";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -12,6 +13,92 @@ interface TrendingPostsProps {
   onToggle: () => void;
   onPostClick: (post: Post) => void;
 }
+
+interface TrendingPostItemProps {
+  post: Post & { rank: number };
+  onPostClick: (post: Post) => void;
+  handleImageError: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+}
+
+const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, handleImageError }) => {
+  const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
+
+  const borderType = post.borderType || 'none';
+  let borderColor = 'border-gray-100';
+  let borderThickness = 'border';
+
+  if (borderType === 'popular') {
+    borderColor = 'border-rose-500';
+    borderThickness = 'border-2';
+  } else if (borderType === 'diamond') {
+    borderColor = 'border-cyan-400';
+    borderThickness = 'border-2';
+  } else if (borderType === 'gold') {
+    borderColor = 'border-amber-400';
+    borderThickness = 'border-2';
+  }
+
+  return (
+    <div
+      key={post.id}
+      onClick={() => onPostClick(post)}
+      className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
+    >
+      <div className="w-6 text-center shrink-0">
+        <span className={cn(
+          "text-sm font-black italic",
+          post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
+        )}>
+          {post.rank}
+        </span>
+      </div>
+
+      <div className={cn(
+        "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50",
+        borderThickness,
+        borderColor
+      )}>
+        <img
+          src={post.image}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+        />
+        {borderType !== 'none' && (
+          <div className="absolute top-0.5 right-0.5 z-10">
+            <Sparkles className={cn(
+              "w-2.5 h-2.5",
+              borderType === 'popular' ? "text-rose-500 fill-rose-500" :
+              borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
+              "text-amber-400 fill-amber-400"
+            )} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
+          {post.content}
+        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-[11px] font-medium text-gray-400 truncate">
+            {displayLocation || '위치 정보 없음'}
+          </p>
+          <div className="flex items-center gap-0.5 text-rose-500">
+            <Heart className="w-3 h-3 fill-rose-500" />
+            <span className="text-[10px] font-black">{post.likes}</span>
+          </div>
+        </div>
+      </div>
+
+      {(post.rank === 1 || post.rank === 4) && (
+        <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+          <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -26,26 +113,24 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // [FIX] 데이터 로딩 전 뼈대(Skeleton) UI 표시 지연 방지 및 로딩 상태 처리
   const isLoading = posts.length === 0;
 
-  // 1위~20위 순환 로직 (접혀있을 때만 동작)
   useEffect(() => {
     if (isExpanded || posts.length <= 1) return;
 
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % posts.length);
-    }, 4000); // 4초마다 다음 순위로 변경
+    }, 4000);
 
     return () => clearInterval(timer);
   }, [isExpanded, posts.length]);
 
-  const currentPost = posts[currentIndex] || posts[0];
+  const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
 
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    
+
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
     setShowScrollDownArrow(!isAtBottom);
 
@@ -57,7 +142,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80';
   };
 
-  // FIX: Ensure useEffect doesn't change hook order based on props
   useEffect(() => {
     const el = listRef.current;
     if (isExpanded && posts.length > 5) {
@@ -71,14 +155,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded, posts.length, handleScroll]);
 
   return (
-    <div 
+    <div
       className={cn(
         "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border-2 border-indigo-600/20",
         isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
       )}
       style={{ willChange: "max-height" }}
     >
-      <div 
+      <div
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
         onClick={onToggle}
       >
@@ -97,7 +181,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             )}>
               {isExpanded ? "HOT" : currentPost?.rank}
             </span>
-            
+
             {!isExpanded ? (
               <div className="flex flex-1 items-center gap-2 overflow-hidden">
                 <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
@@ -131,7 +215,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </span>
               </div>
             )}
-            
+
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
             ) : (
@@ -141,7 +225,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         )}
       </div>
 
-      <div 
+      <div
         className={cn(
           "flex flex-col relative transition-opacity duration-300",
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -157,12 +241,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
   >
     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-    
+
     {/* 배경 이미지 */}
     <div className="absolute inset-0 z-0">
-      <img 
-        src="/assets/nike-ad-banner.png" 
-        alt="Nike Ad" 
+      <img
+        src="/assets/nike-ad-banner.png"
+        alt="Nike Ad"
         className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
@@ -171,13 +255,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div className="relative z-10 p-4 flex flex-col justify-between h-full">
       <div className="flex items-center gap-2">
         <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
-        <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg" 
-          alt="Nike Logo" 
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg"
+          alt="Nike Logo"
           className="h-3.5 invert brightness-200"
         />
       </div>
-      
+
       <div>
         <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
           JUST DO IT.
@@ -196,12 +280,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 </div>
 
         {/* 스크롤 가능한 포스팅 리스트 */}
-        <div 
+        <div
           ref={listRef}
           className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[40vh] relative"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {/* 상단 스크롤 안내 화살표 - 위로 스크롤 가능할 때만 나타남 */}
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
               <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
@@ -210,88 +293,16 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             </div>
           )}
 
-          {posts.map((post) => {
-            // [FIX] 인기/인플루언서 포스팅에 따라 테두리 색상 결정
-            const borderType = post.borderType || 'none';
-            let borderColor = 'border-gray-100';
-            let borderThickness = 'border';
-            
-            if (borderType === 'popular') {
-              borderColor = 'border-rose-500';
-              borderThickness = 'border-2';
-            } else if (borderType === 'diamond') {
-              borderColor = 'border-cyan-400';
-              borderThickness = 'border-2';
-            } else if (borderType === 'gold') {
-              borderColor = 'border-amber-400';
-              borderThickness = 'border-2';
-            }
-
-            return (
-              <div 
-                key={post.id}
-                onClick={() => onPostClick(post)}
-                className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
-              >
-                <div className="w-6 text-center shrink-0">
-                  <span className={cn(
-                    "text-sm font-black italic",
-                    post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
-                  )}>
-                    {post.rank}
-                  </span>
-                </div>
-                
-                <div className={cn(
-                  "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50",
-                  borderThickness,
-                  borderColor
-                )}>
-                  <img 
-                    src={post.image} 
-                    alt="" 
-                    className="w-full h-full object-cover"
-                    onError={handleImageError}
-                  />
-                  {/* [FIX] 특수 티어인 경우 반짝임 아이콘 추가 */}
-                  {borderType !== 'none' && (
-                    <div className="absolute top-0.5 right-0.5 z-10">
-                      <Sparkles className={cn(
-                        "w-2.5 h-2.5",
-                        borderType === 'popular' ? "text-rose-500 fill-rose-500" :
-                        borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
-                        "text-amber-400 fill-amber-400"
-                      )} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
-                    {post.content}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-medium text-gray-400 truncate">
-                      {post.location || '위치 정보 없음'}
-                    </p>
-                    <div className="flex items-center gap-0.5 text-rose-500">
-                      <Heart className="w-3 h-3 fill-rose-500" />
-                      <span className="text-[10px] font-black">{post.likes}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {(post.rank === 1 || post.rank === 4) && (
-                  <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {posts.map((post) => (
+            <TrendingPostItem
+              key={post.id}
+              post={post as Post & { rank: number }}
+              onPostClick={onPostClick}
+              handleImageError={handleImageError}
+            />
+          ))}
         </div>
 
-        {/* 하단 스크롤 안내 화살표 - 아래로 스크롤 가능할 때만 나타남 */}
         {isExpanded && posts.length > 5 && showScrollDownArrow && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
             <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
