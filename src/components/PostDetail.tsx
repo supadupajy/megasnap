@@ -386,7 +386,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
       <AnimatePresence>
-        {isVisible && currentPost && (
+        {isOpen && currentPost && (
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
