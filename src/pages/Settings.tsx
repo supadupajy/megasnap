@@ -231,13 +231,17 @@ const Settings = () => {
       
       <div className="pt-16">
         <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </button>
-          <h1 className="flex-1 text-center font-black text-lg text-gray-900 mr-10">설정</h1>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-400" />
+            </button>
+          </div>
+          <div className="flex-1 flex justify-center -ml-10">
+            <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
+          </div>
         </header>
 
         <div className="px-4 py-4">
