@@ -162,15 +162,15 @@
   object-fit: cover;
 }
 
-@keyframes ad-breathing {
-  0% { transform: scale(1) translateZ(0); }
-  50% { transform: scale(1.08) translateZ(0); }
-  100% { transform: scale(1) translateZ(0); }
+@keyframes ad-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
 }
 
 .animate-ad-breathing {
-  animation: ad-breathing 2s ease-in-out infinite;
-  transform-origin: bottom center;
+  animation: ad-spin 4s linear infinite;
+  transform-origin: center center;
+  transform-style: preserve-3d;
 }
 
 @keyframes marker-float {
