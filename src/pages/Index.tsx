@@ -63,7 +63,8 @@ const Index = () => {
 
   // ── 핵심 상태 ──────────────────────────────────────────────
   // allPosts: 지금까지 fetch된 모든 포스트 (누적, 최대 5000개)
-  const [allPosts, setAllPosts] = useState<Post[]>(() => mapCache.posts || []);
+  // 캐시된 데이터는 사용하지 않고 항상 새로 fetch (좌표 오류 방지)
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
@@ -169,41 +170,39 @@ const Index = () => {
 
   useEffect(() => { fetchGlobalTrending(); }, []);
 
-  // ── 핵심: bounds가 바뀔 때마다 무조건 해당 영역 포스트 fetch ──
+  // ── 핵심: bounds가 바뀔 때마다 해당 영역 포스트 fetch ──────
   useEffect(() => {
     if (!mapData?.bounds) return;
     if (currentZoom >= 11) return;
 
     const { sw, ne } = mapData.bounds;
+    const center = mapData.center;
 
-    // 이미 fetch 중이면 스킵하지 않고 완료 후 재시도 (단순화)
+    // 이전 fetch 취소용 플래그
+    let cancelled = false;
+
     const doFetch = async () => {
-      if (fetchingRef.current) return;
-      fetchingRef.current = true;
       try {
-        console.log('[Index] Fetching posts for bounds:', sw, ne, 'zoom:', currentZoom);
-        const raw = await fetchPostsInBounds(sw, ne, currentZoom, mapData.center);
-        console.log('[Index] Fetched', raw.length, 'posts');
+        const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
+        if (cancelled) return;
         if (raw.length === 0) return;
 
         const mapped = raw.map(mapRawToPost);
-
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
-          // 새로 받은 포스트로 기존 것을 업데이트하거나 추가
           mapped.forEach(p => existingMap.set(p.id, p));
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
           return combined;
         });
       } catch (err) {
-        console.error('[Index] fetch error:', err);
-      } finally {
-        fetchingRef.current = false;
+        if (!cancelled) console.error('[Index] fetch error:', err);
       }
     };
 
     doFetch();
+
+    return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
