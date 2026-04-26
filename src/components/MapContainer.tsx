@@ -185,6 +185,7 @@ const MapContainer = ({
         level: 5
       });
       map.setMaxLevel(11);
+      map.setMinLevel(4);
       mapInstance.current = map;
 
       const updateZoomClass = () => {
