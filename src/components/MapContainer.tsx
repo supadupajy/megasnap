@@ -574,8 +574,8 @@ useEffect(() => {
   }, [searchResultLocation, isMapReady]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
-    // [FIX] post.is_ad 필드나 content 내의 [AD] 텍스트로 광고 여부 판단
-    const isAd = post.isAd || post.is_ad || (post.content && post.content.includes('[AD]'));
+    // [FIX] post.is_ad 필드 대신 borderType이나 content 내의 [AD] 텍스트로 광고 여부 판단
+    const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     // [CRITICAL FIX] is_seed_data가 설정된 경우 무조건 isMine을 false로 만듦
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     

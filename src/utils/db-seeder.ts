@@ -447,8 +447,7 @@ export const seedInBoundsPosts = async (
         likes: likes,
         category: category,
         borderType: borderType, 
-        is_seed_data: true, // [CRITICAL] 이 값이 DB에 확실히 저장되어야 함
-        is_ad: type === 'ad', // 명시적 광고 플래그 추가
+        is_seed_data: true,
         created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString()
       });
     }
