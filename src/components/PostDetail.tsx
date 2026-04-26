@@ -576,7 +576,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                       </div>
 
                       {/* 액션 버튼 및 내용 - 아이콘 그룹과 버튼 그룹 분리 */}
-                      <div className="px-4 pt-3 pb-4" onClick={(e) => e.stopPropagation()} >
+                      <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()} >
                         <div className="flex flex-col gap-3">
                           {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
                           <div className="flex items-center justify-between">
