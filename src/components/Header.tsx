@@ -52,9 +52,9 @@ const Header = () => {
     fetchUnreadCount();
     fetchUnreadNotifCount();
 
-    // Generate unique channel names to avoid overlap
-    const messagesChannelName = `header-messages-${user.id}-${Date.now()}`;
-    const notificationsChannelName = `header-notifications-${user.id}-${Date.now()}`;
+    // ✅ [OPTIMIZATION] Date.now()를 제거하여 불필요한 고유 채널 생성을 방지하고 고정된 채널명을 사용합니다.
+    const messagesChannelName = `header-messages-${user.id}`;
+    const notificationsChannelName = `header-notifications-${user.id}`;
 
     // 1. Create Channel
     const mChannel = supabase.channel(messagesChannelName);
@@ -95,13 +95,8 @@ const Header = () => {
     );
 
     // 3. Subscribe ONLY after all .on() calls are finished
-    mChannel.subscribe((status) => {
-      console.log(`[Header] Messages channel (${messagesChannelName}) status:`, status);
-    });
-    
-    nChannel.subscribe((status) => {
-      console.log(`[Header] Notifications channel (${notificationsChannelName}) status:`, status);
-    });
+    mChannel.subscribe();
+    nChannel.subscribe();
 
     const handleRefresh = () => {
       fetchUnreadCount();
@@ -110,12 +105,11 @@ const Header = () => {
     window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
-      console.log('[Header] Cleaning up channels:', messagesChannelName, notificationsChannelName);
       supabase.removeChannel(mChannel);
       supabase.removeChannel(nChannel);
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id]); // Minimal dependencies to prevent re-runs
+  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]); // ✅ fetch 함수들을 포함하여 최신 상태 유지
 
   // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;

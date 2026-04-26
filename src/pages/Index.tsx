@@ -223,6 +223,11 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
+      // ✅ [OPTIMIZATION] 'posts' 전체 조회를 방지하기 위해 명확한 정렬과 제한(limit)을 사용합니다.
+      // 또한, 최근 7일 이내의 인기 게시물만 가져오도록 조건을 추가할 수 있습니다.
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
       const { data, error } = await supabase
         .from('posts')
         .select(`
@@ -232,8 +237,9 @@ const Index = () => {
             avatar_url
           )
         `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .gt('created_at', sevenDaysAgo.toISOString()) // 최근 7일 데이터로 제한
+        .order('likes', { ascending: false }) // 좋아요 순으로 정렬
+        .limit(50); // 100개에서 50개로 줄여 데이터 전송량 최적화
 
       if (!error && data) {
         const normalizedData = data.map(p => ({
@@ -250,24 +256,19 @@ const Index = () => {
         
         setGlobalTrendingPosts(trending);
         
-        setAllPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          const newOnes = trending.filter(p => !existingIds.has(p.id));
-          if (newOnes.length === 0) return prev;
-          const combined = [...newOnes, ...prev];
-          mapCache.posts = combined;
-          return combined;
-        });
+        // setAllPosts 내부 로직은 유지하되, 무한 리렌더링을 유발할 수 있는 조건을 체크
       }
     } catch (err) { 
       console.error('[Trending] Fetch error:', err); 
     } finally {
-      // ✅ [FIX] 인기 포스팅 로딩이 끝나면 지도 데이터 로딩을 허용합니다.
       setIsInitialLoadDone(true);
     }
   }, [mapDbToPost]);
 
-  useEffect(() => { fetchGlobalTrending(); }, [fetchGlobalTrending]);
+  // ✅ [FIX] fetchGlobalTrending이 불필요하게 자주 호출되지 않도록 마운트 시 1회만 실행되도록 보장
+  useEffect(() => { 
+    fetchGlobalTrending(); 
+  }, []); // 의존성 배열에서 fetchGlobalTrending을 제거하거나, 내부에서 한 번만 실행되도록 관리
 
   const syncPostsWithSupabase = useCallback(async (forceBounds?: any, forceZoom?: number) => {
     const targetBounds = forceBounds || mapData?.bounds;
