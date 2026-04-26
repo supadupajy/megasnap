@@ -82,7 +82,7 @@ const Index = () => {
     } catch (e) { console.error('[Confetti] Confetti error:', e); }
   }, []);
 
-  const [allPosts, setAllPosts] = useState<Post[]>(mapCache.posts);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
   const [mapData, setMapData] = useState<any>(null);
@@ -555,49 +555,55 @@ const Index = () => {
     }
   };
 
+  // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
+  const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
+
   useEffect(() => {
     if (!authUser) return;
 
-    // ✅ [REALTIME] 포스트 테이블 실시간 구독 설정 (INSERT & DELETE)
     const channel = supabase
-      .channel('public:posts-realtime')
+      .channel(channelIdRef.current)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'posts'
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'posts' 
         },
         async (payload) => {
-          console.log('[Realtime] New post detected:', payload.new);
-          const newRawPost = payload.new;
-          
-          const mappedPost = await mapDbToPost(newRawPost);
-          if (!mappedPost) return;
+          console.log('[Index] Realtime INSERT:', payload);
+          const newPost = await mapDbToPost(payload.new);
+          if (newPost) {
+            setAllPosts(prev => {
+              // 중복 방지 체크
+              if (prev.some(p => p.id === newPost.id)) return prev;
+              const updated = [newPost, ...prev];
+              mapCache.posts = updated;
+              return updated;
+            });
+            
+            setDisplayedMarkers(prev => {
+              if (prev.some(p => p.id === newPost.id)) return prev;
+              return [newPost, ...prev];
+            });
 
-          if (mappedPost.user.id !== authUser.id) {
-            triggerConfetti();
+            if (newPost.user_id === authUser?.id) {
+              triggerConfetti();
+            }
           }
-
-          setAllPosts(prev => {
-            if (prev.some(p => p.id === mappedPost.id)) return prev;
-            const combined = [{ ...mappedPost, isNewRealtime: true }, ...prev];
-            mapCache.posts = combined;
-            return combined;
-          });
         }
       )
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'posts'
+        { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'posts' 
         },
         (payload) => {
+          console.log('[Index] Realtime DELETE:', payload);
           const deletedId = payload.old.id;
-          console.log('[Realtime] Post deleted:', deletedId);
-
+          
           // ✅ [FADE OUT] 마커 삭제 애니메이션 트리거 (MapContainer에서 처리)
           window.dispatchEvent(new CustomEvent('animate-marker-delete', { 
             detail: { id: deletedId } 
@@ -617,6 +623,8 @@ const Index = () => {
       .subscribe();
 
     return () => {
+      // ✅ [CLEANUP] unsubscribe와 removeChannel을 모두 호출하여 자원 점유 해제
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, [authUser, mapData, mapDbToPost, triggerConfetti]);
