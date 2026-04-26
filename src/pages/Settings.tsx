@@ -232,26 +232,27 @@ const Settings = () => {
     <div className="h-screen overflow-hidden flex flex-col bg-white no-scrollbar relative">
       <div className="flex-none">
         <Header />
-        <header className="h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('[Settings] Back button clicked - Navigating to /profile');
-                navigate('/profile');
-              }} 
-              className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95 cursor-pointer relative z-[110]"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-400" />
-            </button>
-          </div>
-          <div className="flex-1 flex justify-center -ml-10">
-            <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
-          </div>
-        </header>
       </div>
+
+      <header className="flex-none h-[64px] bg-white flex items-center px-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[Settings] Back button clicked - Navigating to /profile');
+              navigate('/profile');
+            }} 
+            className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl transition-all active:scale-95 cursor-pointer relative z-[110]"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-400" />
+          </button>
+        </div>
+        <div className="flex-1 flex justify-center -ml-10">
+          <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
+        </div>
+      </header>
 
       <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
         <div className="px-4 py-4">
