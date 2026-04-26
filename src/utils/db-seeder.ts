@@ -372,7 +372,8 @@ export const seedInBoundsPosts = async (
   try {
     await initializeYoutubePool();
     // 1. 프로필 목록을 가져와서 랜덤 사용자 정보를 구성
-    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(50);
+    // [FIX] 닉네임과 아바타를 실제 DB에 있는 다양한 사용자들로부터 가져오도록 수정
+    const { data: profiles } = await supabase.from('profiles').select('id, nickname, avatar_url').limit(100);
     
     const count = 5; 
     const insertData = [];
@@ -383,12 +384,14 @@ export const seedInBoundsPosts = async (
       const type = postTypes[Math.floor(Math.random() * postTypes.length)];
       
       // 3. 사용자 정보 랜덤화
-      const randomProfile = profiles && profiles.length > 0 
-        ? profiles[Math.floor(Math.random() * profiles.length)]
-        : null;
+      // [FIX] 내가 아닌 다른 사용자의 닉네임과 아바타를 우선적으로 선택
+      const otherProfiles = profiles?.filter(p => p.id !== currentUserId) || [];
+      const randomProfile = otherProfiles.length > 0 
+        ? otherProfiles[Math.floor(Math.random() * otherProfiles.length)]
+        : (profiles && profiles.length > 0 ? profiles[Math.floor(Math.random() * profiles.length)] : null);
       
       let userName = randomProfile?.nickname || "탐험가";
-      let userAvatar = randomProfile?.avatar_url || `https://i.pravatar.cc/150?u=${Math.random()}`;
+      let userAvatar = randomProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
       let likes = Math.floor(Math.random() * 500);
       let content = REALISTIC_COMMENTS[Math.floor(Math.random() * REALISTIC_COMMENTS.length)];
       let borderType = 'none';
@@ -399,8 +402,6 @@ export const seedInBoundsPosts = async (
         userName = `${userName} ✨`; 
         likes = Math.floor(Math.random() * 10000) + 5000;
         borderType = Math.random() > 0.5 ? 'diamond' : 'gold';
-        // [FIX] RLS 위반을 방지하기 위해 user_id는 항상 currentUserId로 유지하되,
-        // UI에서 is_seed_data 플래그를 통해 'MY' 라벨을 가림
         userIdForRecord = currentUserId;
       } else if (type === 'popular') {
         likes = Math.floor(Math.random() * 4000) + 1000;
