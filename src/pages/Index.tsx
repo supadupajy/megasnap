@@ -724,12 +724,16 @@ const Index = () => {
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
       
       {/* 실시간 인기 포스팅 리스트 */}
-      <TrendingPosts
-        posts={globalTrendingPosts}
-        onPostClick={handleTrendingPostClick}
-        isExpanded={isTrendingExpanded}
-        onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-      />
+      <div className="fixed bottom-24 left-4 right-4 z-[100] pointer-events-none">
+        <div className="max-w-md mx-auto pointer-events-auto">
+          <TrendingPosts
+            posts={globalTrendingPosts}
+            onPostClick={handleTrendingPostClick}
+            isExpanded={isTrendingExpanded}
+            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+          />
+        </div>
+      </div>
 
       <AnimatePresence>
         {isPostListOpen && (
