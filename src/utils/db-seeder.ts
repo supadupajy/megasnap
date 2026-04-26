@@ -111,7 +111,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           longitude: p.lng,
           image_url: finalImage,
           youtube_url: finalYoutubeUrl,
-          user_id: randomUser.id,
+          user_id: currentUserId, // [FIX] RLS INSERT 정책 준수를 위해 현재 로그인한 사용자의 ID로 고정
           user_name: '탐험가', // [FIX] 생성 시 모든 user_name을 '탐험가'로 고정
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: finalLikes,
@@ -407,7 +407,7 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: randomUser.id,
+        user_id: currentUserId, // [FIX] RLS INSERT 정책 (auth.uid() = user_id)를 준수하기 위해 currentUserId 사용
         user_name: "탐험가",
         user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
         likes: Math.floor(Math.random() * 8000) + 500,
@@ -490,7 +490,7 @@ export const seedGangnamSpecialPosts = async (currentUserId: string) => {
         longitude: spot.lng + (Math.random() - 0.5) * 0.002,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: randomUser.id,
+        user_id: currentUserId, // [FIX] RLS INSERT 정책 (auth.uid() = user_id)를 준수하기 위해 currentUserId 사용
         user_name: "탐험가",
         likes: Math.floor(Math.random() * 8000) + 500,
         category: category,
