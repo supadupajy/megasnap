@@ -44,6 +44,8 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
+  // 현재 핑 애니메이션 중인 마커 ID 추적 → React 리렌더링이 HTML 덮어쓰는 것 완전 차단
+  const highlightingIdsRef = useRef<Set<string>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
   const isDragging = useRef(false);
   const lastDragEnd = useRef(0);
@@ -405,13 +407,13 @@ const MapContainer = ({
           existingOverlay.setMap(mapInstance.current);
         }
         
-        // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음
+        // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음 (highlightingIdsRef로 추적)
         if (content.getAttribute('data-content-state') !== contentStateKey) {
-          if (!content.classList.contains('highlighted')) {
+          if (!highlightingIdsRef.current.has(post.id)) {
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
           }
-          // highlighted 중이면 state key만 저장 → 핑 종료 후 복원 시 사용
+          // 핑 중이면 state key만 저장 → 핑 종료 후 복원 시 사용
           else {
             content.setAttribute('data-content-state', contentStateKey);
           }
@@ -440,9 +442,9 @@ const MapContainer = ({
               const c = o.getContent() as HTMLElement;
               if (c && c.classList.contains('highlighted') && id !== postId) {
                 c.classList.remove('highlighted');
+                highlightingIdsRef.current.delete(id);
                 const p = postsRef.current.find(item => item.id === id);
                 if (p) {
-                  // 저장된 state key에서 isViewed 읽기
                   const stateKey = c.getAttribute('data-content-state') || '';
                   const isViewed = stateKey.startsWith('true');
                   c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
@@ -456,12 +458,14 @@ const MapContainer = ({
 
             // 해당 마커 강조
             content.classList.remove('highlighted');
-            void content.offsetWidth; 
+            void content.offsetWidth;
             content.classList.add('highlighted');
+            highlightingIdsRef.current.add(postId);
             overlay.setZIndex(99999);
 
             // duration 후 원복
             setTimeout(() => {
+              highlightingIdsRef.current.delete(postId);
               if (!content || !content.classList.contains('highlighted')) return;
               content.classList.remove('highlighted');
 
@@ -654,16 +658,17 @@ const MapContainer = ({
     }
   }, [searchResultLocation, isMapReady]);
 
-  // getMarkerInnerHtml: authUser 클로저를 직접 사용 (렌더링 시점에 항상 최신)
+  // getMarkerInnerHtml: authUserRef.current를 사용 → 항상 최신 유저 참조 (stale closure 완전 방지)
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
     let isMine = false;
-    if (authUser) {
+    const currentUser = authUserRef.current;
+    if (currentUser) {
       const userId = post.user_id || (post.user && post.user.id);
-      if (String(userId) === String(authUser.id) && !isSeed) {
+      if (String(userId) === String(currentUser.id) && !isSeed) {
         isMine = true;
       }
     }
