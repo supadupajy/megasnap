@@ -102,6 +102,7 @@ const Index = () => {
   const [timeValue, setTimeValue] = useState(48); 
   const { session } = useAuth();
   const [profile, setProfile] = useState<any>(null);
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
   // ✅ [NEW] 이전 요청 위치를 저장하여 미세한 이동 시 중복 요청 방지
   const lastRequestRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
@@ -221,7 +222,6 @@ const Index = () => {
 
   const fetchGlobalTrending = useCallback(async () => {
     try {
-      // ✅ [OPTIMIZATION] 인기 포스팅 조회 시에도 프로필을 Join하여 한 번에 가져옵니다.
       const { data, error } = await supabase
         .from('posts')
         .select(`
@@ -235,7 +235,6 @@ const Index = () => {
         .limit(100);
 
       if (!error && data) {
-        // 조인된 데이터를 평면 구조로 정규화
         const normalizedData = data.map(p => ({
           ...p,
           user_name: p.profiles?.nickname || p.user_name || '탐험가',
@@ -245,13 +244,11 @@ const Index = () => {
         const mappedRaw = await Promise.all(normalizedData.map(mapDbToPost));
         const validMapped = mappedRaw.filter(p => p !== null && p.id);
         
-        // 3. 좋아요 순으로 정렬하여 상위 20개 선정
         const sorted = [...validMapped].sort((a, b) => b.likes - a.likes);
         const trending = sorted.slice(0, 20).map((p, idx) => ({ ...p, rank: idx + 1 }));
         
         setGlobalTrendingPosts(trending);
         
-        // 4. [CRITICAL] 인기 포스트 리스트에 있는 항목들이 지도에서도 즉시 보일 수 있도록 cache/allPosts에 미리 등록
         setAllPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const newOnes = trending.filter(p => !existingIds.has(p.id));
@@ -261,7 +258,12 @@ const Index = () => {
           return combined;
         });
       }
-    } catch (err) { console.error('[Trending] Fetch error:', err); }
+    } catch (err) { 
+      console.error('[Trending] Fetch error:', err); 
+    } finally {
+      // ✅ [FIX] 인기 포스팅 로딩이 끝나면 지도 데이터 로딩을 허용합니다.
+      setIsInitialLoadDone(true);
+    }
   }, [mapDbToPost]);
 
   useEffect(() => { if (authUser) fetchGlobalTrending(); }, [authUser, fetchGlobalTrending]);
@@ -271,9 +273,9 @@ const Index = () => {
     const center = mapData?.center;
     const zoomToUse = forceZoom ?? currentZoom;
 
-    if (!targetBounds || !center || isSyncing.current) return;
+    // ✅ [FIX] 초기 데이터 로딩(인기 포스팅)이 완료되지 않았으면 지도 요청을 잠시 미룹니다.
+    if (!targetBounds || !center || isSyncing.current || !isInitialLoadDone) return;
 
-    // ✅ [OPTIMIZATION] 이전 요청 위치와 현재 위치 비교 (미세한 이동은 캐시된 데이터 활용)
     if (lastRequestRef.current) {
       const { lat: lastLat, lng: lastLng, zoom: lastZoom } = lastRequestRef.current;
       const latDiff = Math.abs(center.lat - lastLat);
