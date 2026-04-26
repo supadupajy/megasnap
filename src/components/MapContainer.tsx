@@ -417,8 +417,8 @@ useEffect(() => {
         }
       }
 
-      // 마커를 찾지 못했으면 최대 5번까지 재시도 (200ms 간격)
-      if (retryCount < 5) {
+      // 마커를 찾지 못했으면 최대 15번까지 재시도 (200ms 간격, 총 3초)
+      if (retryCount < 15) {
         setTimeout(() => tryHighlight(retryCount + 1), 200);
       }
     };

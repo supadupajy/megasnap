@@ -127,34 +127,37 @@ const Index = () => {
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
     if (post.lat === null || post.lng === null) return;
     
-    // ✅ [FIX] 리스트에서 클릭한 포스트가 현재 지도 데이터(allPosts)에 없는 경우, 
-    // 즉시 추가하여 MapContainer가 마커를 생성할 수 있도록 보장합니다.
+    // allPosts에 없으면 즉시 추가
     setAllPosts((prev) => {
       const exists = prev.some((item) => item.id === post.id);
       if (exists) return prev;
-      
-      const newPost = { ...post };
-      const combined = [newPost, ...prev];
+      const combined = [{ ...post }, ...prev];
       mapCache.posts = combined;
       return combined;
+    });
+
+    // displayedMarkers에도 즉시 추가하여 MapContainer가 마커를 바로 그릴 수 있도록 보장
+    setDisplayedMarkers((prev) => {
+      const exists = prev.some((item) => item.id === post.id);
+      if (exists) return prev;
+      return [{ ...post }, ...prev];
     });
 
     setSelectedPostId(null);
     setSearchResultLocation(null);
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    // ✅ 하이라이트 초기화 및 지도 이동 시작
     setHighlightedPostId(null);
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-    // ✅ [FIX] 핑 효과(하이라이트) 이벤트 발송 시간을 지도 이동 애니메이션 완료 시점(약 1.2s)에 맞춰 조정
-    // 처음 클릭 시에도 마커가 생성된 후 충분한 시간이 흐른 뒤 실행되도록 1500ms로 설정
+    // 지도 이동 + 마커 생성 완료를 기다린 후 핑 이벤트 발송
+    // MapContainer의 tryHighlight가 최대 10번(2초) 재시도하므로 여유있게 대기
     highlightTimeoutRef.current = window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('highlight-marker', { 
-        detail: { id: post.id, duration: 2500 } 
+      window.dispatchEvent(new CustomEvent('highlight-marker', {
+        detail: { id: post.id, duration: 2500 }
       }));
       highlightTimeoutRef.current = null;
-    }, 1500);
+    }, 1800);
   }, []);
 
   const mapDbToPost = useCallback(async (rawPost: any): Promise<Post> => {
