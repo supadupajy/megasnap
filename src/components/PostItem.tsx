@@ -389,6 +389,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   };
 
+  const handleHeaderLocationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lat !== undefined && lng !== undefined) {
+      onLocationClick?.(e, lat, lng);
+    }
+  };
+
   const confirmDelete = async () => {
     if (onDelete) onDelete(post.id);
     setIsDeleteDialogOpen(false);
@@ -545,9 +552,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </p>
               {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
             </div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-1">
+            <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
               <MapPin className="w-3 h-3" />
-              <span className="text-[10px] font-medium">{post.location}</span>
+              <span className="text-[10px] font-medium">{post.location || '위치 정보 없음'}</span>
             </div>
           </div>
         </div>
