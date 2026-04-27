@@ -83,20 +83,18 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
      */
     const channel = supabase
       .channel(`global-badge-${userId}`)
-      // 내가 받은 새 메시지
+      // messages INSERT + UPDATE 를 단일 구독으로 처리
+      // ⚠️ .on()을 같은 테이블에 2번 호출하면 realtime.subscription에 2행이 생겨 WAL 폴링 2배 발생
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
-        () => {
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+        (payload) => {
           fetchCounts(userId);
-          window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+          // 새 메시지(INSERT)일 때만 메시지 목록 갱신 이벤트 발생
+          if (payload.eventType === 'INSERT') {
+            window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+          }
         }
-      )
-      // 메시지 읽음 처리 (is_read 변경)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
-        () => fetchCounts(userId)
       )
       // 알림 (변경 시 카운트 갱신 + Notifications 페이지에 이벤트 전달)
       .on(
