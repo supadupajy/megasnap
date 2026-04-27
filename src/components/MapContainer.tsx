@@ -1024,7 +1024,7 @@ const MapContainer = ({
             />
           </svg>
           <span style={{ color: 'white', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
-            마커 숨기기
+            지도 보기
           </span>
         </div>
       )}
