@@ -1007,25 +1007,26 @@ const MapContainer = ({
     const adWrapOpen = '';
     const adWrapClose = '';
 
+    // 반짝이는 이미지 박스 위에 absolute로 올라오도록 이미지 박스 내부에 배치
     const adSparklesHtml = isAd ? `
-      <span class="_ad_s1">✦</span>
-      <span class="_ad_s2">★</span>
-      <span class="_ad_s3">✦</span>
-      <span class="_ad_s4">★</span>
+      <span class="_ad_s1" style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24;animation:_ad_orbit_1 3s linear infinite;">✦</span>
+      <span class="_ad_s2" style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899;animation:_ad_orbit_2 3s linear infinite;">★</span>
+      <span class="_ad_s3" style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa;animation:_ad_orbit_3 3s linear infinite;">✦</span>
+      <span class="_ad_s4" style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa;animation:_ad_orbit_4 3s linear infinite;">★</span>
     ` : '';
 
+    // 인플루언서와 동일한 4.5px 두께, 무지개 그라데이션 box-shadow로 표현
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:3px solid transparent;background-clip:padding-box;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;outline:3px solid #ec4899;outline-offset:-3px;box-shadow:0 0 0 3px #fbbf24, 0 0 0 6px #8b5cf6, 0 0 16px 4px rgba(251,191,36,0.6);`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;box-shadow:0 0 0 0px transparent,0 0 20px 4px rgba(251,191,36,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
-        ${isAd ? adSparklesHtml : ''}
         ${isAd ? adLabelHtml : labelHtml}
-        ${adWrapOpen}
         <div class="${influencerClass} ${isAd ? '_ad_img_box' : ''}" style="${innerBoxStyle}">
-          <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '18px' : '16px'};" class="${shineClass}">
+          ${isAd ? adSparklesHtml : ''}
+          <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
             ${isVideo && post.videoUrl ?
               `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` :
               `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
@@ -1036,7 +1037,6 @@ const MapContainer = ({
             ${videoIconHtml}
           </div>
         </div>
-        ${adWrapClose}
       </div>
     </div>`;
   };
