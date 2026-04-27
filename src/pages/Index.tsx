@@ -394,7 +394,7 @@ const Index = () => {
       mapCache.lastCenter = data.center;
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 800);
+    }, 500);
   }, [isSelectingLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
