@@ -348,13 +348,24 @@ const Index = () => {
     // 이전 타이머 취소
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    setMapCenter(center || { lat: post.lat, lng: post.lng });
+    const targetCenter = center || { lat: post.lat, lng: post.lng };
+    setMapCenter(targetCenter);
 
-    // 지도 이동 완료 후 핑 효과 (smoothMoveTo 최대 1200ms + 여유 300ms)
-    highlightTimeoutRef.current = window.setTimeout(() => {
+    // 지도 이동 완료 이벤트를 받아서 핑 효과 발생 (타이밍 정확히 맞춤)
+    const handleMoveComplete = (e: any) => {
+      window.removeEventListener('map-move-complete', handleMoveComplete);
+      if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
       highlightTimeoutRef.current = null;
-    }, 1600);
+    };
+    window.addEventListener('map-move-complete', handleMoveComplete);
+
+    // 안전장치: 2초 후에도 이벤트가 안 오면 강제 실행
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      window.removeEventListener('map-move-complete', handleMoveComplete);
+      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
+      highlightTimeoutRef.current = null;
+    }, 2000);
   }, []);
 
   // ── 마커 클릭 ────────────────────────────────────────────────
@@ -478,7 +489,10 @@ const Index = () => {
       const { post, lat, lng } = e.detail;
       setIsPostListOpen(false);
       handleMarkerClick(post);
-      focusPostOnMap(post, { lat, lng });
+      // 오버레이 닫힘 애니메이션(350ms) 완료 후 지도 이동 시작
+      setTimeout(() => {
+        focusPostOnMap(post, { lat, lng });
+      }, 400);
     };
     window.addEventListener('focus-post', handleFocusPost);
     return () => window.removeEventListener('focus-post', handleFocusPost);

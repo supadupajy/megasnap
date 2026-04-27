@@ -604,7 +604,7 @@ const MapContainer = ({
     return () => clearTimeout(timer);
   }, [level, isMapReady]);
 
-  const smoothMoveTo = (targetLat: number, targetLng: number) => {
+  const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
     if (!map || !kakao || !kakao.maps?.LatLng) return;
@@ -637,6 +637,7 @@ const MapContainer = ({
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         animationFrameRef.current = null;
+        onComplete?.();
       }
     };
 
@@ -648,7 +649,14 @@ const MapContainer = ({
       const currentCenter = mapInstance.current.getCenter();
       const latDiff = Math.abs(currentCenter.getLat() - center.lat);
       const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
-      if (latDiff > 0.00001 || lngDiff > 0.00001) smoothMoveTo(center.lat, center.lng);
+      if (latDiff > 0.00001 || lngDiff > 0.00001) {
+        smoothMoveTo(center.lat, center.lng, () => {
+          window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
+        });
+      } else {
+        // 이미 해당 위치에 있으면 즉시 완료 이벤트 발생
+        window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
+      }
     }
   }, [center, isMapReady]);
 
