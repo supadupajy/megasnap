@@ -528,6 +528,17 @@
   position: relative;
 }
 
+/* PostDetail 모달에서 광고 카드 전체 높이 채우기 */
+.ad-post-wrapper.w-full.h-full {
+  border-radius: 30px;
+}
+.ad-post-wrapper.w-full.h-full > .ad-post-inner {
+  border-radius: 28px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* 궤도 위 반짝이 공통 */
 .ad-sparkle {
   position: absolute;
