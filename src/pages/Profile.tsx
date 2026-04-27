@@ -300,7 +300,7 @@ const Profile = () => {
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* 내 프로필 상단 메뉴 바 - 앱 헤더(64px) 바로 아래에 고정 */}
-      <div className="fixed left-0 right-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center" style={{ top: '64px' }}>
+      <div className="fixed left-0 right-0 z-40 px-4 py-4 bg-white border-b border-gray-100 flex items-center" style={{ top: '64px' }}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
