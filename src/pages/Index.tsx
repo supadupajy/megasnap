@@ -93,6 +93,7 @@ const Index = () => {
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
+  const currentZoomRef = useRef<number>(mapCache.lastZoom || 5);
   const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
   const triggerConfettiRef = useRef(triggerConfetti);
   useEffect(() => { triggerConfettiRef.current = triggerConfetti; }, [triggerConfetti]);
@@ -308,6 +309,11 @@ const Index = () => {
   useEffect(() => {
     spreadMarkersRef.current = spreadMarkers;
   }, [spreadMarkers]);
+
+  // currentZoom ref 동기화
+  useEffect(() => {
+    currentZoomRef.current = currentZoom;
+  }, [currentZoom]);
 
   // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
   // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
@@ -549,11 +555,18 @@ const Index = () => {
       return combined;
     });
 
-    // TrendingPosts 패널 닫힘 애니메이션(500ms) + React 렌더링 + spreadMarkers 재계산 대기
-    // spreadMarkersRef가 업데이트된 후 focusPostOnMap 호출해야 분산 좌표를 정확히 참조
+    // 줌 레벨 7 이상이면 마커가 숨겨지므로 6으로 강제 변경
+    const needsZoomChange = currentZoomRef.current >= 7;
+    if (needsZoomChange) {
+      setCurrentZoom(6);
+      currentZoomRef.current = 6;
+    }
+
+    // TrendingPosts 패널 닫힘(500ms) + 줌 변경 시 마커 렌더링 대기(추가 300ms)
+    const delay = needsZoomChange ? 900 : 700;
     setTimeout(() => {
       focusPostOnMap(post, { lat: post.lat, lng: post.lng });
-    }, 700);
+    }, delay);
   }, [focusPostOnMap]);
 
   return (
