@@ -960,7 +960,6 @@ const MapContainer = ({
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = (labelText && !isAd) ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
-    const adLabelHtml = isAd ? `<div class="ad-marker-label" style="width: 100%; padding: 3px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; margin-bottom: -16px; position: relative; z-index: 3; overflow: hidden; background: linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24); background-size: 200% 100%; animation: ad-label-slide 2s linear infinite;"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:0.1em;text-shadow:0 1px 3px rgba(0,0,0,0.6);">✦ AD ✦</span></div>` : '';
 
     const isInfluencer = ['gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
@@ -979,35 +978,65 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; 
     }
-    else if (isAd) { inlineBorderStyle = "border: none;"; inlineShadow = "0 0 20px rgba(251,191,36,0.7), 0 0 40px rgba(139,92,246,0.4)"; influencerClass = "ad-marker-rainbow-border"; }
+    else if (isAd) { inlineBorderStyle = "border: none;"; inlineShadow = "0 0 20px rgba(251,191,36,0.7), 0 0 40px rgba(139,92,246,0.3)"; influencerClass = ""; }
     else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
+    // AD 마커 전용: style 태그를 HTML 안에 직접 삽입 (카카오맵 오버레이는 외부 CSS 미적용)
+    const adStyleTag = isAd ? `<style>
+      @keyframes _ad_spin { to { transform: rotate(360deg); } }
+      @keyframes _ad_orbit_1 { 0%{transform:rotate(0deg) translateX(36px) rotate(0deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(360deg) translateX(36px) rotate(-360deg);opacity:1} }
+      @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
+      @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
+      @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
+      @keyframes _ad_label_slide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+      @keyframes _ad_glow_pulse { 0%,100%{box-shadow:0 0 12px 3px rgba(251,191,36,.8),0 0 28px 6px rgba(139,92,246,.4)} 50%{box-shadow:0 0 20px 6px rgba(251,191,36,1),0 0 40px 10px rgba(139,92,246,.6)} }
+      ._ad_border_wrap { animation: _ad_spin 2.5s linear infinite; }
+      ._ad_s1 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24; animation:_ad_orbit_1 3s linear infinite; }
+      ._ad_s2 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899; animation:_ad_orbit_2 3s linear infinite; }
+      ._ad_s3 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa; animation:_ad_orbit_3 3s linear infinite; }
+      ._ad_s4 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa; animation:_ad_orbit_4 3s linear infinite; }
+      ._ad_label { animation:_ad_label_slide 2s linear infinite; background-size:200% 100% !important; }
+      ._ad_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
+    </style>` : '';
+
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;padding:3px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;margin-bottom:-16px;position:relative;z-index:3;overflow:hidden;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:.1em;text-shadow:0 1px 3px rgba(0,0,0,.6);">✦ AD ✦</span></div>` : '';
+
+    // AD 테두리: 회전하는 conic-gradient 래퍼 (padding으로 테두리 효과)
+    const adBorderOpen = isAd ? `<div class="_ad_border_wrap" style="width:66px;height:66px;border-radius:22px;background:conic-gradient(#fbbf24 0deg,#ef4444 60deg,#ec4899 120deg,#8b5cf6 180deg,#3b82f6 240deg,#06b6d4 300deg,#fbbf24 360deg);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">` : '';
+    const adBorderClose = isAd ? `</div>` : '';
+
     const adSparklesHtml = isAd ? `
-      <span class="ad-map-sparkle ad-map-sparkle-1">✦</span>
-      <span class="ad-map-sparkle ad-map-sparkle-2">★</span>
-      <span class="ad-map-sparkle ad-map-sparkle-3">✦</span>
-      <span class="ad-map-sparkle ad-map-sparkle-4">★</span>
+      <span class="_ad_s1">✦</span>
+      <span class="_ad_s2">★</span>
+      <span class="_ad_s3">✦</span>
+      <span class="_ad_s4">★</span>
     ` : '';
 
-    return `<div class="marker-content-wrapper">
+    const innerBoxStyle = isAd
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
+
+    return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px; position: relative;">
+      <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:${isAd ? '66' : '60'}px;position:relative;">
         ${isAd ? adSparklesHtml : ''}
         ${isAd ? adLabelHtml : labelHtml}
-        <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: visible;">
-          <div style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: ${isAd ? '18px' : '16px'};" class="${shineClass}">
+        ${adBorderOpen}
+        <div class="${influencerClass} ${isAd ? '_ad_box' : ''}" style="${innerBoxStyle}">
+          <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '18px' : '16px'};" class="${shineClass}">
             ${isVideo && post.videoUrl ? 
-              `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></video>` : 
-              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover;" />`
+              `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` : 
+              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
             }
-            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
+            <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>
             ${videoIconHtml}
           </div>
         </div>
+        ${adBorderClose}
       </div>
     </div>`;
   };
