@@ -10,6 +10,10 @@ const config: CapacitorConfig = {
       style: "light",
       resizeOnFullScreen: true,
     },
+    Geolocation: {
+      // iOS: NSLocationWhenInUseUsageDescription 등은 Info.plist에서 설정
+      // Android: AndroidManifest.xml에서 ACCESS_FINE_LOCATION 권한 필요
+    },
   },
 };
 

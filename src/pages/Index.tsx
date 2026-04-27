@@ -504,15 +504,53 @@ const Index = () => {
   const handleCurrentLocation = async () => {
     const toastId = showLoading('현재 위치를 확인 중입니다...');
     try {
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
+      // 모바일(Capacitor)에서는 권한 확인 후 필요 시 요청
+      let hasPermission = true;
+      try {
+        const permStatus = await Geolocation.checkPermissions();
+        if (permStatus.location === 'denied') {
+          dismissToast(toastId);
+          showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+          if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
+          return;
+        }
+        if (permStatus.location === 'prompt' || permStatus.location === 'prompt-with-rationale') {
+          const requested = await Geolocation.requestPermissions();
+          if (requested.location === 'denied') {
+            dismissToast(toastId);
+            showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+            if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
+            return;
+          }
+        }
+      } catch {
+        // 웹 환경에서는 checkPermissions가 지원되지 않을 수 있으므로 무시
+        hasPermission = true;
+      }
+
+      if (!hasPermission) return;
+
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
+      });
       if (pos?.coords) {
         setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         dismissToast(toastId);
         showSuccess('현재 위치로 이동했습니다.');
       }
-    } catch {
+    } catch (err: any) {
       dismissToast(toastId);
-      showError('위치 정보를 사용할 수 없습니다. 브라우저의 위치 권한과 GPS 설정을 확인해주세요.');
+      // 에러 코드별 메시지 분기
+      const code = err?.code ?? err?.message ?? '';
+      if (String(code).includes('1') || String(code).toLowerCase().includes('denied') || String(code).toLowerCase().includes('permission')) {
+        showError('위치 권한이 없습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+      } else if (String(code).includes('3') || String(code).toLowerCase().includes('timeout')) {
+        showError('위치 확인 시간이 초과되었습니다. GPS를 켜고 다시 시도해주세요.');
+      } else {
+        showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+      }
       if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
     }
   };
