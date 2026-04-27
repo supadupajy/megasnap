@@ -873,7 +873,8 @@ const MapContainer = ({
       if (String(userId) === String(currentUser.id)) isMine = true;
     }
                    
-    const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
+    // [AD 보정] 광고는 절대 비디오/유튜브로 표시하지 않음
+    const hasVideo = !isAd && (!!post.videoUrl || !!post.youtubeUrl);
 
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
@@ -885,14 +886,19 @@ const MapContainer = ({
     };
 
     let displayImage = post.image;
-    const isVideo = !!post.videoUrl || !!post.youtubeUrl;
+    const isVideo = !isAd && (!!post.videoUrl || !!post.youtubeUrl);
+
+    // 광고이고 image가 유튜브 썸네일이면 안정적인 음식 이미지로 대체
+    if (isAd && typeof displayImage === 'string' && displayImage.includes('img.youtube.com')) {
+      displayImage = getFallbackImage(`ad:${post.id}`);
+    }
 
     if (isVideo && post.videoUrl) {
       displayImage = post.videoUrl;
     } else if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
       displayImage = getFallbackImage(String(post.id));
     }
-    
+
     if (isBrokenUrl(displayImage) && !isVideo) {
       displayImage = getFallbackImage(String(post.id));
     }

@@ -17,6 +17,7 @@ import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
+import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
@@ -147,7 +148,20 @@ const Index = () => {
     // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
     const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || '';
-    const img = p.image_url ?? prev?.image_url ?? '';
+    let img = p.image_url ?? prev?.image_url ?? '';
+
+    // [AD 보정] 광고 포스트는 영상/유튜브 썸네일/빈 이미지를 모두 무시하고
+    // 안정적인 음식 사진 풀에서 ID 해시 기반으로 대체한다. (영상으로 표시되는 사고 방지)
+    const isYoutubeThumb = typeof img === 'string' && img.includes('img.youtube.com');
+    if (isAd && (!img || isYoutubeThumb)) {
+      img = getDiverseUnsplashUrl(`ad:${p.id}`, 'food');
+    }
+
+    const rawImages = p.images || prev?.images || (img ? [img] : []);
+    const images = isAd ? [img] : rawImages;
+    const youtubeUrl = isAd ? undefined : (p.youtube_url ?? prev?.youtubeUrl);
+    const videoUrl = isAd ? undefined : (p.video_url ?? prev?.videoUrl);
+
     return {
       id: p.id,
       user_id: p.user_id || prev?.user_id || '',
@@ -166,11 +180,11 @@ const Index = () => {
       comments: prev?.comments ?? [],
       image: img,
       image_url: img,
-      images: p.images || prev?.images || (img ? [img] : []),
+      images,
       isLiked: prev?.isLiked ?? false,
-      youtubeUrl: p.youtube_url ?? prev?.youtubeUrl,
-      videoUrl: p.video_url ?? prev?.videoUrl,
-      category: p.category ?? prev?.category ?? 'none',
+      youtubeUrl,
+      videoUrl,
+      category: isAd ? 'food' : (p.category ?? prev?.category ?? 'none'),
       createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
       borderType,
       is_seed_data: p.is_seed_data ?? prev?.is_seed_data,

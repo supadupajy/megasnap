@@ -13,6 +13,7 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, getTierFromId } from '@/hooks/use-supabase-posts';
+import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 
 const ObservedPostItem = ({ 
   post, 
@@ -259,13 +260,8 @@ const PostListOverlay = ({
           const userName = profile?.nickname || p.user_name || '탐험가';
           const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
-          let finalImage = p.image_url;
-          if (finalImage?.includes('unsplash.com')) {
-            finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
-          }
-
           // [Fixed] borderType 계산을 mapRawToPost와 동일하게: id 해시 기반 + likes 기반
-          const isAdPost = p.content?.trim().startsWith('[AD]');
+          const isAdPost = !!p.content?.trim().startsWith('[AD]');
           let borderType: string = 'none';
           if (!isAdPost) {
             if (Number(p.likes || 0) >= 9000) {
@@ -274,6 +270,17 @@ const PostListOverlay = ({
               borderType = getTierFromId(p.id);
             }
           }
+
+          let finalImage = p.image_url;
+          if (finalImage?.includes('unsplash.com')) {
+            finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+          }
+          // [AD 보정] 광고는 항상 음식 이미지로 강제 (유튜브 썸네일/빈 이미지 차단)
+          const isYoutubeThumb = typeof finalImage === 'string' && finalImage.includes('img.youtube.com');
+          if (isAdPost && (!finalImage || isYoutubeThumb)) {
+            finalImage = getDiverseUnsplashUrl(`ad:${p.id}`, 'food');
+          }
+          const finalImages = isAdPost ? [finalImage] : (p.images || [finalImage]);
 
           return {
             id: p.id,
@@ -285,10 +292,11 @@ const PostListOverlay = ({
             likes: Number(p.likes || 0),
             image: finalImage,
             image_url: finalImage,
-            images: p.images || [finalImage],
-            videoUrl: p.video_url, youtubeUrl: p.youtube_url,
+            images: finalImages,
+            videoUrl: isAdPost ? undefined : p.video_url,
+            youtubeUrl: isAdPost ? undefined : p.youtube_url,
             createdAt: new Date(p.created_at),
-            category: p.category || 'none',
+            category: isAdPost ? 'food' : (p.category || 'none'),
             commentsCount: 0, comments: [],
             isLiked: false, isAd: isAdPost, isGif: false,
             isInfluencer: borderType === 'gold' || borderType === 'diamond',

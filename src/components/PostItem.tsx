@@ -233,8 +233,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    // 2. 일반 업로드 동영상 처리
-    if (post.videoUrl) {
+    // 2. 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
+    if (!isAd && post.videoUrl) {
       return (
         <div className="w-full h-full relative">
           <video

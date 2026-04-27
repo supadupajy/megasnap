@@ -54,8 +54,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [showComments, setShowComments] = useState(false);
   
   // [FIX] youtubeId 변수 선언 위치를 상단으로 고정
+  // 광고는 절대 영상으로 재생하지 않음 → 음식 이미지로만 표시
   const youtubeId = useMemo(() => {
     if (!currentPost) return '';
+    if (currentPost.isAd) return '';
     return getYoutubeId(currentPost.youtubeUrl || '');
   }, [currentPost]);
 
@@ -511,7 +513,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
                               />
-                            ) : currentPost.videoUrl ? (
+                            ) : (currentPost.videoUrl && !currentPost.isAd) ? (
                               <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
                             ) : (
                               <div className="absolute inset-0 w-full h-full z-10">
