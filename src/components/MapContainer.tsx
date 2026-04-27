@@ -953,13 +953,14 @@ const MapContainer = ({
     let borderType = post.borderType || 'none';
     let labelText = ''; let labelBg = ''; let labelColor = 'white';
     if (isMine) { labelText = 'MY'; labelBg = '#4f46e5'; }
-    else if (isAd) { labelText = 'AD'; labelBg = '#3b82f6'; }
+    else if (isAd) { labelText = 'AD'; labelBg = 'ad-rainbow'; }
     else if (borderType === 'popular') { labelText = 'HOT'; labelBg = '#ef4444'; }
     else if (borderType === 'diamond') { labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; }
     else if (borderType === 'gold') { labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; }
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
-    const labelHtml = labelText ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
+    const labelHtml = (labelText && !isAd) ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
+    const adLabelHtml = isAd ? `<div class="ad-marker-label" style="width: 100%; padding: 3px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; margin-bottom: -16px; position: relative; z-index: 3; overflow: hidden; background: linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24); background-size: 200% 100%; animation: ad-label-slide 2s linear infinite;"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:0.1em;text-shadow:0 1px 3px rgba(0,0,0,0.6);">✦ AD ✦</span></div>` : '';
 
     const isInfluencer = ['gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
@@ -978,20 +979,25 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; 
     }
-    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #3b82f6;"; inlineShadow = "0 0 15px rgba(59, 130, 246, 0.4)"; }
+    else if (isAd) { inlineBorderStyle = "border: none;"; inlineShadow = "0 0 20px rgba(251,191,36,0.7), 0 0 40px rgba(139,92,246,0.4)"; influencerClass = "ad-marker-rainbow-border"; }
     else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
-    const adGlowHtml = '';
+    const adSparklesHtml = isAd ? `
+      <span class="ad-map-sparkle ad-map-sparkle-1">✦</span>
+      <span class="ad-map-sparkle ad-map-sparkle-2">★</span>
+      <span class="ad-map-sparkle ad-map-sparkle-3">✦</span>
+      <span class="ad-map-sparkle ad-map-sparkle-4">★</span>
+    ` : '';
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px;">
-        ${labelHtml}
+      <div class="${animationClass} marker-scaling-target" style="display: flex; flex-direction: column; align-items: center; width: 60px; position: relative;">
+        ${isAd ? adSparklesHtml : ''}
+        ${isAd ? adLabelHtml : labelHtml}
         <div class="${influencerClass}" style="width: 60px; height: 60px; border-radius: 20px; position: relative; z-index: 2; ${inlineBorderStyle} box-shadow: ${inlineShadow}; background-color: white; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: visible;">
-          ${adGlowHtml}
-          <div style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: 16px;" class="${shineClass}">
+          <div style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: ${isAd ? '18px' : '16px'};" class="${shineClass}">
             ${isVideo && post.videoUrl ? 
               `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></video>` : 
               `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover;" />`
