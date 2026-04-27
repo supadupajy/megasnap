@@ -930,12 +930,7 @@ const MapContainer = ({
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
-    const adGlowHtml = isAd ? `
-      <div class="ad-glow-wrapper">
-        <div class="ad-pulse-ring-1"></div>
-        <div class="ad-pulse-ring-2"></div>
-        <div class="ad-pulse-ring-3"></div>
-      </div>` : '';
+    const adGlowHtml = '';
 
     return `<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
@@ -945,10 +940,10 @@ const MapContainer = ({
           ${adGlowHtml}
           <div style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: 16px;" class="${shineClass}">
             ${isVideo && post.videoUrl ? 
-              `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}"></video>` : 
-              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover; ${isViewed ? 'filter: grayscale(1) brightness(0.4) contrast(1.2); opacity: 0.9;' : ''}" />`
+              `<video src="${displayImage}#t=0.1" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></video>` : 
+              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width: 100%; height: 100%; object-fit: cover;" />`
             }
-            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1; ${isViewed ? 'background: rgba(40,40,40,0.9); color: rgba(255,255,255,0.5);' : ''}">
+            <div style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); color: white; font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 6px; z-index: 5; border: 1px solid rgba(255,255,255,0.2); line-height: 1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>
             ${videoIconHtml}
