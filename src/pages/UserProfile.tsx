@@ -144,10 +144,10 @@ const UserProfile = () => {
         setUserPosts(mappedPosts);
         
         // 팔로워/팔로잉 수 조회 (follows 테이블 기준)
-        // [Optimized] count: 'exact' → 'planned' + head: true (페이로드 최소화)
+        // [Fixed] count: 'planned'는 부정확. 'exact'로 정확한 값 보장 (인덱스 있음)
         const [followersResult, followingResult] = await Promise.all([
-          supabase.from('follows').select('id', { count: 'planned', head: true }).eq('following_id', profileUserId),
-          supabase.from('follows').select('id', { count: 'planned', head: true }).eq('follower_id', profileUserId)
+          supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', profileUserId),
+          supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profileUserId)
         ]);
         
         setFollowerCount(followersResult.count || 0);

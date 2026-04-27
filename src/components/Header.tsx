@@ -22,30 +22,32 @@ const Header = () => {
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
-    // [Optimized] count: 'exact' → 'planned'로 변경 (RLS 적용 시 exact는 매우 느림)
-    // head: true + select('id')로 페이로드 최소화
-    const { count, error } = await supabase
+    // [Fixed] count: 'planned'는 부정확(0개여도 1 반환). select+limit으로 정확하게 카운트.
+    // 인덱스 (receiver_id, is_read)로 빠르게 조회됨.
+    const { data, error } = await supabase
       .from('messages')
-      .select('id', { count: 'planned', head: true })
+      .select('id')
       .eq('receiver_id', user.id)
-      .eq('is_read', false);
+      .eq('is_read', false)
+      .limit(100);
 
     if (!error) {
-      setUnreadCount(count || 0);
+      setUnreadCount(data?.length || 0);
     }
   }, [user]);
 
   const fetchUnreadNotifCount = useCallback(async () => {
     if (!user) return;
-    // [Optimized] count: 'exact' → 'planned'
-    const { count, error } = await supabase
+    // [Fixed] count: 'planned'는 부정확. select+limit 방식으로 정확하게 카운트.
+    const { data, error } = await supabase
       .from('notifications')
-      .select('id', { count: 'planned', head: true })
+      .select('id')
       .eq('user_id', user.id)
-      .eq('is_read', false);
+      .eq('is_read', false)
+      .limit(100);
 
     if (!error) {
-      setUnreadNotifCount(count || 0);
+      setUnreadNotifCount(data?.length || 0);
     }
   }, [user]);
 

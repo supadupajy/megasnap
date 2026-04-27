@@ -57,11 +57,13 @@ const Chat = () => {
 
   const fetchUnreadCounts = useCallback(async () => {
     if (!authUser) return;
-    // [Optimized] count: 'exact' → 'planned' (RLS 적용 테이블에서 훨씬 빠름)
-    const { count: mCount } = await supabase.from('messages').select('id', { count: 'planned', head: true }).eq('receiver_id', authUser.id).eq('is_read', false);
-    const { count: nCount } = await supabase.from('notifications').select('id', { count: 'planned', head: true }).eq('user_id', authUser.id).eq('is_read', false);
-    setUnreadCount(mCount || 0);
-    setUnreadNotifCount(nCount || 0);
+    // [Fixed] count: 'planned'는 부정확. select+limit으로 정확하게 카운트.
+    const [{ data: mData }, { data: nData }] = await Promise.all([
+      supabase.from('messages').select('id').eq('receiver_id', authUser.id).eq('is_read', false).limit(100),
+      supabase.from('notifications').select('id').eq('user_id', authUser.id).eq('is_read', false).limit(100),
+    ]);
+    setUnreadCount(mData?.length || 0);
+    setUnreadNotifCount(nData?.length || 0);
   }, [authUser]);
 
   useEffect(() => {

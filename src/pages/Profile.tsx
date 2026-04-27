@@ -210,10 +210,11 @@ const Profile = () => {
         setSavedPosts(formattedSavedPosts);
       }
       
-      // [Optimized] count: 'exact' → 'planned' (RLS 적용 테이블에서 훨씬 빠름)
+      // [Fixed] count: 'planned'는 부정확. count: 'exact'로 정확한 값 보장.
+      // follows 테이블에 인덱스가 있어 빠르게 조회됨.
       const [followersRes, followingRes] = await Promise.all([
-        supabase.from('follows').select('id', { count: 'planned', head: true }).eq('following_id', uid),
-        supabase.from('follows').select('id', { count: 'planned', head: true }).eq('follower_id', uid)
+        supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', uid)
       ]);
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);

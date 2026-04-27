@@ -7,7 +7,7 @@ import { getYoutubeThumbnail } from "@/lib/utils";
 import { remapUnsplashDisplayUrl, getDiverseUnsplashUrl } from "@/lib/mock-data";
 import { sanitizeYoutubeMedia } from "@/utils/youtube-utils";
 
-const getTierFromId = (id: string) => {
+export const getTierFromId = (id: string) => {
   let h = 0;
   for(let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
   const val = Math.abs(h % 1000) / 1000;

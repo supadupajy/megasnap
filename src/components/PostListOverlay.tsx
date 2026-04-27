@@ -12,7 +12,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, getTierFromId } from '@/hooks/use-supabase-posts';
 
 const ObservedPostItem = ({ 
   post, 
@@ -264,6 +264,17 @@ const PostListOverlay = ({
             finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
           }
 
+          // [Fixed] borderType 계산을 mapRawToPost와 동일하게: id 해시 기반 + likes 기반
+          const isAdPost = p.content?.trim().startsWith('[AD]');
+          let borderType: string = 'none';
+          if (!isAdPost) {
+            if (Number(p.likes || 0) >= 9000) {
+              borderType = 'popular';
+            } else {
+              borderType = getTierFromId(p.id);
+            }
+          }
+
           return {
             id: p.id,
             user: { id: p.user_id, name: userName, avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
@@ -279,8 +290,9 @@ const PostListOverlay = ({
             createdAt: new Date(p.created_at),
             category: p.category || 'none',
             commentsCount: 0, comments: [],
-            isLiked: false, isAd: p.content?.trim().startsWith('[AD]'), isGif: false,
-            borderType: Number(p.likes || 0) >= 9000 ? 'popular' : 'none'
+            isLiked: false, isAd: isAdPost, isGif: false,
+            isInfluencer: borderType === 'gold' || borderType === 'diamond',
+            borderType,
           };
         });
 
