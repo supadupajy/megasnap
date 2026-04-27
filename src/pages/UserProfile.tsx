@@ -231,7 +231,7 @@ const UserProfile = () => {
           <ChevronLeft className="w-6 h-6" />
         </button>
         <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">{nickname}</h2>
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">유저 프로필</h2>
         </div>
       </div>
 
