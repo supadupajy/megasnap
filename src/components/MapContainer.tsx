@@ -25,7 +25,7 @@ const BROKEN_UNSPLASH_IDS = new Set([
 ]);
 
 const LONG_PRESS_DURATION = 1000; // 1초
-const LONG_PRESS_MOVE_THRESHOLD = 12; // px 이상 움직이면 취소
+const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
 
 const MapContainer = ({ 
   posts, 
@@ -244,13 +244,14 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    const handleDragEnd = () => { revealMarkersOnce(); };
+    // 드래그 시작 시 롱프레스 즉시 취소 (드래그 중에는 마커 숨기기 불가)
+    const handleDragStart = () => { cancelLongPress(); };
 
-    kakao.maps.event.addListener(mapInstance.current, 'dragend', handleDragEnd);
+    kakao.maps.event.addListener(mapInstance.current, 'dragstart', handleDragStart);
     return () => {
-      kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
+      kakao.maps.event.removeListener(mapInstance.current, 'dragstart', handleDragStart);
     };
-  }, [isMapReady, revealMarkersOnce]);
+  }, [isMapReady, cancelLongPress]);
 
   // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
@@ -464,9 +465,6 @@ const MapContainer = ({
       }, 500);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
-      
-      kakao.maps.event.addListener(map, 'dragstart', () => { isDragging.current = true; });
-      kakao.maps.event.addListener(map, 'dragend', () => { isDragging.current = false; lastDragEnd.current = Date.now(); });
       
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
         if (onMapClickRef.current) {
