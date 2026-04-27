@@ -340,26 +340,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   const confirmDelete = async () => {
-    try {
-      if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
-      
-      // [FIX] 삭제 프로세스 안정화:
-      // 1. UI에서 즉시 제거될 수 있도록 핸들러 먼저 호출 (상위에서 setSelectedPostId(null) 수행)
-      if (onDelete) onDelete(currentPost.id);
-      
-      // 2. 모달 즉시 닫기
-      onClose();
+    if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+    const postId = currentPost.id;
 
-      // 3. 실제 DB 삭제는 백그라운드에서 진행
-      const { error } = await supabase.from('posts').delete().eq('id', currentPost.id);
+    // 1. 확인 다이얼로그 먼저 닫기 → Radix가 body 스타일 정리할 시간 확보
+    setIsDeleteDialogOpen(false);
+
+    // 2. 한 프레임 뒤에 PostDetail 닫기 (두 Dialog가 동시에 닫히면 body pointer-events 잠김 방지)
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (onDelete) onDelete(postId);
+    onClose();
+
+    // 3. body 잠금 강제 해제 (안전장치)
+    document.body.style.pointerEvents = '';
+    document.body.style.overflow = '';
+
+    // 4. DB 삭제는 백그라운드에서 진행
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
-      
       showSuccess('포스팅이 삭제되었습니다.');
     } catch (err: any) {
       console.error('[PostDetail] Delete error:', err);
       showError(`삭제 중 오류가 발생했습니다.`);
-    } finally {
-      setIsDeleteDialogOpen(false);
     }
   };
 
