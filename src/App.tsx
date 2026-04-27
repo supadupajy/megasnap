@@ -72,6 +72,7 @@ const AnimatedRoutes = () => {
   // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화
   // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
   const [isPostListVisible, setIsPostListVisible] = useState(false);
+  const [isMapDragging, setIsMapDragging] = useState(false);
 
   useEffect(() => {
     // 초기값 동기화 (다른 페이지에서 진입 시)
@@ -88,6 +89,17 @@ const AnimatedRoutes = () => {
     return () => {
       window.removeEventListener('open-post-list-overlay', handleOpen);
       window.removeEventListener('close-post-list-overlay', handleClose);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleDragStart = () => setIsMapDragging(true);
+    const handleDragEnd = () => setIsMapDragging(false);
+    window.addEventListener('map-drag-start', handleDragStart);
+    window.addEventListener('map-drag-end', handleDragEnd);
+    return () => {
+      window.removeEventListener('map-drag-start', handleDragStart);
+      window.removeEventListener('map-drag-end', handleDragEnd);
     };
   }, []);
 
@@ -133,10 +145,11 @@ const AnimatedRoutes = () => {
         {(!isFullPage || isWritePage) && session && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: isMapDragging && location.pathname === '/' ? 0 : 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: isMapDragging ? 0.15 : 0.35, ease: "easeInOut" }}
             className="fixed top-0 left-0 right-0 z-50"
+            style={{ pointerEvents: isMapDragging && location.pathname === '/' ? 'none' : 'auto' }}
           >
             <Header />
           </motion.div>
@@ -182,7 +195,15 @@ const AnimatedRoutes = () => {
       </main>
 
       {/* ✅ [FORCE] 하단 바 강제 노출: 복잡한 조건문을 제거하고 기본 필수 조건만 남김 */}
-      {(!isFullPage || isWritePage) && session && <BottomNav />}
+      {(!isFullPage || isWritePage) && session && (
+        <motion.div
+          animate={{ opacity: isMapDragging && location.pathname === '/' ? 0 : 1 }}
+          transition={{ duration: isMapDragging ? 0.15 : 0.35, ease: "easeInOut" }}
+          style={{ pointerEvents: isMapDragging && location.pathname === '/' ? 'none' : 'auto' }}
+        >
+          <BottomNav />
+        </motion.div>
+      )}
 
       <ExitDialog
         isOpen={showExitDialog}

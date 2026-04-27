@@ -110,6 +110,7 @@ const Index = () => {
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isMapDragging, setIsMapDragging] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -596,6 +597,18 @@ const Index = () => {
   // 자연스럽게 반영되므로 실시간 구독이 불필요합니다.
   // (confetti는 Write.tsx → navigate state.triggerConfetti 경로로 정상 동작)
 
+  // ── 지도 드래그 UI 숨김 ──────────────────────────────────────
+  useEffect(() => {
+    const handleDragStart = () => setIsMapDragging(true);
+    const handleDragEnd = () => setIsMapDragging(false);
+    window.addEventListener('map-drag-start', handleDragStart);
+    window.addEventListener('map-drag-end', handleDragEnd);
+    return () => {
+      window.removeEventListener('map-drag-start', handleDragStart);
+      window.removeEventListener('map-drag-end', handleDragEnd);
+    };
+  }, []);
+
   // ── 이벤트 리스너들 ──────────────────────────────────────────
   useEffect(() => {
     const handleFocusPost = (e: any) => {
@@ -729,18 +742,22 @@ const Index = () => {
 
           {!isSelectingLocation && (
             <>
-              <div
-                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
-                className={cn("absolute left-4 z-20 flex flex-col gap-2 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
+              <motion.div
+                animate={{ opacity: isMapDragging ? 0 : (isTrendingExpanded ? 0.2 : 1) }}
+                transition={{ duration: isMapDragging ? 0.15 : 0.35, ease: "easeInOut" }}
+                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)', pointerEvents: isMapDragging ? 'none' : (isTrendingExpanded ? 'none' : 'auto') }}
+                className="absolute left-4 z-20 flex flex-col gap-2"
               >
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
                 <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button>
-              </div>
+              </motion.div>
 
-              <div
-                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
-                className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
+              <motion.div
+                animate={{ opacity: isMapDragging ? 0 : (isTrendingExpanded ? 0.2 : 1) }}
+                transition={{ duration: isMapDragging ? 0.15 : 0.35, ease: "easeInOut" }}
+                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)', pointerEvents: isMapDragging ? 'none' : (isTrendingExpanded ? 'none' : 'auto') }}
+                className="absolute right-4 z-20 flex flex-col items-center gap-4"
               >
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
@@ -762,7 +779,7 @@ const Index = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             </>
           )}
         </div>
@@ -789,9 +806,12 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      <div
+      <motion.div
+        animate={{ opacity: isMapDragging ? 0 : 1 }}
+        transition={{ duration: isMapDragging ? 0.15 : 0.35, ease: "easeInOut" }}
+        style={{ pointerEvents: isMapDragging ? 'none' : 'auto' }}
         className={cn(
-          "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
+          "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none",
           isCategoryOpen && "opacity-50 blur-[1px]",
           (isPostListOpen || isSearchOpen) && "invisible pointer-events-none"
         )}
@@ -804,7 +824,7 @@ const Index = () => {
             onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
           />
         </div>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {isPostListOpen && (

@@ -260,17 +260,23 @@ const MapContainer = ({
     };
   }, [startLongPress, handlePointerUp, cancelLongPress]);
 
-  // 카카오맵 dragstart/dragend → 롱프레스 취소 및 마커 복원
+  // 카카오맵 dragstart/dragend → 롱프레스 취소 및 마커 복원 + UI fade 이벤트
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    // 드래그 시작 시 롱프레스 즉시 취소
-    const handleDragStart = () => { cancelLongPress(); };
+    // 드래그 시작 시 롱프레스 즉시 취소 + UI 숨김 이벤트
+    const handleDragStart = () => {
+      cancelLongPress();
+      window.dispatchEvent(new CustomEvent('map-drag-start'));
+    };
 
-    // 드래그 끝날 때 마커 숨김 상태면 복원
-    const handleDragEnd = () => { revealMarkersOnce(); };
+    // 드래그 끝날 때 마커 숨김 상태면 복원 + UI 표시 이벤트
+    const handleDragEnd = () => {
+      revealMarkersOnce();
+      window.dispatchEvent(new CustomEvent('map-drag-end'));
+    };
 
     kakao.maps.event.addListener(mapInstance.current, 'dragstart', handleDragStart);
     kakao.maps.event.addListener(mapInstance.current, 'dragend', handleDragEnd);
