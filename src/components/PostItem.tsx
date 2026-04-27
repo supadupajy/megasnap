@@ -562,11 +562,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     >
       {isAd ? (
         <div className="ad-post-wrapper mx-2 my-1">
-          {/* 궤도 반짝이 4개 */}
-          <span className="ad-sparkle ad-sparkle-1">✦</span>
-          <span className="ad-sparkle ad-sparkle-2">★</span>
-          <span className="ad-sparkle ad-sparkle-3">✦</span>
-          <span className="ad-sparkle ad-sparkle-4">★</span>
           <div className="ad-post-inner">
             {/* Header Section */}
             <div className="flex items-center justify-between p-4 pb-3">
