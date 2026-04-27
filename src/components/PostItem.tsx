@@ -41,6 +41,7 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import { useLocationDisplay } from '@/hooks/use-location-display';
 
 const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
@@ -196,6 +197,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
+
+  const displayLocation = useLocationDisplay(post.location || '', lat, lng);
 
   // 유튜브 비디오 ID 추출
   const getYouTubeId = (url?: string) => {
@@ -584,7 +587,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   </div>
                   <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
                     <MapPin className="w-3 h-3" />
-                    <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
+                    <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                   </div>
                 </div>
               </div>
@@ -670,7 +673,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 </div>
                 <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
                   <MapPin className="w-3 h-3" />
-                  <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
+                  <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                 </div>
               </div>
             </div>
