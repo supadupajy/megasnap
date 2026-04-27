@@ -93,15 +93,13 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // ── 마커 DOM 직접 숨김/표시 (React 리렌더링 없이 즉시 처리) ──────────
+  // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        content.style.transition = 'opacity 0.25s ease-out, transform 0.25s ease-out';
-        content.style.opacity = '0';
-        content.style.transform = (content.style.transform || '').replace(/\s*scale\([^)]*\)/g, '') + ' scale(0.75)';
-        content.style.pointerEvents = 'none';
+        content.classList.remove('markers-revealing');
+        content.classList.add('markers-hidden');
       }
     });
     if (searchOverlayRef.current) {
@@ -114,10 +112,14 @@ const MapContainer = ({
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        content.style.transition = 'opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        content.style.opacity = '1';
-        content.style.transform = (content.style.transform || '').replace(/\s*scale\([^)]*\)/g, '');
-        content.style.pointerEvents = 'auto';
+        content.classList.remove('markers-hidden');
+        content.classList.add('markers-revealing');
+        // 트랜지션 끝나면 revealing 클래스 제거 (정상 상태로 복귀)
+        const onEnd = () => {
+          content.classList.remove('markers-revealing');
+          content.removeEventListener('transitionend', onEnd);
+        };
+        content.addEventListener('transitionend', onEnd);
       }
     });
     if (searchOverlayRef.current) {
@@ -563,10 +565,9 @@ const MapContainer = ({
           onMarkerClickRef.current(post);
         };
 
-        // 숨김 상태면 즉시 숨김
+        // 숨김 상태면 즉시 숨김 클래스 적용
         if (markersHiddenRef.current) {
-          content.style.opacity = '0';
-          content.style.pointerEvents = 'none';
+          content.classList.add('markers-hidden');
         }
 
         const overlay = new kakao.maps.CustomOverlay({
