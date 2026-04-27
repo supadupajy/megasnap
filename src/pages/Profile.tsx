@@ -299,8 +299,8 @@ const Profile = () => {
 
   return (
     <div className="h-screen bg-white flex flex-col">
-      {/* 내 프로필 상단 메뉴 바 - 항상 고정 */}
-      <div className="fixed top-0 left-0 right-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
+      {/* 내 프로필 상단 메뉴 바 - 앱 헤더(64px) 바로 아래에 고정 */}
+      <div className="fixed left-0 right-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center" style={{ top: '64px' }}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
@@ -317,7 +317,8 @@ const Profile = () => {
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar pt-[72px]">
+      {/* 앱 헤더(64px) + 프로필 타이틀바(~64px) 높이만큼 상단 여백 */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar pt-[136px]">
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8"><div className="relative"><div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600"><img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} /></div></div><div className="flex-1"><h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2><p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p><div className="flex gap-4"><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={handleScrollToPosts}><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}><p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}><p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div></div></div></div>
           <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
