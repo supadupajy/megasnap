@@ -835,7 +835,7 @@ const MapContainer = ({
     const startLat = startCenter.getLat();
     const startLng = startCenter.getLng();
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
-    const duration = Math.min(Math.max(dist * 800, 600), 1200);
+    const duration = Math.min(Math.max(dist * 500, 400), 800);
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
