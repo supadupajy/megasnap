@@ -733,43 +733,40 @@ const Index = () => {
       <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
 
       <AnimatePresence>
-        {!isPostListOpen && !isSearchOpen && (
-          <>
-            <AnimatePresence>
-              {isTrendingExpanded && (
-                <motion.div
-                  key="trending-backdrop"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="fixed inset-0 z-[49] bg-black/40 backdrop-blur-[2px]"
-                  onClick={() => setIsTrendingExpanded(false)}
-                >
-                  <div className="absolute bottom-28 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none translate-y-6">
-                    <div className="w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                    </div>
-                    <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러 닫기</span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <motion.div
-              initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className={cn("fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300", isCategoryOpen && "opacity-50 blur-[1px]")}
-            >
-              <div className="max-w-md mx-auto pointer-events-auto">
-                <TrendingPosts
-                  posts={globalTrendingPosts}
-                  onPostClick={handleTrendingPostClick}
-                  isExpanded={isTrendingExpanded}
-                  onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-                />
+        {isTrendingExpanded && !isPostListOpen && !isSearchOpen && (
+          <motion.div
+            key="trending-backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[49] bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setIsTrendingExpanded(false)}
+          >
+            <div className="absolute bottom-28 left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none translate-y-6">
+              <div className="w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </div>
-            </motion.div>
-          </>
+              <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러 닫기</span>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
+
+      <div
+        className={cn(
+          "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
+          isCategoryOpen && "opacity-50 blur-[1px]",
+          (isPostListOpen || isSearchOpen) && "invisible pointer-events-none"
+        )}
+      >
+        <div className="max-w-md mx-auto pointer-events-auto">
+          <TrendingPosts
+            posts={globalTrendingPosts}
+            onPostClick={handleTrendingPostClick}
+            isExpanded={isTrendingExpanded}
+            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+          />
+        </div>
+      </div>
 
       <AnimatePresence>
         {isPostListOpen && (
