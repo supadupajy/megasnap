@@ -236,10 +236,11 @@ const UserProfile = () => {
       </div>
 
       {/* 스크롤 영역 */}
+      {/* 앱 헤더(64px) + 프로필 타이틀 헤더(56px) + safe-area */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 78px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)' }}
       >
         {/* 프로필 정보 */}
         <div className="p-6">
