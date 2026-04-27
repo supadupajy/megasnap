@@ -964,7 +964,7 @@ const MapContainer = ({
     const isInfluencer = ['gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
     let animationClass = '';
-    if (isAd) animationClass = 'animate-ad-breathing';
+    if (isAd) animationClass = '';
     else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
     const isSpecialPost = isMine || isAd || borderType !== 'none';
@@ -1001,7 +1001,7 @@ const MapContainer = ({
       ._ad_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
     </style>` : '';
 
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;padding:3px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;margin-bottom:-16px;position:relative;z-index:3;overflow:hidden;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:.1em;text-shadow:0 1px 3px rgba(0,0,0,.6);">✦ AD ✦</span></div>` : '';
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;margin-bottom:-16px;position:relative;z-index:3;overflow:hidden;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);line-height:1.2;"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:.1em;text-shadow:0 1px 3px rgba(0,0,0,.6);">✦ AD ✦</span></div>` : '';
 
     // AD 테두리: 회전하는 conic-gradient 래퍼 (padding으로 테두리 효과)
     const adBorderOpen = isAd ? `<div class="_ad_border_wrap" style="width:66px;height:66px;border-radius:22px;background:conic-gradient(#fbbf24 0deg,#ef4444 60deg,#ec4899 120deg,#8b5cf6 180deg,#3b82f6 240deg,#06b6d4 300deg,#fbbf24 360deg);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">` : '';
