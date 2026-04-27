@@ -297,9 +297,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const isMine = useMemo(() => {
     if (!currentPost || !authUser) return false;
-    // 시드 데이터가 아니고, ID가 일치할 때만 본인 포스팅으로 간주
-    return (currentPost.user.id === authUser.id || currentPost.user.id === 'me') && !isSeed;
-  }, [currentPost, authUser, isSeed]);
+    // owner_id(실제 DB user_id)를 우선 사용 — 시드 데이터도 실제 소유자면 삭제 가능
+    const ownerId = currentPost.owner_id || currentPost.user.id;
+    return ownerId === authUser.id || ownerId === 'me';
+  }, [currentPost, authUser]);
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
