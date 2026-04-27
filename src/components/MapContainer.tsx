@@ -481,6 +481,25 @@ const MapContainer = ({
       }, 500);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
+
+      // zoom_changed 시 레벨을 즉시 전달 → 레벨 7 전환 시 마커가 잠깐 보이는 버그 방지
+      kakao.maps.event.addListener(map, 'zoom_changed', () => {
+        try {
+          const bounds = map.getBounds();
+          const currentCenter = map.getCenter();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const mapLevel = map.getLevel();
+          onMapChangeRef.current({
+            bounds: {
+              sw: { lat: sw.getLat(), lng: sw.getLng() },
+              ne: { lat: ne.getLat(), lng: ne.getLng() }
+            },
+            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            level: mapLevel,
+          });
+        } catch (e) {}
+      });
       
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
         if (onMapClickRef.current) {

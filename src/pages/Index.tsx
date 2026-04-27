@@ -381,13 +381,15 @@ const Index = () => {
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
     // ref는 즉시 업데이트 (throttle 없이) → handleRefresh가 항상 최신 bounds 참조 가능
     mapDataRef.current = data;
+    // 줌 레벨은 즉시 업데이트 → 레벨 7 전환 시 마커가 잠깐 보이는 버그 방지
+    if (data.level !== undefined) {
+      setCurrentZoom(data.level);
+      currentZoomRef.current = data.level;
+      mapCache.lastZoom = data.level;
+    }
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      if (data.level !== undefined) {
-        setCurrentZoom(data.level);
-        mapCache.lastZoom = data.level;
-      }
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
     }, 800);
