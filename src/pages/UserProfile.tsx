@@ -225,7 +225,7 @@ const UserProfile = () => {
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => viewMode === 'list' ? setViewMode('grid') : navigate(-1)}
           className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
         >
           <ChevronLeft className="w-6 h-6" />
