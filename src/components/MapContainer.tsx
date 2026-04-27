@@ -24,6 +24,8 @@ const BROKEN_UNSPLASH_IDS = new Set([
   "photo-1501785888041-af3ef285b470",
 ]);
 
+const LONG_PRESS_DURATION = 3000; // 3초
+
 const MapContainer = ({ 
   posts, 
   viewedPostIds, 
@@ -41,10 +43,19 @@ const MapContainer = ({
   const [currentLevel, setCurrentLevel] = useState<number>(5);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
 
+  // ── 마커 숨김 관련 상태 ──────────────────────────────────
+  const [markersHidden, setMarkersHidden] = useState(false);
+  const [longPressProgress, setLongPressProgress] = useState(0); // 0~100
+  const markersHiddenRef = useRef(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const longPressStartRef = useRef<number>(0);
+  const isLongPressingRef = useRef(false);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
-  // 현재 핑 애니메이션 중인 마커 ID 추적 → React 리렌더링이 HTML 덮어쓰는 것 완전 차단
   const highlightingIdsRef = useRef<Set<string>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
   const isDragging = useRef(false);
@@ -54,7 +65,6 @@ const MapContainer = ({
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
 
-  // 핀치 줌 원천 차단용
   const pinchStartDistRef = useRef<number | null>(null);
 
   const centerRef = useRef(center);
@@ -67,7 +77,6 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
-  // getMarkerInnerHtml을 ref로 관리 → highlight 핸들러에서 항상 최신 authUser 참조
   const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '');
   const authUserRef = useRef(authUser);
 
@@ -82,6 +91,190 @@ const MapContainer = ({
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
+
+  // ── 마커 숨김/표시 헬퍼 ──────────────────────────────────
+  const hideAllMarkers = useCallback(() => {
+    overlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        content.style.opacity = '0';
+        content.style.transform = content.style.transform.replace(/\s*scale\([^)]*\)/, '') + ' scale(0.7)';
+        content.style.pointerEvents = 'none';
+      }
+    });
+    if (searchOverlayRef.current) {
+      const c = searchOverlayRef.current.getContent() as HTMLElement;
+      if (c) { c.style.transition = 'opacity 0.3s ease'; c.style.opacity = '0'; }
+    }
+  }, []);
+
+  const showAllMarkers = useCallback(() => {
+    overlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.style.transition = 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        content.style.opacity = '1';
+        // transform에서 scale(0.7) 제거
+        content.style.transform = content.style.transform.replace(/\s*scale\([^)]*\)/, '');
+        content.style.pointerEvents = 'auto';
+      }
+    });
+    if (searchOverlayRef.current) {
+      const c = searchOverlayRef.current.getContent() as HTMLElement;
+      if (c) { c.style.transition = 'opacity 0.5s ease'; c.style.opacity = '1'; }
+    }
+  }, []);
+
+  // markersHidden 변경 시 실제 DOM 반영
+  useEffect(() => {
+    markersHiddenRef.current = markersHidden;
+    if (markersHidden) {
+      hideAllMarkers();
+    } else {
+      showAllMarkers();
+    }
+  }, [markersHidden, hideAllMarkers, showAllMarkers]);
+
+  // 새 마커가 추가될 때 숨김 상태면 즉시 숨김 처리
+  const applyHiddenStateToOverlay = useCallback((content: HTMLElement) => {
+    if (markersHiddenRef.current) {
+      content.style.opacity = '0';
+      content.style.pointerEvents = 'none';
+    }
+  }, []);
+
+  // ── 롱프레스 로직 ──────────────────────────────────────
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (longPressProgressTimerRef.current) {
+      clearInterval(longPressProgressTimerRef.current);
+      longPressProgressTimerRef.current = null;
+    }
+    isLongPressingRef.current = false;
+    setLongPressProgress(0);
+  }, []);
+
+  const startLongPress = useCallback(() => {
+    // 이미 숨김 상태면 롱프레스 시작 안 함
+    if (markersHiddenRef.current) return;
+    // 이미 진행 중이면 중복 시작 방지
+    if (isLongPressingRef.current) return;
+
+    isLongPressingRef.current = true;
+    longPressStartRef.current = Date.now();
+    setLongPressProgress(0);
+
+    // 진행 바 업데이트 (60fps)
+    longPressProgressTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - longPressStartRef.current;
+      const progress = Math.min((elapsed / LONG_PRESS_DURATION) * 100, 100);
+      setLongPressProgress(progress);
+    }, 16);
+
+    // 3초 후 마커 숨김
+    longPressTimerRef.current = setTimeout(() => {
+      cancelLongPress();
+      setMarkersHidden(true);
+    }, LONG_PRESS_DURATION);
+  }, [cancelLongPress]);
+
+  // 손 뗄 때: 숨김 상태면 마커 다시 표시
+  const handlePointerUp = useCallback(() => {
+    if (isLongPressingRef.current) {
+      cancelLongPress();
+      return;
+    }
+    if (markersHiddenRef.current) {
+      // 드래그 중이었다면 손 뗄 때 마커 복원
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = setTimeout(() => {
+        setMarkersHidden(false);
+      }, 80); // 약간의 딜레이로 자연스럽게
+    }
+  }, [cancelLongPress]);
+
+  // ── 터치/마우스 이벤트 등록 ──────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      // 마커 클릭이 아닌 지도 빈 공간 터치만 처리
+      const target = e.target as HTMLElement;
+      if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
+      if (e.touches.length === 1) {
+        startLongPress();
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      handlePointerUp();
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      // 롱프레스 중 손가락 움직이면 취소 (단, 숨김 상태에서 드래그는 허용)
+      if (isLongPressingRef.current) {
+        cancelLongPress();
+      }
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
+      startLongPress();
+    };
+
+    const onMouseUp = () => {
+      handlePointerUp();
+    };
+
+    const onMouseMove = () => {
+      if (isLongPressingRef.current) {
+        cancelLongPress();
+      }
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('mousemove', onMouseMove);
+
+    return () => {
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('mousemove', onMouseMove);
+    };
+  }, [startLongPress, handlePointerUp, cancelLongPress]);
+
+  // 카카오맵 dragend 이벤트에서도 손 뗌 처리
+  useEffect(() => {
+    if (!isMapReady || !mapInstance.current) return;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+
+    const handleDragEnd = () => {
+      if (markersHiddenRef.current) {
+        if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+        revealTimerRef.current = setTimeout(() => {
+          setMarkersHidden(false);
+        }, 80);
+      }
+    };
+
+    kakao.maps.event.addListener(mapInstance.current, 'dragend', handleDragEnd);
+    return () => {
+      kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
+    };
+  }, [isMapReady]);
 
   useEffect(() => {
     const handleUpdateViewedMarkers = (e: any) => {
@@ -176,7 +369,6 @@ const MapContainer = ({
     };
   }, []);
 
-  // 핀치 줌 원천 차단
   useEffect(() => {
     const getDistance = (touches: TouchList) => {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -334,9 +526,6 @@ const MapContainer = ({
     }
   }, [level]);
 
-  // ── 마커 렌더링 통합 로직 ──────────────────────────────────
-  // highlightedPostId 제거 → contentStateKey에서 isHighlighted 없음
-  // 핑 효과는 오직 DOM 직접 조작으로만 처리 (React 리렌더링과 완전 분리)
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
@@ -345,7 +534,6 @@ const MapContainer = ({
 
     const propPostIds = new Set(posts.map(p => p.id));
 
-    // 사라진 마커 제거 (애니메이션)
     overlaysRef.current.forEach((overlay, id) => {
       if (!propPostIds.has(id)) {
         const content = overlay.getContent() as HTMLElement;
@@ -378,7 +566,6 @@ const MapContainer = ({
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
       const postUserId = (post as any).user_id || (post.user && post.user.id);
       const isMineKey = !!(authUser && String(postUserId) === String(authUser.id));
-      // isHighlighted를 key에서 제거 → 핑 중에도 React가 HTML을 덮어쓰지 않음
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
 
       if (!existingOverlay) {
@@ -394,6 +581,9 @@ const MapContainer = ({
           onMarkerClickRef.current(post);
         };
 
+        // 숨김 상태면 즉시 숨김 처리
+        applyHiddenStateToOverlay(content);
+
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: content,
@@ -407,7 +597,6 @@ const MapContainer = ({
           existingOverlay.setMap(mapInstance.current);
         }
         
-        // 핑 애니메이션 중인 마커는 HTML을 건드리지 않음 (highlightingIdsRef로 추적)
         if (content.getAttribute('data-content-state') !== contentStateKey) {
           if (!highlightingIdsRef.current.has(post.id)) {
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
@@ -421,19 +610,17 @@ const MapContainer = ({
     });
   }, [posts, isMapReady, authUser]);
 
-  // viewed 상태 변경 전용 useEffect - 핑 중인 마커는 건드리지 않음
   useEffect(() => {
     if (!isMapReady) return;
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
     overlaysRef.current.forEach((overlay, id) => {
-      if (highlightingIdsRef.current.has(id)) return; // 핑 중이면 절대 건드리지 않음
+      if (highlightingIdsRef.current.has(id)) return;
       const content = overlay.getContent() as HTMLElement;
       if (!content) return;
       const stateKey = content.getAttribute('data-content-state') || '';
       const isViewed = combinedViewedIds.has(id);
       const currentIsViewed = stateKey.startsWith('true');
-      if (isViewed === currentIsViewed) return; // 변화 없으면 스킵
-      // viewed 상태만 바뀐 경우 HTML 업데이트
+      if (isViewed === currentIsViewed) return;
       const p = postsRef.current.find(item => item.id === id);
       if (!p) return;
       const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
@@ -445,8 +632,6 @@ const MapContainer = ({
     });
   }, [viewedPostIds, internalViewedIds, isMapReady]);
 
-  // ── highlight-marker 이벤트 핸들러 ────────────────────────
-  // React state와 완전히 분리된 순수 DOM 조작
   useEffect(() => {
     const handleHighlight = (e: any) => {
       const postId = e.detail?.id;
@@ -460,7 +645,6 @@ const MapContainer = ({
         if (overlay) {
           const content = overlay.getContent() as HTMLElement;
           if (content) {
-            // 이미 진행 중인 다른 마커의 핑 제거 후 올바르게 복원
             overlaysRef.current.forEach((o, id) => {
               const c = o.getContent() as HTMLElement;
               if (c && c.classList.contains('highlighted') && id !== postId) {
@@ -479,14 +663,12 @@ const MapContainer = ({
               }
             });
 
-            // 해당 마커 강조
             content.classList.remove('highlighted');
             void content.offsetWidth;
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
             overlay.setZIndex(99999);
 
-            // duration 후 원복
             setTimeout(() => {
               if (!content || !content.classList.contains('highlighted')) {
                 highlightingIdsRef.current.delete(postId);
@@ -506,11 +688,9 @@ const MapContainer = ({
                 const currentAuthUser = authUserRef.current;
                 const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id));
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
-                // HTML 재생성 완료 후 마지막에 가드 해제 → React 리렌더링 타이밍 경쟁 완전 차단
                 content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 content.setAttribute('data-content-state', newStateKey);
               }
-              // HTML/key 업데이트 완전히 끝난 후에 가드 해제
               highlightingIdsRef.current.delete(postId);
 
               const p2 = postsRef.current.find(item => item.id === postId);
@@ -654,7 +834,6 @@ const MapContainer = ({
           window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
         });
       } else {
-        // 이미 해당 위치에 있으면 즉시 완료 이벤트 발생
         window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
       }
     }
@@ -691,7 +870,6 @@ const MapContainer = ({
     }
   }, [searchResultLocation, isMapReady]);
 
-  // getMarkerInnerHtml: authUserRef.current를 사용 → 항상 최신 유저 참조 (stale closure 완전 방지)
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     
@@ -791,7 +969,6 @@ const MapContainer = ({
     </div>`;
   };
 
-  // ref를 항상 최신으로 유지 (highlight 핸들러에서 stale closure 방지)
   getMarkerInnerHtmlRef.current = getMarkerInnerHtml;
 
   return (
@@ -814,6 +991,49 @@ const MapContainer = ({
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         </div>
       )}
+
+      {/* 롱프레스 진행 표시 */}
+      {longPressProgress > 0 && !markersHidden && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
+          <div className="bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-xl">
+            <div className="relative w-8 h-8">
+              <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
+                <circle
+                  cx="16" cy="16" r="13"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="16" cy="16" r="13"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 13}`}
+                  strokeDashoffset={`${2 * Math.PI * 13 * (1 - longPressProgress / 100)}`}
+                  style={{ transition: 'stroke-dashoffset 0.05s linear' }}
+                />
+              </svg>
+            </div>
+            <span className="text-white text-xs font-semibold tracking-wide">마커 숨기기</span>
+          </div>
+        </div>
+      )}
+
+      {/* 마커 숨김 상태 안내 */}
+      {markersHidden && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div
+            className="bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl"
+            style={{ animation: 'fadeInUp 0.3s ease forwards' }}
+          >
+            <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
+            <span className="text-white text-xs font-semibold tracking-wide">손을 떼면 마커가 다시 나타납니다</span>
+          </div>
+        </div>
+      )}
+
       <div
         ref={containerRef}
         id="kakao-map"
