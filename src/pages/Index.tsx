@@ -595,26 +595,18 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">재검색</span>
                 </button>
                 <div className="relative">
-                  {(visibleMarkers.length > 0 || currentZoom === 7) && currentZoom < 9 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
+                  {visibleMarkers.length > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => {
-                      if (currentZoom === 7) {
-                        // 레벨 7에서는 레벨 6으로 줌인 후 포스트 리스트 열기
-                        setCurrentZoom(6);
-                        setTimeout(() => setIsPostListOpen(true), 900);
-                      } else if (visibleMarkers.length > 0 && currentZoom < 9) {
-                        setIsPostListOpen(true);
-                      }
-                    }}
-                    disabled={currentZoom >= 8}
-                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", currentZoom >= 8 && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
+                    onClick={() => { if (visibleMarkers.length > 0 && currentZoom < 7) setIsPostListOpen(true); }}
+                    disabled={currentZoom >= 7}
+                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", currentZoom >= 7 && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {(visibleMarkers.length > 0 || currentZoom === 7) && currentZoom < 9 && (
+                  {visibleMarkers.length > 0 && currentZoom < 7 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                      {currentZoom === 7 ? '↓' : visibleMarkers.length}
+                      {visibleMarkers.length}
                     </div>
                   )}
                 </div>
