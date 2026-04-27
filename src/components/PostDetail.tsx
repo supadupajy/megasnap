@@ -22,6 +22,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import { useLocationDisplay } from '@/hooks/use-location-display';
 
 interface PostDetailProps {
   posts: any[];
@@ -316,6 +317,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
+  const displayLocation = useLocationDisplay(
+    currentPost?.location || '',
+    currentPost?.lat ?? currentPost?.latitude,
+    currentPost?.lng ?? currentPost?.longitude
+  );
+
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return;
     const container = e.currentTarget;
@@ -465,7 +472,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           </div>
                           <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
                             <MapPin className="w-3 h-3" />
-                            <span className="text-[10px] font-medium hover:underline">{currentPost.location}</span>
+                            <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
                           </div>
                         </div>
                       </div>
