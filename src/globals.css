@@ -40,9 +40,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* [FIX] 안드로이드/iOS 상태바 및 내비게이션 바 침범 방지 - !important로 강제 적용 */
+    /* [FIX] 안드로이드/iOS 상태바 침범 방지 - 상단만 적용, 하단은 BottomNav에서 처리 */
     padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-bottom: 0px !important;
     padding-left: env(safe-area-inset-left, 0px) !important;
     padding-right: env(safe-area-inset-right, 0px) !important;
     min-height: 100vh;
@@ -50,6 +50,9 @@
     overflow: hidden;
     position: fixed;
     width: 100%;
+    /* safe area 변수 - 지도 버튼 등에서 활용 */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --bottom-nav-height: calc(64px + max(env(safe-area-inset-bottom, 0px), 8px));
   }
 }
 

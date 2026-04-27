@@ -22,7 +22,10 @@ const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[2000] safe-area-bottom">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[2000]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+    >
       <div className="flex items-center justify-around max-w-lg mx-auto h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -52,8 +55,6 @@ const BottomNav = () => {
           );
         })}
       </div>
-      {/* 안드로이드 하단 소프트키/제스처 바 여백 강제 확보 */}
-      <div className="h-[env(safe-area-inset-bottom,16px)] w-full" />
     </nav>
   );
 };
