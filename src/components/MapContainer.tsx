@@ -25,7 +25,7 @@ const BROKEN_UNSPLASH_IDS = new Set([
 ]);
 
 const LONG_PRESS_DURATION = 2000; // 2초
-const LONG_PRESS_MOVE_THRESHOLD = 10; // px 이상 움직이면 취소
+const LONG_PRESS_MOVE_THRESHOLD = 12; // px 이상 움직이면 취소
 
 const MapContainer = ({ 
   posts, 
@@ -44,15 +44,15 @@ const MapContainer = ({
   const [currentLevel, setCurrentLevel] = useState<number>(5);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
 
-  // ── 마커 숨김 관련 상태 ──────────────────────────────────
-  const [markersHidden, setMarkersHidden] = useState(false);
-  const [longPressProgress, setLongPressProgress] = useState(0); // 0~100
+  // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
+  const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
   const markersHiddenRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const longPressStartRef = useRef<number>(0);
   const isLongPressingRef = useRef(false);
+  const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // CSS 애니메이션용 - 누르기 시작 시각
+  const pressStartTimeRef = useRef<number>(0);
 
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -93,114 +93,86 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // ── 마커 숨김/표시 헬퍼 ──────────────────────────────────
-  const hideAllMarkers = useCallback(() => {
+  // ── 마커 DOM 직접 숨김/표시 (React 리렌더링 없이 즉시 처리) ──────────
+  const hideAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        content.style.transition = 'opacity 0.25s ease-out, transform 0.25s ease-out';
         content.style.opacity = '0';
-        content.style.transform = content.style.transform.replace(/\s*scale\([^)]*\)/, '') + ' scale(0.7)';
+        content.style.transform = (content.style.transform || '').replace(/\s*scale\([^)]*\)/g, '') + ' scale(0.75)';
         content.style.pointerEvents = 'none';
       }
     });
     if (searchOverlayRef.current) {
       const c = searchOverlayRef.current.getContent() as HTMLElement;
-      if (c) { c.style.transition = 'opacity 0.3s ease'; c.style.opacity = '0'; }
+      if (c) { c.style.transition = 'opacity 0.25s ease-out'; c.style.opacity = '0'; }
     }
   }, []);
 
-  const showAllMarkers = useCallback(() => {
+  const showAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        content.style.transition = 'opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        content.style.transition = 'opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)';
         content.style.opacity = '1';
-        // transform에서 scale(0.7) 제거
-        content.style.transform = content.style.transform.replace(/\s*scale\([^)]*\)/, '');
+        content.style.transform = (content.style.transform || '').replace(/\s*scale\([^)]*\)/g, '');
         content.style.pointerEvents = 'auto';
       }
     });
     if (searchOverlayRef.current) {
       const c = searchOverlayRef.current.getContent() as HTMLElement;
-      if (c) { c.style.transition = 'opacity 0.5s ease'; c.style.opacity = '1'; }
+      if (c) { c.style.transition = 'opacity 0.45s ease'; c.style.opacity = '1'; }
     }
   }, []);
 
-  // markersHidden 변경 시 실제 DOM 반영
-  useEffect(() => {
-    markersHiddenRef.current = markersHidden;
-    if (markersHidden) {
-      hideAllMarkers();
-    } else {
-      showAllMarkers();
-    }
-  }, [markersHidden, hideAllMarkers, showAllMarkers]);
-
-  // 새 마커가 추가될 때 숨김 상태면 즉시 숨김 처리
-  const applyHiddenStateToOverlay = useCallback((content: HTMLElement) => {
-    if (markersHiddenRef.current) {
-      content.style.opacity = '0';
-      content.style.pointerEvents = 'none';
-    }
-  }, []);
-
-  // ── 롱프레스 로직 ──────────────────────────────────────
+  // ── 롱프레스 취소 ──────────────────────────────────────────────────────
   const cancelLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-    if (longPressProgressTimerRef.current) {
-      clearInterval(longPressProgressTimerRef.current);
-      longPressProgressTimerRef.current = null;
-    }
     isLongPressingRef.current = false;
-    setLongPressProgress(0);
+    pressStartPosRef.current = null;
+    setUiState(prev => prev === 'pressing' ? 'idle' : prev);
   }, []);
 
-  const startLongPress = useCallback(() => {
-    // 이미 숨김 상태면 롱프레스 시작 안 함
+  // ── 롱프레스 시작 ──────────────────────────────────────────────────────
+  const startLongPress = useCallback((x: number, y: number) => {
     if (markersHiddenRef.current) return;
-    // 이미 진행 중이면 중복 시작 방지
     if (isLongPressingRef.current) return;
 
     isLongPressingRef.current = true;
-    longPressStartRef.current = Date.now();
-    setLongPressProgress(0);
+    pressStartPosRef.current = { x, y };
+    pressStartTimeRef.current = Date.now();
+    setUiState('pressing');
 
-    // 진행 바 업데이트 (60fps)
-    longPressProgressTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - longPressStartRef.current;
-      const progress = Math.min((elapsed / LONG_PRESS_DURATION) * 100, 100);
-      setLongPressProgress(progress);
-    }, 16);
-
-    // 3초 후 마커 숨김
     longPressTimerRef.current = setTimeout(() => {
-      cancelLongPress();
-      setMarkersHidden(true);
+      isLongPressingRef.current = false;
+      pressStartPosRef.current = null;
+      markersHiddenRef.current = true;
+      hideAllMarkersDom();
+      setUiState('hidden');
     }, LONG_PRESS_DURATION);
-  }, [cancelLongPress]);
+  }, [hideAllMarkersDom]);
 
-  // 손 뗄 때: 숨김 상태면 마커 다시 표시
+  // ── 손 뗄 때 ──────────────────────────────────────────────────────────
   const handlePointerUp = useCallback(() => {
     if (isLongPressingRef.current) {
       cancelLongPress();
       return;
     }
     if (markersHiddenRef.current) {
-      // 드래그 중이었다면 손 뗄 때 마커 복원
       if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
       revealTimerRef.current = setTimeout(() => {
-        setMarkersHidden(false);
-      }, 80); // 약간의 딜레이로 자연스럽게
+        markersHiddenRef.current = false;
+        showAllMarkersDom();
+        setUiState('idle');
+      }, 60);
     }
-  }, [cancelLongPress]);
+  }, [cancelLongPress, showAllMarkersDom]);
 
-  // ── 터치/마우스 이벤트 등록 ──────────────────────────────
-  const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
-
+  // ── 터치/마우스 이벤트 등록 ──────────────────────────────────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -209,23 +181,19 @@ const MapContainer = ({
       const target = e.target as HTMLElement;
       if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
       if (e.touches.length === 1) {
-        pressStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        startLongPress();
+        startLongPress(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
     const onTouchEnd = () => {
-      pressStartPosRef.current = null;
       handlePointerUp();
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!isLongPressingRef.current) return;
-      if (!pressStartPosRef.current) { cancelLongPress(); return; }
+      if (!isLongPressingRef.current || !pressStartPosRef.current) return;
       const dx = e.touches[0].clientX - pressStartPosRef.current.x;
       const dy = e.touches[0].clientY - pressStartPosRef.current.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > LONG_PRESS_MOVE_THRESHOLD) {
+      if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_THRESHOLD) {
         cancelLongPress();
       }
     };
@@ -233,22 +201,18 @@ const MapContainer = ({
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
-      pressStartPosRef.current = { x: e.clientX, y: e.clientY };
-      startLongPress();
+      startLongPress(e.clientX, e.clientY);
     };
 
     const onMouseUp = () => {
-      pressStartPosRef.current = null;
       handlePointerUp();
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!isLongPressingRef.current) return;
-      if (!pressStartPosRef.current) { cancelLongPress(); return; }
+      if (!isLongPressingRef.current || !pressStartPosRef.current) return;
       const dx = e.clientX - pressStartPosRef.current.x;
       const dy = e.clientY - pressStartPosRef.current.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > LONG_PRESS_MOVE_THRESHOLD) {
+      if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_THRESHOLD) {
         cancelLongPress();
       }
     };
@@ -270,7 +234,7 @@ const MapContainer = ({
     };
   }, [startLongPress, handlePointerUp, cancelLongPress]);
 
-  // 카카오맵 dragend 이벤트에서도 손 뗌 처리
+  // 카카오맵 dragend → 손 뗌 처리
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;
     const kakao = (window as any).kakao;
@@ -280,8 +244,10 @@ const MapContainer = ({
       if (markersHiddenRef.current) {
         if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
         revealTimerRef.current = setTimeout(() => {
-          setMarkersHidden(false);
-        }, 80);
+          markersHiddenRef.current = false;
+          showAllMarkersDom();
+          setUiState('idle');
+        }, 60);
       }
     };
 
@@ -289,7 +255,9 @@ const MapContainer = ({
     return () => {
       kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
     };
-  }, [isMapReady]);
+  }, [isMapReady, showAllMarkersDom]);
+
+  // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
   useEffect(() => {
     const handleUpdateViewedMarkers = (e: any) => {
@@ -546,7 +514,6 @@ const MapContainer = ({
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
-
     const propPostIds = new Set(posts.map(p => p.id));
 
     overlaysRef.current.forEach((overlay, id) => {
@@ -596,8 +563,11 @@ const MapContainer = ({
           onMarkerClickRef.current(post);
         };
 
-        // 숨김 상태면 즉시 숨김 처리
-        applyHiddenStateToOverlay(content);
+        // 숨김 상태면 즉시 숨김
+        if (markersHiddenRef.current) {
+          content.style.opacity = '0';
+          content.style.pointerEvents = 'none';
+        }
 
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
@@ -616,8 +586,7 @@ const MapContainer = ({
           if (!highlightingIdsRef.current.has(post.id)) {
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
-          }
-          else {
+          } else {
             content.setAttribute('data-content-state', contentStateKey);
           }
         }
@@ -887,16 +856,13 @@ const MapContainer = ({
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
-    
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
     let isMine = false;
     const currentUser = authUserRef.current;
     if (currentUser) {
       const userId = post.user_id || (post.user && post.user.id);
-      if (String(userId) === String(currentUser.id)) {
-        isMine = true;
-      }
+      if (String(userId) === String(currentUser.id)) isMine = true;
     }
                    
     const hasVideo = !!post.videoUrl || !!post.youtubeUrl;
@@ -986,6 +952,9 @@ const MapContainer = ({
 
   getMarkerInnerHtmlRef.current = getMarkerInnerHtml;
 
+  // CSS 애니메이션 duration을 변수로 전달
+  const circleCircumference = 2 * Math.PI * 13; // r=13
+
   return (
     <div
       className="w-full h-full relative select-none touch-none"
@@ -1007,45 +976,86 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 롱프레스 진행 표시 */}
-      {longPressProgress > 0 && !markersHidden && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
-          <div className="bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-xl">
-            <div className="relative w-8 h-8">
-              <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
-                <circle
-                  cx="16" cy="16" r="13"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.2)"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="16" cy="16" r="13"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 13}`}
-                  strokeDashoffset={`${2 * Math.PI * 13 * (1 - longPressProgress / 100)}`}
-                  style={{ transition: 'stroke-dashoffset 0.05s linear' }}
-                />
-              </svg>
-            </div>
-            <span className="text-white text-xs font-semibold tracking-wide">마커 숨기기</span>
-          </div>
+      {/* 롱프레스 진행 표시 - CSS 애니메이션으로 부드럽게 */}
+      {uiState === 'pressing' && (
+        <div
+          className="longpress-toast"
+          style={{
+            position: 'fixed',
+            bottom: '96px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: '20px',
+            padding: '10px 18px',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {/* CSS 애니메이션 원형 진행 바 */}
+          <svg
+            width="32" height="32"
+            viewBox="0 0 32 32"
+            style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}
+          >
+            {/* 배경 트랙 */}
+            <circle cx="16" cy="16" r="13" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+            {/* 진행 원 - CSS 애니메이션으로 strokeDashoffset 변화 */}
+            <circle
+              cx="16" cy="16" r="13"
+              fill="none"
+              stroke="white"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={circleCircumference}
+              strokeDashoffset={circleCircumference}
+              style={{
+                animation: `longpress-circle ${LONG_PRESS_DURATION}ms linear forwards`,
+              }}
+            />
+          </svg>
+          <span style={{ color: 'white', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            마커 숨기기
+          </span>
         </div>
       )}
 
       {/* 마커 숨김 상태 안내 */}
-      {markersHidden && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div
-            className="bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xl"
-            style={{ animation: 'fadeInUp 0.3s ease forwards' }}
-          >
-            <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
-            <span className="text-white text-xs font-semibold tracking-wide">손을 떼면 마커가 다시 나타납니다</span>
-          </div>
+      {uiState === 'hidden' && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '96px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: '20px',
+            padding: '10px 18px',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+            animation: 'longpress-toast-in 0.25s ease forwards',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <div style={{
+            width: '8px', height: '8px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.8)',
+            animation: 'longpress-dot-pulse 1.2s ease-in-out infinite',
+          }} />
+          <span style={{ color: 'white', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            손을 떼면 마커가 다시 나타납니다
+          </span>
         </div>
       )}
 
