@@ -226,9 +226,9 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const center = mapData.center;
 
-    // [Optimized] bounds 변화량이 매우 작으면 fetch 스킵 (부동소수점 노이즈 방어)
-    // 좌표를 소수점 4자리(약 11m)로 반올림해서 키 생성
-    const boundsKey = `${sw.lat.toFixed(4)}|${sw.lng.toFixed(4)}|${ne.lat.toFixed(4)}|${ne.lng.toFixed(4)}|${currentZoom}`;
+    // [Optimized] bounds 변화량이 작으면 fetch 스킵
+    // 소수점 2자리(약 1.1km) 단위로 반올림 → 지도를 조금 움직여도 fetch 안 함
+    const boundsKey = `${sw.lat.toFixed(2)}|${sw.lng.toFixed(2)}|${ne.lat.toFixed(2)}|${ne.lng.toFixed(2)}|${currentZoom}`;
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
@@ -393,7 +393,7 @@ const Index = () => {
       mapCache.lastCenter = data.center;
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 800);
+    }, 1500);
   }, [isSelectingLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
