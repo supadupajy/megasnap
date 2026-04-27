@@ -984,16 +984,14 @@ const MapContainer = ({
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
     // AD 마커 전용: style 태그를 HTML 안에 직접 삽입 (카카오맵 오버레이는 외부 CSS 미적용)
-    // ※ 회전은 테두리 레이어(_ad_ring)만 돌고, 이미지 박스(_ad_img_box)는 고정
+    // ※ 반짝이 궤도만 돌고, 테두리·이미지·배경은 모두 고정
     const adStyleTag = isAd ? `<style>
-      @keyframes _ad_ring_spin { to { transform: rotate(360deg); } }
       @keyframes _ad_orbit_1 { 0%{transform:rotate(0deg) translateX(36px) rotate(0deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(360deg) translateX(36px) rotate(-360deg);opacity:1} }
       @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
       @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
       @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
       @keyframes _ad_label_slide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
       @keyframes _ad_glow_pulse { 0%,100%{box-shadow:0 0 12px 3px rgba(251,191,36,.8),0 0 28px 6px rgba(139,92,246,.4)} 50%{box-shadow:0 0 20px 6px rgba(251,191,36,1),0 0 40px 10px rgba(139,92,246,.6)} }
-      ._ad_ring { animation: _ad_ring_spin 2.5s linear infinite; }
       ._ad_s1 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24; animation:_ad_orbit_1 3s linear infinite; }
       ._ad_s2 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899; animation:_ad_orbit_2 3s linear infinite; }
       ._ad_s3 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa; animation:_ad_orbit_3 3s linear infinite; }
@@ -1002,12 +1000,11 @@ const MapContainer = ({
       ._ad_img_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
     </style>` : '';
 
-    // AD 라벨: labelHtml과 완전히 동일한 padding/line-height, 텍스트만 다름
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.08em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.3);line-height:1.2;">✦ AD ✦</div>` : '';
+    // AD 라벨: MY/HOT labelHtml과 padding·font-size·line-height·margin-bottom 완전 동일
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">✦ AD ✦</div>` : '';
 
-    // AD 테두리: 회전하는 링은 absolute로 분리 → 이미지 박스는 회전 안 함
-    const adWrapOpen = isAd ? `<div style="position:relative;width:60px;height:60px;z-index:2;">
-      <div class="_ad_ring" style="position:absolute;inset:-3px;border-radius:23px;background:conic-gradient(#fbbf24 0deg,#ef4444 60deg,#ec4899 120deg,#8b5cf6 180deg,#3b82f6 240deg,#06b6d4 300deg,#fbbf24 360deg);z-index:0;"></div>` : '';
+    // AD 테두리: 정적 무지개 그라데이션 테두리 (회전 없음), 이미지 박스는 내부에 고정
+    const adWrapOpen = isAd ? `<div style="position:relative;width:60px;height:60px;z-index:2;border-radius:20px;background:linear-gradient(135deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#06b6d4);padding:3px;box-sizing:border-box;">` : '';
     const adWrapClose = isAd ? `</div>` : '';
 
     const adSparklesHtml = isAd ? `
@@ -1018,7 +1015,7 @@ const MapContainer = ({
     ` : '';
 
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:1;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:100%;height:100%;border-radius:17px;position:relative;z-index:1;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
