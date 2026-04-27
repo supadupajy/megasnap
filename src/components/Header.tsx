@@ -1,135 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, MessageSquare, ChevronLeft } from 'lucide-react';
+import React from 'react';
+import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/components/AuthProvider';
-
-// 사운드 파일 경로 (더 명확하고 호환성 높은 MP3 파일로 교체)
-const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+import { useNotifications } from '@/components/NotificationProvider';
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  
-  // Realtime 채널을 useRef로 관리하여 중복 생성을 방지합니다.
-  const channelsRef = useRef<{ messages: any; notifications: any }>({ messages: null, notifications: null });
+  const { unreadMessages, unreadNotifs } = useNotifications();
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!user) return;
-    // [Fixed] count: 'planned'는 부정확(0개여도 1 반환). select+limit으로 정확하게 카운트.
-    // 인덱스 (receiver_id, is_read)로 빠르게 조회됨.
-    const { data, error } = await supabase
-      .from('messages')
-      .select('id')
-      .eq('receiver_id', user.id)
-      .eq('is_read', false)
-      .limit(100);
-
-    if (!error) {
-      setUnreadCount(data?.length || 0);
-    }
-  }, [user]);
-
-  const fetchUnreadNotifCount = useCallback(async () => {
-    if (!user) return;
-    // [Fixed] count: 'planned'는 부정확. select+limit 방식으로 정확하게 카운트.
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_read', false)
-      .limit(100);
-
-    if (!error) {
-      setUnreadNotifCount(data?.length || 0);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-
-    fetchUnreadCount();
-    fetchUnreadNotifCount();
-
-    const messagesChannelName = `header-messages-${user.id}`;
-    const notificationsChannelName = `header-notifications-${user.id}`;
-
-    // 이전에 생성된 채널이 있다면 제거하여 충돌 방지
-    const existingChannels = supabase.getChannels();
-    const mOld = existingChannels.find(c => c.topic === `realtime:${messagesChannelName}`);
-    const nOld = existingChannels.find(c => c.topic === `realtime:${notificationsChannelName}`);
-    if (mOld) supabase.removeChannel(mOld);
-    if (nOld) supabase.removeChannel(nOld);
-
-    const mChannel = supabase.channel(messagesChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-          // Messages.tsx가 중복 채널 없이 대화 목록을 갱신할 수 있도록 이벤트 발생
-          window.dispatchEvent(new CustomEvent('refresh-messages-list'));
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `sender_id=eq.${user.id}`
-        },
-        () => fetchUnreadCount()
-      );
-
-    const nChannel = supabase.channel(notificationsChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => fetchUnreadNotifCount()
-      );
-
-    mChannel.subscribe();
-    nChannel.subscribe();
-
-    const handleRefresh = () => {
-      fetchUnreadCount();
-      fetchUnreadNotifCount();
-    };
-    window.addEventListener('refresh-unread-counts', handleRefresh);
-
-    return () => {
-      mChannel.unsubscribe();
-      nChannel.unsubscribe();
-      supabase.removeChannel(mChannel);
-      supabase.removeChannel(nChannel);
-      window.removeEventListener('refresh-unread-counts', handleRefresh);
-    };
-  }, [user?.id, fetchUnreadCount, fetchUnreadNotifCount]);
-
-  // ✅ [FIX] 메인 지도 화면('/')에서 '위치 선택' 중일 때만 헤더를 숨깁니다.
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
   if (isHiddenPage) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white border-b border-gray-100">
-      {/* 안드로이드 상단 상태바 여백 - Index와의 간격을 위해 높이를 최소화하거나 Index에서 조절 */}
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
@@ -137,9 +23,7 @@ const Header = () => {
           className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
           onClick={() => navigate('/')}
         >
-          <h1 
-            className="text-2xl font-black tracking-tighter italic shrink-0"
-          >
+          <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
             <span className="text-gray-900">Chora</span>
             <span className="text-indigo-600">Snap</span>
           </h1>
@@ -153,9 +37,9 @@ const Header = () => {
             onClick={() => navigate('/notifications')}
           >
             <Bell className="w-6 h-6 text-gray-600" />
-            {unreadNotifCount > 0 && (
+            {unreadNotifs > 0 && (
               <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
-                {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                {unreadNotifs > 99 ? '99+' : unreadNotifs}
               </span>
             )}
           </button>
@@ -164,9 +48,9 @@ const Header = () => {
             onClick={() => navigate('/messages')}
           >
             <MessageSquare className="w-6 h-6 text-gray-600" />
-            {unreadCount > 0 && (
+            {unreadMessages > 0 && (
               <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
+                {unreadMessages > 99 ? '99+' : unreadMessages}
               </span>
             )}
           </button>
