@@ -912,7 +912,7 @@ const MapContainer = ({
     const isPopular = borderType === 'popular';
     let animationClass = '';
     if (isAd) animationClass = 'animate-ad-breathing';
-    else if (isInfluencer || isPopular) animationClass = 'animate-marker-float';
+    else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
     const isSpecialPost = isMine || isAd || borderType !== 'none';
     const shineClass = isSpecialPost ? 'shine-overlay' : '';
