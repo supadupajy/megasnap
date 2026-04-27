@@ -984,28 +984,31 @@ const MapContainer = ({
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
     // AD 마커 전용: style 태그를 HTML 안에 직접 삽입 (카카오맵 오버레이는 외부 CSS 미적용)
+    // ※ 회전은 테두리 레이어(_ad_ring)만 돌고, 이미지 박스(_ad_img_box)는 고정
     const adStyleTag = isAd ? `<style>
-      @keyframes _ad_spin { to { transform: rotate(360deg); } }
+      @keyframes _ad_ring_spin { to { transform: rotate(360deg); } }
       @keyframes _ad_orbit_1 { 0%{transform:rotate(0deg) translateX(36px) rotate(0deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(360deg) translateX(36px) rotate(-360deg);opacity:1} }
       @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
       @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
       @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
       @keyframes _ad_label_slide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
       @keyframes _ad_glow_pulse { 0%,100%{box-shadow:0 0 12px 3px rgba(251,191,36,.8),0 0 28px 6px rgba(139,92,246,.4)} 50%{box-shadow:0 0 20px 6px rgba(251,191,36,1),0 0 40px 10px rgba(139,92,246,.6)} }
-      ._ad_border_wrap { animation: _ad_spin 2.5s linear infinite; }
+      ._ad_ring { animation: _ad_ring_spin 2.5s linear infinite; }
       ._ad_s1 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24; animation:_ad_orbit_1 3s linear infinite; }
       ._ad_s2 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899; animation:_ad_orbit_2 3s linear infinite; }
       ._ad_s3 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa; animation:_ad_orbit_3 3s linear infinite; }
       ._ad_s4 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa; animation:_ad_orbit_4 3s linear infinite; }
       ._ad_label { animation:_ad_label_slide 2s linear infinite; background-size:200% 100% !important; }
-      ._ad_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
+      ._ad_img_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
     </style>` : '';
 
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;margin-bottom:-16px;position:relative;z-index:3;overflow:hidden;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);line-height:1.2;"><span style="position:relative;z-index:1;font-size:9px;font-weight:900;color:white;letter-spacing:.1em;text-shadow:0 1px 3px rgba(0,0,0,.6);">✦ AD ✦</span></div>` : '';
+    // AD 라벨: labelHtml과 완전히 동일한 padding/line-height, 텍스트만 다름
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.08em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.3);line-height:1.2;">✦ AD ✦</div>` : '';
 
-    // AD 테두리: 회전하는 conic-gradient 래퍼 (padding으로 테두리 효과)
-    const adBorderOpen = isAd ? `<div class="_ad_border_wrap" style="width:66px;height:66px;border-radius:22px;background:conic-gradient(#fbbf24 0deg,#ef4444 60deg,#ec4899 120deg,#8b5cf6 180deg,#3b82f6 240deg,#06b6d4 300deg,#fbbf24 360deg);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">` : '';
-    const adBorderClose = isAd ? `</div>` : '';
+    // AD 테두리: 회전하는 링은 absolute로 분리 → 이미지 박스는 회전 안 함
+    const adWrapOpen = isAd ? `<div style="position:relative;width:60px;height:60px;z-index:2;">
+      <div class="_ad_ring" style="position:absolute;inset:-3px;border-radius:23px;background:conic-gradient(#fbbf24 0deg,#ef4444 60deg,#ec4899 120deg,#8b5cf6 180deg,#3b82f6 240deg,#06b6d4 300deg,#fbbf24 360deg);z-index:0;"></div>` : '';
+    const adWrapClose = isAd ? `</div>` : '';
 
     const adSparklesHtml = isAd ? `
       <span class="_ad_s1">✦</span>
@@ -1015,19 +1018,19 @@ const MapContainer = ({
     ` : '';
 
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:1;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
-      <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:${isAd ? '66' : '60'}px;position:relative;">
+      <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adSparklesHtml : ''}
         ${isAd ? adLabelHtml : labelHtml}
-        ${adBorderOpen}
-        <div class="${influencerClass} ${isAd ? '_ad_box' : ''}" style="${innerBoxStyle}">
+        ${adWrapOpen}
+        <div class="${influencerClass} ${isAd ? '_ad_img_box' : ''}" style="${innerBoxStyle}">
           <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '18px' : '16px'};" class="${shineClass}">
-            ${isVideo && post.videoUrl ? 
-              `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` : 
+            ${isVideo && post.videoUrl ?
+              `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` :
               `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
             }
             <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
@@ -1036,7 +1039,7 @@ const MapContainer = ({
             ${videoIconHtml}
           </div>
         </div>
-        ${adBorderClose}
+        ${adWrapClose}
       </div>
     </div>`;
   };
