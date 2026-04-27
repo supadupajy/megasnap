@@ -112,14 +112,11 @@ const MapContainer = ({
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
+        // markers-revealing은 제거하지 않음 → 클래스가 남아있어도 opacity:1 !important 유지
+        // 깜빡임 원인: transitionend 후 클래스 제거 시 브라우저 재계산 순간 flicker 발생
+        // 해결: revealing 클래스를 영구적으로 유지하고, 다음 숨김 시 hideAllMarkersDom에서 제거
         content.classList.remove('markers-hidden');
         content.classList.add('markers-revealing');
-        // 트랜지션 끝나면 revealing 클래스 제거 (정상 상태로 복귀)
-        const onEnd = () => {
-          content.classList.remove('markers-revealing');
-          content.removeEventListener('transitionend', onEnd);
-        };
-        content.addEventListener('transitionend', onEnd);
       }
     });
     if (searchOverlayRef.current) {
@@ -159,20 +156,25 @@ const MapContainer = ({
   }, [hideAllMarkersDom]);
 
   // ── 손 뗄 때 ──────────────────────────────────────────────────────────
+  const revealMarkersOnce = useCallback(() => {
+    // 이미 복원됐거나 복원 예약 중이면 중복 실행 방지
+    if (!markersHiddenRef.current) return;
+    if (revealTimerRef.current) return;
+    revealTimerRef.current = setTimeout(() => {
+      revealTimerRef.current = null;
+      markersHiddenRef.current = false;
+      showAllMarkersDom();
+      setUiState('idle');
+    }, 60);
+  }, [showAllMarkersDom]);
+
   const handlePointerUp = useCallback(() => {
     if (isLongPressingRef.current) {
       cancelLongPress();
       return;
     }
-    if (markersHiddenRef.current) {
-      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = setTimeout(() => {
-        markersHiddenRef.current = false;
-        showAllMarkersDom();
-        setUiState('idle');
-      }, 60);
-    }
-  }, [cancelLongPress, showAllMarkersDom]);
+    revealMarkersOnce();
+  }, [cancelLongPress, revealMarkersOnce]);
 
   // ── 터치/마우스 이벤트 등록 ──────────────────────────────────────────
   useEffect(() => {
@@ -242,22 +244,13 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    const handleDragEnd = () => {
-      if (markersHiddenRef.current) {
-        if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
-        revealTimerRef.current = setTimeout(() => {
-          markersHiddenRef.current = false;
-          showAllMarkersDom();
-          setUiState('idle');
-        }, 60);
-      }
-    };
+    const handleDragEnd = () => { revealMarkersOnce(); };
 
     kakao.maps.event.addListener(mapInstance.current, 'dragend', handleDragEnd);
     return () => {
       kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
     };
-  }, [isMapReady, showAllMarkersDom]);
+  }, [isMapReady, revealMarkersOnce]);
 
   // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
