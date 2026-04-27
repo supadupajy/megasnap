@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Settings, 
   Grid, 
-  Map as MapIcon, 
   ChevronLeft, 
   User as UserIcon, 
   Loader2,
@@ -14,12 +12,12 @@ import {
   UserPlus,
   MessageCircle
 } from 'lucide-react';
-import { Post, User } from '@/types';
-import { cn, getYoutubeThumbnail, getFallbackImage } from '@/lib/utils';
+import { Post } from '@/types';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
@@ -36,8 +34,10 @@ const UserProfile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const mapDbToPost = async (
     p: any,
@@ -85,9 +85,18 @@ const UserProfile = () => {
     };
   };
 
-  const toggleFollow = () => {
-    setIsFollowing(!isFollowing);
-    showSuccess(isFollowing ? '팔로우를 취소했습니다.' : '팔로우를 시작했습니다.');
+  const toggleFollow = async () => {
+    if (!authUser?.id || !profileUserId) return;
+    const next = !isFollowing;
+    setIsFollowing(next);
+    setFollowerCount(prev => next ? prev + 1 : prev - 1);
+    if (next) {
+      await supabase.from('follows').insert({ follower_id: authUser.id, following_id: profileUserId });
+      showSuccess('팔로우를 시작했습니다.');
+    } else {
+      await supabase.from('follows').delete().eq('follower_id', authUser.id).eq('following_id', profileUserId);
+      showSuccess('팔로우를 취소했습니다.');
+    }
   };
 
   const handleLikeToggle = (postId: string) => {
@@ -107,8 +116,18 @@ const UserProfile = () => {
     });
   };
 
-  const handleLocationClick = (e: React.MouseEvent, lat: number, lng: number) => {
-    navigate('/', { state: { center: { lat, lng } } });
+  const handleGridItemClick = (postId: string) => {
+    setViewMode('list');
+    setTimeout(() => {
+      const element = document.getElementById(`post-${postId}`);
+      const container = scrollRef.current;
+      if (element && container) {
+        const containerTop = container.getBoundingClientRect().top;
+        const elementTop = element.getBoundingClientRect().top;
+        const offset = elementTop - containerTop + container.scrollTop - 120;
+        container.scrollTo({ top: offset, behavior: 'smooth' });
+      }
+    }, 150);
   };
 
   useEffect(() => {
@@ -117,21 +136,15 @@ const UserProfile = () => {
       try {
         setLoading(true);
         
-        // Profiles 테이블에서 조회 (필요한 컬럼만)
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url, bio, last_seen')
           .eq('id', profileUserId)
           .single();
         
-        if (error) {
-          console.error('Profile fetch error:', error);
-          throw error;
-        }
-        
+        if (error) throw error;
         setUserProfile(data);
         
-        // [Optimized] 포스트 조회 — select('*') → 명시적 컬럼 + limit
         const { data: posts, error: postsError } = await supabase
           .from('posts')
           .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
@@ -141,7 +154,6 @@ const UserProfile = () => {
         
         if (postsError) throw postsError;
         
-        // [Optimized] N+1 제거: likes/saved_posts를 .in()으로 일괄 조회
         const postIds = (posts || []).map(p => p.id);
         let likedSet = new Set<string>();
         let savedSet = new Set<string>();
@@ -157,8 +169,6 @@ const UserProfile = () => {
         const mappedPosts = await Promise.all((posts || []).map(p => mapDbToPost(p, likedSet, savedSet)));
         setUserPosts(mappedPosts);
         
-        // 팔로워/팔로잉 수 조회 (follows 테이블 기준)
-        // [Fixed] count: 'planned'는 부정확. 'exact'로 정확한 값 보장 (인덱스 있음)
         const [followersResult, followingResult] = await Promise.all([
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', profileUserId),
           supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profileUserId)
@@ -167,7 +177,6 @@ const UserProfile = () => {
         setFollowerCount(followersResult.count || 0);
         setFollowingCount(followingResult.count || 0);
         
-        // 현재 내가 팔로우 중인지 확인
         if (authUser?.id) {
           const { data: followCheck } = await supabase
             .from('follows')
@@ -206,39 +215,59 @@ const UserProfile = () => {
     );
   }
 
+  const nickname = userProfile?.nickname || '탐험가';
+
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-16">
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필</h2>
-          </div>
+    <div className="h-screen bg-white flex flex-col">
+      {/* 상단 고정 헤더 */}
+      <div
+        className="fixed left-0 right-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 h-14"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+      >
+        <button
+          onClick={() => navigate(-1)}
+          className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">{nickname}</h2>
         </div>
-        
+        {viewMode === 'list' && (
+          <button
+            onClick={() => setViewMode('grid')}
+            className="ml-auto w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <Grid className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* 스크롤 영역 */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 78px)' }}
+      >
+        {/* 프로필 정보 */}
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
               <img src={userProfile?.avatar_url || FALLBACK_IMAGE} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-black text-gray-900 mb-1">{userProfile?.nickname || '탐험가'}</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-1">{nickname}</h2>
               <p className="text-sm text-gray-500 mb-4">{userProfile?.bio || "지도를 여행하는 탐험가 📍"}</p>
               <div className="flex gap-4">
                 <div className="text-center">
                   <p className="font-bold text-gray-900">{userPosts.length}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${profileUserId}`, { state: { tab: 'followers' } })}>
                   <p className="font-bold text-gray-900">{followerCount}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                 </div>
-                <div className="text-center">
+                <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${profileUserId}`, { state: { tab: 'following' } })}>
                   <p className="font-bold text-gray-900">{followingCount}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                 </div>
@@ -255,31 +284,72 @@ const UserProfile = () => {
             </Button>
           </div>
 
+          {/* 탭 */}
           <div className="flex border-b border-gray-100 mb-4">
-            <div className="flex-1 py-3 flex justify-center border-b-2 border-indigo-600 text-indigo-600">
-              <Grid className="w-6 h-6" />
-            </div>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'grid' ? "border-b-2 border-indigo-600" : "text-gray-300")}
+            >
+              <Grid className={cn("w-6 h-6", viewMode === 'grid' ? "text-indigo-600" : "")} />
+            </button>
           </div>
+        </div>
 
-          <div className="flex flex-col -mx-6">
+        {/* 포스트 목록 */}
+        <div className="flex flex-col -mx-0">
+          {viewMode === 'grid' ? (
             <div className="grid grid-cols-3 gap-1 px-6">
               {userPosts.map((post) => (
-                <div 
-                  key={post.id} 
+                <div
+                  key={post.id}
                   className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
-                  onClick={() => navigate(`/post/${post.id}`)}
+                  onClick={() => handleGridItemClick(post.id)}
                 >
-                  <img 
-                    src={post.image_url || post.image} 
-                    alt="" 
-                    className="w-full h-full object-cover hover:opacity-80 transition-opacity" 
-                    onError={() => {}} 
+                  {post.videoUrl ? (
+                    <video
+                      src={`${post.videoUrl}#t=0.5`}
+                      className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={post.image_url || post.image}
+                      alt=""
+                      className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                    />
+                  )}
+                  {(post.videoUrl || post.youtubeUrl) && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
+                    </div>
+                  )}
+                  {/* 다중 이미지 표시 */}
+                  {Array.isArray(post.images) && post.images.length > 1 && (
+                    <div className="absolute top-2 right-2 z-10 bg-black/50 rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className="text-white text-[9px] font-bold">{post.images.length}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {userPosts.length === 0 && (
+                <div className="col-span-3 py-20 text-center text-gray-400 font-medium">게시물이 없습니다.</div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {userPosts.map((post) => (
+                <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+                  <PostItem
+                    post={post}
+                    disablePulse={true}
+                    onLikeToggle={() => handleLikeToggle(post.id)}
+                    onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng } } })}
                   />
                 </div>
               ))}
-              {userPosts.length === 0 && <p className="text-center py-10 text-gray-400">게시물이 없습니다.</p>}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
