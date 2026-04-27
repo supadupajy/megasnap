@@ -105,8 +105,6 @@ const MapContainer = ({
     }
   }, [level]);
 
-  // REMOVED: level prop 기반 useEffect (아래 zoom_changed 직접 처리로 대체)
-
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
@@ -554,6 +552,9 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
 
+    // 레벨 7 이상이면 마커를 생성하지 않음 (zoom_changed에서 이미 제거됨)
+    if (mapInstance.current && mapInstance.current.getLevel() >= 7) return;
+
     const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
     const propPostIds = new Set(posts.map(p => p.id));
 
@@ -565,12 +566,14 @@ const MapContainer = ({
           content.classList.add('marker-disappear-animation');
           content.style.pointerEvents = 'none';
           
-          setTimeout(() => {
+          const removalTimer = window.setTimeout(() => {
+            removalTimeoutsRef.current.delete(id);
             if (!propPostIds.has(id) && overlaysRef.current.has(id)) {
               overlay.setMap(null);
               overlaysRef.current.delete(id);
             }
           }, 450);
+          removalTimeoutsRef.current.set(id, removalTimer);
         } else if (!content) {
           overlay.setMap(null);
           overlaysRef.current.delete(id);
@@ -748,11 +751,15 @@ const MapContainer = ({
       const level = map.getLevel();
 
       // 레벨 7 이상이면 React 렌더 사이클을 기다리지 않고 즉시 모든 마커 제거
+      // disappear 애니메이션 없이 즉시 제거해야 깜빡임이 없음
       if (level >= 7) {
         overlaysRef.current.forEach((overlay) => {
           overlay.setMap(null);
         });
         overlaysRef.current.clear();
+        // 진행 중인 removalTimeout도 모두 취소
+        removalTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+        removalTimeoutsRef.current.clear();
       }
 
       if (level < MIN_LEVEL) {
