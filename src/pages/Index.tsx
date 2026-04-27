@@ -528,8 +528,19 @@ const Index = () => {
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setIsTrendingExpanded(false);
-    focusPostOnMap(post);
-    // 중복 dispatch 제거 - focusPostOnMap 내부에서 이미 처리
+
+    // 트렌딩 포스트가 allPosts에 없으면 먼저 추가 (bounds 밖 포스트도 마커로 표시되도록)
+    setAllPosts(prev => {
+      if (prev.some(p => p.id === post.id)) return prev;
+      const combined = [post, ...prev];
+      mapCache.posts = combined;
+      return combined;
+    });
+
+    // TrendingPosts 패널 닫힘 애니메이션(500ms) 완료 후 지도 이동
+    setTimeout(() => {
+      focusPostOnMap(post, { lat: post.lat, lng: post.lng });
+    }, 550);
   }, [focusPostOnMap]);
 
   return (
