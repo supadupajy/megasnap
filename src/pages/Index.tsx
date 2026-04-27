@@ -781,9 +781,10 @@ const Index = () => {
           >
             <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}>
               <div className="w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                
               </div>
-             </div>
+              <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러 닫기</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
