@@ -119,23 +119,11 @@ const Messages = () => {
     };
     window.addEventListener('refresh-messages-list', handleRefreshEvent);
 
-    // 메시지 실시간 업데이트 - 내가 관련된 메시지만 구독
-    // [Fixed] 채널 이름에 user.id 포함 — 사용자별 격리로 좀비 채널 충돌 방지
-    const channel = supabase.channel(`messages_list_updates_${authUser.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${authUser.id}`
-        },
-        () => {
-          // 새 메시지 수신 시에만 재fetch (UPDATE/DELETE 제외)
-          fetchConversations();
-        }
-      )
-      .subscribe();
+    // [Fixed] Header.tsx가 이미 messages INSERT를 구독 중 → 중복 채널 제거
+    // Header의 구독이 fetchUnreadCount를 호출하고, 그 시점에 'refresh-messages-list' 이벤트를 발생시키는 방식으로 연동
+    // 대신 'refresh-messages-list' 커스텀 이벤트로 대화 목록 갱신
+    const handleNewMessage = () => fetchConversations();
+    window.addEventListener('refresh-messages-list', handleNewMessage);
 
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
@@ -167,10 +155,10 @@ const Messages = () => {
     const onlineStatusInterval = setInterval(pollOnlineStatus, 60_000);
 
     return () => {
-      supabase.removeChannel(channel);
       clearInterval(onlineStatusInterval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('refresh-messages-list', handleRefreshEvent);
+      window.removeEventListener('refresh-messages-list', handleNewMessage);
       unsubscribeChatStore();
     };
   }, [authUser]);

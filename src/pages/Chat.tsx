@@ -216,9 +216,11 @@ const Chat = () => {
       setTimeout(scrollToBottom, 100);
     };
     fetchMessages();
-    const channel = supabase.channel(`chat-room-${chatId}-${authUser.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+    // [Fixed] filter 없이 messages 전체 구독 → receiver_id 필터로 범위 축소
+    // 내가 받는 메시지만 구독 (내가 보내는 건 로컬 상태로 즉시 반영)
+    const channel = supabase.channel(`chat-room-${chatId}-${authUser.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, (payload) => {
       const newMsg = payload.new as Message;
-      if (!((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId))) return;
+      if (!(newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id)) return;
       // ref로 최신 visibility 값을 참조 (의존성에서 isPageVisible 제외하기 위함)
       if (newMsg.sender_id === chatId) { playNotificationSound(isPageVisibleRef.current); markAsRead(); }
       setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));

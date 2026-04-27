@@ -111,49 +111,47 @@ const Notifications = () => {
     // 초기 데이터 로딩
     fetchNotifications();
 
-    // Realtime 구독 설정
-    // [Fixed] 채널 이름에서 Date.now() 제거 — 매번 다른 이름이면 서버 측에서
-    // 이전 채널 cleanup 전에 새 채널이 join돼 좀비 채널이 누적될 수 있음.
+    // [Fixed] fetchNotifications를 의존성에서 제거 → 무한 루프 차단
+    // 새 알림은 Realtime으로 로컬 상태에 직접 추가 (re-fetch 불필요)
     const channelName = `realtime_notifs_page_${authUser.id}`;
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${authUser.id}` 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${authUser.id}`
       }, async (payload) => {
-        // 새 알림이 들어오면 목록에 추가 (무한 루프 방지)
         const { data: actorProfile } = await supabase
           .from('profiles')
           .select('nickname, avatar_url')
           .eq('id', payload.new.actor_id)
           .single();
         
-        const newNotif = { 
-          ...payload.new, 
-          actor: actorProfile || { nickname: '알 수 없는 사용자', avatar_url: null } 
+        const newNotif = {
+          ...payload.new,
+          actor: actorProfile || { nickname: '알 수 없는 사용자', avatar_url: null }
         } as Notification;
         
         setNotifications(prev => [newNotif, ...prev]);
       })
-      .on('postgres_changes', { 
-        event: 'UPDATE', // 읽음 처리 시 뱃지 업데이트를 위해 Header.tsx에서 구독 중이므로, 여기서는 무시
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${authUser.id}` 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${authUser.id}`
       }, (payload) => {
-        // 읽음 상태가 변경되면 로컬 상태만 업데이트
-        setNotifications(prev => prev.map(notif => 
+        setNotifications(prev => prev.map(notif =>
           notif.id === payload.new.id ? { ...notif, is_read: payload.new.is_read } : notif
         ));
       })
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(channel); 
+    return () => {
+      supabase.removeChannel(channel);
     };
-  }, [authUser, fetchNotifications]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
 
   const deleteNotification = async (id: string) => {
     try {

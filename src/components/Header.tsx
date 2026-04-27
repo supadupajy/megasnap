@@ -76,7 +76,11 @@ const Header = () => {
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`
         },
-        () => fetchUnreadCount()
+        () => {
+          fetchUnreadCount();
+          // Messages.tsx가 중복 채널 없이 대화 목록을 갱신할 수 있도록 이벤트 발생
+          window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+        }
       )
       .on(
         'postgres_changes',
