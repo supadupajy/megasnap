@@ -145,6 +145,7 @@ const Index = () => {
       const v = Math.abs(h % 1000) / 1000;
       if (v < 0.03) borderType = 'diamond';
       else if (v < 0.08) borderType = 'gold';
+      else if (v < 0.15) borderType = 'silver';
     }
     // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
@@ -168,7 +169,7 @@ const Index = () => {
       user_id: p.user_id || prev?.user_id || '',
       isAd,
       isGif: false,
-      isInfluencer: ['gold', 'diamond'].includes(borderType),
+      isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
       user: { id: p.user_id || prev?.user?.id || '', name: userName, avatar: userAvatar },
       content: content.replace(/^\[AD\]\s*/, ''),
       location: p.location_name ?? prev?.location ?? '알 수 없는 장소',
@@ -279,7 +280,7 @@ const Index = () => {
       if (selectedCategories.includes('all')) return true;
 
       const isHot = post.borderType === 'popular' || post.likes >= 9000;
-      const isInfluencer = post.isInfluencer || ['gold', 'diamond'].includes(post.borderType || '');
+      const isInfluencer = post.isInfluencer || ['silver', 'gold', 'diamond'].includes(post.borderType || '');
       return selectedCategories.includes(post.category || 'none') ||
         (selectedCategories.includes('hot') && isHot) ||
         (selectedCategories.includes('influencer') && isInfluencer) ||
@@ -313,6 +314,7 @@ const Index = () => {
     const priority = (p: Post) => {
       if (p.borderType === 'diamond') return 5;
       if (p.borderType === 'gold') return 4;
+      if (p.borderType === 'silver') return 3;
       if (p.borderType === 'popular') return 3;
       if (p.isAd) return 2;
       return 1;

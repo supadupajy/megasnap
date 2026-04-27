@@ -25,10 +25,10 @@ const seededRandom = (seed: string) => {
 
 const getTierFromId = (id: string) => {
   const val = (stableHash(id) % 1000) / 1000;
-  if (val < 0.01) return 'diamond';
-  if (val < 0.03) return 'gold';
-  if (val < 0.07) return 'silver';
-  if (val < 0.15) return 'popular';
+  if (val < 0.03) return 'diamond';
+  if (val < 0.08) return 'gold';
+  if (val < 0.15) return 'silver';
+  if (val < 0.25) return 'popular';
   return 'none';
 };
 

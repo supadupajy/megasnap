@@ -295,7 +295,7 @@ const PostListOverlay = ({
           category: isAdPost ? 'food' : (p.category || 'none'),
           commentsCount: 0, comments: [],
           isLiked: false, isAd: isAdPost, isGif: false,
-          isInfluencer: borderType === 'gold' || borderType === 'diamond',
+          isInfluencer: borderType === 'silver' || borderType === 'gold' || borderType === 'diamond',
           borderType,
         };
       });

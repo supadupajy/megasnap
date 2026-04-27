@@ -36,6 +36,9 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
   } else if (borderType === 'gold') {
     borderColor = 'border-amber-400';
     borderThickness = 'border-2';
+  } else if (borderType === 'silver') {
+    borderColor = 'border-slate-400';
+    borderThickness = 'border-2';
   }
 
   return (
@@ -70,6 +73,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
               "w-2.5 h-2.5",
               borderType === 'popular' ? "text-rose-500 fill-rose-500" :
               borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
+              borderType === 'silver' ? "text-slate-400 fill-slate-400" :
               "text-amber-400 fill-amber-400"
             )} />
           </div>
