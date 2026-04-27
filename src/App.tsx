@@ -68,24 +68,25 @@ const AnimatedRoutes = () => {
   const isBackAction = (location.state as any)?.direction === 'back';
 
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
+  // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화
+  // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
   const [isPostListVisible, setIsPostListVisible] = useState(false);
 
   useEffect(() => {
-    const handleSync = () => {
-      const isOpen = typeof window !== 'undefined' && (window as any).__isPostListOpen === true;
-      setIsPostListVisible(isOpen);
-    };
-    
-    // 초기값 동기화
-    handleSync();
+    // 초기값 동기화 (다른 페이지에서 진입 시)
+    if (typeof window !== 'undefined') {
+      setIsPostListVisible((window as any).__isPostListOpen === true);
+    }
 
-    // 커스텀 이벤트나 상태 변경 감지를 위한 인터벌 (더 확실한 동기화)
-    const interval = setInterval(handleSync, 100);
-    window.addEventListener('close-post-list-overlay', () => setIsPostListVisible(false));
-    
+    const handleOpen = () => setIsPostListVisible(true);
+    const handleClose = () => setIsPostListVisible(false);
+
+    window.addEventListener('open-post-list-overlay', handleOpen);
+    window.addEventListener('close-post-list-overlay', handleClose);
+
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('close-post-list-overlay', () => setIsPostListVisible(false));
+      window.removeEventListener('open-post-list-overlay', handleOpen);
+      window.removeEventListener('close-post-list-overlay', handleClose);
     };
   }, []);
 

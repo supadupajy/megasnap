@@ -40,16 +40,30 @@ const Index = () => {
   const [showCssConfetti, setShowCssConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
+  // [Fix] 언마운트 시 confetti interval/timeout 정리용 ref (메모리 누수 방지)
+  const confettiIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const confettiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const triggerConfetti = useCallback(() => {
     try {
+      // 이전 confetti가 진행 중이면 정리 후 재시작
+      if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
+      if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+
       fireConfetti({ particleCount: 80, spread: 60, origin: { y: 0.65 }, zIndex: 999999, colors: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'], scalar: 1.0 });
       const duration = 1.2 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 25, spread: 360, ticks: 60, zIndex: 999999, scalar: 0.8 };
       const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-      const interval: any = setInterval(() => {
+      confettiIntervalRef.current = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
+        if (timeLeft <= 0) {
+          if (confettiIntervalRef.current) {
+            clearInterval(confettiIntervalRef.current);
+            confettiIntervalRef.current = null;
+          }
+          return;
+        }
         const particleCount = 20 * (timeLeft / duration);
         fireConfetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#4F46E5', '#F59E0B'] });
         fireConfetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#10B981', '#EF4444'] });
@@ -57,8 +71,19 @@ const Index = () => {
       const pieces = Array.from({ length: 25 }).map((_, i) => ({ id: i, left: `${Math.random() * 100}%`, delay: `${Math.random() * 1.5}s`, color: ['#4F46E5', '#F59E0B', '#10B981', '#EF4444', '#22d3ee'][Math.floor(Math.random() * 5)] }));
       setConfettiPieces(pieces);
       setShowCssConfetti(true);
-      setTimeout(() => setShowCssConfetti(false), 3000);
+      confettiTimeoutRef.current = setTimeout(() => {
+        setShowCssConfetti(false);
+        confettiTimeoutRef.current = null;
+      }, 3000);
     } catch (e) {}
+  }, []);
+
+  // 언마운트 시 진행 중이던 confetti interval/timeout 정리
+  useEffect(() => {
+    return () => {
+      if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
+      if (confettiTimeoutRef.current) clearTimeout(confettiTimeoutRef.current);
+    };
   }, []);
 
   // ── 핵심 상태 ──────────────────────────────────────────────

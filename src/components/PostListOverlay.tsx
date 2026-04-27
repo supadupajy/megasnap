@@ -360,10 +360,14 @@ const PostListOverlay = ({
     isDraggingListRef.current = false;
   };
 
-  // window 객체에 상태 기록
+  // window 객체에 상태 기록 + BottomNav 동기화 이벤트 발생
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).__isPostListOpen = isOpen;
+      // App.tsx의 BottomNav 표시 상태를 즉시 동기화 (setInterval 폴링 제거)
+      window.dispatchEvent(
+        new CustomEvent(isOpen ? 'open-post-list-overlay' : 'close-post-list-overlay')
+      );
     }
   }, [isOpen]);
 
