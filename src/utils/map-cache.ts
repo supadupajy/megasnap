@@ -7,5 +7,5 @@ export const mapCache = {
   posts: [] as Post[],
   populatedTiles: new Set<string>(),
   lastCenter: { lat: 37.5665, lng: 126.9780 } as { lat: number; lng: number },
-  lastZoom: 5
+  lastZoom: 6
 };
