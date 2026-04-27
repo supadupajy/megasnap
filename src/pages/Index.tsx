@@ -148,7 +148,7 @@ const Index = () => {
     }
     // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
-    const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || '';
+    const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || `https://i.pravatar.cc/150?u=${p.user_id}`;
     let img = p.image_url ?? prev?.image_url ?? '';
 
     // [AD 보정] 광고 포스트는 영상/유튜브 썸네일/빈 이미지를 모두 무시하고

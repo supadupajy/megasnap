@@ -42,38 +42,44 @@ const ObservedPostItem = ({
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
   useEffect(() => {
     const fetchFullData = async () => {
-      // ✅ [FIX] user.name이 '...'이거나 location이 없으면 데이터를 새로 불러옴
-      if (fullPost.user.name === '...' || !fullPost.location || fullPost.location === '알 수 없는 장소') {
-        try {
-          // [Optimized] select('*') → 필요한 컬럼만 + profiles JOIN을 동일 쿼리에서 처리 (round-trip 1회)
-          const { data: p, error } = await supabase
-            .from('posts')
-            .select('id, content, location_name, user_id, user_name, user_avatar, profiles:user_id(nickname, avatar_url)')
-            .eq('id', post.id)
-            .single();
+      // ✅ [FIX] user.name이 '...'이거나, avatar가 없거나, location이 없으면 데이터를 새로 불러옴
+      const needsFetch =
+        fullPost.user.name === '...' ||
+        !fullPost.user.avatar ||
+        !fullPost.location ||
+        fullPost.location === '알 수 없는 장소';
 
-          if (p && !error) {
-            const profile = (p as any).profiles;
-            const userName = profile?.nickname || p.user_name || '탐험가';
-            const userAvatar = profile?.avatar_url || p.user_avatar || '';
+      if (!needsFetch) return;
 
-            setFullPost(prev => ({
-              ...prev,
-              user: { ...prev.user, name: userName, avatar: userAvatar },
-              content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-              location: p.location_name || '알 수 없는 장소'
-            }));
-          }
-        } catch (err) {
-          console.error('[PostList] Full data fetch error:', err);
+      try {
+        // [Optimized] select('*') → 필요한 컬럼만 + profiles JOIN을 동일 쿼리에서 처리 (round-trip 1회)
+        const { data: p, error } = await supabase
+          .from('posts')
+          .select('id, content, location_name, user_id, user_name, user_avatar, profiles:user_id(nickname, avatar_url)')
+          .eq('id', post.id)
+          .single();
+
+        if (p && !error) {
+          const profile = (p as any).profiles;
+          const userName = profile?.nickname || p.user_name || '탐험가';
+          const userAvatar = profile?.avatar_url || p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}`;
+
+          setFullPost(prev => ({
+            ...prev,
+            user: { ...prev.user, name: userName, avatar: userAvatar },
+            content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+            location: p.location_name || '알 수 없는 장소'
+          }));
         }
+      } catch (err) {
+        console.error('[PostList] Full data fetch error:', err);
       }
     };
 
     if (isNearVisible || isCurrentlyVisible) {
       fetchFullData();
     }
-  }, [post.id, fullPost.user.name, isNearVisible, isCurrentlyVisible]);
+  }, [post.id, fullPost.user.name, fullPost.user.avatar, isNearVisible, isCurrentlyVisible]);
 
   useEffect(() => {
     // 1. 읽음 처리용 옵저버 (기존 로직 유지)
