@@ -24,7 +24,8 @@ const BROKEN_UNSPLASH_IDS = new Set([
   "photo-1501785888041-af3ef285b470",
 ]);
 
-const LONG_PRESS_DURATION = 3000; // 3초
+const LONG_PRESS_DURATION = 2000; // 2초
+const LONG_PRESS_MOVE_THRESHOLD = 10; // px 이상 움직이면 취소
 
 const MapContainer = ({ 
   posts, 
@@ -198,26 +199,33 @@ const MapContainer = ({
   }, [cancelLongPress]);
 
   // ── 터치/마우스 이벤트 등록 ──────────────────────────────
+  const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      // 마커 클릭이 아닌 지도 빈 공간 터치만 처리
       const target = e.target as HTMLElement;
       if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
       if (e.touches.length === 1) {
+        pressStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         startLongPress();
       }
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
+    const onTouchEnd = () => {
+      pressStartPosRef.current = null;
       handlePointerUp();
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      // 롱프레스 중 손가락 움직이면 취소 (단, 숨김 상태에서 드래그는 허용)
-      if (isLongPressingRef.current) {
+      if (!isLongPressingRef.current) return;
+      if (!pressStartPosRef.current) { cancelLongPress(); return; }
+      const dx = e.touches[0].clientX - pressStartPosRef.current.x;
+      const dy = e.touches[0].clientY - pressStartPosRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > LONG_PRESS_MOVE_THRESHOLD) {
         cancelLongPress();
       }
     };
@@ -225,15 +233,22 @@ const MapContainer = ({
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
+      pressStartPosRef.current = { x: e.clientX, y: e.clientY };
       startLongPress();
     };
 
     const onMouseUp = () => {
+      pressStartPosRef.current = null;
       handlePointerUp();
     };
 
-    const onMouseMove = () => {
-      if (isLongPressingRef.current) {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isLongPressingRef.current) return;
+      if (!pressStartPosRef.current) { cancelLongPress(); return; }
+      const dx = e.clientX - pressStartPosRef.current.x;
+      const dy = e.clientY - pressStartPosRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > LONG_PRESS_MOVE_THRESHOLD) {
         cancelLongPress();
       }
     };
