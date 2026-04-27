@@ -988,11 +988,9 @@ const MapContainer = ({
       @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
       @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
       @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
-      @keyframes _ad_glow_pulse { 0%,100%{box-shadow:0 0 12px 3px rgba(251,191,36,.8),0 0 28px 6px rgba(139,92,246,.4)} 50%{box-shadow:0 0 20px 6px rgba(251,191,36,1),0 0 40px 10px rgba(139,92,246,.6)} }
+      @keyframes _ad_glow_pulse { 0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)} }
     </style>` : '';
 
-    // MY labelHtml과 완전히 동일한 구조 — padding/margin/font/line-height 한 글자도 다르지 않음
-    // 단, background만 그라데이션으로 교체
     const adLabelHtml = isAd
       ? `<div style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">AD</div>`
       : '';
@@ -1004,14 +1002,19 @@ const MapContainer = ({
       <span style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa;animation:_ad_orbit_4 3s linear infinite;">★</span>
     ` : '';
 
-    // 인플루언서와 동일한 4.5px 두께
+    // 글로우를 z-index:-1 별도 레이어로 분리 → 라벨/이미지 뒤에 완전히 숨음
+    const adGlowLayer = isAd
+      ? `<div style="position:absolute;top:50%;left:50%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,0.7) 0%,rgba(139,92,246,0.4) 50%,transparent 75%);filter:blur(8px);z-index:-1;pointer-events:none;animation:_ad_glow_pulse 1.8s ease-in-out infinite;"></div>`
+      : '';
+
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;animation:_ad_glow_pulse 1.8s ease-in-out infinite;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
+        ${isAd ? adGlowLayer : ''}
         ${isAd ? adLabelHtml : labelHtml}
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
