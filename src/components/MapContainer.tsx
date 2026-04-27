@@ -983,48 +983,37 @@ const MapContainer = ({
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
 
-    // AD 마커 전용: style 태그를 HTML 안에 직접 삽입 (카카오맵 오버레이는 외부 CSS 미적용)
-    // ※ 반짝이 궤도만 돌고, 테두리·이미지·배경은 모두 고정
     const adStyleTag = isAd ? `<style>
       @keyframes _ad_orbit_1 { 0%{transform:rotate(0deg) translateX(36px) rotate(0deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(360deg) translateX(36px) rotate(-360deg);opacity:1} }
       @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
       @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
       @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
-      @keyframes _ad_label_slide { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
       @keyframes _ad_glow_pulse { 0%,100%{box-shadow:0 0 12px 3px rgba(251,191,36,.8),0 0 28px 6px rgba(139,92,246,.4)} 50%{box-shadow:0 0 20px 6px rgba(251,191,36,1),0 0 40px 10px rgba(139,92,246,.6)} }
-      ._ad_s1 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24; animation:_ad_orbit_1 3s linear infinite; }
-      ._ad_s2 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899; animation:_ad_orbit_2 3s linear infinite; }
-      ._ad_s3 { position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa; animation:_ad_orbit_3 3s linear infinite; }
-      ._ad_s4 { position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:30;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa; animation:_ad_orbit_4 3s linear infinite; }
-      ._ad_label { animation:_ad_label_slide 2s linear infinite; background-size:200% 100% !important; }
-      ._ad_img_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
     </style>` : '';
 
-    // AD 라벨: MY labelHtml과 구조·스타일 완전 동일 (width:60px 고정으로 래퍼와 무관)
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:60px;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;overflow:hidden;"><span style="display:inline-block;line-height:1;vertical-align:middle;">AD</span></div>` : '';
+    // MY labelHtml과 완전히 동일한 구조 — padding/margin/font/line-height 한 글자도 다르지 않음
+    // 단, background만 그라데이션으로 교체
+    const adLabelHtml = isAd
+      ? `<div style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">AD</div>`
+      : '';
 
-    // AD 테두리: 이미지 박스에 직접 그라데이션 border 적용 (래퍼 없음 → 라벨 너비 영향 없음)
-    const adWrapOpen = '';
-    const adWrapClose = '';
-
-    // 반짝이는 이미지 박스 위에 absolute로 올라오도록 이미지 박스 내부에 배치
     const adSparklesHtml = isAd ? `
-      <span class="_ad_s1" style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24;animation:_ad_orbit_1 3s linear infinite;">✦</span>
-      <span class="_ad_s2" style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899;animation:_ad_orbit_2 3s linear infinite;">★</span>
-      <span class="_ad_s3" style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa;animation:_ad_orbit_3 3s linear infinite;">✦</span>
-      <span class="_ad_s4" style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa;animation:_ad_orbit_4 3s linear infinite;">★</span>
+      <span style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24;animation:_ad_orbit_1 3s linear infinite;">✦</span>
+      <span style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899;animation:_ad_orbit_2 3s linear infinite;">★</span>
+      <span style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa;animation:_ad_orbit_3 3s linear infinite;">✦</span>
+      <span style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa;animation:_ad_orbit_4 3s linear infinite;">★</span>
     ` : '';
 
-    // 인플루언서와 동일한 4.5px 두께, 무지개 그라데이션 box-shadow로 표현
+    // 인플루언서와 동일한 4.5px 두께
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;box-shadow:0 0 0 0px transparent,0 0 20px 4px rgba(251,191,36,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;animation:_ad_glow_pulse 1.8s ease-in-out infinite;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adLabelHtml : labelHtml}
-        <div class="${influencerClass} ${isAd ? '_ad_img_box' : ''}" style="${innerBoxStyle}">
+        <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
           <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
             ${isVideo && post.videoUrl ?
