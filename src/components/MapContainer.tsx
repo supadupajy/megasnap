@@ -24,7 +24,7 @@ const BROKEN_UNSPLASH_IDS = new Set([
   "photo-1501785888041-af3ef285b470",
 ]);
 
-const LONG_PRESS_DURATION = 2000; // 2초
+const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 12; // px 이상 움직이면 취소
 
 const MapContainer = ({ 
