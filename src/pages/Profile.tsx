@@ -298,26 +298,26 @@ const Profile = () => {
   }
 
   return (
-    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white pb-28 no-scrollbar">
-      <div className="pt-16">
-        {/* 내 프로필 상단 메뉴 바 - 스크롤 시에도 고정 */}
-        <div className="sticky top-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
-                <UserIcon className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">내 프로필</h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
-              </div>
+    <div className="h-screen bg-white flex flex-col">
+      {/* 내 프로필 상단 메뉴 바 - 항상 고정 */}
+      <div className="fixed top-0 left-0 right-0 z-40 px-4 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
+              <UserIcon className="w-6 h-6 text-indigo-600" />
             </div>
-            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 cursor-pointer" onClick={() => navigate('/settings')}>
-              <Settings className="w-5 h-5 text-indigo-600" />
+            <div>
+              <h2 className="text-lg font-black text-gray-900 tracking-tight">내 프로필</h2>
+              <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
             </div>
           </div>
+          <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 cursor-pointer" onClick={() => navigate('/settings')}>
+            <Settings className="w-5 h-5 text-indigo-600" />
+          </div>
         </div>
+      </div>
 
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar pt-[72px]">
         <div className="p-6">
           <div className="flex items-center gap-6 mb-8"><div className="relative"><div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600"><img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} /></div></div><div className="flex-1"><h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2><p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p><div className="flex gap-4"><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={handleScrollToPosts}><p className="font-bold text-gray-900">{myPosts.length}</p><p className="text-[10px] text-gray-400 uppercase font-black">Posts</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}><p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Followers</p></div><div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}><p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p><p className="text-[10px] text-gray-400 uppercase font-black">Following</p></div></div></div></div>
           <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
