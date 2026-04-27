@@ -34,14 +34,14 @@ const MapContainer = ({
   onMapChange, 
   onMapClick,
   center,
-  level = 5,
+  level = 6,
   searchResultLocation,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState<number>(5);
+  const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
@@ -62,7 +62,7 @@ const MapContainer = ({
   const animationFrameRef = useRef<number | null>(null);
   const isDragging = useRef(false);
   const lastDragEnd = useRef(0);
-  const currentLevelRef = useRef<number>(5);
+  const currentLevelRef = useRef<number>(6);
   const postsRef = useRef<any[]>(posts);
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
@@ -70,7 +70,7 @@ const MapContainer = ({
   const pinchStartDistRef = useRef<number | null>(null);
 
   const centerRef = useRef(center);
-  const levelRef = useRef(5);
+  const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -428,7 +428,7 @@ const MapContainer = ({
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
       const map = new kakao.maps.Map(containerRef.current!, {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
-        level: 5
+        level: 6
       });
       map.setMaxLevel(11);
       mapInstance.current = map;
@@ -530,9 +530,9 @@ const MapContainer = ({
         if (isInit) {
           clearInterval(checkMap);
           if (mapInstance.current) {
-            mapInstance.current.setLevel(5, { animate: false });
-            setCurrentLevel(5);
-            currentLevelRef.current = 5;
+            mapInstance.current.setLevel(6, { animate: false });
+            setCurrentLevel(6);
+            currentLevelRef.current = 6;
           }
         }
       }

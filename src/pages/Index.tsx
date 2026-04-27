@@ -98,7 +98,7 @@ const Index = () => {
 
   const [mapData, setMapData] = useState<any>(null);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 5);
+  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -120,7 +120,7 @@ const Index = () => {
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
-  const currentZoomRef = useRef<number>(mapCache.lastZoom || 5);
+  const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
   // posts 실시간 구독 제거에 따라 channelIdRef / triggerConfettiRef는 더 이상 필요하지 않음
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
