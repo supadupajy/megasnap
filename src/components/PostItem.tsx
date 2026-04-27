@@ -553,93 +553,188 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     <div
       ref={containerRef}
       className={cn(
-        "bg-white transition-none",
+        "transition-none",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >
-      {/* Header Section */}
-      <div className="flex items-center justify-between p-4 pb-3">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-full h-full rounded-full object-cover border-2 border-white"
-            />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
-                {user.name}
-              </p>
-              {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-            </div>
-            <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
-              <MapPin className="w-3 h-3" />
-              <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
-            </div>
-          </div>
-        </div>
-        <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
-      </div>
-
-      {/* Media Section */}
-      <div 
-        className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-        onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
-      >
-        {renderMedia()}
-      </div>
-
-      {renderInteractionButtons()}
-
-      {/* Content Section */}
-      <div className="px-4 pb-4 space-y-1">
-        <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
-        <div className="flex gap-2 items-start">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-            {isAd && <span className="bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm leading-none">Ad</span>}
-          </div>
-          <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
-        </div>
-        <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-          <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
-          <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-
-        <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-          <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-          {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-        </button>
-
-        <AnimatePresence>
-          {showComments && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden space-y-2 mt-2"
-            >
-              {localComments.slice(0, -1).map((c, i) => (
-                <div key={i} className="flex gap-2 items-start">
-                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                  <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+      {isAd ? (
+        <div className="ad-post-wrapper mx-2 my-1">
+          {/* 궤도 반짝이 4개 */}
+          <span className="ad-sparkle ad-sparkle-1">✦</span>
+          <span className="ad-sparkle ad-sparkle-2">★</span>
+          <span className="ad-sparkle ad-sparkle-3">✦</span>
+          <span className="ad-sparkle ad-sparkle-4">★</span>
+          <div className="ad-post-inner">
+            {/* Header Section */}
+            <div className="flex items-center justify-between p-4 pb-3">
+              <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover border-2 border-white"
+                  />
                 </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
+                      {user.name}
+                    </p>
+                    <div className="ad-badge-fancy"><span>AD</span></div>
+                  </div>
+                  <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
+                    <MapPin className="w-3 h-3" />
+                    <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
+                  </div>
+                </div>
+              </div>
+              <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+            </div>
 
-        {lastComment && (
-          <div className="flex gap-2 items-start mt-1">
-            <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+            {/* Media Section */}
+            <div
+              className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
+            >
+              {renderMedia()}
+            </div>
+
+            {renderInteractionButtons()}
+
+            {/* Content Section */}
+            <div className="px-4 pb-4 space-y-1">
+              <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
+              <div className="flex gap-2 items-start">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+                  <div className="ad-badge-fancy"><span>AD</span></div>
+                </div>
+                <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
+              </div>
+              <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+                <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+                <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+
+              <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
+                {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+              </button>
+
+              <AnimatePresence>
+                {showComments && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden space-y-2 mt-2"
+                  >
+                    {localComments.slice(0, -1).map((c, i) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                        <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {lastComment && (
+                <div className="flex gap-2 items-start mt-1">
+                  <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+                  <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="bg-white">
+          {/* Header Section */}
+          <div className="flex items-center justify-between p-4 pb-3">
+            <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+              <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-full h-full rounded-full object-cover border-2 border-white"
+                />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
+                    {user.name}
+                  </p>
+                </div>
+                <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
+                  <MapPin className="w-3 h-3" />
+                  <span className="text-[10px] font-medium">{post.location || '알 수 없는 장소'}</span>
+                </div>
+              </div>
+            </div>
+            <DropdownMenu><DropdownMenuTrigger asChild><button className="text-gray-400 p-1 outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">{isMine ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+          </div>
+
+          {/* Media Section */}
+          <div
+            className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
+          >
+            {renderMedia()}
+          </div>
+
+          {renderInteractionButtons()}
+
+          {/* Content Section */}
+          <div className="px-4 pb-4 space-y-1">
+            <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
+            <div className="flex gap-2 items-start">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+              </div>
+              <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
+            </div>
+            <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+              <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+              <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+
+            <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+              <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
+              {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
+            </button>
+
+            <AnimatePresence>
+              {showComments && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden space-y-2 mt-2"
+                >
+                  {localComments.slice(0, -1).map((c, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                      <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {lastComment && (
+              <div className="flex gap-2 items-start mt-1">
+                <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
+                <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </div>
   );

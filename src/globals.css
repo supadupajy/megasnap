@@ -386,3 +386,144 @@
   transform: translate(-50%, -50%);
   animation: ad-pulse-ring 2.2s ease-out 1.4s infinite;
 }
+
+/* =============================================
+   광고 포스팅 카드 전용: 화려한 회전 테두리 + 반짝이 애니메이션
+   ============================================= */
+
+@property --ad-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ad-border-rotate {
+  to { --ad-angle: 360deg; }
+}
+
+@keyframes ad-sparkle-orbit {
+  0%   { transform: rotate(0deg) translateX(52px) rotate(0deg) scale(1); opacity: 1; }
+  25%  { transform: rotate(90deg) translateX(52px) rotate(-90deg) scale(1.4); opacity: 0.7; }
+  50%  { transform: rotate(180deg) translateX(52px) rotate(-180deg) scale(1); opacity: 1; }
+  75%  { transform: rotate(270deg) translateX(52px) rotate(-270deg) scale(1.4); opacity: 0.7; }
+  100% { transform: rotate(360deg) translateX(52px) rotate(-360deg) scale(1); opacity: 1; }
+}
+
+@keyframes ad-sparkle-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  25%       { transform: scale(1.6) rotate(45deg); opacity: 0.7; }
+  50%       { transform: scale(0.8) rotate(90deg); opacity: 1; }
+  75%       { transform: scale(1.4) rotate(135deg); opacity: 0.5; }
+}
+
+@keyframes ad-badge-glow {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(251,191,36,0.8), 0 0 12px 4px rgba(251,191,36,0.4); }
+  50%       { box-shadow: 0 0 12px 4px rgba(251,191,36,1), 0 0 24px 8px rgba(251,191,36,0.6); }
+}
+
+@keyframes ad-badge-rotate-bg {
+  to { --ad-angle: 360deg; }
+}
+
+/* 광고 포스팅 카드 래퍼 */
+.ad-post-wrapper {
+  position: relative;
+  border-radius: 1rem;
+  padding: 2px;
+  background-image: conic-gradient(
+    from var(--ad-angle),
+    #fbbf24 0deg,
+    #f59e0b 40deg,
+    #ef4444 80deg,
+    #ec4899 120deg,
+    #8b5cf6 160deg,
+    #3b82f6 200deg,
+    #06b6d4 240deg,
+    #10b981 280deg,
+    #fbbf24 360deg
+  );
+  animation: ad-border-rotate 3s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(251,191,36,0.3),
+    0 0 20px 4px rgba(251,191,36,0.25),
+    0 0 40px 8px rgba(139,92,246,0.15);
+}
+
+.ad-post-inner {
+  border-radius: calc(1rem - 2px);
+  overflow: hidden;
+  background: white;
+  position: relative;
+}
+
+/* 궤도 위 반짝이 공통 */
+.ad-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 20;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(251,191,36,0.9));
+}
+
+.ad-sparkle-1 {
+  animation: ad-sparkle-orbit 4s linear infinite;
+  animation-delay: 0s;
+  color: #fbbf24;
+  font-size: 16px;
+}
+.ad-sparkle-2 {
+  animation: ad-sparkle-orbit 4s linear infinite;
+  animation-delay: -1s;
+  color: #ec4899;
+  font-size: 12px;
+}
+.ad-sparkle-3 {
+  animation: ad-sparkle-orbit 4s linear infinite;
+  animation-delay: -2s;
+  color: #60a5fa;
+  font-size: 16px;
+}
+.ad-sparkle-4 {
+  animation: ad-sparkle-orbit 4s linear infinite;
+  animation-delay: -3s;
+  color: #a78bfa;
+  font-size: 12px;
+}
+
+/* AD 뱃지 */
+.ad-badge-fancy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.05em;
+  background-image: conic-gradient(
+    from var(--ad-angle),
+    #fbbf24, #ef4444, #ec4899, #8b5cf6, #3b82f6, #fbbf24
+  );
+  animation: ad-border-rotate 2s linear infinite, ad-badge-glow 1.5s ease-in-out infinite;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.ad-badge-fancy::before {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  z-index: 0;
+}
+
+.ad-badge-fancy span {
+  position: relative;
+  z-index: 1;
+}
