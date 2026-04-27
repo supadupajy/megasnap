@@ -51,6 +51,7 @@ const MapContainer = ({
   const isLongPressingRef = useRef(false);
   const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 토스트 표시 딜레이용
   // CSS 애니메이션용 - 누르기 시작 시각
   const pressStartTimeRef = useRef<number>(0);
 
@@ -131,6 +132,10 @@ const MapContainer = ({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    if (showToastTimerRef.current) {
+      clearTimeout(showToastTimerRef.current);
+      showToastTimerRef.current = null;
+    }
     isLongPressingRef.current = false;
     pressStartPosRef.current = null;
     setUiState(prev => prev === 'pressing' ? 'idle' : prev);
@@ -144,7 +149,13 @@ const MapContainer = ({
     isLongPressingRef.current = true;
     pressStartPosRef.current = { x, y };
     pressStartTimeRef.current = Date.now();
-    setUiState('pressing');
+    // 토스트는 0.5초 후에 표시 (그 전에 드래그하면 취소됨)
+    showToastTimerRef.current = setTimeout(() => {
+      showToastTimerRef.current = null;
+      if (isLongPressingRef.current) {
+        setUiState('pressing');
+      }
+    }, 500);
 
     longPressTimerRef.current = setTimeout(() => {
       isLongPressingRef.current = false;
@@ -1008,7 +1019,7 @@ const MapContainer = ({
               strokeDasharray={circleCircumference}
               strokeDashoffset={circleCircumference}
               style={{
-                animation: `longpress-circle ${LONG_PRESS_DURATION}ms linear forwards`,
+                animation: `longpress-circle ${LONG_PRESS_DURATION - 500}ms linear forwards`,
               }}
             />
           </svg>
