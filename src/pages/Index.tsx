@@ -750,8 +750,8 @@ const Index = () => {
                   {visibleMarkers.length > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
                     onClick={() => { if (visibleMarkers.length > 0 && currentZoom < 7) setIsPostListOpen(true); }}
-                    disabled={currentZoom >= 7}
-                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", currentZoom >= 7 && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
+                    disabled={currentZoom >= 7 || visibleMarkers.length === 0}
+                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || visibleMarkers.length === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
