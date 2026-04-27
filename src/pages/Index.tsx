@@ -155,7 +155,7 @@ const Index = () => {
   };
 
   // ── 트렌딩 fetch ─────────────────────────────────────────────
-  // [Optimized] 컬럼 축소(JOIN 제거, content 제거), 60초 캐싱
+  // [Optimized] 컬럼 축소(JOIN 제거), 60초 캐싱
   const fetchGlobalTrending = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && now - trendingFetchedAtRef.current < 60_000 && globalTrendingPosts.length > 0) {
@@ -164,7 +164,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
