@@ -199,7 +199,7 @@ const Chat = () => {
     const checkOnline = () => {
       const lastSeen = new Date(otherUser.last_seen!);
       const diffMinutes = (new Date().getTime() - lastSeen.getTime()) / (1000 * 60);
-      setIsOnline(diffMinutes < 5);
+      setIsOnline(diffMinutes < 10);
     };
     checkOnline();
     const interval = setInterval(checkOnline, 30000);

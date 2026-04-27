@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 interface AuthContextType {
   session: Session | null;
@@ -13,15 +15,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isMobilePlatform = () =>
+  Capacitor.getPlatform() === "ios" || Capacitor.getPlatform() === "android";
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ interval을 useRef로 관리하여 클로저/누수 문제 완전 차단
   const lastSeenIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
+  // Capacitor 리스너 핸들 보관 (cleanup용)
+  const capListenerRef = useRef<{ remove: () => void } | null>(null);
 
   const updateLastSeen = async (userId: string) => {
     try {
@@ -34,20 +40,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // ✅ interval 시작/재시작을 단일 함수로 통합 — 중복 등록 원천 차단
   const startLastSeenInterval = (userId: string) => {
-    // 기존 interval이 있으면 반드시 먼저 해제
     if (lastSeenIntervalRef.current) {
       clearInterval(lastSeenIntervalRef.current);
       lastSeenIntervalRef.current = null;
     }
 
-    // 같은 유저면 즉시 1회 실행, 이후 5분마다 갱신
-    // (1분 → 5분으로 늘려 Supabase Warp 커넥션 부하 감소)
+    // 즉시 1회 실행 후 10분마다 갱신
     updateLastSeen(userId);
     lastSeenIntervalRef.current = setInterval(() => {
       updateLastSeen(userId);
-    }, 5 * 60 * 1000); // 5분
+    }, 10 * 60 * 1000); // 10분
 
     currentUserIdRef.current = userId;
   };
@@ -58,6 +61,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       lastSeenIntervalRef.current = null;
     }
     currentUserIdRef.current = null;
+  };
+
+  // 포커스 복귀 시: 즉시 업데이트 + interval 재시작
+  const handleForeground = (userId: string) => {
+    startLastSeenInterval(userId);
+  };
+
+  // 백그라운드 전환 시: interval 정지 (불필요한 업데이트 차단)
+  const handleBackground = () => {
+    if (lastSeenIntervalRef.current) {
+      clearInterval(lastSeenIntervalRef.current);
+      lastSeenIntervalRef.current = null;
+    }
+  };
+
+  const registerVisibilityEvents = (userId: string) => {
+    // 기존 Capacitor 리스너 제거
+    if (capListenerRef.current) {
+      capListenerRef.current.remove();
+      capListenerRef.current = null;
+    }
+
+    if (isMobilePlatform()) {
+      // 네이티브: Capacitor appStateChange 사용
+      CapApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) {
+          handleForeground(userId);
+        } else {
+          handleBackground();
+        }
+      }).then((handle) => {
+        capListenerRef.current = handle;
+      });
+    } else {
+      // 웹: visibilitychange 사용
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          handleForeground(userId);
+        } else {
+          handleBackground();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+      // cleanup을 capListenerRef에 통일하여 관리
+      capListenerRef.current = {
+        remove: () => document.removeEventListener("visibilitychange", handleVisibility),
+      };
+    }
+  };
+
+  const unregisterVisibilityEvents = () => {
+    if (capListenerRef.current) {
+      capListenerRef.current.remove();
+      capListenerRef.current = null;
+    }
   };
 
   const fetchProfile = async (userId: string, userEmail?: string) => {
@@ -100,14 +158,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
-        // ✅ 세션 확인 즉시 로딩 종료 (프로필은 백그라운드 로드)
         setLoading(false);
 
         if (initialSession?.user) {
           const userId = initialSession.user.id;
-          // 프로필 fetch와 last_seen interval은 병렬 시작
           fetchProfile(userId, initialSession.user.email);
           startLastSeenInterval(userId);
+          registerVisibilityEvents(userId);
         }
       } catch (error) {
         console.error("[AuthProvider] Auth init error:", error);
@@ -117,11 +174,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initSession();
 
-    // ✅ onAuthStateChange: initSession과 중복 실행되지 않도록
-    // INITIAL_SESSION 이벤트는 무시하고 실제 상태 변경만 처리
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        // INITIAL_SESSION은 initSession에서 이미 처리했으므로 스킵
         if (event === "INITIAL_SESSION") return;
 
         setSession(currentSession);
@@ -132,22 +186,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userId = currentSession.user.id;
           fetchProfile(userId, currentSession.user.email);
 
-          // ✅ 같은 유저면 interval 재시작 불필요 (TOKEN_REFRESHED 등 빈번한 이벤트 대응)
           if (currentUserIdRef.current !== userId) {
             startLastSeenInterval(userId);
+            registerVisibilityEvents(userId);
           }
         } else {
-          // 로그아웃 시 interval 정리
           setProfile(null);
           stopLastSeenInterval();
+          unregisterVisibilityEvents();
         }
       }
     );
 
-    // ✅ 컴포넌트 언마운트 시 모든 리소스 정리
     return () => {
       subscription.unsubscribe();
       stopLastSeenInterval();
+      unregisterVisibilityEvents();
     };
   }, []);
 
@@ -157,6 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     stopLastSeenInterval();
+    unregisterVisibilityEvents();
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);

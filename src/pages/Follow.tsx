@@ -183,7 +183,7 @@ const Follow = () => {
               const isFollowing = followingIds.has(user.id);
               
               // 온라인 상태 계산 (최근 5분 이내 활동)
-              const isOnline = user.last_seen && (new Date().getTime() - new Date(user.last_seen).getTime()) / (1000 * 60) < 5;
+              const isOnline = user.last_seen && (new Date().getTime() - new Date(user.last_seen).getTime()) / (1000 * 60) < 10;
 
               return (
                 <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all relative">

@@ -263,7 +263,7 @@ const Messages = () => {
                 <AnimatePresence initial={false}>{filteredConversations.map((conv) => {
                   const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                   const isSwiped = swipedId === conv.other_id;
-                  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 5;
+                  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 10;
                   
                   return (
                     <div key={conv.other_id} className="relative group overflow-hidden">
