@@ -1001,7 +1001,7 @@ const MapContainer = ({
     </style>` : '';
 
     // AD 라벨: MY labelHtml과 구조·스타일 완전 동일 (width:60px 고정으로 래퍼와 무관)
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:60px;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">✦ AD ✦</div>` : '';
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:60px;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;overflow:hidden;"><span style="display:inline-block;line-height:1;vertical-align:middle;">AD</span></div>` : '';
 
     // AD 테두리: 이미지 박스에 직접 그라데이션 border 적용 (래퍼 없음 → 라벨 너비 영향 없음)
     const adWrapOpen = '';
