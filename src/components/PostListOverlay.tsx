@@ -44,34 +44,23 @@ const ObservedPostItem = ({
       // ✅ [FIX] user.name이 '...'이거나 location이 없으면 데이터를 새로 불러옴
       if (fullPost.user.name === '...' || !fullPost.location || fullPost.location === '알 수 없는 장소') {
         try {
+          // [Optimized] select('*') → 필요한 컬럼만 + profiles JOIN을 동일 쿼리에서 처리 (round-trip 1회)
           const { data: p, error } = await supabase
             .from('posts')
-            .select('*')
+            .select('id, content, location_name, user_id, user_name, user_avatar, profiles:user_id(nickname, avatar_url)')
             .eq('id', post.id)
             .single();
 
           if (p && !error) {
-            let userName = p.user_name || '탐험가';
-            let userAvatar = p.user_avatar || '';
-            
-            if (p.user_id) {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('nickname, avatar_url')
-                .eq('id', p.user_id)
-                .maybeSingle();
-              
-              if (profileData) {
-                userName = profileData.nickname || userName;
-                userAvatar = profileData.avatar_url || userAvatar;
-              }
-            }
+            const profile = (p as any).profiles;
+            const userName = profile?.nickname || p.user_name || '탐험가';
+            const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
             setFullPost(prev => ({
               ...prev,
               user: { ...prev.user, name: userName, avatar: userAvatar },
               content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-              location: p.location_name || '알 수 없는 장소' // ✅ [FIX] location_name 매핑 추가
+              location: p.location_name || '알 수 없는 장소'
             }));
           }
         } catch (err) {
@@ -234,11 +223,10 @@ const PostListOverlay = ({
       const expandedLngMin = lngMin - lngDiff;
       const expandedLngMax = lngMax + lngDiff;
 
-      console.log(`[PostListOverlay] Regional adaptive fetch before ${lastPostDate}...`);
-
+      // [Optimized] select('*') → 명시적 컬럼만 (egress 절감)
       let { data, error } = await supabase
         .from('posts')
-        .select('*')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
         .gte('latitude', expandedLatMin)
         .lte('latitude', expandedLatMax)
         .gte('longitude', expandedLngMin)
@@ -250,37 +238,42 @@ const PostListOverlay = ({
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const newPosts: Post[] = await Promise.all(data.map(async (p) => {
-          // [FIX] Index.tsx와 동일한 닉네임/아바타 매핑 로직 적용 (p.user_id 기반 실시간 조회)
-          let userName = p.user_name || '탐험가';
-          let userAvatar = p.user_avatar || '';
-          
-          if (p.user_id) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('nickname, avatar_url')
-              .eq('id', p.user_id)
-              .maybeSingle();
-            
-            if (profileData) {
-              userName = profileData.nickname || userName;
-              userAvatar = profileData.avatar_url || userAvatar;
-            }
-          }
+        // [Optimized] N+1 제거: 12개 포스트의 user_id를 한 번에 모아서 profiles를 1번에 조회
+        const userIds = Array.from(new Set(
+          data.map((p: any) => p.user_id).filter((id: any) => !!id)
+        ));
+
+        let profileMap = new Map<string, { nickname: string | null; avatar_url: string | null }>();
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, nickname, avatar_url')
+            .in('id', userIds);
+          (profilesData || []).forEach((pf: any) => {
+            profileMap.set(pf.id, { nickname: pf.nickname, avatar_url: pf.avatar_url });
+          });
+        }
+
+        const newPosts: Post[] = data.map((p: any) => {
+          const profile = p.user_id ? profileMap.get(p.user_id) : null;
+          const userName = profile?.nickname || p.user_name || '탐험가';
+          const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
           let finalImage = p.image_url;
           if (finalImage?.includes('unsplash.com')) {
             finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
           }
-          
+
           return {
             id: p.id,
             user: { id: p.user_id, name: userName, avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '',
             location: p.location_name || '알 수 없는 장소',
             lat: p.latitude, lng: p.longitude,
+            latitude: p.latitude, longitude: p.longitude,
             likes: Number(p.likes || 0),
             image: finalImage,
+            image_url: finalImage,
             images: p.images || [finalImage],
             videoUrl: p.video_url, youtubeUrl: p.youtube_url,
             createdAt: new Date(p.created_at),
@@ -289,7 +282,7 @@ const PostListOverlay = ({
             isLiked: false, isAd: p.content?.trim().startsWith('[AD]'), isGif: false,
             borderType: Number(p.likes || 0) >= 9000 ? 'popular' : 'none'
           };
-        }));
+        });
 
         setPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));

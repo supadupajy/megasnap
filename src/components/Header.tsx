@@ -22,9 +22,11 @@ const Header = () => {
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
+    // [Optimized] count: 'exact' → 'planned'로 변경 (RLS 적용 시 exact는 매우 느림)
+    // head: true + select('id')로 페이로드 최소화
     const { count, error } = await supabase
       .from('messages')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'planned', head: true })
       .eq('receiver_id', user.id)
       .eq('is_read', false);
 
@@ -35,9 +37,10 @@ const Header = () => {
 
   const fetchUnreadNotifCount = useCallback(async () => {
     if (!user) return;
+    // [Optimized] count: 'exact' → 'planned'
     const { count, error } = await supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'planned', head: true })
       .eq('user_id', user.id)
       .eq('is_read', false);
 

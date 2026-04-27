@@ -57,7 +57,12 @@ const Popular = () => {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       await initializeYoutubePool();
-      const { data, error } = await supabase.from('posts').select('*').order('likes', { ascending: false }).range(from, to);
+      // [Optimized] select('*') → 필요한 컬럼만 (egress 절감)
+      const { data, error } = await supabase
+        .from('posts')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+        .order('likes', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
       const sanitizedData = await Promise.all((data || []).map((post) => sanitizeYoutubeMedia(post)));

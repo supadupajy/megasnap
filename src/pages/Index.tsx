@@ -86,7 +86,7 @@ const Index = () => {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
   const highlightTimeoutRef = useRef<number | null>(null);
   const throttleTimer = useRef<any>(null);
@@ -98,18 +98,19 @@ const Index = () => {
   const triggerConfettiRef = useRef(triggerConfetti);
   useEffect(() => { triggerConfettiRef.current = triggerConfetti; }, [triggerConfetti]);
 
-  useEffect(() => {
-    if (session?.user) {
-      supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
-        if (data) setProfile(data);
-      });
-    }
-  }, [session]);
+  // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
+  const trendingFetchedAtRef = useRef<number>(0);
+  const lastBoundsKeyRef = useRef<string>('');
+
+  // [Optimized] profile fetch 제거 — AuthProvider에서 이미 관리하며, Index.tsx에서는 사용처가 없음
 
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
-  const mapRawToPost = (p: any): Post => {
-    const isAd = p.content?.trim().startsWith('[AD]') || false;
-    const likes = Number(p.likes || 0);
+  // [Optimized] bounds fetch에서 일부 컬럼이 빠진 raw도 안전하게 처리.
+  // 빠진 필드는 기존 allPosts의 동일 id 데이터를 우선 사용하고, 없으면 기본값.
+  const mapRawToPost = (p: any, prev?: Post | null): Post => {
+    const content = p.content !== undefined ? (p.content || '') : (prev?.content ?? '');
+    const isAd = content.trim().startsWith('[AD]') || prev?.isAd || false;
+    const likes = Number(p.likes ?? prev?.likes ?? 0);
     let borderType: any = 'none';
     if (likes >= 9000) borderType = 'popular';
     else if (!isAd) {
@@ -120,58 +121,62 @@ const Index = () => {
       if (v < 0.03) borderType = 'diamond';
       else if (v < 0.08) borderType = 'gold';
     }
-    const isSeed = p.is_seed_data === true || p.is_seed_data === 'true';
-    // profiles.nickname이 있으면 항상 우선 사용 (시드 데이터도 실제 유저 ID로 연결될 수 있음)
-    // profiles.nickname이 없을 때만 posts.user_name 사용
-    const userName = p.profiles?.nickname || p.user_name || '탐험가';
-    const userAvatar = p.profiles?.avatar_url || p.user_avatar || '';
-    const img = p.image_url || '';
+    // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
+    const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
+    const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || '';
+    const img = p.image_url ?? prev?.image_url ?? '';
     return {
       id: p.id,
-      user_id: p.user_id || '',
+      user_id: p.user_id || prev?.user_id || '',
       isAd,
       isGif: false,
       isInfluencer: ['gold', 'diamond'].includes(borderType),
-      user: { id: p.user_id || '', name: userName, avatar: userAvatar },
-      content: (p.content || '').replace(/^\[AD\]\s*/, ''),
-      location: p.location_name || '알 수 없는 장소',
-      lat: p.latitude,
-      lng: p.longitude,
-      latitude: p.latitude,
-      longitude: p.longitude,
+      user: { id: p.user_id || prev?.user?.id || '', name: userName, avatar: userAvatar },
+      content: content.replace(/^\[AD\]\s*/, ''),
+      location: p.location_name ?? prev?.location ?? '알 수 없는 장소',
+      lat: p.latitude ?? prev?.lat,
+      lng: p.longitude ?? prev?.lng,
+      latitude: p.latitude ?? prev?.latitude,
+      longitude: p.longitude ?? prev?.longitude,
       likes,
-      commentsCount: 0,
-      comments: [],
+      commentsCount: prev?.commentsCount ?? 0,
+      comments: prev?.comments ?? [],
       image: img,
       image_url: img,
-      images: p.images || (img ? [img] : []),
-      isLiked: false,
-      youtubeUrl: p.youtube_url,
-      videoUrl: p.video_url,
-      category: p.category || 'none',
-      createdAt: new Date(p.created_at),
+      images: p.images || prev?.images || (img ? [img] : []),
+      isLiked: prev?.isLiked ?? false,
+      youtubeUrl: p.youtube_url ?? prev?.youtubeUrl,
+      videoUrl: p.video_url ?? prev?.videoUrl,
+      category: p.category ?? prev?.category ?? 'none',
+      createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
       borderType,
-      is_seed_data: p.is_seed_data,
+      is_seed_data: p.is_seed_data ?? prev?.is_seed_data,
     };
   };
 
   // ── 트렌딩 fetch ─────────────────────────────────────────────
-  const fetchGlobalTrending = useCallback(async () => {
+  // [Optimized] 컬럼 축소(JOIN 제거, content 제거), 60초 캐싱
+  const fetchGlobalTrending = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && now - trendingFetchedAtRef.current < 60_000 && globalTrendingPosts.length > 0) {
+      return; // 60초 이내 호출이면 스킵
+    }
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar, is_seed_data, borderType, profiles:user_id(nickname, avatar_url)')
+        .select('id, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
-        const mapped = data.map(mapRawToPost);
+        const mapped = data.map(p => mapRawToPost(p));
         const trending = mapped.slice(0, 20).map((p, i) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
+        trendingFetchedAtRef.current = now;
       }
     } catch (err) {
       console.error('[Trending] fetch error:', err);
     }
-  }, []);
+  }, [globalTrendingPosts.length]);
 
   useEffect(() => { fetchGlobalTrending(); }, []);
 
@@ -183,6 +188,12 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const center = mapData.center;
 
+    // [Optimized] bounds 변화량이 매우 작으면 fetch 스킵 (부동소수점 노이즈 방어)
+    // 좌표를 소수점 4자리(약 11m)로 반올림해서 키 생성
+    const boundsKey = `${sw.lat.toFixed(4)}|${sw.lng.toFixed(4)}|${ne.lat.toFixed(4)}|${ne.lng.toFixed(4)}|${currentZoom}`;
+    if (boundsKey === lastBoundsKeyRef.current) return;
+    lastBoundsKeyRef.current = boundsKey;
+
     // 이전 fetch 취소용 플래그
     let cancelled = false;
 
@@ -192,10 +203,12 @@ const Index = () => {
         if (cancelled) return;
         if (raw.length === 0) return;
 
-        const mapped = raw.map(mapRawToPost);
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
-          mapped.forEach(p => existingMap.set(p.id, p));
+          raw.forEach(r => {
+            const prevPost = existingMap.get(r.id) || null;
+            existingMap.set(r.id, mapRawToPost(r, prevPost));
+          });
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
           return combined;
@@ -390,18 +403,17 @@ const Index = () => {
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
     setSelectedPostId(lightPost.id);
     try {
+      // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles:user_id(nickname, avatar_url)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url)')
         .eq('id', lightPost.id)
         .single();
       if (!error && data) {
-        const full = mapRawToPost({
-          ...data,
-          // profiles 조인 결과를 그대로 전달 → mapRawToPost에서 isSeed 여부에 따라 올바르게 처리
-        });
         setAllPosts(prev => {
-          const idx = prev.findIndex(p => p.id === full.id);
+          const idx = prev.findIndex(p => p.id === data.id);
+          const prevPost = idx === -1 ? null : prev[idx];
+          const full = mapRawToPost(data, prevPost);
           if (idx === -1) return [full, ...prev];
           const next = [...prev];
           next[idx] = full;
@@ -419,19 +431,24 @@ const Index = () => {
     const currentMapData = mapDataRef.current;
 
     setIsRefreshing(true);
-    await fetchGlobalTrending();
+    await fetchGlobalTrending(true); // 강제 새로고침
 
     if (currentMapData?.bounds) {
       const { sw, ne } = currentMapData.bounds;
       const zoom = currentMapData.level ?? 6;
       const center = currentMapData.center;
 
+      // 새로고침은 캐시 무시
+      lastBoundsKeyRef.current = '';
+
       const raw = await fetchPostsInBounds(sw, ne, zoom, center);
       if (raw.length > 0) {
-        const mapped = raw.map(mapRawToPost);
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
-          mapped.forEach(p => existingMap.set(p.id, p));
+          raw.forEach(r => {
+            const prevPost = existingMap.get(r.id) || null;
+            existingMap.set(r.id, mapRawToPost(r, prevPost));
+          });
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
           return combined;

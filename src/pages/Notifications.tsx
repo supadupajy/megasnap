@@ -52,11 +52,13 @@ const Notifications = () => {
     if (!authUser) return;
     
     try {
+      // [Optimized] select('*') → 필요한 컬럼만 + limit 추가 (오래된 알림 무한 누적 방지)
       const { data: notifs, error: notifError } = await supabase
         .from('notifications')
-        .select('*')
+        .select('id, type, actor_id, post_id, content, created_at, is_read')
         .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (notifError) throw notifError;
 

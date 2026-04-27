@@ -170,15 +170,30 @@ const Profile = () => {
       const allPostIds = [...new Set([...myPostIds, ...savedPostIds])];
 
       let likedPostIds = new Set<string>();
-      let savedPostIdSet = new Set<string>();
+      // [Optimized] savedPostIdSet은 이미 위 savedData에서 알 수 있음 → 중복 조회 제거
+      // 단, 내 포스트 중에 내가 저장한 것은 아직 모르므로, my posts 중 savedPostIds에 포함된 것만 체크
+      const savedPostIdSet = new Set<string>(savedPostIds);
 
       if (authUser?.id && allPostIds.length > 0) {
-        const [{ data: likesData }, { data: savedPostsData }] = await Promise.all([
-          supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds),
-          supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds)
-        ]);
+        // saved_posts 중복 쿼리 제거 → likes 1번만
+        const { data: likesData } = await supabase
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', authUser.id)
+          .in('post_id', allPostIds);
         likedPostIds = new Set((likesData || []).map(l => l.post_id));
-        savedPostIdSet = new Set((savedPostsData || []).map(s => s.post_id));
+
+        // my posts 중에 saved에 포함되지 않은 것들에 대해 saved 여부 추가 확인
+        // (내 포스트를 내가 저장했는지 알기 위해)
+        const myPostsNotInSaved = myPostIds.filter(id => !savedPostIdSet.has(id));
+        if (myPostsNotInSaved.length > 0) {
+          const { data: extraSavedData } = await supabase
+            .from('saved_posts')
+            .select('post_id')
+            .eq('user_id', authUser.id)
+            .in('post_id', myPostsNotInSaved);
+          (extraSavedData || []).forEach(s => savedPostIdSet.add(s.post_id));
+        }
       }
 
       if (myData) {
@@ -195,9 +210,10 @@ const Profile = () => {
         setSavedPosts(formattedSavedPosts);
       }
       
+      // [Optimized] count: 'exact' → 'planned' (RLS 적용 테이블에서 훨씬 빠름)
       const [followersRes, followingRes] = await Promise.all([
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid),
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid)
+        supabase.from('follows').select('id', { count: 'planned', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('id', { count: 'planned', head: true }).eq('follower_id', uid)
       ]);
       setFollowerCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);

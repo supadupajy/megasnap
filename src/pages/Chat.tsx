@@ -57,8 +57,9 @@ const Chat = () => {
 
   const fetchUnreadCounts = useCallback(async () => {
     if (!authUser) return;
-    const { count: mCount } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('receiver_id', authUser.id).eq('is_read', false);
-    const { count: nCount } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', authUser.id).eq('is_read', false);
+    // [Optimized] count: 'exact' → 'planned' (RLS 적용 테이블에서 훨씬 빠름)
+    const { count: mCount } = await supabase.from('messages').select('id', { count: 'planned', head: true }).eq('receiver_id', authUser.id).eq('is_read', false);
+    const { count: nCount } = await supabase.from('notifications').select('id', { count: 'planned', head: true }).eq('user_id', authUser.id).eq('is_read', false);
     setUnreadCount(mCount || 0);
     setUnreadNotifCount(nCount || 0);
   }, [authUser]);

@@ -38,7 +38,11 @@ const UserProfile = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'gifs' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
 
-  const mapDbToPost = async (p: any): Promise<Post> => {
+  const mapDbToPost = async (
+    p: any,
+    likedSet: Set<string> = new Set(),
+    savedSet: Set<string> = new Set()
+  ): Promise<Post> => {
     const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
 
     const isValidUrl = (url: any) => {
@@ -63,27 +67,19 @@ const UserProfile = () => {
       ? sanitized.images.filter(isValidUrl)
       : [finalImage];
 
-    let isLiked = false;
-    let isSaved = false;
-    
-    if (authUser?.id) {
-      const [{ data: likeData }, { data: saveData }] = await Promise.all([
-        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
-        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
-      ]);
-      isLiked = !!likeData;
-      isSaved = !!saveData;
-    }
-
     return {
       id: sanitized.id, isAd, isGif: false, isInfluencer: false,
       user: { id: sanitized.user_id, name: sanitized.user_name || '탐험가', avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` },
       content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '', location: sanitized.location_name || '알 수 없는 장소', lat: sanitized.latitude, lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [], 
-      image: finalImage, 
-      images: finalImages, 
+      latitude: sanitized.latitude, longitude: sanitized.longitude,
+      likes: Number(sanitized.likes || 0), commentsCount: 0, comments: [],
+      image: finalImage,
+      image_url: finalImage,
+      images: finalImages,
       youtubeUrl: sanitized.youtube_url, videoUrl: sanitized.video_url,
-      isLiked, isSaved, createdAt: new Date(sanitized.created_at),
+      isLiked: likedSet.has(sanitized.id),
+      isSaved: savedSet.has(sanitized.id),
+      createdAt: new Date(sanitized.created_at),
       category: sanitized.category || 'none'
     };
   };
@@ -107,10 +103,10 @@ const UserProfile = () => {
       try {
         setLoading(true);
         
-        // Profiles 테이블에서 조회하도록 수정
+        // Profiles 테이블에서 조회 (필요한 컬럼만)
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, nickname, avatar_url, bio, last_seen')
           .eq('id', profileUserId)
           .single();
         
@@ -121,21 +117,37 @@ const UserProfile = () => {
         
         setUserProfile(data);
         
-        // 포스트 조회
+        // [Optimized] 포스트 조회 — select('*') → 명시적 컬럼 + limit
         const { data: posts, error: postsError } = await supabase
           .from('posts')
-          .select('*')
-          .eq('user_id', profileUserId);
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+          .eq('user_id', profileUserId)
+          .order('created_at', { ascending: false })
+          .limit(100);
         
         if (postsError) throw postsError;
         
-        const mappedPosts = await Promise.all((posts || []).map(mapDbToPost));
+        // [Optimized] N+1 제거: likes/saved_posts를 .in()으로 일괄 조회
+        const postIds = (posts || []).map(p => p.id);
+        let likedSet = new Set<string>();
+        let savedSet = new Set<string>();
+        if (authUser?.id && postIds.length > 0) {
+          const [{ data: likesData }, { data: savedData }] = await Promise.all([
+            supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
+            supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', postIds)
+          ]);
+          likedSet = new Set((likesData || []).map(l => l.post_id));
+          savedSet = new Set((savedData || []).map(s => s.post_id));
+        }
+
+        const mappedPosts = await Promise.all((posts || []).map(p => mapDbToPost(p, likedSet, savedSet)));
         setUserPosts(mappedPosts);
         
         // 팔로워/팔로잉 수 조회 (follows 테이블 기준)
+        // [Optimized] count: 'exact' → 'planned' + head: true (페이로드 최소화)
         const [followersResult, followingResult] = await Promise.all([
-          supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', profileUserId),
-          supabase.from('follows').select('id', { count: 'exact' }).eq('follower_id', profileUserId)
+          supabase.from('follows').select('id', { count: 'planned', head: true }).eq('following_id', profileUserId),
+          supabase.from('follows').select('id', { count: 'planned', head: true }).eq('follower_id', profileUserId)
         ]);
         
         setFollowerCount(followersResult.count || 0);

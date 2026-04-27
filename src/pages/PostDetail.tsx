@@ -11,6 +11,8 @@ import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar';
+
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -22,70 +24,130 @@ const PostDetail = () => {
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
 
+  const isValidUrl = (url: any) => {
+    if (!url || typeof url !== 'string') return false;
+    const clean = url.trim();
+    if (/post\s*content/i.test(clean)) return false;
+    if (!clean.startsWith('http')) return false;
+    return true;
+  };
+
+  const mapDbToPost = async (
+    p: any,
+    likedSet: Set<string>,
+    savedSet: Set<string>
+  ): Promise<Post> => {
+    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+
+    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+    let rawImages = Array.isArray(p.images) && p.images.length > 0
+      ? p.images.filter(isValidUrl)
+      : [rawImage];
+
+    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
+    const isAd = sanitized.content?.trim().startsWith('[AD]');
+
+    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
+    if (finalImage.includes('unsplash.com')) {
+      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
+    }
+
+    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0
+      ? sanitized.images.filter(isValidUrl)
+      : [finalImage];
+
+    return {
+      id: sanitized.id,
+      isAd,
+      isGif: false,
+      isInfluencer: false,
+      user: {
+        id: sanitized.user_id,
+        name: sanitized.user_name || '탐험가',
+        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
+      },
+      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: sanitized.location_name || '알 수 없는 장소',
+      lat: sanitized.latitude,
+      lng: sanitized.longitude,
+      latitude: sanitized.latitude,
+      longitude: sanitized.longitude,
+      likes: Number(sanitized.likes || 0),
+      commentsCount: 0,
+      comments: [],
+      image: finalImage,
+      image_url: finalImage,
+      images: finalImages,
+      youtubeUrl: sanitized.youtube_url,
+      videoUrl: sanitized.video_url,
+      isLiked: likedSet.has(sanitized.id),
+      isSaved: savedSet.has(sanitized.id),
+      createdAt: new Date(sanitized.created_at),
+      category: sanitized.category || 'none'
+    };
+  };
+
   useEffect(() => {
     const fetchAllPosts = async () => {
-      console.log("[PostDetail] fetchAllPosts started. ID:", id, "AuthUser:", authUser?.id);
-      
-      if (!authUser?.id) {
-        console.log("[PostDetail] No authUser.id yet.");
-        return;
-      }
-      
+      if (!authUser?.id || !id) return;
+
       setLoading(true);
       try {
-        // [FIX] Try to fetch ALL posts first without filtering by user_id
-        // Since we are having 500 errors on user_id filter, we'll filter client-side
-        // Or try to fetch only the specific post first
-        
-        console.log("[PostDetail] Fetching target post info for ID:", id);
+        // [Optimized] 단일 쿼리로 target post 조회 (필요한 컬럼만)
         const { data: targetPost, error: targetError } = await supabase
           .from('posts')
-          .select('*')
+          .select(POST_COLUMNS)
           .eq('id', id)
           .maybeSingle();
-            
+
         if (targetError) {
           console.error("[PostDetail] Error fetching target post:", targetError);
         }
 
+        let postsToFormat: any[] = [];
+
         if (targetPost) {
-          console.log("[PostDetail] Found target post owner:", targetPost.user_id);
-          
-          // Try to fetch posts without eq filter if it causes 500, but use it as a primary attempt
+          // [Optimized] 클라이언트 필터링 제거 → 서버사이드 user_id 필터 사용
+          // (idx_posts_user_id 인덱스가 있으므로 매우 빠름)
           const { data, error } = await supabase
             .from('posts')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select(POST_COLUMNS)
+            .eq('user_id', targetPost.user_id)
+            .order('created_at', { ascending: false })
+            .limit(100);
 
           if (error) {
-            console.error("[PostDetail] Error fetching all posts:", error);
-          } else if (data) {
-            // Filter client-side to avoid 500 error on user_id filter
-            const filteredData = data.filter((p: any) => p.user_id === targetPost.user_id);
-            console.log("[PostDetail] Client-side filtered posts count:", filteredData.length);
-            
-            const formattedPosts = await Promise.all(filteredData.map(mapDbToPost));
-            setAllPosts(formattedPosts);
-            setLoading(false);
-            return;
+            console.error("[PostDetail] Error fetching user's posts:", error);
+            // Fallback: 단일 포스트만 표시
+            postsToFormat = [targetPost];
+          } else {
+            postsToFormat = data || [targetPost];
           }
-        } else {
-          console.warn("[PostDetail] Target post not found in DB for ID:", id);
         }
 
-        // Final fallback: just fetch the single post if nothing else works
-        if (id) {
-          const { data: singlePost, error: singleError } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', id)
-            .maybeSingle();
-          
-          if (singlePost) {
-            const formatted = await mapDbToPost(singlePost);
-            setAllPosts([formatted]);
-          }
+        if (postsToFormat.length === 0) {
+          setAllPosts([]);
+          return;
         }
+
+        // [Optimized] likes/saved_posts를 .in()으로 일괄 조회 (N+1 제거)
+        const postIds = postsToFormat.map(p => p.id);
+        let likedSet = new Set<string>();
+        let savedSet = new Set<string>();
+
+        if (authUser?.id && postIds.length > 0) {
+          const [{ data: likesData }, { data: savedData }] = await Promise.all([
+            supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
+            supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', postIds)
+          ]);
+          likedSet = new Set((likesData || []).map(l => l.post_id));
+          savedSet = new Set((savedData || []).map(s => s.post_id));
+        }
+
+        const formattedPosts = await Promise.all(
+          postsToFormat.map(p => mapDbToPost(p, likedSet, savedSet))
+        );
+        setAllPosts(formattedPosts);
       } catch (err) {
         console.error('[PostDetail] Error in fetchAllPosts:', err);
       } finally {
@@ -108,7 +170,7 @@ const PostDetail = () => {
   }, [id, allPosts]);
 
   const handleLikeToggle = (postId: string) => {
-    setAllPosts(prev => prev.map(post => 
+    setAllPosts(prev => prev.map(post =>
       post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post
     ));
   };
@@ -124,8 +186,7 @@ const PostDetail = () => {
 
       setAllPosts(prev => prev.filter(p => p.id !== postId));
       showSuccess('게시물이 삭제되었습니다.');
-      
-      // 만약 현재 리스트에 포스팅이 더 이상 없다면 이전 화면으로 이동
+
       if (allPosts.length <= 1) {
         navigate(-1);
       }
@@ -133,74 +194,6 @@ const PostDetail = () => {
       console.error('[PostDetail] Delete error:', err);
       showError('게시물 삭제 중 오류가 발생했습니다.');
     }
-  };
-
-  const mapDbToPost = async (p: any): Promise<Post> => {
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
-
-    const isValidUrl = (url: any) => {
-      if (!url || typeof url !== 'string') return false;
-      const clean = url.trim();
-      if (/post\s*content/i.test(clean)) return false;
-      if (!clean.startsWith('http')) return false;
-      return true;
-    };
-
-    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
-    let rawImages = Array.isArray(p.images) && p.images.length > 0 
-      ? p.images.filter(isValidUrl)
-      : [rawImage];
-
-    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
-    const isAd = sanitized.content?.trim().startsWith('[AD]');
-    
-    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
-    if (finalImage.includes('unsplash.com')) {
-      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
-    }
-
-    // [FIX] sanitized.images가 없거나 단일 URL인 경우를 대비하여 rawImages 필터링 결과 활용
-    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0 
-      ? sanitized.images.filter(isValidUrl)
-      : [finalImage];
-
-    let isLiked = false;
-    let isSaved = false;
-    if (authUser?.id) {
-      const [{ data: likeData }, { data: saveData }] = await Promise.all([
-        supabase.from('likes').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle(),
-        supabase.from('saved_posts').select('id').eq('post_id', sanitized.id).eq('user_id', authUser.id).maybeSingle()
-      ]);
-      isLiked = !!likeData;
-      isSaved = !!saveData;
-    }
-
-    return {
-      id: sanitized.id,
-      isAd,
-      isGif: false,
-      isInfluencer: false,
-      user: { 
-        id: sanitized.user_id, 
-        name: sanitized.user_name || '탐험가', 
-        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}` 
-      },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: sanitized.location_name || '알 수 없는 장소',
-      lat: sanitized.latitude,
-      lng: sanitized.longitude,
-      likes: Number(sanitized.likes || 0),
-      commentsCount: 0,
-      comments: [],
-      image: finalImage,
-      images: finalImages, // [FIX] 정제된 finalImages 사용
-      youtubeUrl: sanitized.youtube_url,
-      videoUrl: sanitized.video_url,
-      isLiked,
-      isSaved,
-      createdAt: new Date(sanitized.created_at),
-      category: sanitized.category || 'none'
-    };
   };
 
   if (loading) {

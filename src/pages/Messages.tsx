@@ -43,27 +43,26 @@ const Messages = () => {
   const fetchConversations = async () => {
     if (!authUser) return;
     try {
-      const { data: messages } = await supabase.from('messages').select('*').or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`).order('created_at', { ascending: false });
+      // [Optimized] select('*') → 필요한 컬럼만 (id, content 텍스트는 마지막 메시지 표시용)
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id, sender_id, receiver_id, content, created_at, is_read')
+        .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+        .order('created_at', { ascending: false });
       const convMap = new Map<string, any>();
       
-      // 현재 사용자가 보고 있는 채팅방 ID 확인 (URL 파라미터나 상태에서 가져오기 어려우므로 
-      // 렌더링 시점에 Messages 페이지가 활성화된 경우만 뱃지 표시)
-      // 실제로는 전역 상태(예: useChat)에 activeChatId를 저장하는 것이 가장 좋음.
-      
       if (messages) {
+        const activeChatId = localStorage.getItem('activeChatId');
         for (const msg of messages) {
           const otherId = msg.sender_id === authUser.id ? msg.receiver_id : msg.sender_id;
-          
-          // 로컬 스토리지 등에 저장된 '현재 열린 채팅방' 정보를 활용할 수도 있음
-          const activeChatId = localStorage.getItem('activeChatId');
           const shouldShowBadge = !msg.is_read && msg.receiver_id === authUser.id && otherId !== activeChatId;
 
           if (!convMap.has(otherId)) {
-            convMap.set(otherId, { 
-              other_id: otherId, 
-              last_message: msg.content, 
-              created_at: msg.created_at, 
-              unread_count: shouldShowBadge ? 1 : 0 
+            convMap.set(otherId, {
+              other_id: otherId,
+              last_message: msg.content,
+              created_at: msg.created_at,
+              unread_count: shouldShowBadge ? 1 : 0
             });
           } else if (shouldShowBadge) {
             convMap.get(otherId).unread_count += 1;
@@ -78,11 +77,23 @@ const Messages = () => {
         }
       }
       const convList = Array.from(convMap.values());
-      const results = await Promise.all(convList.map(async (conv) => {
+
+      // [Optimized] N+1 제거: profiles를 .in()으로 한 번에 일괄 조회
+      const profileNeededIds = convList.filter(c => !c.profile).map(c => c.other_id);
+      let profileMap = new Map<string, any>();
+      if (profileNeededIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_url, last_seen')
+          .in('id', profileNeededIds);
+        (profilesData || []).forEach(p => profileMap.set(p.id, p));
+      }
+
+      const results = convList.map(conv => {
         if (conv.profile) return conv;
-        const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url, last_seen').eq('id', conv.other_id).single();
+        const profile = profileMap.get(conv.other_id);
         return { ...conv, profile: profile || { nickname: '사용자', avatar_url: null, last_seen: null } };
-      }));
+      });
 
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);

@@ -59,7 +59,7 @@ interface PostItemProps {
 
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
-  const { user: authUser, session } = useAuth();
+  const { user: authUser, session, profile: authProfile } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
   
@@ -114,19 +114,25 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   }, [autoPlayVideo]);
 
   // 프로필 정보 가져오기
+  // [Optimized] AuthProvider가 이미 profile을 관리하므로 그것을 우선 사용.
+  // 없을 때만 가벼운 fetch (필요 컬럼만, select('*') 제거)
   useEffect(() => {
+    if (authProfile) {
+      setProfile(authProfile);
+      return;
+    }
     if (authUser?.id) {
       const fetchProfile = async () => {
         const { data } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, nickname, avatar_url')
           .eq('id', authUser.id)
           .single();
         if (data) setProfile(data);
       };
       fetchProfile();
     }
-  }, [authUser]);
+  }, [authUser, authProfile]);
 
   // Intersection Observer to track visibility and control playback
   useEffect(() => {
