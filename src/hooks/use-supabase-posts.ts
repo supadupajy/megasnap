@@ -83,7 +83,8 @@ const mapDbToPost = async (rawPost: any): Promise<Post> => {
     category: isAd ? 'food' : (p.category || 'none'),
     createdAt: new Date(p.created_at),
     borderType: p.borderType || borderType,
-    is_seed_data: p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1
+    is_seed_data: p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1,
+    owner_id: p.user_id, // 실제 DB user_id — isMine 판별에 사용
   };
 };
 

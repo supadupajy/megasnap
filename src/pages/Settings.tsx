@@ -191,7 +191,7 @@ const Settings = () => {
     const toastId = showLoading('현재 화면 안에 포스팅을 생성 중입니다...');
     try {
       const bounds = JSON.parse(storedBounds);
-      const count = await seedInBoundsPosts(user.id, bounds);
+      const count = await seedInBoundsPosts(user.id, bounds, profile?.nickname);
       dismissToast(toastId);
       showSuccess(`현재 화면 안에 ${count}개의 포스팅이 생성되었습니다! 📍`);
       

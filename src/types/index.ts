@@ -46,5 +46,6 @@ export interface Post {
   createdAt: Date;
   borderType?: string;
   isNewRealtime?: boolean;
-  is_seed_data?: boolean; // [NEW] 시드 데이터 여부 추가
+  is_seed_data?: boolean;
+  owner_id?: string; // 실제 DB user_id (RLS 소유자 판별용)
 }

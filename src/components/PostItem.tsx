@@ -90,11 +90,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const { user, content, isAd } = post;
   
-  // [DEBUG] Force direct evaluation and add visual marker for testing
+  // owner_id(실제 DB user_id)를 우선 사용하여 isMine 판별
+  // 시드 데이터는 user.id가 다른 사람 이름이지만 owner_id는 실제 소유자 ID
   const isMine = useMemo(() => {
-    if (!authUser?.id || !user?.id) return false;
-    return authUser.id === user.id || user.id === 'me';
-  }, [authUser?.id, user?.id]);
+    if (!authUser?.id) return false;
+    const ownerId = post.owner_id || user?.id;
+    return ownerId === authUser.id || ownerId === 'me';
+  }, [authUser?.id, post.owner_id, user?.id]);
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();

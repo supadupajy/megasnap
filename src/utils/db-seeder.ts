@@ -373,19 +373,25 @@ export const deletePostsInBounds = async (
  */
 export const seedInBoundsPosts = async (
   currentUserId: string, 
-  bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }
+  bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } },
+  currentNickname?: string
 ) => {
   console.log("📍 [Seeder] 화면 내 데이터 생성을 시작합니다...", bounds);
 
   try {
     await initializeYoutubePool();
     
-    // [FIX] 실제 DB에서 본인을 제외한 다른 유저들의 프로필을 최대한 많이 가져옴
+    // 본인을 제외한 다른 유저들의 프로필을 가져옴
     const { data: otherProfiles } = await supabase
       .from('profiles')
       .select('id, nickname, avatar_url')
       .neq('id', currentUserId)
       .limit(100);
+
+    // 본인 닉네임도 필터링
+    const filteredProfiles = (otherProfiles || []).filter(p => 
+      p.nickname && p.nickname !== currentNickname
+    );
 
     const count = 5; 
     const insertData = [];
@@ -400,18 +406,18 @@ export const seedInBoundsPosts = async (
       if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
-      } else if (otherProfiles && otherProfiles.length > 0) {
-        const p = otherProfiles[Math.floor(Math.random() * otherProfiles.length)];
+      } else if (filteredProfiles.length > 0) {
+        // 본인 닉네임이 제외된 다른 유저 프로필에서 선택
+        const p = filteredProfiles[Math.floor(Math.random() * filteredProfiles.length)];
         userName = p.nickname;
         userAvatar = p.avatar_url;
       } else {
-        userName = RANDOM_NICKNAMES[Math.floor(Math.random() * RANDOM_NICKNAMES.length)];
+        // 다른 유저가 없으면 랜덤 닉네임 풀에서 선택 (본인 닉네임 완전 제외)
+        const availableNames = currentNickname 
+          ? RANDOM_NICKNAMES.filter(n => n !== currentNickname)
+          : RANDOM_NICKNAMES;
+        userName = availableNames[Math.floor(Math.random() * availableNames.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
-      }
-
-      // [CRITICAL] 본인 닉네임이 절대 들어가지 않도록 강제 필터링
-      if (userName === '비트코인떡락') {
-        userName = RANDOM_NICKNAMES.find(n => n !== '비트코인떡락') || '익명탐험가';
       }
 
       let likes = Math.floor(Math.random() * 500);
@@ -453,8 +459,8 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId, 
-        user_name: userName,    // [CRITICAL CHECK] 이 값이 DB의 user_name 컬럼에 정확히 저장되는지 확인
+        user_id: currentUserId,  // RLS 정책 준수 (실제 소유자)
+        user_name: userName,     // 화면에 표시될 랜덤 닉네임
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -464,7 +470,7 @@ export const seedInBoundsPosts = async (
       });
     }
 
-    console.log("📤 [Seeder] Inserting with explicit user_name:", insertData.map(d => d.user_name));
+    console.log("📤 [Seeder] Inserting with user_names:", insertData.map(d => d.user_name));
 
     const { error } = await supabase.from('posts').insert(insertData);
     
