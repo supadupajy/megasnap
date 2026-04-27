@@ -489,7 +489,7 @@ const MapContainer = ({
             level: mapLevel,
           });
         }
-      }, 500);
+      }, 200);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
 

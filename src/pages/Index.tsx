@@ -229,7 +229,7 @@ const Index = () => {
 
     // [Optimized] bounds 변화량이 작으면 fetch 스킵
     // 소수점 2자리(약 1.1km) 단위로 반올림 → 지도를 조금 움직여도 fetch 안 함
-    const boundsKey = `${sw.lat.toFixed(2)}|${sw.lng.toFixed(2)}|${ne.lat.toFixed(2)}|${ne.lng.toFixed(2)}|${currentZoom}`;
+    const boundsKey = `${sw.lat.toFixed(3)}|${sw.lng.toFixed(3)}|${ne.lat.toFixed(3)}|${ne.lng.toFixed(3)}|${currentZoom}`;
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
@@ -395,7 +395,7 @@ const Index = () => {
       mapCache.lastCenter = data.center;
       if (isSelectingLocation) setTempSelectedLocation(data.center);
       throttleTimer.current = null;
-    }, 800);
+    }, 300);
   }, [isSelectingLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
