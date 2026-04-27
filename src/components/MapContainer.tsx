@@ -1000,12 +1000,12 @@ const MapContainer = ({
       ._ad_img_box { animation:_ad_glow_pulse 1.8s ease-in-out infinite; }
     </style>` : '';
 
-    // AD 라벨: MY/HOT labelHtml과 padding·font-size·line-height·margin-bottom 완전 동일
-    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">✦ AD ✦</div>` : '';
+    // AD 라벨: MY labelHtml과 구조·스타일 완전 동일 (width:60px 고정으로 래퍼와 무관)
+    const adLabelHtml = isAd ? `<div class="_ad_label" style="width:60px;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">✦ AD ✦</div>` : '';
 
-    // AD 테두리: 정적 무지개 그라데이션 테두리 (회전 없음), 이미지 박스는 내부에 고정
-    const adWrapOpen = isAd ? `<div style="position:relative;width:60px;height:60px;z-index:2;border-radius:20px;background:linear-gradient(135deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#06b6d4);padding:3px;box-sizing:border-box;">` : '';
-    const adWrapClose = isAd ? `</div>` : '';
+    // AD 테두리: 이미지 박스에 직접 그라데이션 border 적용 (래퍼 없음 → 라벨 너비 영향 없음)
+    const adWrapOpen = '';
+    const adWrapClose = '';
 
     const adSparklesHtml = isAd ? `
       <span class="_ad_s1">✦</span>
@@ -1015,7 +1015,7 @@ const MapContainer = ({
     ` : '';
 
     const innerBoxStyle = isAd
-      ? `width:100%;height:100%;border-radius:17px;position:relative;z-index:1;border:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:3px solid transparent;background-clip:padding-box;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;outline:3px solid #ec4899;outline-offset:-3px;box-shadow:0 0 0 3px #fbbf24, 0 0 0 6px #8b5cf6, 0 0 16px 4px rgba(251,191,36,0.6);`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
