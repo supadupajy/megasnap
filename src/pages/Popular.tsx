@@ -10,6 +10,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
+import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 
 const getTierFromId = (id: string) => {
@@ -118,12 +119,21 @@ const Popular = () => {
   }, [loadMorePosts, posts.length, hasMore]);
 
   const handleLikeToggle = useCallback((postId: string) => {
+    if (!authUser?.id) return;
+    let currentlyLiked = false;
     setPosts(prev => prev.map(post => {
       if (post.id !== postId) return post;
-      const isLiked = !post.isLiked;
-      return { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 };
+      currentlyLiked = post.isLiked;
+      return { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 };
     }));
-  }, []);
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) {
+        setPosts(prev => prev.map(post => post.id !== postId ? post
+          : { ...post, isLiked: currentlyLiked, likes: currentlyLiked ? post.likes + 1 : post.likes - 1 }
+        ));
+      }
+    });
+  }, [authUser?.id]);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);

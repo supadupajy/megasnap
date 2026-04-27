@@ -23,6 +23,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
+import { toggleLikeInDb } from '@/utils/like-utils';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
@@ -518,10 +519,28 @@ const Index = () => {
 
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
-    const updater = (p: Post) => p.id === postId ? { ...p, isLiked: !p.isLiked, likes: !p.isLiked ? p.likes + 1 : p.likes - 1 } : p;
+    if (!authUser?.id) return;
+    // Optimistic UI: 즉시 상태 반영
+    let currentlyLiked = false;
+    const updater = (p: Post) => {
+      if (p.id !== postId) return p;
+      currentlyLiked = p.isLiked;
+      return { ...p, isLiked: !p.isLiked, likes: !p.isLiked ? p.likes + 1 : p.likes - 1 };
+    };
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
-  }, []);
+    // DB 쓰기 (트리거가 posts.likes 자동 동기화)
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) {
+        // 실패 시 롤백
+        const rollback = (p: Post) => p.id === postId
+          ? { ...p, isLiked: currentlyLiked, likes: currentlyLiked ? p.likes + 1 : p.likes - 1 }
+          : p;
+        setAllPosts(prev => prev.map(rollback));
+        setGlobalTrendingPosts(prev => prev.map(rollback));
+      }
+    });
+  }, [authUser?.id]);
 
   // ── 포스트 삭제 ──────────────────────────────────────────────
   const handlePostDeleted = useCallback((id: string) => {

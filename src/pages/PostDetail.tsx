@@ -10,6 +10,7 @@ import { Post } from '@/types';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
+import { toggleLikeInDb } from '@/utils/like-utils';
 
 const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar';
 
@@ -170,9 +171,20 @@ const PostDetail = () => {
   }, [id, allPosts]);
 
   const handleLikeToggle = (postId: string) => {
-    setAllPosts(prev => prev.map(post =>
-      post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post
-    ));
+    if (!authUser?.id) return;
+    let currentlyLiked = false;
+    setAllPosts(prev => prev.map(post => {
+      if (post.id !== postId) return post;
+      currentlyLiked = post.isLiked;
+      return { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 };
+    }));
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) {
+        setAllPosts(prev => prev.map(post => post.id !== postId ? post
+          : { ...post, isLiked: currentlyLiked, likes: currentlyLiked ? post.likes + 1 : post.likes - 1 }
+        ));
+      }
+    });
   };
 
   const handlePostDelete = async (postId: string) => {

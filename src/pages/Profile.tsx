@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
+import { toggleLikeInDb } from '@/utils/like-utils';
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
@@ -229,12 +230,25 @@ const Profile = () => {
   }, [authLoading, authUser?.id, loadProfileData]);
 
   const handleLikeToggle = useCallback((postId: string, isFromSaved: boolean) => {
-    const updatePost = (prev: Post[]) => prev.map(post => 
-      post.id === postId ? { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 } : post
-    );
+    if (!authUser?.id) return;
+    let currentlyLiked = false;
+    const updatePost = (prev: Post[]) => prev.map(post => {
+      if (post.id !== postId) return post;
+      currentlyLiked = post.isLiked;
+      return { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 };
+    });
     setMyPosts(updatePost);
     setSavedPosts(updatePost);
-  }, []);
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) {
+        const rollback = (prev: Post[]) => prev.map(post => post.id !== postId ? post
+          : { ...post, isLiked: currentlyLiked, likes: currentlyLiked ? post.likes + 1 : post.likes - 1 }
+        );
+        setMyPosts(rollback);
+        setSavedPosts(rollback);
+      }
+    });
+  }, [authUser?.id]);
 
   const handleSaveToggle = useCallback((postId: string, isSaved: boolean) => {
     if (isSaved) {

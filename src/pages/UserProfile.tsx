@@ -20,6 +20,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { showSuccess, showError } from '@/utils/toast';
+import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
 
@@ -90,7 +91,20 @@ const UserProfile = () => {
   };
 
   const handleLikeToggle = (postId: string) => {
-    setUserPosts(prev => prev.map(p => p.id === postId ? { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 } : p));
+    if (!authUser?.id) return;
+    let currentlyLiked = false;
+    setUserPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      currentlyLiked = p.isLiked;
+      return { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 };
+    }));
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) {
+        setUserPosts(prev => prev.map(p => p.id !== postId ? p
+          : { ...p, isLiked: currentlyLiked, likes: currentlyLiked ? p.likes + 1 : p.likes - 1 }
+        ));
+      }
+    });
   };
 
   const handleLocationClick = (e: React.MouseEvent, lat: number, lng: number) => {
