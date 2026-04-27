@@ -249,20 +249,25 @@ const MapContainer = ({
     };
   }, [startLongPress, handlePointerUp, cancelLongPress]);
 
-  // 카카오맵 dragend → 손 뗌 처리
+  // 카카오맵 dragstart/dragend → 롱프레스 취소 및 마커 복원
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    // 드래그 시작 시 롱프레스 즉시 취소 (드래그 중에는 마커 숨기기 불가)
+    // 드래그 시작 시 롱프레스 즉시 취소
     const handleDragStart = () => { cancelLongPress(); };
 
+    // 드래그 끝날 때 마커 숨김 상태면 복원
+    const handleDragEnd = () => { revealMarkersOnce(); };
+
     kakao.maps.event.addListener(mapInstance.current, 'dragstart', handleDragStart);
+    kakao.maps.event.addListener(mapInstance.current, 'dragend', handleDragEnd);
     return () => {
       kakao.maps.event.removeListener(mapInstance.current, 'dragstart', handleDragStart);
+      kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
     };
-  }, [isMapReady, cancelLongPress]);
+  }, [isMapReady, cancelLongPress, revealMarkersOnce]);
 
   // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
@@ -985,7 +990,7 @@ const MapContainer = ({
           className="longpress-toast"
           style={{
             position: 'fixed',
-            bottom: '96px',
+            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
@@ -1034,7 +1039,7 @@ const MapContainer = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '96px',
+            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
