@@ -24,7 +24,7 @@ const Header = () => {
           onClick={() => navigate('/')}
         >
           <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
-            <span className="text-gray-900">Chora</span>
+            <span className="text-gray-900">Vivid</span>
             <span className="text-indigo-600">Snap</span>
           </h1>
         </div>
