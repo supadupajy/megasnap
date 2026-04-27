@@ -94,9 +94,7 @@ const Index = () => {
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 5);
-  const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
-  const triggerConfettiRef = useRef(triggerConfetti);
-  useEffect(() => { triggerConfettiRef.current = triggerConfetti; }, [triggerConfetti]);
+  // posts 실시간 구독 제거에 따라 channelIdRef / triggerConfettiRef는 더 이상 필요하지 않음
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
   const trendingFetchedAtRef = useRef<number>(0);
@@ -493,30 +491,12 @@ const Index = () => {
     }, 400);
   }, []);
 
-  // ── 실시간 구독 ──────────────────────────────────────────────
-  useEffect(() => {
-    const channel = supabase
-      .channel(channelIdRef.current)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-        const newPost = mapRawToPost(payload.new);
-        setAllPosts(prev => {
-          if (prev.some(p => p.id === newPost.id)) return prev;
-          const updated = [newPost, ...prev];
-          mapCache.posts = updated;
-          return updated;
-        });
-        if (payload.new.user_id === authUser?.id) triggerConfettiRef.current();
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
-        const deletedId = payload.old.id;
-        window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: deletedId } }));
-        setTimeout(() => {
-          setAllPosts(prev => { const f = prev.filter(p => p.id !== deletedId); mapCache.posts = f; return f; });
-        }, 450);
-      })
-      .subscribe();
-    return () => { channel.unsubscribe(); supabase.removeChannel(channel); };
-  }, [authUser?.id]);
+  // ── posts 실시간 구독은 제거되었습니다 ─────────────────────────
+  // 이유: 4,559+ row 테이블의 INSERT/DELETE 이벤트를 모든 클라이언트에
+  // fan-out하는 것은 Realtime 서버에 큰 부하(thread killed by timeout)를 유발.
+  // 새 글/삭제는 지도 이동, 재검색 버튼, 또는 글 작성 후 navigate state로
+  // 자연스럽게 반영되므로 실시간 구독이 불필요합니다.
+  // (confetti는 Write.tsx → navigate state.triggerConfetti 경로로 정상 동작)
 
   // ── 이벤트 리스너들 ──────────────────────────────────────────
   useEffect(() => {

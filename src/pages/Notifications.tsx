@@ -112,7 +112,9 @@ const Notifications = () => {
     fetchNotifications();
 
     // Realtime 구독 설정
-    const channelName = `realtime_notifs_page_${authUser.id}_${Date.now()}`;
+    // [Fixed] 채널 이름에서 Date.now() 제거 — 매번 다른 이름이면 서버 측에서
+    // 이전 채널 cleanup 전에 새 채널이 join돼 좀비 채널이 누적될 수 있음.
+    const channelName = `realtime_notifs_page_${authUser.id}`;
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', { 

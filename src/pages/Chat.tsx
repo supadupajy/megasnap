@@ -55,6 +55,13 @@ const Chat = () => {
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
 
+  // [Fixed] 채팅방 채널 useEffect의 의존성에서 isPageVisible을 빼고
+  // ref로 최신값을 참조하도록 변경. 의존성에 포함되어 있으면 visibility가
+  // 바뀔 때마다 채널이 destroy/recreate되어 채널 churn으로 인한
+  // Realtime 서버 부하(thread killed by timeout)가 발생함.
+  const isPageVisibleRef = useRef(isPageVisible);
+  useEffect(() => { isPageVisibleRef.current = isPageVisible; }, [isPageVisible]);
+
   const fetchUnreadCounts = useCallback(async () => {
     if (!authUser) return;
     // [Fixed] count: 'planned'는 부정확. select+limit으로 정확하게 카운트.
@@ -212,15 +219,16 @@ const Chat = () => {
     const channel = supabase.channel(`chat-room-${chatId}-${authUser.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
       const newMsg = payload.new as Message;
       if (!((newMsg.sender_id === chatId && newMsg.receiver_id === authUser.id) || (newMsg.sender_id === authUser.id && newMsg.receiver_id === chatId))) return;
-      if (newMsg.sender_id === chatId) { playNotificationSound(isPageVisible); markAsRead(); }
+      // ref로 최신 visibility 값을 참조 (의존성에서 isPageVisible 제외하기 위함)
+      if (newMsg.sender_id === chatId) { playNotificationSound(isPageVisibleRef.current); markAsRead(); }
       setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
       setTimeout(scrollToBottom, 10);
     }).subscribe();
 
-    return () => { 
-      supabase.removeChannel(channel); 
+    return () => {
+      supabase.removeChannel(channel);
     };
-  }, [authUser.id, chatId, isPageVisible, markAsRead, playNotificationSound, scrollToBottom]);
+  }, [authUser.id, chatId, markAsRead, playNotificationSound, scrollToBottom]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || !authUser || !chatId) return;

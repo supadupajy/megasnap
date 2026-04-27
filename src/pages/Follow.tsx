@@ -77,22 +77,28 @@ const Follow = () => {
   useEffect(() => {
     if (users.length === 0) return;
 
-    // 실시간 온라인 상태 업데이트 구독
-    const channel = supabase
-      .channel('follow-list-online-status')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
-        (payload) => {
-          setUsers(prev => prev.map(user => 
-            user.id === payload.new.id ? { ...user, last_seen: payload.new.last_seen } : user
-          ));
-        }
-      )
-      .subscribe();
+    // [Fixed] profiles UPDATE 실시간 구독 → polling으로 대체.
+    // 이유: 필터 없는 profiles UPDATE 구독이 모든 클라이언트에 fan-out 되어
+    // Realtime 서버 부하(thread killed by timeout)의 주요 원인이었음.
+    // 현재 화면에 보이는 사용자들의 last_seen만 60초마다 폴링하여 동일한 UX 유지.
+    const userIds = users.map(u => u.id);
+    const pollOnlineStatus = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, last_seen')
+        .in('id', userIds);
+      if (!data) return;
+      const lastSeenMap = new Map(data.map(p => [p.id, p.last_seen]));
+      setUsers(prev => prev.map(user =>
+        lastSeenMap.has(user.id)
+          ? { ...user, last_seen: lastSeenMap.get(user.id) }
+          : user
+      ));
+    };
+    const interval = setInterval(pollOnlineStatus, 60_000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [users.length]);
 

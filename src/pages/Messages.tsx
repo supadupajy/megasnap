@@ -120,15 +120,16 @@ const Messages = () => {
     window.addEventListener('refresh-messages-list', handleRefreshEvent);
 
     // 메시지 실시간 업데이트 - 내가 관련된 메시지만 구독
-    const channel = supabase.channel('messages_list_updates')
+    // [Fixed] 채널 이름에 user.id 포함 — 사용자별 격리로 좀비 채널 충돌 방지
+    const channel = supabase.channel(`messages_list_updates_${authUser.id}`)
       .on(
-        'postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
           table: 'messages',
           filter: `receiver_id=eq.${authUser.id}`
-        }, 
+        },
         () => {
           // 새 메시지 수신 시에만 재fetch (UPDATE/DELETE 제외)
           fetchConversations();
@@ -138,18 +139,36 @@ const Messages = () => {
 
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
-    // Profiles real-time subscription for online status
-    const profileChannel = supabase.channel('messages_profiles_updates')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
-        setConversations(prev => prev.map(conv =>
-          conv.other_id === payload.new.id ? { ...conv, profile: { ...conv.profile, last_seen: payload.new.last_seen } } : conv
-        ));
-      })
-      .subscribe();
+    // [Fixed] profiles UPDATE 실시간 구독 → polling으로 대체.
+    // 이유: 모든 사용자의 last_seen UPDATE가 모든 클라이언트에 fan-out 되어
+    // Realtime 서버 부하 폭증(thread killed by timeout)의 주요 원인이었음.
+    // 60초마다 현재 보이는 대화 상대들의 last_seen만 가볍게 폴링하여 동일한 UX 유지.
+    const pollOnlineStatus = async () => {
+      setConversations(prev => {
+        if (prev.length === 0) return prev;
+        const ids = prev.map(c => c.other_id);
+        // 비동기 fetch는 별도로 실행 (setState 콜백 안에서 await 불가)
+        supabase
+          .from('profiles')
+          .select('id, last_seen')
+          .in('id', ids)
+          .then(({ data }) => {
+            if (!data) return;
+            const lastSeenMap = new Map(data.map(p => [p.id, p.last_seen]));
+            setConversations(curr => curr.map(conv =>
+              lastSeenMap.has(conv.other_id)
+                ? { ...conv, profile: { ...conv.profile, last_seen: lastSeenMap.get(conv.other_id) } }
+                : conv
+            ));
+          });
+        return prev;
+      });
+    };
+    const onlineStatusInterval = setInterval(pollOnlineStatus, 60_000);
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(profileChannel);
+      clearInterval(onlineStatusInterval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('refresh-messages-list', handleRefreshEvent);
       unsubscribeChatStore();
