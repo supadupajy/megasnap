@@ -92,6 +92,7 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
+  const spreadMarkersRef = useRef<Post[]>([]);
   const channelIdRef = useRef(`posts-channel-${Math.random().toString(36).substring(7)}`);
   const triggerConfettiRef = useRef(triggerConfetti);
   useEffect(() => { triggerConfettiRef.current = triggerConfetti; }, [triggerConfetti]);
@@ -303,6 +304,11 @@ const Index = () => {
     return result;
   }, [displayedMarkers, currentZoom]);
 
+  // spreadMarkers가 바뀔 때마다 ref 동기화 (focusPostOnMap에서 분산 좌표 참조용)
+  useEffect(() => {
+    spreadMarkersRef.current = spreadMarkers;
+  }, [spreadMarkers]);
+
   // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
   // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
   const visibleMarkers = useMemo(() => {
@@ -345,14 +351,20 @@ const Index = () => {
     setSelectedPostId(null);
     setSearchResultLocation(null);
 
-    // 이전 타이머 취소
+    // 이전 타이머/리스너 취소
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    const targetCenter = center || { lat: post.lat, lng: post.lng };
+    // spreadMarkers에서 분산된 실제 표시 좌표를 찾아 그 위치로 지도 이동
+    // 없으면 원래 좌표 사용 (마커가 아직 렌더링 안 된 경우)
+    const spreadPost = spreadMarkersRef.current.find(p => p.id === post.id);
+    const targetCenter = spreadPost
+      ? { lat: spreadPost.lat, lng: spreadPost.lng }
+      : (center || { lat: post.lat, lng: post.lng });
+
     setMapCenter(targetCenter);
 
-    // 지도 이동 완료 이벤트를 받아서 핑 효과 발생 (타이밍 정확히 맞춤)
-    const handleMoveComplete = (e: any) => {
+    // 지도 이동 완료 이벤트를 받아서 핑 효과 발생
+    const handleMoveComplete = () => {
       window.removeEventListener('map-move-complete', handleMoveComplete);
       if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
@@ -537,10 +549,11 @@ const Index = () => {
       return combined;
     });
 
-    // TrendingPosts 패널 닫힘 애니메이션(500ms) 완료 후 지도 이동
+    // TrendingPosts 패널 닫힘 애니메이션(500ms) + React 렌더링 + spreadMarkers 재계산 대기
+    // spreadMarkersRef가 업데이트된 후 focusPostOnMap 호출해야 분산 좌표를 정확히 참조
     setTimeout(() => {
       focusPostOnMap(post, { lat: post.lat, lng: post.lng });
-    }, 550);
+    }, 700);
   }, [focusPostOnMap]);
 
   return (
