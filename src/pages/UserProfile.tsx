@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Grid, 
-  ChevronLeft, 
+import {
+  Grid,
+  ChevronLeft,
   User as UserIcon, 
   Loader2,
   Play,
@@ -233,14 +233,6 @@ const UserProfile = () => {
         <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">{nickname}</h2>
         </div>
-        {viewMode === 'list' && (
-          <button
-            onClick={() => setViewMode('grid')}
-            className="ml-auto w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <Grid className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
       {/* 스크롤 영역 */}
