@@ -350,11 +350,11 @@ const Index = () => {
 
     setMapCenter(center || { lat: post.lat, lng: post.lng });
 
-    // 지도 이동 후 핑 효과 (1회만)
+    // 지도 이동 완료 후 핑 효과 (smoothMoveTo 최대 1200ms + 여유 300ms)
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
       highlightTimeoutRef.current = null;
-    }, 800);
+    }, 1600);
   }, []);
 
   // ── 마커 클릭 ────────────────────────────────────────────────
