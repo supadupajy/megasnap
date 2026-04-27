@@ -98,11 +98,14 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
         () => fetchCounts(userId)
       )
-      // 알림
+      // 알림 (변경 시 카운트 갱신 + Notifications 페이지에 이벤트 전달)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        () => fetchCounts(userId)
+        () => {
+          fetchCounts(userId);
+          window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
+        }
       )
       .subscribe();
 

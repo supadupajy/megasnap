@@ -111,47 +111,20 @@ const Notifications = () => {
     // 초기 데이터 로딩
     fetchNotifications();
 
-    // [Fixed] fetchNotifications를 의존성에서 제거 → 무한 루프 차단
-    // 새 알림은 Realtime으로 로컬 상태에 직접 추가 (re-fetch 불필요)
-    const channelName = `realtime_notifs_page_${authUser.id}`;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
-      }, async (payload) => {
-        const { data: actorProfile } = await supabase
-          .from('profiles')
-          .select('nickname, avatar_url')
-          .eq('id', payload.new.actor_id)
-          .single();
-        
-        const newNotif = {
-          ...payload.new,
-          actor: actorProfile || { nickname: '알 수 없는 사용자', avatar_url: null }
-        } as Notification;
-        
-        setNotifications(prev => [newNotif, ...prev]);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
-      }, (payload) => {
-        setNotifications(prev => prev.map(notif =>
-          notif.id === payload.new.id ? { ...notif, is_read: payload.new.is_read } : notif
-        ));
-      })
-      .subscribe();
+    /**
+     * ✅ 전역 NotificationProvider(global-badge 채널)가 notifications 변경을 감지하면
+     *    'refresh-unread-counts' 이벤트를 발생시킴.
+     *    Notifications 페이지는 그 이벤트를 받아 목록을 다시 fetch.
+     *    → 별도 Realtime 채널 없이 동일한 실시간 효과 달성.
+     *    채널 수: 2개 → 1개 유지
+     */
+    const handleRefresh = () => fetchNotifications();
+    window.addEventListener('refresh-unread-counts', handleRefresh);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser?.id]);
+  }, [authUser?.id, fetchNotifications]);
 
   const deleteNotification = async (id: string) => {
     try {
