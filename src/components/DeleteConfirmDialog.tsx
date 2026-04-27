@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,10 +19,24 @@ interface DeleteConfirmDialogProps {
   onConfirm: () => void;
 }
 
+const forceUnlockBody = () => {
+  document.body.style.pointerEvents = '';
+  document.body.style.overflow = '';
+  document.body.removeAttribute('data-scroll-locked');
+};
+
 const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialogProps) => {
+  // 다이얼로그가 닫힐 때마다 body 잠금 강제 해제
+  useEffect(() => {
+    if (!isOpen) {
+      // Radix UI의 애니메이션(~150ms) 완료 후 정리
+      const t = setTimeout(forceUnlockBody, 200);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* z-[2000]을 추가하여 최상단에 오도록 설정하고 포인터 이벤트 강제 활성화 */}
+    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) { forceUnlockBody(); onClose(); } }}>
       <AlertDialogContent
         className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl z-[2000] pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
@@ -44,6 +58,7 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              forceUnlockBody();
               onClose();
             }}
             className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0 cursor-pointer"
@@ -54,6 +69,7 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              forceUnlockBody();
               onConfirm();
             }}
             className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0 cursor-pointer"
@@ -63,7 +79,6 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
   );
 };
 

@@ -406,13 +406,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     setIsDeleteDialogOpen(false);
-    // AlertDialog가 닫히고 body 스타일을 정리할 시간을 준 뒤 삭제 실행
-    await new Promise(resolve => setTimeout(resolve, 50));
-    document.body.style.pointerEvents = '';
-    document.body.style.overflow = '';
-    if (onDelete) onDelete(post.id);
+    // 다음 tick에서 실행해 Radix AlertDialog cleanup이 먼저 완료되도록 함
+    setTimeout(() => {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      document.body.removeAttribute('data-scroll-locked');
+      if (onDelete) onDelete(post.id);
+    }, 0);
   };
 
   const handleAddComment = async (e?: React.FormEvent) => {

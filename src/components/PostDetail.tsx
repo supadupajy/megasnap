@@ -99,6 +99,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Dialog가 모두 닫힌 뒤 body 잠금 강제 해제
+  useEffect(() => {
+    if (!isOpen && !isDeleteDialogOpen) {
+      // Radix UI가 body에 걸어둔 scroll-lock / pointer-events 잔재 제거
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      document.body.removeAttribute('data-scroll-locked');
+    }
+  }, [isOpen, isDeleteDialogOpen]);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
@@ -343,19 +353,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
     const postId = currentPost.id;
 
-    // 1. 확인 다이얼로그 먼저 닫기 → Radix가 body 스타일 정리할 시간 확보
+    // 1. 확인 다이얼로그 닫기
     setIsDeleteDialogOpen(false);
 
-    // 2. 한 프레임 뒤에 PostDetail 닫기 (두 Dialog가 동시에 닫히면 body pointer-events 잠김 방지)
-    await new Promise(resolve => setTimeout(resolve, 50));
-    if (onDelete) onDelete(postId);
-    onClose();
+    // 2. PostDetail 닫기 (다음 tick에서 실행해 Radix 애니메이션 충돌 방지)
+    setTimeout(() => {
+      if (onDelete) onDelete(postId);
+      onClose();
+    }, 0);
 
-    // 3. body 잠금 강제 해제 (안전장치)
-    document.body.style.pointerEvents = '';
-    document.body.style.overflow = '';
-
-    // 4. DB 삭제는 백그라운드에서 진행
+    // 3. DB 삭제는 백그라운드에서 진행
     try {
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
