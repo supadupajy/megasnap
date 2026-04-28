@@ -274,10 +274,10 @@ const UserProfile = () => {
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
+              <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
                 <DropdownMenuItem
                   onClick={() => showSuccess('신고가 접수되었습니다.')}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
                 >
                   <AlertCircle className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-bold text-gray-700">신고</span>
@@ -290,7 +290,7 @@ const UserProfile = () => {
                       navigate(-1);
                     }
                   }}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
                 >
                   <Ban className="w-4 h-4 text-red-600" />
                   <span className="text-sm font-bold text-red-600">차단</span>
