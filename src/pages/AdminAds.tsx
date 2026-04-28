@@ -518,6 +518,23 @@ const AdCard = ({
                     {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
                   </button>
                 </div>
+                {/* 기간 설정 */}
+                <div className="grid grid-cols-2 gap-2">
+                  <DatetimeRow
+                    label="시작 일시"
+                    value={form.start_date || ''}
+                    onChange={v => handleChange('start_date', v)}
+                  />
+                  <DatetimeRow
+                    label="종료 일시"
+                    value={form.end_date || ''}
+                    min={form.start_date || undefined}
+                    onChange={v => handleChange('end_date', v)}
+                  />
+                </div>
+                {(form.start_date || form.end_date) && (
+                  <PeriodStatusBadge startDate={form.start_date || ''} endDate={form.end_date || ''} isNext={false} />
+                )}
                 <FieldRow icon={Type} label="브랜드명" value={form.brand_name || ''} placeholder="브랜드 이름" onChange={v => handleChange('brand_name', v)} />
                 <FieldRow icon={Type} label="설명" value={form.title || ''} placeholder="광고 설명 문구" onChange={v => handleChange('title', v)} />
                 <FieldRow icon={Link} label="랜딩 URL" value={form.link_url || ''} placeholder="https://example.com" onChange={v => handleChange('link_url', v)} />
