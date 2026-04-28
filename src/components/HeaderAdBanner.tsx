@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ExternalLink, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
 
@@ -71,10 +71,6 @@ const HeaderAdBanner = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 group-hover:bg-white/20 transition-colors">
-          <span className="text-[7px] font-black text-white uppercase">Link</span>
-          <ExternalLink className="w-2.5 h-2.5 text-white" />
-        </div>
       </div>
     </motion.div>
   );
