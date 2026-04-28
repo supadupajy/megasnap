@@ -262,9 +262,24 @@ export function useAd(adId: string) {
       setLoading(false);
     }
 
+    // ── Supabase Realtime 구독: ads 테이블 변경 시 모든 클라이언트에 즉시 반영 ──
+    const channel = supabase
+      .channel(`ads-realtime-${adId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ads', filter: `id=eq.${adId}` },
+        (payload) => {
+          const updated = payload.new as AdData;
+          adCache[adId] = updated;
+          listeners[adId]?.forEach(fn => fn(updated));
+        }
+      )
+      .subscribe();
+
     return () => {
       listeners[adId]?.delete(handler);
       if (timerRef.current) clearTimeout(timerRef.current);
+      supabase.removeChannel(channel);
     };
   }, [adId]);
 
