@@ -181,12 +181,14 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
 // key가 바뀌면 컴포넌트가 재마운트되어 initialAd가 새로 적용됨
 const AdCard = ({
   initialAd,
+  savedAd,
   defaultExpanded = false,
   locationFieldRef,
   onSave,
   onSelectLocation,
 }: {
-  initialAd: AdData;
+  initialAd: AdData;       // 화면에 표시할 초기값 (pendingLocation 반영됨)
+  savedAd: AdData;         // DB에 실제 저장된 값 (hasChanges 비교 기준)
   defaultExpanded?: boolean;
   locationFieldRef?: React.RefObject<HTMLDivElement>;
   onSave: (updated: AdData) => Promise<void>;
@@ -205,24 +207,24 @@ const AdCard = ({
   // lat/lng가 있으면 역지오코딩으로 주소 가져오기
   useEffect(() => {
     if (form.lat != null && form.lng != null) {
-      setLocationLabel(null); // 로딩 중
+      setLocationLabel(null);
       reverseGeocode(form.lat, form.lng).then(addr => setLocationLabel(addr));
     } else {
       setLocationLabel(null);
     }
   }, [form.lat, form.lng]);
 
-  // initialAd와 비교해 변경 여부 판단
+  // savedAd(DB 원본)와 비교해 변경 여부 판단
   const hasChanges =
-    form.title !== initialAd.title ||
-    form.subtitle !== initialAd.subtitle ||
-    form.link_url !== initialAd.link_url ||
-    form.brand_name !== initialAd.brand_name ||
-    form.image_url !== initialAd.image_url ||
-    form.brand_logo_url !== initialAd.brand_logo_url ||
-    form.is_active !== initialAd.is_active ||
-    form.lat !== initialAd.lat ||
-    form.lng !== initialAd.lng;
+    form.title !== savedAd.title ||
+    form.subtitle !== savedAd.subtitle ||
+    form.link_url !== savedAd.link_url ||
+    form.brand_name !== savedAd.brand_name ||
+    form.image_url !== savedAd.image_url ||
+    form.brand_logo_url !== savedAd.brand_logo_url ||
+    form.is_active !== savedAd.is_active ||
+    form.lat !== savedAd.lat ||
+    form.lng !== savedAd.lng;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -517,6 +519,7 @@ const AdminAds = () => {
                 <AdCard
                   key={`${ad.id}-${ad.lat ?? 'null'}-${ad.lng ?? 'null'}`}
                   initialAd={ad}
+                  savedAd={ads.find(a => a.id === ad.id) ?? ad}
                   defaultExpanded={ad.id === 'map_marker' && pendingLocation != null}
                   locationFieldRef={ad.id === 'map_marker' ? locationFieldRef : undefined}
                   onSave={handleSave}
