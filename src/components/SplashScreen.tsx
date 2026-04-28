@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Camera } from 'lucide-react';
+import { Camera, Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
@@ -72,36 +72,46 @@ const SplashScreen = () => {
             </motion.p>
           </div>
 
-          {/* 광고 슬롯 — 만료 시 구인 이미지 표시 */}
+          {/* 광고 슬롯 — 만료 시 구인 배너 표시 */}
           {slot && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group cursor-pointer"
+              className="mt-12 w-full max-w-[320px] cursor-pointer"
               onClick={() => slot.link_url && window.open(slot.link_url, '_blank', 'noopener,noreferrer')}
             >
-              <img 
-                src={slot.image_url}
-                alt={slot.isRecruitment ? '광고 문의' : slot.brand_name}
-                className="w-full h-full object-cover"
-              />
-              {!slot.isRecruitment && (
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
-                      {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
-                    </div>
-                    {slot.brand_logo_url && (
-                      <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
-                        <img 
-                          src={slot.brand_logo_url}
-                          alt={slot.brand_name}
-                          className="w-full h-full object-contain" 
-                        />
+              {slot.isRecruitment ? (
+                <div className="w-full h-14 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-200">
+                  <Mail className="w-4 h-4 text-white/90 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
+                    <span className="text-[8px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group">
+                  <img
+                    src={slot.image_url}
+                    alt={slot.brand_name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
+                        {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
                       </div>
-                    )}
+                      {slot.brand_logo_url && (
+                        <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
+                          <img
+                            src={slot.brand_logo_url}
+                            alt={slot.brand_name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
