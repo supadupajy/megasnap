@@ -30,7 +30,8 @@ const HeaderAdBanner = () => {
       onClick={() => linkUrl && window.open(linkUrl, '_blank')}
     >
       {/* Background Image */}
-      <img 
+      <img
+        key={imageUrl}
         src={imageUrl}
         alt={ad.brand_name || 'Ad'}
         className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700"

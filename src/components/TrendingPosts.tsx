@@ -138,6 +138,7 @@ const TrendingAdBanner: React.FC = () => {
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
         <div className="absolute inset-0 z-0">
           <img
+            key={imageUrl}
             src={imageUrl}
             alt={ad.brand_name || 'Ad'}
             className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"

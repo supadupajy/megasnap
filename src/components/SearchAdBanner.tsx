@@ -29,7 +29,8 @@ const SearchAdBanner = () => {
       onClick={() => linkUrl && window.open(linkUrl, '_blank', 'noopener,noreferrer')}
     >
       {/* Background Image */}
-      <img 
+      <img
+        key={imageUrl}
         src={imageUrl}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-90"
         alt={brandName}

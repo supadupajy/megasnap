@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AdData {
@@ -20,6 +20,9 @@ const listeners: Record<string, Set<(data: AdData) => void>> = {};
 
 // AdminAds에서 저장 후 호출해 캐시를 갱신
 export function invalidateAdCache(adId: string, updated: AdData) {
+  const prev = adCache[adId];
+  // 실제로 변경된 경우에만 리스너 호출 (불필요한 리렌더링/깜빡임 방지)
+  if (prev && JSON.stringify(prev) === JSON.stringify(updated)) return;
   adCache[adId] = updated;
   listeners[adId]?.forEach(fn => fn(updated));
 }
@@ -27,11 +30,18 @@ export function invalidateAdCache(adId: string, updated: AdData) {
 export function useAd(adId: string) {
   const [ad, setAd] = useState<AdData | null>(adCache[adId] ?? null);
   const [loading, setLoading] = useState(!adCache[adId]);
+  // 이전 ad 참조를 유지해 불필요한 state 업데이트 방지
+  const adRef = useRef<AdData | null>(adCache[adId] ?? null);
 
   useEffect(() => {
-    // 리스너 등록 (다른 탭/컴포넌트에서 캐시 갱신 시 반영)
     if (!listeners[adId]) listeners[adId] = new Set();
-    const handler = (data: AdData) => setAd(data);
+
+    const handler = (data: AdData) => {
+      // 이전 값과 완전히 동일하면 state 업데이트 생략
+      if (adRef.current && JSON.stringify(adRef.current) === JSON.stringify(data)) return;
+      adRef.current = data;
+      setAd(data);
+    };
     listeners[adId].add(handler);
 
     if (!adCache[adId]) {
@@ -43,6 +53,7 @@ export function useAd(adId: string) {
         .then(({ data, error }) => {
           if (!error && data) {
             adCache[adId] = data as AdData;
+            adRef.current = data as AdData;
             setAd(data as AdData);
           }
           setLoading(false);
