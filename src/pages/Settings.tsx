@@ -30,8 +30,6 @@ import {
   Receipt,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
 import { useAuth } from '@/components/AuthProvider';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -230,12 +228,8 @@ const Settings = () => {
 
   return (
     <div className="h-screen bg-gray-50 relative flex flex-col">
-      <div className="flex-none h-16">
-        <Header />
-      </div>
-
       {/* 타이틀 바 */}
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button
           onClick={() => navigate('/profile')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
@@ -556,8 +550,6 @@ const Settings = () => {
           </p>
         </div>
       </div>
-
-      <BottomNav />
 
       {/* 버그 신고 다이얼로그 */}
       <Dialog open={showBugReport} onOpenChange={(open) => { setShowBugReport(open); if (!open) setBugContent(''); }}>
