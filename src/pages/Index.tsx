@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { useAd } from '@/hooks/use-ad';
+import { resolveOfflineLocationName } from '@/utils/offline-location';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
@@ -297,7 +298,7 @@ const Index = () => {
         isInfluencer: false,
         user: { id: 'ad', name: mapMarkerAd.brand_name || '광고', avatar: mapMarkerAd.brand_logo_url || '' },
         content: mapMarkerAd.title || '',
-        location: mapMarkerAd.subtitle || '',
+        location: resolveOfflineLocationName(mapMarkerAd.lat, mapMarkerAd.lng),
         lat: mapMarkerAd.lat,
         lng: mapMarkerAd.lng,
         latitude: mapMarkerAd.lat,
