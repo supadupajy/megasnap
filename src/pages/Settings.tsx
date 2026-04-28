@@ -259,16 +259,16 @@ const Settings = () => {
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Lock} label="비밀번호 및 보안" />
-            <SettingItem icon={Bell} label="알림 설정" />
+            <SettingItem icon={Lock} label="비밀번호 및 보안" onClick={() => navigate('/settings/password')} />
+            <SettingItem icon={Bell} label="알림 설정" onClick={() => navigate('/settings/notifications')} />
           </div>
         </div>
 
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">앱 설정</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Languages} label="언어 설정" />
-            <SettingItem icon={Shield} label="개인정보 보호" />
+            <SettingItem icon={Languages} label="언어 설정" onClick={() => navigate('/settings/language')} />
+            <SettingItem icon={Shield} label="개인정보 보호" onClick={() => navigate('/settings/privacy')} />
           </div>
         </div>
 

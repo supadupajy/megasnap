@@ -21,6 +21,10 @@ import FriendList from "./pages/FriendList";
 import FriendFeed from "./pages/FriendFeed";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
+import PasswordSecurity from "./pages/PasswordSecurity";
+import NotificationSettings from "./pages/NotificationSettings";
+import LanguageSettings from "./pages/LanguageSettings";
+import PrivacySettings from "./pages/PrivacySettings";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
@@ -175,6 +179,10 @@ const AnimatedRoutes = () => {
               <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               <Route path="/user-profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/password" element={<ProtectedRoute><PasswordSecurity /></ProtectedRoute>} />
+              <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+              <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
+              <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
