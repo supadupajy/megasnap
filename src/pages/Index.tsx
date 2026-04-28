@@ -175,6 +175,7 @@ const Index = () => {
       id: p.id,
       user_id: p.user_id || prev?.user_id || '',
       owner_id: p.user_id || prev?.owner_id || '', // [FIX] RLS 소유자 ID (isMine 판별용)
+      display_user_id: p.display_user_id ?? prev?.display_user_id ?? null, // [FIX] 표시용 유저 ID (MapContainer isMine 판별용)
       isAd,
       isGif: false,
       isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),

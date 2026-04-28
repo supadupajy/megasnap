@@ -590,8 +590,17 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       
       const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
-      const postUserId = (post as any).user_id || (post.user && post.user.id);
-      const isMineKey = !!(authUser && String(postUserId) === String(authUser.id));
+      // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
+      let isMineKey = false;
+      if (authUser) {
+        if (!isSeed) {
+          const ownerId = (post as any).owner_id || (post as any).user_id;
+          isMineKey = !!(ownerId && String(ownerId) === String(authUser.id));
+        } else {
+          const displayId = (post as any).display_user_id;
+          isMineKey = !!(displayId && String(displayId) === String(authUser.id));
+        }
+      }
       const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
 
       if (!existingOverlay) {
@@ -651,8 +660,17 @@ const MapContainer = ({
       const p = postsRef.current.find(item => item.id === id);
       if (!p) return;
       const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
-      const postUserId = (p as any).user_id || (p.user && p.user.id);
-      const isMineKey = !!(authUserRef.current && String(postUserId) === String(authUserRef.current.id));
+      // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
+      let isMineKey = false;
+      if (authUserRef.current) {
+        if (!isSeed) {
+          const ownerId = (p as any).owner_id || (p as any).user_id;
+          isMineKey = !!(ownerId && String(ownerId) === String(authUserRef.current.id));
+        } else {
+          const displayId = (p as any).display_user_id;
+          isMineKey = !!(displayId && String(displayId) === String(authUserRef.current.id));
+        }
+      }
       const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
       content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
       content.setAttribute('data-content-state', newStateKey);
@@ -711,9 +729,18 @@ const MapContainer = ({
                 ]);
                 const isViewed = combinedViewed.has(postId);
                 const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
-                const postUserId = (p as any).user_id || (p.user && p.user.id);
                 const currentAuthUser = authUserRef.current;
-                const isMineKey = !!(currentAuthUser && String(postUserId) === String(currentAuthUser.id));
+                // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
+                let isMineKey = false;
+                if (currentAuthUser) {
+                  if (!isSeed) {
+                    const ownerId = (p as any).owner_id || (p as any).user_id;
+                    isMineKey = !!(ownerId && String(ownerId) === String(currentAuthUser.id));
+                  } else {
+                    const displayId = (p as any).display_user_id;
+                    isMineKey = !!(displayId && String(displayId) === String(currentAuthUser.id));
+                  }
+                }
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
                 content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 content.setAttribute('data-content-state', newStateKey);
@@ -916,8 +943,20 @@ const MapContainer = ({
     let isMine = false;
     const currentUser = authUserRef.current;
     if (currentUser) {
-      const userId = post.user_id || (post.user && post.user.id);
-      if (String(userId) === String(currentUser.id)) isMine = true;
+      // [FIX] 시드 데이터는 user_id가 현재 사용자 ID이지만 실제로는 다른 사람 포스팅
+      // owner_id(실제 소유자)를 우선 사용하되, 시드 데이터는 display_user_id가 없거나
+      // display_user_id가 현재 사용자와 다르면 MY 표시 안 함
+      if (!isSeed) {
+        // 일반 포스팅: user_id 또는 owner_id로 판별
+        const ownerId = post.owner_id || post.user_id;
+        if (ownerId && String(ownerId) === String(currentUser.id)) isMine = true;
+      } else {
+        // 시드 데이터: display_user_id가 현재 사용자 ID인 경우에만 MY
+        // (display_user_id가 null이거나 다른 사람이면 MY 아님)
+        const displayId = post.display_user_id;
+        if (displayId && String(displayId) === String(currentUser.id)) isMine = true;
+        // display_user_id가 없으면 MY 표시 안 함 (랜덤 닉네임 풀에서 생성된 경우)
+      }
     }
                    
     // [AD 보정] 광고는 절대 비디오/유튜브로 표시하지 않음
