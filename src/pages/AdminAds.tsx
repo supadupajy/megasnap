@@ -22,7 +22,6 @@ import {
   Navigation2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -463,17 +462,16 @@ const AdminAds = () => {
   };
 
   return (
-    <div className="h-screen bg-white flex flex-col">
-      {/* 전역 Header 자리 (Settings.tsx와 동일한 방식) */}
-      <div className="flex-none h-16">
-        <Header />
-      </div>
-
-      {/* 페이지 자체 헤더 (인라인, fixed 아님) */}
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+    <div className="h-screen bg-gray-50 flex flex-col">
+      {/* 전역 Header(fixed, z-50) 아래에 위치하는 서브헤더 */}
+      {/* 전역 Header 높이 = safe-area-inset-top + 64px */}
+      <div
+        className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100"
+        style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+      >
         <button
           onClick={() => navigate('/settings')}
-          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer"
+          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer z-[100] relative"
         >
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
@@ -483,7 +481,7 @@ const AdminAds = () => {
       </div>
 
       <div
-        className="flex-1 overflow-y-auto no-scrollbar bg-gray-50"
+        className="flex-1 overflow-y-auto no-scrollbar"
         style={{
           paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))',
         }}
