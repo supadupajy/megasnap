@@ -209,7 +209,9 @@ const UserProfile = () => {
 
         if (profileRes.error) throw profileRes.error;
         setUserProfile(profileRes.data);
-        setFollowerCount(followersRes.count || 0);
+        // profiles.followers(인플루언서 등급용 수치)가 있으면 우선 사용, 없으면 실제 follows 카운트
+        const profileFollowersVal = Number(profileRes.data?.followers ?? 0);
+        setFollowerCount(profileFollowersVal > 0 ? profileFollowersVal : (followersRes.count || 0));
         setFollowingCount(followingRes.count || 0);
         setIsFollowing(!!followCheckRes.data);
 

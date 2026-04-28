@@ -138,7 +138,7 @@ const Profile = () => {
     setIsDataLoading(true);
     try {
       // ✅ 모든 독립 쿼리를 동시에 실행
-      const [myPostsRes, savedPostsRes, followersRes, followingRes] = await Promise.all([
+      const [myPostsRes, savedPostsRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
           .from('posts')
           .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id')
@@ -152,9 +152,12 @@ const Profile = () => {
           .limit(20),
         supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
         supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', uid),
+        supabase.from('profiles').select('followers').eq('id', uid).single(),
       ]);
 
-      setFollowerCount(followersRes.count || 0);
+      // profiles.followers(인플루언서 등급용 수치)가 있으면 우선 사용, 없으면 실제 follows 카운트
+      const profileFollowersVal = Number(profileRes.data?.followers ?? 0);
+      setFollowerCount(profileFollowersVal > 0 ? profileFollowersVal : (followersRes.count || 0));
       setFollowingCount(followingRes.count || 0);
 
       const myData = myPostsRes.data || [];
