@@ -49,14 +49,10 @@ const ProfileHeaderSkeleton = () => (
   </div>
 );
 
-const getTierFromId = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-  const val = Math.abs(h % 1000) / 1000;
-  if (val < 0.03) return 'diamond';
-  if (val < 0.08) return 'gold';
-  if (val < 0.15) return 'silver';
-  if (val < 0.25) return 'popular';
+const getTierFromFollowers = (followers: number) => {
+  if (followers >= 10000000) return 'diamond';
+  if (followers >= 1000000) return 'gold';
+  if (followers >= 100000) return 'silver';
   return 'none';
 };
 
@@ -103,7 +99,8 @@ const Profile = () => {
     if (likesCountNum >= 9000) {
       borderType = 'popular';
     } else if (!isAd) {
-      borderType = getTierFromId(p.id) as any;
+      // follower 수 기반 tier 결정 (내 프로필이므로 followerCount 사용)
+      borderType = getTierFromFollowers(followerCount) as any;
     }
 
     let finalImage = isValidUrl(rawImage) ? rawImage : SAFE_FALLBACK;

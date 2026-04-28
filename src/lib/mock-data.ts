@@ -23,12 +23,10 @@ const seededRandom = (seed: string) => {
   };
 };
 
-const getTierFromId = (id: string) => {
-  const val = (stableHash(id) % 1000) / 1000;
-  if (val < 0.03) return 'diamond';
-  if (val < 0.08) return 'gold';
-  if (val < 0.15) return 'silver';
-  if (val < 0.25) return 'popular';
+const getTierFromFollowers = (followers: number) => {
+  if (followers >= 10000000) return 'diamond';
+  if (followers >= 1000000) return 'gold';
+  if (followers >= 100000) return 'silver';
   return 'none';
 };
 
@@ -339,9 +337,9 @@ export const createMockPosts = (
     const id = specificUserId ? `${specificUserId}_post_${i}` : Math.random().toString(36).slice(2, 11);
     const isAd = i % 20 === 0;
     
-    // ✅ 포스팅 종류(티어)를 다시 ID 기반의 고유한 속성으로 복구합니다.
-    // 이는 좋아요 개수와는 별개인 "포스팅의 신분"입니다.
-    const borderType = isAd ? 'none' : getTierFromId(id);
+    // mock 데이터는 랜덤 follower 수로 tier 결정
+    const mockFollowers = isAd ? 0 : Math.floor(randomFn() * 15000000);
+    const borderType = isAd ? 'none' : getTierFromFollowers(mockFollowers);
     const isInfluencer = !isAd && ['silver', 'gold', 'diamond'].includes(borderType);
     
     const hasYoutube = !isAd && i % 2 === 0;

@@ -151,13 +151,11 @@ const Index = () => {
     let borderType: any = 'none';
     if (likes >= 9000) borderType = 'popular';
     else if (!isAd) {
-      let h = 0;
-      const s = String(p.id);
-      for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
-      const v = Math.abs(h % 1000) / 1000;
-      if (v < 0.03) borderType = 'diamond';
-      else if (v < 0.08) borderType = 'gold';
-      else if (v < 0.15) borderType = 'silver';
+      // follower 수 기반 tier 결정 (profiles JOIN 데이터 우선, 없으면 0)
+      const followers = Number(p.profiles?.followers ?? 0);
+      if (followers >= 10000000) borderType = 'diamond';
+      else if (followers >= 1000000) borderType = 'gold';
+      else if (followers >= 100000) borderType = 'silver';
     }
     // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
@@ -579,7 +577,7 @@ const Index = () => {
       // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url, followers)')
         .eq('id', lightPost.id)
         .single();
       if (!error && data) {

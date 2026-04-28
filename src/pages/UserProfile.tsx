@@ -96,17 +96,29 @@ const UserProfile = () => {
       ? p.images.filter(isValidUrl)
       : [finalImage];
 
+    const getTierFromFollowers = (followers: number) => {
+      if (followers >= 10000000) return 'diamond';
+      if (followers >= 1000000) return 'gold';
+      if (followers >= 100000) return 'silver';
+      return 'none';
+    };
+    const profileFollowers = Number(userProfile?.followers ?? 0);
+    const isAd = p.content?.trim().startsWith('[AD]') ?? false;
+    const likes = Number(p.likes || 0);
+    const borderType = likes >= 9000 ? 'popular' : (!isAd ? getTierFromFollowers(profileFollowers) : 'none');
+
     return {
       id: p.id,
-      isAd: p.content?.trim().startsWith('[AD]') ?? false,
+      isAd,
       isGif: false,
-      isInfluencer: false,
+      isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+      borderType: borderType as any,
       user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
       content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name || '알 수 없는 장소',
       lat: p.latitude, lng: p.longitude,
       latitude: p.latitude, longitude: p.longitude,
-      likes: Number(p.likes || 0), commentsCount: 0, comments: [],
+      likes, commentsCount: 0, comments: [],
       image: finalImage,
       image_url: finalImage,
       images: finalImages.length > 0 ? finalImages : [finalImage],
@@ -179,7 +191,7 @@ const UserProfile = () => {
         ] = await Promise.all([
           supabase
             .from('profiles')
-            .select('id, nickname, avatar_url, bio, last_seen')
+            .select('id, nickname, avatar_url, bio, last_seen, followers')
             .eq('id', profileUserId)
             .single(),
           supabase

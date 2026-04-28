@@ -14,14 +14,10 @@ import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 
-const getTierFromId = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-  const val = Math.abs(h % 1000) / 1000;
-  if (val < 0.03) return 'diamond';
-  if (val < 0.08) return 'gold';
-  if (val < 0.15) return 'silver';
-  if (val < 0.25) return 'popular';
+const getTierFromFollowers = (followers: number) => {
+  if (followers >= 10000000) return 'diamond';
+  if (followers >= 1000000) return 'gold';
+  if (followers >= 100000) return 'silver';
   return 'none';
 };
 
@@ -29,7 +25,8 @@ const PAGE_SIZE = 15;
 
 // 포스트 데이터를 즉시 매핑 (YouTube 검증 없이)
 const mapPostImmediate = (p: any): Post => {
-  const borderType = getTierFromId(p.id);
+  const followers = Number(p.profiles?.followers ?? 0);
+  const borderType = getTierFromFollowers(followers);
   const isAd = p.content?.trim().startsWith('[AD]');
   let finalImage = p.youtube_url
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
@@ -108,7 +105,7 @@ const Popular = () => {
 
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(followers)')
         .order('likes', { ascending: false })
         .range(from, to);
 
