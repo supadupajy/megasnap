@@ -237,7 +237,7 @@ export function useAd(adId: string) {
       if (adRef.current && JSON.stringify(adRef.current) === JSON.stringify(data)) return;
       adRef.current = data;
       setAd(data);
-      setNow(new Date()); // 새 데이터 기준으로 슬롯 즉시 재계산
+      setNow(new Date());
       scheduleTransition(data);
     };
     listeners[adId].add(handler);
@@ -262,9 +262,16 @@ export function useAd(adId: string) {
       setLoading(false);
     }
 
-    // ── Supabase Realtime 구독: ads 테이블 변경 시 모든 클라이언트에 즉시 반영 ──
+    // ── Supabase Realtime 구독: 기존 채널 제거 후 새로 생성 ──
+    // React Strict Mode에서 useEffect가 두 번 실행될 때 채널 중복 생성 방지
+    const channelName = `ads-realtime-${adId}`;
+    const existingChannel = supabase.getChannels().find(ch => ch.topic === `realtime:${channelName}`);
+    if (existingChannel) {
+      supabase.removeChannel(existingChannel);
+    }
+
     const channel = supabase
-      .channel(`ads-realtime-${adId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'ads', filter: `id=eq.${adId}` },
