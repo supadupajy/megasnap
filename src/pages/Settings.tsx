@@ -50,7 +50,7 @@ const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: {
 }) => (
   <button 
     onClick={onClick}
-    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
+    className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
   >
     <div className="flex items-center gap-3">
       <div className={cn(
@@ -278,7 +278,7 @@ const Settings = () => {
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
               <button
                 onClick={() => navigate('/settings/admin-ads')}
-                className="w-full flex items-center justify-between p-4 hover:bg-violet-50 active:bg-violet-100 transition-colors border-b border-gray-50"
+                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-violet-50 active:bg-violet-100 transition-colors border-b border-gray-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-100 text-violet-600">
@@ -295,7 +295,7 @@ const Settings = () => {
               <button 
                 onClick={() => setShowGenerateConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
@@ -312,7 +312,7 @@ const Settings = () => {
               <button 
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-100 text-rose-600">
@@ -329,7 +329,7 @@ const Settings = () => {
               <button 
                 onClick={() => setShowSeedConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
@@ -346,7 +346,7 @@ const Settings = () => {
               <button 
                 onClick={() => setShowRandomizeConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
