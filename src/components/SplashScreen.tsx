@@ -82,11 +82,11 @@ const SplashScreen = () => {
               onClick={() => slot.link_url && window.open(slot.link_url, '_blank', 'noopener,noreferrer')}
             >
               {slot.isRecruitment ? (
-                <div className="w-full h-14 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-200">
-                  <Mail className="w-4 h-4 text-white/90 shrink-0" />
+                <div className="w-full aspect-[16/9] bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center gap-4 shadow-2xl shadow-indigo-200">
+                  <Mail className="w-8 h-8 text-white/90 shrink-0" />
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
-                    <span className="text-[8px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
+                    <span className="text-lg font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
+                    <span className="text-sm font-bold text-white/70 leading-none mt-1.5 tracking-[-0.04em]">chorasnap@gmail.com</span>
                   </div>
                 </div>
               ) : (
