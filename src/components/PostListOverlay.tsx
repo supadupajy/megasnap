@@ -42,9 +42,11 @@ const ObservedPostItem = ({
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
   useEffect(() => {
     const fetchFullData = async () => {
-      // ✅ [FIX] user.name이 '...'이거나, avatar가 없거나, location이 없으면 데이터를 새로 불러옴
+      // user.name이 placeholder이거나, avatar가 없거나, location이 없으면 데이터를 새로 불러옴
+      // '탐험가'도 profiles JOIN 없이 생성된 기본값이므로 재fetch 대상에 포함
       const needsFetch =
         fullPost.user.name === '...' ||
+        fullPost.user.name === '탐험가' ||
         !fullPost.user.avatar ||
         !fullPost.location ||
         fullPost.location === '알 수 없는 장소';
