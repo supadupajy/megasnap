@@ -17,7 +17,6 @@ import {
   Bug,
   User,
   Smartphone,
-  CreditCard,
   HelpCircle,
   FileText,
   Building2,
@@ -27,7 +26,6 @@ import {
   MessageSquare,
   BookOpen,
   Link2,
-  Receipt,
   AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -274,17 +272,6 @@ const Settings = () => {
                 wip
               />
             )}
-            {isAdmin && (
-              <SettingItem
-                icon={Smartphone}
-                label="로그인 기기 관리"
-                sublabel="현재 로그인된 기기 확인 및 원격 로그아웃"
-                iconBg="bg-violet-50"
-                iconColor="text-violet-500"
-                onClick={() => navigate('/settings/devices')}
-                wip
-              />
-            )}
             <SettingItem
               icon={Bell}
               label="알림 설정"
@@ -295,33 +282,6 @@ const Settings = () => {
             />
           </div>
         </div>
-
-        {/* ── 구독 & 결제 ── */}
-        {isAdmin && (
-          <div className="px-4 pt-4 pb-1">
-            <SectionHeader title="구독 & 결제" />
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <SettingItem
-                icon={CreditCard}
-                label="구독 플랜 관리"
-                sublabel="현재 플랜 확인 및 업그레이드"
-                iconBg="bg-emerald-50"
-                iconColor="text-emerald-500"
-                onClick={() => navigate('/settings/subscription')}
-                wip
-              />
-              <SettingItem
-                icon={Receipt}
-                label="결제 내역"
-                sublabel="영수증 및 결제 기록 확인"
-                iconBg="bg-teal-50"
-                iconColor="text-teal-500"
-                onClick={() => navigate('/settings/billing')}
-                wip
-              />
-            </div>
-          </div>
-        )}
 
         {/* ── 앱 설정 ── */}
         <div className="px-4 pt-4 pb-1">
