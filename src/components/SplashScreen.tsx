@@ -6,10 +6,10 @@ import { Camera } from 'lucide-react';
 import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
-  const { ad, loading } = useAd('splash');
+  const { ad, loading, now } = useAd('splash');
 
-  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
-  const slot = ad ? resolveActiveSlot(ad) : null;
+  // 기간 기반으로 현재 or 다음 광고 슬롯 결정 (now가 바뀌면 자동 재계산)
+  const slot = ad ? resolveActiveSlot(ad, now) : null;
   const showAd = !loading && ad?.is_active && !!slot?.image_url;
 
   return (

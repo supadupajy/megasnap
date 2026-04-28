@@ -102,6 +102,56 @@ const AD_DESCRIPTIONS: Record<string, string> = {
   map_marker: '지도 위에 표시되는 브랜드 마커 광고입니다.',
 };
 
+// ─── 날짜+시간 포맷 헬퍼 ─────────────────────────────────────────────────────
+// ISO 문자열 → "YYYY-MM-DDTHH:mm" (datetime-local input value 형식)
+function toDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return '';
+  // timestamptz → 로컬 시간 기준 datetime-local 문자열
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// datetime-local 값 → ISO 문자열 (로컬 시간 → UTC)
+function fromDatetimeLocal(val: string): string {
+  if (!val) return '';
+  return new Date(val).toISOString();
+}
+
+// 표시용 포맷: "2025년 4월 28일 오후 3:00"
+function formatDatetime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  });
+}
+
+// ─── 날짜+시간 필드 ───────────────────────────────────────────────────────────
+const DatetimeRow = ({ label, value, onChange, min }: {
+  label: string; value: string; onChange: (isoString: string) => void; min?: string;
+}) => (
+  <div className="bg-gray-50 rounded-2xl p-3">
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <Calendar className="w-3 h-3 text-gray-400" />
+      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
+    </div>
+    <input
+      type="datetime-local"
+      value={toDatetimeLocal(value)}
+      min={min ? toDatetimeLocal(min) : undefined}
+      onChange={e => onChange(e.target.value ? fromDatetimeLocal(e.target.value) : '')}
+      className="w-full bg-white rounded-xl border border-gray-100 px-3 h-9 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
+    />
+    {value && (
+      <p className="text-[10px] text-gray-400 font-medium mt-1 px-1">{formatDatetime(value)}</p>
+    )}
+  </div>
+);
+
 // ─── 이미지 업로드 필드 ───────────────────────────────────────────────────────
 const ImageUploadField = ({
   label, value, onChange, adId, fieldKey, previewType = 'banner',
@@ -186,108 +236,42 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
   </div>
 );
 
-// ─── 날짜 필드 ───────────────────────────────────────────────────────────────
-const DateRow = ({ label, value, onChange, min }: {
-  label: string; value: string; onChange: (v: string) => void; min?: string;
-}) => (
-  <div className="bg-gray-50 rounded-2xl p-3">
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <Calendar className="w-3 h-3 text-gray-400" />
-      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
-    </div>
-    <input
-      type="date"
-      value={value || ''}
-      min={min}
-      onChange={e => onChange(e.target.value)}
-      className="w-full bg-white rounded-xl border border-gray-100 px-3 h-9 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
-    />
-  </div>
-);
-
-// ─── 광고 슬롯 폼 (현재 or 다음) ─────────────────────────────────────────────
-const AdSlotForm = ({
-  slot,
-  adId,
-  fieldPrefix,
-  accentColor,
-  onChange,
-}: {
-  slot: {
-    image_url: string;
-    title: string;
-    subtitle: string;
-    link_url: string;
-    brand_name: string;
-    brand_logo_url: string;
-    start_date: string;
-    end_date: string;
-  };
-  adId: string;
-  fieldPrefix: string; // '' | 'next_'
-  accentColor: string;
-  onChange: (key: string, value: string) => void;
-}) => {
-  const isNext = fieldPrefix === 'next_';
-  return (
-    <div className="space-y-2.5">
-      {/* 기간 설정 */}
-      <div className="grid grid-cols-2 gap-2">
-        <DateRow
-          label="시작일"
-          value={slot.start_date}
-          onChange={v => onChange(`${fieldPrefix}start_date`, v)}
-        />
-        <DateRow
-          label="종료일"
-          value={slot.end_date}
-          min={slot.start_date || undefined}
-          onChange={v => onChange(`${fieldPrefix}end_date`, v)}
-        />
-      </div>
-
-      {/* 기간 상태 뱃지 */}
-      {(slot.start_date || slot.end_date) && (
-        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} />
-      )}
-
-      <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
-      <FieldRow icon={Type} label="설명" value={slot.title} placeholder="광고 설명 문구" onChange={v => onChange(`${fieldPrefix}title`, v)} />
-      {adId !== 'map_marker' && (
-        <FieldRow icon={Type} label="부제목" value={slot.subtitle} placeholder="광고 부제목" onChange={v => onChange(`${fieldPrefix}subtitle`, v)} />
-      )}
-      <FieldRow icon={Link} label="랜딩 URL" value={slot.link_url} placeholder="https://example.com" onChange={v => onChange(`${fieldPrefix}link_url`, v)} />
-      <ImageUploadField label="배너 이미지" value={slot.image_url} onChange={v => onChange(`${fieldPrefix}image_url`, v)} adId={adId} fieldKey={`${fieldPrefix}banner`} previewType="banner" />
-      <ImageUploadField label="브랜드 로고" value={slot.brand_logo_url} onChange={v => onChange(`${fieldPrefix}brand_logo_url`, v)} adId={adId} fieldKey={`${fieldPrefix}logo`} previewType="logo" />
-    </div>
-  );
-};
-
-// ─── 기간 상태 뱃지 ───────────────────────────────────────────────────────────
+// ─── 기간 상태 뱃지 (시간 단위) ───────────────────────────────────────────────
 const PeriodStatusBadge = ({ startDate, endDate, isNext }: { startDate: string; endDate: string; isNext: boolean }) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
+  const now = new Date();
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
 
-  let status: 'active' | 'upcoming' | 'expired' | 'no-end' = 'no-end';
   let label = '';
   let colorClass = '';
 
-  if (end && end < today) {
-    status = 'expired';
+  const formatRemaining = (ms: number): string => {
+    const totalMinutes = Math.ceil(ms / 60000);
+    if (totalMinutes < 60) return `${totalMinutes}분 남음`;
+    const hours = Math.floor(totalMinutes / 60);
+    if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남음`;
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
+  };
+
+  const formatUntil = (ms: number): string => {
+    const totalMinutes = Math.ceil(ms / 60000);
+    if (totalMinutes < 60) return `${totalMinutes}분 후 시작`;
+    const hours = Math.floor(totalMinutes / 60);
+    if (hours < 24) return `${hours}시간 후 시작`;
+    const days = Math.floor(hours / 24);
+    return `${days}일 후 시작`;
+  };
+
+  if (end && end <= now) {
     label = '기간 만료됨';
     colorClass = 'bg-red-50 text-red-600 border-red-100';
-  } else if (start && start > today) {
-    status = 'upcoming';
-    const diff = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    label = `${diff}일 후 시작`;
+  } else if (start && start > now) {
+    label = formatUntil(start.getTime() - now.getTime());
     colorClass = 'bg-amber-50 text-amber-600 border-amber-100';
   } else if (end) {
-    const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    status = 'active';
-    label = `D-${diff} (${diff}일 남음)`;
+    label = formatRemaining(end.getTime() - now.getTime());
     colorClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
   } else {
     label = '종료일 미설정';
@@ -450,7 +434,7 @@ const AdCard = ({
                   {form.end_date && (
                     <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Calendar className="w-2.5 h-2.5" />
-                      {form.end_date}까지
+                      {formatDatetime(form.end_date)}까지
                     </div>
                   )}
                 </div>
@@ -465,7 +449,7 @@ const AdCard = ({
                     {form.next_start_date && (
                       <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Calendar className="w-2.5 h-2.5" />
-                        {form.next_start_date}부터
+                        {formatDatetime(form.next_start_date)}부터
                       </div>
                     )}
                   </div>
@@ -593,6 +577,64 @@ const AdCard = ({
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── 광고 슬롯 폼 (현재 or 다음) ─────────────────────────────────────────────
+const AdSlotForm = ({
+  slot,
+  adId,
+  fieldPrefix,
+  accentColor,
+  onChange,
+}: {
+  slot: {
+    image_url: string;
+    title: string;
+    subtitle: string;
+    link_url: string;
+    brand_name: string;
+    brand_logo_url: string;
+    start_date: string;
+    end_date: string;
+  };
+  adId: string;
+  fieldPrefix: string;
+  accentColor: string;
+  onChange: (key: string, value: string) => void;
+}) => {
+  const isNext = fieldPrefix === 'next_';
+  return (
+    <div className="space-y-2.5">
+      {/* 기간 설정 */}
+      <div className="grid grid-cols-2 gap-2">
+        <DatetimeRow
+          label="시작 일시"
+          value={slot.start_date}
+          onChange={v => onChange(`${fieldPrefix}start_date`, v)}
+        />
+        <DatetimeRow
+          label="종료 일시"
+          value={slot.end_date}
+          min={slot.start_date || undefined}
+          onChange={v => onChange(`${fieldPrefix}end_date`, v)}
+        />
+      </div>
+
+      {/* 기간 상태 뱃지 */}
+      {(slot.start_date || slot.end_date) && (
+        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} />
+      )}
+
+      <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
+      <FieldRow icon={Type} label="설명" value={slot.title} placeholder="광고 설명 문구" onChange={v => onChange(`${fieldPrefix}title`, v)} />
+      {adId !== 'map_marker' && (
+        <FieldRow icon={Type} label="부제목" value={slot.subtitle} placeholder="광고 부제목" onChange={v => onChange(`${fieldPrefix}subtitle`, v)} />
+      )}
+      <FieldRow icon={Link} label="랜딩 URL" value={slot.link_url} placeholder="https://example.com" onChange={v => onChange(`${fieldPrefix}link_url`, v)} />
+      <ImageUploadField label="배너 이미지" value={slot.image_url} onChange={v => onChange(`${fieldPrefix}image_url`, v)} adId={adId} fieldKey={`${fieldPrefix}banner`} previewType="banner" />
+      <ImageUploadField label="브랜드 로고" value={slot.brand_logo_url} onChange={v => onChange(`${fieldPrefix}brand_logo_url`, v)} adId={adId} fieldKey={`${fieldPrefix}logo`} previewType="logo" />
     </div>
   );
 };
