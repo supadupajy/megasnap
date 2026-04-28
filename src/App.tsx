@@ -243,7 +243,7 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <NotificationProvider>
-            <div className="min-h-[100dvh] w-full bg-white overflow-hidden">
+            <div className="min-h-[100dvh] w-full bg-white overflow-x-hidden">
               <AnimatePresence mode="wait">
                 {showSplash ? (
                   <SplashScreen key="splash" />
