@@ -18,12 +18,12 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white border-b border-gray-100">
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
-      <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
+      <div className="h-16 px-4 flex items-center gap-2 max-w-lg mx-auto">
         <div
           className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform shrink-0"
           onClick={() => navigate('/')}
         >
-          <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
+          <h1 className="text-2xl font-black tracking-tighter italic">
             <span className="text-gray-900">Chora</span>
             <span className="text-indigo-600">Snap</span>
           </h1>
@@ -31,7 +31,7 @@ const Header = () => {
 
         <HeaderAdBanner />
 
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-4 shrink-0 ml-auto">
           <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
             onClick={() => navigate('/notifications')}

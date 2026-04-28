@@ -10,7 +10,7 @@ const HeaderAdBanner = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 mx-3 h-10 bg-gray-100 rounded-xl animate-pulse" />
+      <div className="flex-1 max-w-[180px] ml-3 h-10 bg-gray-100 rounded-xl animate-pulse" />
     );
   }
 
@@ -23,7 +23,7 @@ const HeaderAdBanner = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex-1 mx-3 h-10 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl overflow-hidden relative group cursor-pointer shadow-md"
+        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl overflow-hidden relative group cursor-pointer shadow-md"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center gap-2">
@@ -41,7 +41,7 @@ const HeaderAdBanner = () => {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 mx-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
+      className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
       onClick={() => slot.link_url && window.open(slot.link_url, '_blank')}
     >
       {/* Background Image */}
