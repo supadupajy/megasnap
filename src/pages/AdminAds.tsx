@@ -266,29 +266,23 @@ const AdCard = ({
       {/* 접힌 상태 미리보기 */}
       {!isExpanded && (
         <>
-          {/* map_marker: 위치 정보 + 이미지 미리보기 */}
+          {/* map_marker: 위치 정보(설정된 경우만) + 이미지 미리보기 */}
           {initialAd.id === 'map_marker' && (
             <div className="px-4 pb-3 space-y-2">
-              <button
-                onClick={e => { e.stopPropagation(); onSelectLocation(initialAd.id); }}
-                className={cn(
-                  'w-full flex items-center gap-3 rounded-2xl px-3 h-11 border transition-all active:scale-[0.98]',
-                  hasLocation ? 'bg-rose-50 border-rose-100 hover:border-rose-300' : 'bg-gray-50 border-gray-100 hover:border-violet-300'
-                )}
-              >
-                <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0', hasLocation ? 'bg-rose-100' : 'bg-gray-100')}>
-                  <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400')} />
-                </div>
-                <span className={cn('flex-1 text-left text-sm font-semibold truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                  {hasLocation
-                    ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`)
-                    : '지도에서 위치 선택'}
-                </span>
-                {hasLocation
-                  ? <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
-                  : <span className="text-[10px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg shrink-0">선택하기</span>
-                }
-              </button>
+              {hasLocation && (
+                <button
+                  onClick={e => { e.stopPropagation(); onSelectLocation(initialAd.id); }}
+                  className="w-full flex items-center gap-3 rounded-2xl px-3 h-11 border bg-rose-50 border-rose-100 hover:border-rose-300 transition-all active:scale-[0.98]"
+                >
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-rose-100">
+                    <Navigation2 className="w-3.5 h-3.5 text-rose-500" />
+                  </div>
+                  <span className="flex-1 text-left text-sm font-semibold truncate text-gray-900">
+                    {locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`}
+                  </span>
+                  <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
+                </button>
+              )}
               {form.image_url && (
                 <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
                   <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
