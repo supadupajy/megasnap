@@ -6,6 +6,7 @@ import {
   Bell,
   Shield,
   LogOut,
+  ChevronLeft,
   ChevronRight,
   Languages,
   Database,
@@ -235,7 +236,14 @@ const Settings = () => {
       </div>
 
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
-        <div className="flex-1 flex justify-center">
+        <button
+          onClick={() => navigate('/profile')}
+          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
+          style={{ pointerEvents: 'auto' }}
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-400" />
+        </button>
+        <div className="flex-1 flex justify-center -ml-10">
           <h1 className="text-[17px] font-black text-gray-900 tracking-tight">설정</h1>
         </div>
       </div>
