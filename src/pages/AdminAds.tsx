@@ -229,9 +229,9 @@ const AdCard = ({
       {/* 접힌 상태 미리보기 */}
       {!isExpanded && (
         <>
-          {/* map_marker: 위치 정보 항상 표시 */}
+          {/* map_marker: 위치 정보 + 이미지 미리보기 */}
           {initialAd.id === 'map_marker' && (
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-3 space-y-2">
               <button
                 onClick={e => { e.stopPropagation(); onSelectLocation(initialAd.id); }}
                 className={cn(
@@ -250,6 +250,11 @@ const AdCard = ({
                   : <span className="text-[10px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg shrink-0">선택하기</span>
                 }
               </button>
+              {form.image_url && (
+                <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+                  <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                </div>
+              )}
             </div>
           )}
           {/* 그 외: 배너 이미지 미리보기 */}
