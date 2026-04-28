@@ -4,6 +4,31 @@ import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
 import { showSuccess } from '@/utils/toast';
 
+const STORAGE_KEY = 'notification_settings';
+
+const DEFAULT_SETTINGS = {
+  likes: true,
+  comments: true,
+  follows: true,
+  nearbyPosts: false,
+  announcements: true,
+  messages: true,
+};
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+  } catch {}
+  return DEFAULT_SETTINGS;
+}
+
+function saveSettings(settings: typeof DEFAULT_SETTINGS) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {}
+}
+
 interface NotifToggleProps {
   icon: React.ElementType;
   iconBg: string;
@@ -37,18 +62,12 @@ const NotifToggle = ({ icon: Icon, iconBg, iconColor, label, description, checke
 const NotificationSettings = () => {
   const navigate = useNavigate();
 
-  const [settings, setSettings] = useState({
-    likes: true,
-    comments: true,
-    follows: true,
-    nearbyPosts: false,
-    announcements: true,
-    messages: true,
-  });
+  const [settings, setSettings] = useState(loadSettings);
 
-  const toggle = (key: keyof typeof settings) => {
+  const toggle = (key: keyof typeof DEFAULT_SETTINGS) => {
     setSettings(prev => {
       const next = { ...prev, [key]: !prev[key] };
+      saveSettings(next);
       showSuccess('알림 설정이 저장되었습니다.');
       return next;
     });
@@ -57,14 +76,16 @@ const NotificationSettings = () => {
   const allOn = Object.values(settings).every(Boolean);
   const toggleAll = () => {
     const next = !allOn;
-    setSettings({
+    const nextSettings = {
       likes: next,
       comments: next,
       follows: next,
       nearbyPosts: next,
       announcements: next,
       messages: next,
-    });
+    };
+    setSettings(nextSettings);
+    saveSettings(nextSettings);
     showSuccess(next ? '모든 알림이 켜졌습니다.' : '모든 알림이 꺼졌습니다.');
   };
 
