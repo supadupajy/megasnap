@@ -23,7 +23,7 @@ const Inquiry = () => {
   if (submitted) {
     return (
       <div className="h-screen bg-gray-50 flex flex-col">
-          <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
+          <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
             <button onClick={() => navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
               <ChevronLeft className="w-6 h-6 text-gray-400" />
             </button>
@@ -31,7 +31,7 @@ const Inquiry = () => {
               <h1 className="text-[17px] font-black text-gray-900">1:1 문의</h1>
             </div>
           </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center pt-14">
           <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-indigo-600" />
           </div>
@@ -53,7 +53,7 @@ const Inquiry = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
+      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button onClick={() => navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
@@ -62,7 +62,7 @@ const Inquiry = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar pt-14">
         <div className="px-4 pt-5 space-y-4">
           {/* 문의 유형 */}
           <div>

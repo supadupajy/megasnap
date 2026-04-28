@@ -82,11 +82,13 @@ const AnimatedRoutes = () => {
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
 
-  // App 레벨 Header/BottomNav를 숨길 페이지 (login, splash만)
-  // settings 계열도 App Header를 사용하도록 통일
+  // App 레벨 Header/BottomNav를 숨길 페이지
+  // settings 계열은 자체 fixed 타이틀 바를 사용하므로 App Header 숨김
   const hideAppChrome =
     location.pathname === "/login" ||
-    location.pathname === "/splash";
+    location.pathname === "/splash" ||
+    location.pathname === "/settings" ||
+    location.pathname.startsWith("/settings/");
 
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
   // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화

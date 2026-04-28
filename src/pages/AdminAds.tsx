@@ -852,10 +852,7 @@ const AdminAds = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div
-        className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100"
-        style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
-      >
+      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={() => navigate('/settings')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer z-[100] relative"
@@ -867,10 +864,7 @@ const AdminAds = () => {
         </div>
       </div>
 
-      <div
-        className="flex-1 overflow-y-auto no-scrollbar"
-        style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}
-      >
+      <div className="flex-1 overflow-y-auto no-scrollbar pt-14" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
         {/* 히어로 */}
         <div className="mx-4 mt-5 bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-violet-200">
           <div className="flex items-center gap-3">
