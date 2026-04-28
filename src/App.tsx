@@ -80,8 +80,13 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFullPage = ["/splash", "/login", "/write"].includes(location.pathname) || location.pathname.startsWith("/settings");
+  const isSettingsPage = location.pathname === "/settings" || location.pathname.startsWith("/settings/");
   const isWritePage = location.pathname === "/write";
+  // isFullPage: App 레벨 Header/BottomNav를 숨겨야 하는 페이지
+  // - splash, login: 자체 UI
+  // - settings 계열: 각 페이지가 자체 Header를 가짐
+  // - write: Header/BottomNav는 보여야 하므로 제외
+  const isFullPage = ["/splash", "/login"].includes(location.pathname) || isSettingsPage;
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
 
@@ -220,7 +225,6 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {/* ✅ [FORCE] 하단 바 강제 노출: 복잡한 조건문을 제거하고 기본 필수 조건만 남김 */}
       {(!isFullPage || isWritePage) && session && <BottomNav />}
 
       <ExitDialog
