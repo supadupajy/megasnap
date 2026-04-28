@@ -124,9 +124,6 @@ const Index = () => {
   const isSelectingAdLocationRef = useRef(false);
   const tempAdLocationRef = useRef<{ lat: number; lng: number } | null>(mapCache.lastCenter || null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [markerPage, setMarkerPage] = useState(0);
-
-  const MARKERS_PER_PAGE = 30;
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
@@ -487,17 +484,6 @@ const Index = () => {
     );
   }, [spreadMarkers, mapData?.bounds]);
 
-  // ── pagedMarkers: visibleMarkers에서 현재 페이지 30개만 ──────
-  const pagedMarkers = useMemo(() => {
-    // 광고 마커는 페이지 제한 없이 항상 포함
-    const adMarkers = visibleMarkers.filter(p => p.isAd);
-    const nonAdMarkers = visibleMarkers.filter(p => !p.isAd);
-    const start = markerPage * MARKERS_PER_PAGE;
-    return [...adMarkers, ...nonAdMarkers.slice(start, start + MARKERS_PER_PAGE)];
-  }, [visibleMarkers, markerPage]);
-
-  const hasNextMarkerPage = (markerPage + 1) * MARKERS_PER_PAGE < visibleMarkers.length;
-
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
   // 원본 좌표(분산 전) 기준으로 계산 → PostListOverlay에 전달되는 수와 일치
   const visiblePostCount = useMemo(() => {
@@ -517,11 +503,6 @@ const Index = () => {
         (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
     ).length;
   }, [allPosts, mapData?.bounds, blockedIds, selectedCategories, authUser, visibleMarkers]);
-
-  // bounds나 카테고리가 바뀌면 페이지 리셋
-  useEffect(() => {
-    setMarkerPage(0);
-  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, selectedCategories]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
@@ -560,14 +541,6 @@ const Index = () => {
       return combined;
     });
 
-    // 해당 포스트가 현재 페이지에 없으면 포함된 페이지로 이동
-    const spreadAll = spreadMarkersRef.current;
-    const postIdx = spreadAll.findIndex(p => p.id === post.id);
-    if (postIdx !== -1) {
-      const targetPage = Math.floor(postIdx / MARKERS_PER_PAGE);
-      setMarkerPage(targetPage);
-    }
-
     setSelectedPostId(null);
     setSearchResultLocation(null);
 
@@ -575,7 +548,6 @@ const Index = () => {
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
     // spreadMarkers에서 분산된 실제 표시 좌표를 찾아 그 위치로 지도 이동
-    // 없으면 원래 좌표 사용 (마커가 아직 렌더링 안 된 경우)
     const spreadPost = spreadMarkersRef.current.find(p => p.id === post.id);
     const targetCenter = spreadPost
       ? { lat: spreadPost.lat, lng: spreadPost.lng }
@@ -660,12 +632,6 @@ const Index = () => {
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
   }, [fetchGlobalTrending]);
-
-  // ── 다른 포스팅 버튼 핸들러 ──────────────────────────────────
-  const handleNextMarkerPage = useCallback(() => {
-    if (!hasNextMarkerPage) return;
-    setMarkerPage(prev => prev + 1);
-  }, [hasNextMarkerPage]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
   const handleCurrentLocation = async () => {
@@ -863,7 +829,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={pagedMarkers}
+              posts={spreadMarkers}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
@@ -985,9 +951,9 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleNextMarkerPage} disabled={isRefreshing || !hasNextMarkerPage} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
+                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
-                  <span className="text-[9px] font-black mt-1">다른 포스팅</span>
+                  <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
                 <div className="relative">
                   {visiblePostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
