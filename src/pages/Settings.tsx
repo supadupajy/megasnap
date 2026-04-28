@@ -275,8 +275,23 @@ const Settings = () => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
 
-        {/* ── 계정 설정 ── */}
+        {/* ── 광고 ── */}
         <div className="px-4 pt-5 pb-1">
+          <SectionHeader title="광고" />
+          <div className="bg-white rounded-2xl border-2 border-pink-300 overflow-hidden shadow-sm">
+            <SettingItem
+              icon={Megaphone}
+              label="광고 문의"
+              sublabel="ChoraSnap에 광고를 게재하세요"
+              iconBg="bg-pink-50"
+              iconColor="text-pink-500"
+              onClick={() => navigate('/settings/ad')}
+            />
+          </div>
+        </div>
+
+        {/* ── 계정 설정 ── */}
+        <div className="px-4 pt-4 pb-1">
           <SectionHeader title="계정 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem
@@ -386,21 +401,6 @@ const Settings = () => {
               iconBg="bg-orange-50"
               iconColor="text-orange-500"
               onClick={() => setShowBugReport(true)}
-            />
-          </div>
-        </div>
-
-        {/* ── 광고 ── */}
-        <div className="px-4 pt-4 pb-1">
-          <SectionHeader title="광고" />
-          <div className="bg-white rounded-2xl border-2 border-pink-300 overflow-hidden shadow-sm">
-            <SettingItem
-              icon={Megaphone}
-              label="광고 문의"
-              sublabel="ChoraSnap에 광고를 게재하세요"
-              iconBg="bg-pink-50"
-              iconColor="text-pink-500"
-              onClick={() => navigate('/settings/ad')}
             />
           </div>
         </div>
