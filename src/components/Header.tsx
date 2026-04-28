@@ -12,7 +12,8 @@ const Header = () => {
   const { unreadMessages, unreadNotifs } = useNotifications();
 
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
-  if (isHiddenPage) return null;
+  const isAdminAdsPage = location.pathname === '/settings/admin-ads';
+  if (isHiddenPage || isAdminAdsPage) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[50] bg-white border-b border-gray-100">

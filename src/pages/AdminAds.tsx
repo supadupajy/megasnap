@@ -466,7 +466,7 @@ const AdminAds = () => {
       {/* 헤더 */}
       <div
         className="fixed left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100"
-        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
       >
         <button
           onClick={() => navigate('/settings')}
@@ -482,7 +482,7 @@ const AdminAds = () => {
       <div
         className="flex-1 overflow-y-auto no-scrollbar"
         style={{
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px + 56px)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
           paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))',
         }}
       >
