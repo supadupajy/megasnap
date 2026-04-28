@@ -364,6 +364,9 @@ const Index = () => {
       if (!post || post.lat == null || post.lng == null) return false;
       if (blockedIds.has(post.user?.id)) return false;
 
+      // 광고 마커는 카테고리 필터 무관하게 항상 표시
+      if (post.isAd) return true;
+
       if (selectedCategories.includes('mine')) {
         return !!(authUser && post.user?.id === authUser.id);
       }
@@ -373,8 +376,7 @@ const Index = () => {
       const isInfluencer = post.isInfluencer || ['silver', 'gold', 'diamond'].includes(post.borderType || '');
       return selectedCategories.includes(post.category || 'none') ||
         (selectedCategories.includes('hot') && isHot) ||
-        (selectedCategories.includes('influencer') && isInfluencer) ||
-        post.isAd;
+        (selectedCategories.includes('influencer') && isInfluencer);
     });
 
     // 중복 제거
@@ -468,15 +470,20 @@ const Index = () => {
     if (!mapData?.bounds) return spreadMarkers;
     const { sw, ne } = mapData.bounds;
     return spreadMarkers.filter(p =>
-      p.lat >= sw.lat && p.lat <= ne.lat &&
-      p.lng >= sw.lng && p.lng <= ne.lng
+      // 광고 마커는 bounds 밖이어도 항상 포함
+      p.isAd ||
+      (p.lat >= sw.lat && p.lat <= ne.lat &&
+      p.lng >= sw.lng && p.lng <= ne.lng)
     );
   }, [spreadMarkers, mapData?.bounds]);
 
   // ── pagedMarkers: visibleMarkers에서 현재 페이지 30개만 ──────
   const pagedMarkers = useMemo(() => {
+    // 광고 마커는 페이지 제한 없이 항상 포함
+    const adMarkers = visibleMarkers.filter(p => p.isAd);
+    const nonAdMarkers = visibleMarkers.filter(p => !p.isAd);
     const start = markerPage * MARKERS_PER_PAGE;
-    return visibleMarkers.slice(start, start + MARKERS_PER_PAGE);
+    return [...adMarkers, ...nonAdMarkers.slice(start, start + MARKERS_PER_PAGE)];
   }, [visibleMarkers, markerPage]);
 
   const hasNextMarkerPage = (markerPage + 1) * MARKERS_PER_PAGE < visibleMarkers.length;
