@@ -189,7 +189,7 @@ const AdCard = ({
           />
           <FieldRow
             icon={Image}
-            label="이미지"
+            label="배너 이미지"
             value={form.image_url}
             placeholder="https://example.com/image.jpg"
             onChange={v => setForm(f => ({ ...f, image_url: v }))}
