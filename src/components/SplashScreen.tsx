@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera, Mail } from 'lucide-react';
-import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
   const { ad, loading, now } = useAd('splash');
@@ -79,7 +79,7 @@ const SplashScreen = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
               className="mt-12 w-full max-w-[320px] cursor-pointer"
-              onClick={() => slot.link_url && window.open(slot.link_url, '_blank', 'noopener,noreferrer')}
+              onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer')}
             >
               {slot.isRecruitment ? (
                 <div className="w-full aspect-[16/9] bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center gap-4 shadow-2xl shadow-indigo-200">

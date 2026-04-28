@@ -3,7 +3,7 @@
 import React from 'react';
 import { ExternalLink, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 
 const SearchAdBanner = () => {
   const { ad, loading, now } = useAd('search');
@@ -38,7 +38,7 @@ const SearchAdBanner = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="relative h-[120px] w-full rounded-[24px] overflow-hidden mb-8 group cursor-pointer shadow-lg shadow-black/10 bg-zinc-900"
-      onClick={() => slot.link_url && window.open(slot.link_url, '_blank', 'noopener,noreferrer')}
+      onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer')}
     >
       {/* Background Image */}
       <img

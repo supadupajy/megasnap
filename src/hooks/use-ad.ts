@@ -38,6 +38,14 @@ export interface AdSlot {
   isRecruitment: boolean; // 만료 후 구인 광고 슬롯인 경우 true
 }
 
+// https:// 없는 URL에 자동으로 프로토콜 추가
+export function normalizeUrl(url: string): string {
+  if (!url) return url;
+  if (/^mailto:/i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
+
 // 광고 만료 시 보여줄 구인 슬롯
 export const RECRUITMENT_SLOT: AdSlot = {
   image_url: '/assets/ad-recruitment-banner.png',

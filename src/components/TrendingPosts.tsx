@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as Scro
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
-import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from "@/hooks/use-ad";
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -147,7 +147,7 @@ const TrendingAdBanner: React.FC = () => {
       <div
         onClick={(e) => {
           e.stopPropagation();
-          if (slot.link_url) window.open(slot.link_url, '_blank', 'noopener,noreferrer');
+          if (slot.link_url) window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer');
         }}
         className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
       >

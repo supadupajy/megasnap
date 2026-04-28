@@ -3,7 +3,7 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 
 const HeaderAdBanner = () => {
   const { ad, loading, now } = useAd('header');
@@ -42,7 +42,7 @@ const HeaderAdBanner = () => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
-      onClick={() => slot.link_url && window.open(slot.link_url, '_blank')}
+      onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank')}
     >
       {/* Background Image */}
       <img
