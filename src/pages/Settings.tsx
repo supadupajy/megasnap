@@ -28,6 +28,7 @@ import {
   BookOpen,
   Link2,
   Receipt,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
@@ -520,18 +521,31 @@ const Settings = () => {
           </div>
         )}
 
-        {/* ── 로그아웃 & 회원탈퇴 ── */}
-        <div className="px-4 pt-4 pb-8">
+        {/* ── 로그아웃 ── */}
+        <div className="px-4 pt-4 pb-1">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem 
-              icon={LogOut} 
-              label="로그아웃" 
+            <SettingItem
+              icon={LogOut}
+              label="로그아웃"
               variant="danger"
               onClick={() => setShowLogoutConfirm(true)}
             />
-            <SettingItem 
-              icon={Trash2} 
-              label="회원 탈퇴" 
+          </div>
+        </div>
+
+        {/* ── 위험 구역 ── */}
+        <div className="px-4 pt-4 pb-8">
+          <SectionHeader title="위험 구역" />
+          <div className="bg-white rounded-2xl border-2 border-red-100 overflow-hidden shadow-sm">
+            <div className="px-4 py-3 bg-red-50 border-b border-red-100 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-[11px] font-bold text-red-400 leading-tight">
+                아래 작업은 되돌릴 수 없습니다. 신중하게 진행해주세요.
+              </p>
+            </div>
+            <SettingItem
+              icon={Trash2}
+              label="회원 탈퇴"
               sublabel="계정 및 모든 데이터가 영구 삭제됩니다"
               variant="danger"
               onClick={() => navigate('/settings/delete-account')}
