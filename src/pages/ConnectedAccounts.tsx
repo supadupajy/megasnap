@@ -3,6 +3,7 @@ import { ChevronLeft, Link2, Unlink, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { showSuccess } from '@/utils/toast';
+import Header from '@/components/Header';
 
 const allProviders = [
   { id: 'google', name: '구글', icon: '🔵', description: 'Google 계정으로 로그인' },
@@ -55,6 +56,7 @@ const ConnectedAccounts = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
+      <Header />
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button
           onClick={() => navigate('/settings')}

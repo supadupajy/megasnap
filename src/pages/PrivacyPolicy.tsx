@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
 const sections = [
   {
     title: '1. 수집하는 개인정보 항목',
@@ -33,6 +34,7 @@ const PrivacyPolicy = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
+      <Header />
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button onClick={() => navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
           <ChevronLeft className="w-6 h-6 text-gray-400" />
