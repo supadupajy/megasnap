@@ -11,7 +11,8 @@ import {
   Database,
   RefreshCw,
   MapPin,
-  Megaphone
+  Megaphone,
+  Tv2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -267,6 +268,22 @@ const Settings = () => {
           <div className="px-4 py-4">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+              <button
+                onClick={() => navigate('/settings/admin-ads')}
+                className="w-full flex items-center justify-between p-4 hover:bg-violet-50 active:bg-violet-100 transition-colors border-b border-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-100 text-violet-600">
+                    <Tv2 className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-bold text-violet-600">광고 만들기</span>
+                    <span className="text-[10px] text-gray-400 font-medium leading-tight">앱 내 모든 광고 이미지와 설명을 수정합니다.</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
+
               <button 
                 onClick={() => setShowGenerateConfirm(true)}
                 disabled={isProcessing}

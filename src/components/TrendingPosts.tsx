@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as Scro
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
+import { useAd } from "@/hooks/use-ad";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -105,6 +106,72 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
 };
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+
+const TrendingAdBanner: React.FC = () => {
+  const { ad, loading } = useAd('trending');
+
+  if (loading) {
+    return (
+      <div className="px-5 py-3 border-b border-gray-100">
+        <div className="h-32 rounded-2xl bg-gray-100 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!ad || !ad.is_active) return null;
+
+  const imageUrl = ad.image_url || '/assets/nike-ad-banner.png';
+  const title = ad.title || 'JUST DO IT.';
+  const subtitle = ad.subtitle || '새로운 나이키 러닝 컬렉션';
+  const linkUrl = ad.link_url || 'https://www.nike.com/kr/';
+  const brandLogoUrl = ad.brand_logo_url;
+
+  return (
+    <div className="px-5 py-3 border-b border-gray-100">
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          if (linkUrl) window.open(linkUrl, '_blank', 'noopener,noreferrer');
+        }}
+        className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+        <div className="absolute inset-0 z-0">
+          <img
+            src={imageUrl}
+            alt={ad.brand_name || 'Ad'}
+            className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+        </div>
+        <div className="relative z-10 p-4 flex flex-col justify-between h-full">
+          <div className="flex items-center gap-2">
+            <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
+            {brandLogoUrl && (
+              <img
+                src={brandLogoUrl}
+                alt={ad.brand_name || 'Brand'}
+                className="h-3.5 invert brightness-200"
+              />
+            )}
+          </div>
+          <div>
+            <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
+              {title}
+            </h3>
+            <p className="text-[12px] font-bold text-white/90 drop-shadow-md">
+              {subtitle}
+            </p>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Shop Now</p>
+            <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TrendingPosts: React.FC<TrendingPostsProps> = ({
   posts,
@@ -235,53 +302,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        {/* 광고 구좌 (고정) - 나이키 광고로 변경 */}
-<div className="px-5 py-3 border-b border-gray-100">
-  <div
-    onClick={(e) => {
-      e.stopPropagation();
-      window.open('https://www.nike.com/kr/', '_blank', 'noopener,noreferrer');
-    }}
-    className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
-  >
-    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-
-    {/* 배경 이미지 */}
-    <div className="absolute inset-0 z-0">
-      <img
-        src="/assets/nike-ad-banner.png"
-        alt="Nike Ad"
-        className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-    </div>
-
-    <div className="relative z-10 p-4 flex flex-col justify-between h-full">
-      <div className="flex items-center gap-2">
-        <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg"
-          alt="Nike Logo"
-          className="h-3.5 invert brightness-200"
-        />
-      </div>
-
-      <div>
-        <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
-          JUST DO IT.
-        </h3>
-        <p className="text-[12px] font-bold text-white/90 drop-shadow-md">
-          새로운 나이키 러닝 컬렉션
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between mt-1">
-        <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Shop Now</p>
-        <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
-      </div>
-    </div>
-  </div>
-</div>
+        {/* 광고 구좌 (DB 연동) */}
+        <TrendingAdBanner />
 
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div

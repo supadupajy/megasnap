@@ -26,6 +26,7 @@ import NotificationSettings from "./pages/NotificationSettings";
 import LanguageSettings from "./pages/LanguageSettings";
 import PrivacySettings from "./pages/PrivacySettings";
 import AdInquiry from "./pages/AdInquiry";
+import AdminAds from "./pages/AdminAds";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
@@ -185,6 +186,7 @@ const AnimatedRoutes = () => {
               <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
               <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
               <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
+              <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
