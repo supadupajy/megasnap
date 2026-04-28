@@ -366,19 +366,8 @@ const AdCard = ({
         </div>
       </div>
 
-      {/* map_marker 전용: 위치 요약 (접힌 상태에서도 항상 표시) */}
-      {ad.id === 'map_marker' && !isExpanded && (
-        <div className="px-4 pb-3">
-          <LocationField
-            lat={form.lat}
-            lng={form.lng}
-            onSelect={() => onSelectLocation(ad.id)}
-          />
-        </div>
-      )}
-
-      {/* 배너 미리보기 (접힌 상태, map_marker 제외) */}
-      {form.image_url && !isExpanded && ad.id !== 'map_marker' && (
+      {/* 배너 미리보기 (접힌 상태) */}
+      {form.image_url && !isExpanded && (
         <div className="px-4 pb-3">
           <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
             <img
