@@ -229,7 +229,7 @@ const Settings = () => {
   return (
     <div className="h-screen bg-gray-50 relative flex flex-col">
       {/* 타이틀 바 */}
-      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="sticky top-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={() => navigate('/profile')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
@@ -242,7 +242,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar pt-14">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
 
         {/* ── 계정 설정 ── */}
         <div className="px-4 pt-5 pb-1">

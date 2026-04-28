@@ -78,14 +78,14 @@ const AdInquiry = () => {
   if (submitted) {
     return (
       <div className="h-screen bg-gray-50 flex flex-col">
-        <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
+        <div className="sticky top-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
           <BackButton onPress={goBack} />
           <div className="flex-1 flex justify-center -ml-10">
             <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24 pt-14">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24">
           <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-indigo-600" />
           </div>
@@ -108,14 +108,14 @@ const AdInquiry = () => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="sticky top-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <BackButton onPress={goBack} />
         <div className="flex-1 flex justify-center -ml-10">
           <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar pt-14">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
 
         {/* 히어로 배너 */}
         <div className="mx-4 mt-5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200">

@@ -104,7 +104,7 @@ const PrivacySettings = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="sticky top-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -121,7 +121,7 @@ const PrivacySettings = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar pt-14">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
 
         {/* 계정 공개 설정 */}
         <div className="px-4 pt-5">

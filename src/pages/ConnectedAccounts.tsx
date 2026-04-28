@@ -55,7 +55,7 @@ const ConnectedAccounts = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="sticky top-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={() => navigate('/settings')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all"
@@ -67,7 +67,7 @@ const ConnectedAccounts = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar pt-14">
+      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
         <div className="px-4 pt-5">
           <p className="text-[13px] text-gray-400 font-medium mb-4 px-1">
             소셜 계정을 연결하면 해당 계정으로 간편하게 로그인할 수 있습니다.
