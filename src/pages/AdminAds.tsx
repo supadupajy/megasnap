@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft,
   Tv2,
@@ -29,6 +29,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { invalidateAdCache } from '@/hooks/use-ad';
+import { resolveOfflineLocationName } from '@/utils/offline-location';
+
+// 카카오 역지오코딩으로 좌표 → 주소 변환
+const reverseGeocode = (lat: number, lng: number): Promise<string> => {
+  return new Promise(resolve => {
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps?.services) {
+      resolve(resolveOfflineLocationName(lat, lng));
+      return;
+    }
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+      if (status === kakao.maps.services.Status.OK) {
+        const addr = result[0].address;
+        const city = addr.region_1depth_name || '';
+        const gu = addr.region_2depth_name || '';
+        const dong = addr.region_3depth_name || '';
+        resolve([city, gu, dong].filter(Boolean).join(' '));
+      } else {
+        resolve(resolveOfflineLocationName(lat, lng));
+      }
+    });
+  });
+};
 
 interface AdData {
   id: string;
@@ -171,9 +195,20 @@ const AdCard = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   const Icon = AD_ICONS[initialAd.id] || Tv2;
   const colors = AD_COLORS[initialAd.id] || AD_COLORS.splash;
+
+  // lat/lng가 있으면 역지오코딩으로 주소 가져오기
+  useEffect(() => {
+    if (form.lat != null && form.lng != null) {
+      setLocationLabel(null); // 로딩 중
+      reverseGeocode(form.lat, form.lng).then(addr => setLocationLabel(addr));
+    } else {
+      setLocationLabel(null);
+    }
+  }, [form.lat, form.lng]);
 
   // initialAd와 비교해 변경 여부 판단
   const hasChanges =
@@ -243,7 +278,9 @@ const AdCard = ({
                   <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400')} />
                 </div>
                 <span className={cn('flex-1 text-left text-sm font-semibold truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                  {hasLocation ? `${form.lat!.toFixed(5)}, ${form.lng!.toFixed(5)}` : '지도에서 위치 선택'}
+                  {hasLocation
+                    ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`)
+                    : '지도에서 위치 선택'}
                 </span>
                 {hasLocation
                   ? <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
@@ -296,7 +333,9 @@ const AdCard = ({
                   <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
                 </div>
                 <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                  {hasLocation ? `${form.lat!.toFixed(5)}, ${form.lng!.toFixed(5)}` : '지도에서 위치 선택'}
+                  {hasLocation
+                    ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`)
+                    : '지도에서 위치 선택'}
                 </span>
                 {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
               </button>
