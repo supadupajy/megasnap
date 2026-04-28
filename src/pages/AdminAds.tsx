@@ -147,9 +147,6 @@ const DatetimeRow = ({ label, value, onChange, min }: {
       className="w-full bg-white rounded-xl border border-gray-100 px-2 h-9 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
       style={{ minWidth: 0 }}
     />
-    {value && (
-      <p className="text-[10px] text-gray-400 font-medium mt-1 px-1 leading-snug">{formatDatetime(value)}</p>
-    )}
   </div>
 );
 
