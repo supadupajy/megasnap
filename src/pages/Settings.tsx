@@ -76,6 +76,9 @@ const Settings = () => {
   const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
+  const [showRandomizeConfirm, setShowRandomizeConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -277,7 +280,7 @@ const Settings = () => {
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
               <button 
-                onClick={handleGenerateInView}
+                onClick={() => setShowGenerateConfirm(true)}
                 disabled={isProcessing}
                 className="w-full flex items-center justify-between p-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
@@ -311,7 +314,7 @@ const Settings = () => {
               </button>
 
               <button 
-                onClick={handleSeedData}
+                onClick={() => setShowSeedConfirm(true)}
                 disabled={isProcessing}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
               >
@@ -328,7 +331,7 @@ const Settings = () => {
               </button>
 
               <button 
-                onClick={handleRandomizeLikes}
+                onClick={() => setShowRandomizeConfirm(true)}
                 disabled={isProcessing}
                 className="w-full flex items-center justify-between p-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
               >
@@ -344,39 +347,6 @@ const Settings = () => {
                 <ChevronRight className="w-4 h-4 text-gray-300" />
               </button>
 
-              <button 
-                onClick={handleEnrichLocations}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-emerald-50 active:bg-emerald-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100 text-emerald-600">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-emerald-600">기존 지역명 상세 보정</span>
-                    <span className="text-[10px] text-gray-400 font-medium">서울/부산처럼 짧게 저장된 포스팅을 서울시 강동구 형식으로 보정합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
-
-              <button 
-                onClick={handleCleanupYoutubePosts}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between p-4 hover:bg-red-50 active:bg-red-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100 text-red-600">
-                    <Loader2 className={cn("w-5 h-5", isProcessing && "animate-spin")} />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-red-600">재생 불가 유튜브 링크 정리</span>
-                    <span className="text-[10px] text-gray-400 font-medium">기존 포스팅의 유튜브 URL을 검수해 재생 불가 링크를 제거합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
             </div>
           </div>
         )}
@@ -397,6 +367,78 @@ const Settings = () => {
       </div>
 
       <BottomNav />
+
+      <AlertDialog open={showGenerateConfirm} onOpenChange={setShowGenerateConfirm}>
+        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
+              포스팅 생성
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
+              현재 화면 안에 5개의 포스팅을 랜덤하게 생성합니다. 진행하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setShowGenerateConfirm(false); handleGenerateInView(); }}
+              className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all m-0"
+            >
+              생성 실행
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
+        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
+              전국 데이터 대량 생성
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
+              대한민국 전역에 대량의 포스팅을 생성합니다. 진행하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setShowSeedConfirm(false); handleSeedData(); }}
+              className="flex-1 h-12 rounded-2xl bg-gray-700 text-white font-bold hover:bg-gray-800 shadow-lg shadow-gray-100 transition-all m-0"
+            >
+              생성 실행
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showRandomizeConfirm} onOpenChange={setShowRandomizeConfirm}>
+        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
+              좋아요 수치 랜덤화
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
+              모든 포스팅의 좋아요 수치를 무작위로 변경합니다. 이 작업은 되돌릴 수 없습니다. 진행하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setShowRandomizeConfirm(false); handleRandomizeLikes(); }}
+              className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-100 transition-all m-0"
+            >
+              랜덤화 실행
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
