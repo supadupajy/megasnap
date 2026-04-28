@@ -92,12 +92,12 @@ const AdInquiry = () => {
               <Megaphone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Chora Ads</p>
+              <p className="text-xs font-bold text-white/70 uppercase tracking-widest">ChoraSnap Ads</p>
               <p className="text-lg font-black leading-tight">지도 위에서 브랜드를 알리세요</p>
             </div>
           </div>
           <p className="text-sm text-white/80 font-medium leading-relaxed">
-            실시간 위치 기반 플랫폼 Chora에서 타겟 고객에게 정확하게 도달하세요.
+            실시간 위치 기반 플랫폼 ChoraSnap에서 타겟 고객에게 정확하게 도달하세요.
           </p>
           <div className="flex gap-4 mt-4">
             <div className="text-center">
