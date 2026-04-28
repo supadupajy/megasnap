@@ -67,7 +67,7 @@ const AnimatedRoutes = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   
   const isChatPage = location.pathname.startsWith("/chat");
-  const isFullPage = ["/splash", "/login", "/settings", "/write"].includes(location.pathname);
+  const isFullPage = ["/splash", "/login", "/settings", "/write"].includes(location.pathname) || location.pathname.startsWith("/settings/");
   const isWritePage = location.pathname === "/write";
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
