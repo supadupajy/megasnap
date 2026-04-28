@@ -10,8 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 const AD_TYPES = [
   { id: 'map', icon: MapPin, label: '지도 마커 광고', desc: '지도 위에 브랜드 마커를 노출합니다' },
-  { id: 'feed', icon: MessageSquare, label: '피드 광고', desc: '포스팅 피드 사이에 광고를 삽입합니다' },
-  { id: 'banner', icon: TrendingUp, label: '배너 광고', desc: '앱 상단/하단 배너 영역을 활용합니다' },
+  { id: 'feed', icon: MessageSquare, label: '피드 광고', desc: '포스팅 사이에 광고를 보여줍니다' },
+  { id: 'banner', icon: TrendingUp, label: '배너 광고', desc: '앱 배너 영역을 활용합니다' },
   { id: 'sponsored', icon: Sparkles, label: '스폰서드 콘텐츠', desc: '브랜드 스토리를 콘텐츠로 제작합니다' },
 ];
 
