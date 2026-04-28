@@ -40,7 +40,7 @@ serve(async (req) => {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;margin:0;padding:20px;">
   <div style="max-width:560px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px 28px;">
-      <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">Chora Ads</p>
+      <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">ChoraSnap Ads</p>
       <h1 style="color:white;font-size:22px;font-weight:900;margin:0;">새로운 광고 문의가 접수되었습니다</h1>
     </div>
     <div style="padding:28px;">
