@@ -211,10 +211,10 @@ const App = () => {
 
   useEffect(() => {
     initializeYoutubePool();
-    // 6초(2.5+@) 동안 스플래시 유지하여 안정적인 로딩 도모
-    const timer = setTimeout(() => { 
-      setShowSplash(false); 
-    }, 4000);
+    // 3초 동안 스플래시 유지
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
 
