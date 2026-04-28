@@ -24,7 +24,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { toggleLikeInDb } from '@/utils/like-utils';
-import { useAd } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
@@ -105,8 +105,8 @@ const Index = () => {
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
 
-  // map_marker 광고 데이터 구독
-  const { ad: mapMarkerAd } = useAd('map_marker');
+  // map_marker 광고 데이터 구독 (now: 시간 전환 시 리렌더 트리거)
+  const { ad: mapMarkerAd, now: mapMarkerNow } = useAd('map_marker');
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -284,73 +284,83 @@ const Index = () => {
 
   // ── map_marker 광고를 allPosts에 주입 ──────────────────────
   // ads 테이블의 map_marker 광고가 활성화되어 있고 lat/lng가 있으면
-  // 고정 ID 'ad-map-marker'로 allPosts에 추가해 지도 마커로 표시
+  // 고정 ID 'ad-map-marker'로 allPosts에 추가해 지도 마커로 표시.
+  // mapMarkerNow가 바뀌면(시간 전환 타이머) 재실행되어 start/end_date 반영.
   useEffect(() => {
     const AD_POST_ID = 'ad-map-marker';
-    if (mapMarkerAd && mapMarkerAd.is_active && mapMarkerAd.lat != null && mapMarkerAd.lng != null) {
-      const lat = mapMarkerAd.lat;
-      const lng = mapMarkerAd.lng;
 
-      // 카카오 역지오코딩으로 정확한 주소 가져오기 (광고 만들기와 동일한 방식)
-      const getLocation = (): Promise<string> => {
-        return new Promise(resolve => {
-          const kakao = (window as any).kakao;
-          if (!kakao?.maps?.services) {
+    if (!mapMarkerAd || !mapMarkerAd.is_active || mapMarkerAd.lat == null || mapMarkerAd.lng == null) {
+      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
+      return;
+    }
+
+    // start_date / end_date 기반으로 현재 유효한 슬롯 결정
+    const slot = resolveActiveSlot(mapMarkerAd, mapMarkerNow);
+    if (!slot.image_url) {
+      // 기간 밖이면 마커 제거
+      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
+      return;
+    }
+
+    const lat = mapMarkerAd.lat;
+    const lng = mapMarkerAd.lng;
+
+    // 카카오 역지오코딩으로 정확한 주소 가져오기
+    const getLocation = (): Promise<string> => {
+      return new Promise(resolve => {
+        const kakao = (window as any).kakao;
+        if (!kakao?.maps?.services) {
+          resolve(resolveOfflineLocationName(lat, lng));
+          return;
+        }
+        const geocoder = new kakao.maps.services.Geocoder();
+        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const addr = result[0].address;
+            const city = addr.region_1depth_name || '';
+            const gu = addr.region_2depth_name || '';
+            const dong = addr.region_3depth_name || '';
+            resolve([city, gu, dong].filter(Boolean).join(' '));
+          } else {
             resolve(resolveOfflineLocationName(lat, lng));
-            return;
           }
-          const geocoder = new kakao.maps.services.Geocoder();
-          geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-            if (status === kakao.maps.services.Status.OK) {
-              const addr = result[0].address;
-              const city = addr.region_1depth_name || '';
-              const gu = addr.region_2depth_name || '';
-              const dong = addr.region_3depth_name || '';
-              resolve([city, gu, dong].filter(Boolean).join(' '));
-            } else {
-              resolve(resolveOfflineLocationName(lat, lng));
-            }
-          });
-        });
-      };
-
-      getLocation().then(locationName => {
-        const adPost: Post = {
-          id: AD_POST_ID,
-          user_id: 'ad',
-          owner_id: 'ad',
-          display_user_id: null,
-          isAd: true,
-          isGif: false,
-          isInfluencer: false,
-          user: { id: 'ad', name: mapMarkerAd.brand_name || '광고', avatar: mapMarkerAd.brand_logo_url || '' },
-          content: mapMarkerAd.title || '',
-          location: locationName,
-          lat,
-          lng,
-          latitude: lat,
-          longitude: lng,
-          likes: 0,
-          commentsCount: 0,
-          comments: [],
-          image: mapMarkerAd.image_url || '',
-          image_url: mapMarkerAd.image_url || '',
-          images: mapMarkerAd.image_url ? [mapMarkerAd.image_url] : [],
-          isLiked: false,
-          category: 'food',
-          createdAt: new Date(),
-          borderType: 'none',
-        };
-        setAllPosts(prev => {
-          const without = prev.filter(p => p.id !== AD_POST_ID);
-          return [adPost, ...without];
         });
       });
-    } else {
-      // 비활성화되거나 위치 없으면 제거
-      setAllPosts(prev => prev.filter(p => p.id !== 'ad-map-marker'));
-    }
-  }, [mapMarkerAd]);
+    };
+
+    getLocation().then(locationName => {
+      const adPost: Post = {
+        id: AD_POST_ID,
+        user_id: 'ad',
+        owner_id: 'ad',
+        display_user_id: null,
+        isAd: true,
+        isGif: false,
+        isInfluencer: false,
+        user: { id: 'ad', name: slot.brand_name || '광고', avatar: slot.brand_logo_url || '' },
+        content: slot.title || '',
+        location: locationName,
+        lat,
+        lng,
+        latitude: lat,
+        longitude: lng,
+        likes: 0,
+        commentsCount: 0,
+        comments: [],
+        image: slot.image_url,
+        image_url: slot.image_url,
+        images: [slot.image_url],
+        isLiked: false,
+        category: 'food',
+        createdAt: new Date(),
+        borderType: 'none',
+      };
+      setAllPosts(prev => {
+        const without = prev.filter(p => p.id !== AD_POST_ID);
+        return [adPost, ...without];
+      });
+    });
+  }, [mapMarkerAd, mapMarkerNow]);
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김

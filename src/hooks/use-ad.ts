@@ -41,15 +41,31 @@ export interface AdSlot {
  * 현재 시각 기준으로 유효한 광고 슬롯을 반환.
  *
  * 판단 로직:
- * 1. 현재 광고에 end_date가 있고 이미 지났으면 → "만료"
- * 2. 만료됐고 next_image_url이 있고 next_start_date가 현재 이전이면 → 다음 광고 승격
+ * 1. start_date가 있고 아직 안 됐으면 → 미표시 (image_url = '')
+ * 2. end_date가 있고 이미 지났으면 → "만료"
+ *    - next_image_url이 있고 next_start_date가 현재 이전이면 → 다음 광고 승격
+ *    - 없으면 → 빈 슬롯 (image_url = '')
  * 3. 그 외 → 현재 광고 반환
- *
- * start_date / end_date 는 timestamptz (ISO 8601) 문자열.
  */
 export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
+  const currentStarted =
+    ad.start_date == null || new Date(ad.start_date) <= now;
+
   const currentExpired =
     ad.end_date != null && new Date(ad.end_date) <= now;
+
+  // 아직 시작 전이면 빈 슬롯
+  if (!currentStarted) {
+    return {
+      image_url: '',
+      title: '',
+      subtitle: '',
+      link_url: '',
+      brand_name: '',
+      brand_logo_url: '',
+      isNext: false,
+    };
+  }
 
   const nextAvailable =
     !!ad.next_image_url &&
@@ -67,6 +83,19 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
     };
   }
 
+  // 만료됐는데 다음 광고도 없으면 빈 슬롯
+  if (currentExpired) {
+    return {
+      image_url: '',
+      title: '',
+      subtitle: '',
+      link_url: '',
+      brand_name: '',
+      brand_logo_url: '',
+      isNext: false,
+    };
+  }
+
   return {
     image_url: ad.image_url,
     title: ad.title,
@@ -80,6 +109,7 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
 
 /**
  * 다음 전환이 일어날 때까지 남은 ms를 계산.
+ * - 현재 광고 start_date가 미래면 그 시각까지 (시작 대기)
  * - 현재 광고 end_date가 미래면 그 시각까지
  * - 다음 광고 next_start_date가 미래면 그 시각까지
  * - 없으면 null (타이머 불필요)
@@ -87,6 +117,10 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
 function msUntilNextTransition(ad: AdData, now: Date): number | null {
   const candidates: number[] = [];
 
+  if (ad.start_date) {
+    const t = new Date(ad.start_date).getTime() - now.getTime();
+    if (t > 0) candidates.push(t);
+  }
   if (ad.end_date) {
     const t = new Date(ad.end_date).getTime() - now.getTime();
     if (t > 0) candidates.push(t);
