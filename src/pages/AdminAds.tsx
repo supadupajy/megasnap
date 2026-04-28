@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronLeft,
   Tv2,
@@ -17,6 +17,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Upload,
+  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
@@ -47,21 +49,190 @@ const AD_ICONS: Record<string, React.ElementType> = {
 };
 
 const AD_COLORS: Record<string, { bg: string; icon: string; border: string; badge: string }> = {
-  splash: { bg: 'bg-blue-50', icon: 'text-blue-600', border: 'border-blue-100', badge: 'bg-blue-100 text-blue-700' },
-  header: { bg: 'bg-indigo-50', icon: 'text-indigo-600', border: 'border-indigo-100', badge: 'bg-indigo-100 text-indigo-700' },
-  search: { bg: 'bg-emerald-50', icon: 'text-emerald-600', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700' },
-  trending: { bg: 'bg-orange-50', icon: 'text-orange-600', border: 'border-orange-100', badge: 'bg-orange-100 text-orange-700' },
-  map_marker: { bg: 'bg-rose-50', icon: 'text-rose-600', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700' },
+  splash:     { bg: 'bg-blue-50',    icon: 'text-blue-600',    border: 'border-blue-100',    badge: 'bg-blue-100 text-blue-700' },
+  header:     { bg: 'bg-indigo-50',  icon: 'text-indigo-600',  border: 'border-indigo-100',  badge: 'bg-indigo-100 text-indigo-700' },
+  search:     { bg: 'bg-emerald-50', icon: 'text-emerald-600', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700' },
+  trending:   { bg: 'bg-orange-50',  icon: 'text-orange-600',  border: 'border-orange-100',  badge: 'bg-orange-100 text-orange-700' },
+  map_marker: { bg: 'bg-rose-50',    icon: 'text-rose-600',    border: 'border-rose-100',    badge: 'bg-rose-100 text-rose-700' },
 };
 
 const AD_DESCRIPTIONS: Record<string, string> = {
-  splash: '앱 시작 시 스플래시 화면에 표시되는 광고입니다.',
-  header: '지도 화면 상단 헤더 영역의 배너 광고입니다.',
-  search: '친구 검색 화면 상단에 표시되는 배너 광고입니다.',
-  trending: '실시간 인기 포스팅 패널 내 광고 구좌입니다.',
+  splash:     '앱 시작 시 스플래시 화면에 표시되는 광고입니다.',
+  header:     '지도 화면 상단 헤더 영역의 배너 광고입니다.',
+  search:     '친구 검색 화면 상단에 표시되는 배너 광고입니다.',
+  trending:   '실시간 인기 포스팅 패널 내 광고 구좌입니다.',
   map_marker: '지도 위에 표시되는 브랜드 마커 광고입니다.',
 };
 
+// ─── 이미지 업로드 필드 ───────────────────────────────────────────────────────
+const ImageUploadField = ({
+  label,
+  value,
+  onChange,
+  adId,
+  fieldKey,
+  previewType = 'banner',
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  adId: string;
+  fieldKey: string;
+  previewType?: 'banner' | 'logo';
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 5MB 제한
+    if (file.size > 5 * 1024 * 1024) {
+      showError('파일 크기는 5MB 이하여야 합니다.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${adId}/${fieldKey}-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('ad-assets')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ad-assets').getPublicUrl(path);
+      onChange(data.publicUrl);
+      showSuccess('이미지가 업로드되었습니다! 🖼️');
+    } catch (err: any) {
+      console.error('[AdminAds] upload error:', err);
+      showError('업로드 실패: ' + (err.message || '알 수 없는 오류'));
+    } finally {
+      setUploading(false);
+      // input 초기화 (같은 파일 재선택 가능하도록)
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const isBanner = previewType === 'banner';
+
+  return (
+    <div className="bg-gray-50 rounded-2xl p-3">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Image className="w-3 h-3 text-gray-400" />
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
+      </div>
+
+      {/* 미리보기 + 업로드 버튼 */}
+      <div
+        className={cn(
+          'relative w-full rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 cursor-pointer group transition-all hover:border-violet-400',
+          isBanner ? 'h-28' : 'h-16'
+        )}
+        onClick={() => !uploading && inputRef.current?.click()}
+      >
+        {value ? (
+          <>
+            <img
+              src={value}
+              alt="preview"
+              className={cn(
+                'w-full h-full transition-transform duration-300 group-hover:scale-105',
+                isBanner ? 'object-cover' : 'object-contain p-2'
+              )}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            {/* 호버 오버레이 */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+              <Upload className="w-5 h-5 text-white" />
+              <span className="text-[10px] font-black text-white">사진 변경</span>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+            {uploading ? (
+              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+            ) : (
+              <>
+                <Upload className="w-5 h-5 text-gray-300 group-hover:text-violet-400 transition-colors" />
+                <span className="text-[10px] font-bold text-gray-300 group-hover:text-violet-400 transition-colors">
+                  클릭하여 사진 선택
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* 업로드 중 오버레이 */}
+        {uploading && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-violet-500 animate-spin" />
+          </div>
+        )}
+      </div>
+
+      {/* URL 직접 입력 */}
+      <div className="mt-2 flex items-center gap-2">
+        <Input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="또는 URL 직접 입력"
+          className="border-none bg-white rounded-xl focus-visible:ring-violet-300 font-medium text-xs h-8 shadow-sm flex-1"
+        />
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-400 transition-colors shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* 숨겨진 파일 input */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  );
+};
+
+// ─── 일반 텍스트 필드 ─────────────────────────────────────────────────────────
+const FieldRow = ({
+  icon: Icon,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) => (
+  <div className="bg-gray-50 rounded-2xl p-3">
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <Icon className="w-3 h-3 text-gray-400" />
+      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
+    </div>
+    <Input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="border-none bg-white rounded-xl focus-visible:ring-violet-300 font-medium text-sm h-9 shadow-sm"
+    />
+  </div>
+);
+
+// ─── 광고 카드 ────────────────────────────────────────────────────────────────
 const AdCard = ({
   ad,
   onSave,
@@ -130,7 +301,7 @@ const AdCard = ({
         </div>
       </div>
 
-      {/* 이미지 미리보기 */}
+      {/* 배너 미리보기 (접힌 상태) */}
       {form.image_url && !isExpanded && (
         <div className="px-4 pb-3">
           <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
@@ -147,18 +318,6 @@ const AdCard = ({
       {/* 편집 폼 */}
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3">
-          {/* 이미지 미리보기 */}
-          {form.image_url && (
-            <div className="w-full h-32 rounded-2xl overflow-hidden bg-gray-100 mb-2">
-              <img
-                src={form.image_url}
-                alt="preview"
-                className="w-full h-full object-cover"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            </div>
-          )}
-
           <FieldRow
             icon={Type}
             label="제목"
@@ -187,19 +346,21 @@ const AdCard = ({
             placeholder="브랜드 이름"
             onChange={v => setForm(f => ({ ...f, brand_name: v }))}
           />
-          <FieldRow
-            icon={Image}
+          <ImageUploadField
             label="배너 이미지"
             value={form.image_url}
-            placeholder="https://example.com/image.jpg"
             onChange={v => setForm(f => ({ ...f, image_url: v }))}
+            adId={ad.id}
+            fieldKey="banner"
+            previewType="banner"
           />
-          <FieldRow
-            icon={Image}
+          <ImageUploadField
             label="브랜드 로고"
             value={form.brand_logo_url}
-            placeholder="https://example.com/logo.svg"
             onChange={v => setForm(f => ({ ...f, brand_logo_url: v }))}
+            adId={ad.id}
+            fieldKey="logo"
+            previewType="logo"
           />
 
           <Button
@@ -226,33 +387,7 @@ const AdCard = ({
   );
 };
 
-const FieldRow = ({
-  icon: Icon,
-  label,
-  value,
-  placeholder,
-  onChange,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-}) => (
-  <div className="bg-gray-50 rounded-2xl p-3">
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <Icon className="w-3 h-3 text-gray-400" />
-      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
-    </div>
-    <Input
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="border-none bg-white rounded-xl focus-visible:ring-violet-300 font-medium text-sm h-9 shadow-sm"
-    />
-  </div>
-);
-
+// ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 const AdminAds = () => {
   const navigate = useNavigate();
   const [ads, setAds] = useState<AdData[]>([]);
@@ -268,7 +403,6 @@ const AdminAds = () => {
         showError('광고 데이터를 불러오지 못했습니다.');
         console.error('[AdminAds] fetch error:', error);
       } else {
-        // 원하는 순서로 정렬
         const ORDER = ['splash', 'header', 'search', 'trending', 'map_marker'];
         const sorted = [...(data || [])].sort(
           (a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)
