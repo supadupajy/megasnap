@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const lastSeenIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
   const capListenerRef = useRef<{ remove: () => void } | null>(null);
-  // 중복 fetchProfile 호출 방지
   const profileFetchingRef = useRef<string | null>(null);
 
   const updateLastSeen = async (userId: string) => {
@@ -49,13 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       clearInterval(lastSeenIntervalRef.current);
       lastSeenIntervalRef.current = null;
     }
-
-    // 즉시 1회 실행 후 10분마다 갱신
     updateLastSeen(userId);
     lastSeenIntervalRef.current = setInterval(() => {
       updateLastSeen(userId);
-    }, 10 * 60 * 1000); // 10분
-
+    }, 10 * 60 * 1000);
     currentUserIdRef.current = userId;
   };
 
@@ -67,12 +63,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     currentUserIdRef.current = null;
   };
 
-  // 포커스 복귀 시: 즉시 업데이트 + interval 재시작
   const handleForeground = (userId: string) => {
     startLastSeenInterval(userId);
   };
 
-  // 백그라운드 전환 시: interval 정지 (불필요한 업데이트 차단)
   const handleBackground = () => {
     if (lastSeenIntervalRef.current) {
       clearInterval(lastSeenIntervalRef.current);
@@ -81,14 +75,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const registerVisibilityEvents = (userId: string) => {
-    // 기존 Capacitor 리스너 제거
     if (capListenerRef.current) {
       capListenerRef.current.remove();
       capListenerRef.current = null;
     }
 
     if (isMobilePlatform()) {
-      // 네이티브: Capacitor appStateChange 사용
       CapApp.addListener("appStateChange", ({ isActive }) => {
         if (isActive) {
           handleForeground(userId);
@@ -99,7 +91,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         capListenerRef.current = handle;
       });
     } else {
-      // 웹: visibilitychange 사용
       const handleVisibility = () => {
         if (document.visibilityState === "visible") {
           handleForeground(userId);
@@ -108,7 +99,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       };
       document.addEventListener("visibilitychange", handleVisibility);
-      // cleanup을 capListenerRef에 통일하여 관리
       capListenerRef.current = {
         remove: () => document.removeEventListener("visibilitychange", handleVisibility),
       };
@@ -123,7 +113,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const fetchProfile = async (userId: string, userEmail?: string) => {
-    // 동일 유저에 대해 이미 fetch 중이면 skip
     if (profileFetchingRef.current === userId) return;
     profileFetchingRef.current = userId;
 
@@ -161,7 +150,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // admin 여부는 profileFetchingRef 가드와 무관하게 독립적으로 조회
   const fetchIsAdmin = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -169,9 +157,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select("role")
         .eq("id", userId)
         .limit(1);
-      console.log("[AuthProvider] fetchIsAdmin result:", { userId, data, error });
-      const isAdminUser = Array.isArray(data) && data.length > 0 && data[0].role === "admin";
-      setIsAdmin(isAdminUser);
+      const result = Array.isArray(data) && data.length > 0 && data[0].role === "admin";
+      setIsAdmin(result);
     } catch (e) {
       console.error("[AuthProvider] fetchIsAdmin error:", e);
       setIsAdmin(false);
@@ -179,34 +166,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const initSession = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        setLoading(false);
-
-        if (initialSession?.user) {
-          const userId = initialSession.user.id;
-          console.log("[AuthProvider] initSession user found:", userId);
-          fetchProfile(userId, initialSession.user.email);
-          fetchIsAdmin(userId);
-          startLastSeenInterval(userId);
-          registerVisibilityEvents(userId);
-          blockedStore.loadFromDB(userId);
-        }
-      } catch (error) {
-        console.error("[AuthProvider] Auth init error:", error);
-        setLoading(false);
-      }
-    };
-
-    initSession();
-
+    // onAuthStateChange 단일 진입점으로 통합
+    // INITIAL_SESSION 이벤트가 현재 세션 상태를 즉시 전달하므로 getSession() 별도 호출 불필요
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("[AuthProvider] onAuthStateChange event:", event, "userId:", currentSession?.user?.id);
 
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
@@ -214,7 +177,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (currentSession?.user) {
           const userId = currentSession.user.id;
-          if (currentUserIdRef.current !== userId) {
+          const isNewUser = currentUserIdRef.current !== userId;
+
+          // INITIAL_SESSION은 항상 admin 체크 (순서 무관하게 보장)
+          if (event === "INITIAL_SESSION") {
+            currentUserIdRef.current = userId;
+            fetchProfile(userId, currentSession.user.email);
+            fetchIsAdmin(userId);
+            startLastSeenInterval(userId);
+            registerVisibilityEvents(userId);
+            blockedStore.loadFromDB(userId);
+          } else if (isNewUser) {
+            // 새 유저 로그인
+            currentUserIdRef.current = userId;
             fetchProfile(userId, currentSession.user.email);
             fetchIsAdmin(userId);
             startLastSeenInterval(userId);
@@ -226,6 +201,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             fetchIsAdmin(userId);
           }
         } else {
+          currentUserIdRef.current = null;
           setProfile(null);
           setIsAdmin(false);
           stopLastSeenInterval();
@@ -252,6 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null);
     setUser(null);
     setProfile(null);
+    setIsAdmin(false);
   };
 
   return (
