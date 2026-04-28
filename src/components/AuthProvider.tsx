@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   profile: any | null;
   loading: boolean;
+  isAdmin: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const lastSeenIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
@@ -152,6 +154,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (data) {
         setProfile(data);
       }
+
+      // admin 여부 확인
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+      setIsAdmin(roleData?.role === "admin");
     } catch (err) {
       console.error("[AuthProvider] Profile fetch error:", err);
     } finally {
@@ -206,6 +216,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else {
           setProfile(null);
+          setIsAdmin(false);
           stopLastSeenInterval();
           unregisterVisibilityEvents();
         }
@@ -234,7 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, refreshProfile, signOut }}
+      value={{ session, user, profile, loading, isAdmin, refreshProfile, signOut }}
     >
       {children}
     </AuthContext.Provider>
