@@ -44,7 +44,7 @@ const AdInquiry = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('send-ad-inquiry', {
+      const { data, error } = await supabase.functions.invoke('send-ad-inquiry', {
         body: {
           adType: selectedType,
           company: company.trim(),
@@ -53,13 +53,16 @@ const AdInquiry = () => {
         },
       });
 
-      if (error) throw error;
+      console.log('[AdInquiry] 응답:', { data, error });
+
+      if (error) throw new Error(error.message || JSON.stringify(error));
+      if (data?.error) throw new Error(data.error);
 
       setSubmitted(true);
       showSuccess('광고 문의가 접수되었습니다! 빠른 시일 내에 연락드리겠습니다. 🎉');
     } catch (err: any) {
       console.error('[AdInquiry] 문의 전송 실패:', err);
-      showError('문의 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      showError(`문의 전송에 실패했습니다: ${err.message || '알 수 없는 오류'}`);
     } finally {
       setIsLoading(false);
     }
