@@ -735,7 +735,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
-                                  <span className="text-[10px] font-black">방문 하기</span>
+                                  <span className="text-[10px] font-black">방문하기</span>
                                 </a>
                               </div>
                               )}
