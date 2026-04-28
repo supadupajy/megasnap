@@ -401,11 +401,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     e.stopPropagation();
     if (isMine) {
       navigate('/profile');
-    } else if (user.id && user.id !== post.owner_id && user.id !== post.user_id) {
-      // display_user_id가 실제 다른 유저 ID인 경우에만 프로필 이동
-      navigate(`/profile/${user.id}`);
+      return;
     }
-    // display_user_id가 없는 경우(랜덤 닉네임 풀) → 이동 없음
+    // 이동할 유저 ID 결정: display_user_id(시드 데이터용) 또는 실제 user_id
+    const targetUserId = user.id || post.user_id;
+    // UUID 형식인지 확인 (랜덤 닉네임 풀 등 실제 유저가 없는 경우 제외)
+    const isValidUUID = targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
+    if (isValidUUID) {
+      navigate(`/profile/${targetUserId}`);
+    }
   };
 
   const handleLocationClick = (e: React.MouseEvent) => {

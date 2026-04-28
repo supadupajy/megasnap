@@ -333,14 +333,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onClose();
     if (isMine) {
+      onClose();
       navigate('/profile');
-    } else if (currentPost.user.id && currentPost.user.id !== currentPost.owner_id && currentPost.user.id !== currentPost.user_id) {
-      // display_user_id가 실제 다른 유저 ID인 경우에만 프로필 이동
-      navigate(`/profile/${currentPost.user.id}`);
+      return;
     }
-    // display_user_id가 없는 경우(랜덤 닉네임 풀) → 이동 없음
+    // 이동할 유저 ID 결정: display_user_id(시드 데이터용) 또는 실제 user_id
+    const targetUserId = currentPost.user.id || currentPost.user_id;
+    // UUID 형식인지 확인 (랜덤 닉네임 풀 등 실제 유저가 없는 경우 제외)
+    const isValidUUID = targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
+    if (isValidUUID) {
+      onClose();
+      navigate(`/profile/${targetUserId}`);
+    }
   };
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
