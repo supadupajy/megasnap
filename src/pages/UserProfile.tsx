@@ -105,7 +105,7 @@ const UserProfile = () => {
     const profileFollowers = Number(userProfile?.followers ?? 0);
     const isAd = p.content?.trim().startsWith('[AD]') ?? false;
     const likes = Number(p.likes || 0);
-    const borderType = likes >= 9000 ? 'popular' : (!isAd ? getTierFromFollowers(profileFollowers) : 'none');
+    const borderType = p.hot_since ? 'popular' : (!isAd ? getTierFromFollowers(profileFollowers) : 'none');
 
     return {
       id: p.id,

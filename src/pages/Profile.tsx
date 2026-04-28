@@ -96,7 +96,7 @@ const Profile = () => {
     const isAd = p.content?.trim().startsWith('[AD]');
     let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
     const likesCountNum = Number(p.likes || 0);
-    if (likesCountNum >= 9000) {
+    if (p.hot_since) {
       borderType = 'popular';
     } else if (!isAd) {
       // follower 수 기반 tier 결정 (내 프로필이므로 followerCount 사용)

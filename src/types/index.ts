@@ -49,4 +49,6 @@ export interface Post {
   is_seed_data?: boolean;
   owner_id?: string; // 실제 DB user_id (RLS 소유자 판별용, mapRawToPost에서 p.user_id로 설정)
   display_user_id?: string; // 화면 표시용 유저 ID (시드 데이터에서 다른 유저 ID)
+  hot_since?: string | null; // HOT 상태 시작 시각 (1시간 내 좋아요 1000개 이상 달성 시 설정)
+  user_followers?: number; // 작성자 follower 수 (tier 판별용)
 }

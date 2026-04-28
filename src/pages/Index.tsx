@@ -149,7 +149,9 @@ const Index = () => {
     const isAd = content.trim().startsWith('[AD]') || prev?.isAd || false;
     const likes = Number(p.likes ?? prev?.likes ?? 0);
     let borderType: any = 'none';
-    if (likes >= 9000) borderType = 'popular';
+    // hot_since가 있으면 HOT (1시간 내 좋아요 1000개 이상 달성)
+    const hotSince = p.hot_since ?? prev?.hot_since ?? null;
+    if (hotSince) borderType = 'popular';
     else if (!isAd) {
       // follower 수 기반 tier 결정 (profiles JOIN 데이터 우선, 없으면 0)
       const followers = Number(p.profiles?.followers ?? 0);
@@ -205,6 +207,7 @@ const Index = () => {
       createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
       borderType,
       is_seed_data: p.is_seed_data ?? prev?.is_seed_data,
+      hot_since: hotSince,
     };
   };
 
@@ -218,7 +221,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar, hot_since')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
@@ -377,7 +380,7 @@ const Index = () => {
       }
       if (selectedCategories.includes('all')) return true;
 
-      const isHot = post.borderType === 'popular' || post.likes >= 9000;
+      const isHot = post.borderType === 'popular';
       const isInfluencer = post.isInfluencer || ['silver', 'gold', 'diamond'].includes(post.borderType || '');
       return selectedCategories.includes(post.category || 'none') ||
         (selectedCategories.includes('hot') && isHot) ||
@@ -577,7 +580,7 @@ const Index = () => {
       // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url, followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, hot_since, profiles:user_id(nickname, avatar_url, followers)')
         .eq('id', lightPost.id)
         .single();
       if (!error && data) {

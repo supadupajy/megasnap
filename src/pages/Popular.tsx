@@ -26,7 +26,7 @@ const PAGE_SIZE = 15;
 // 포스트 데이터를 즉시 매핑 (YouTube 검증 없이)
 const mapPostImmediate = (p: any): Post => {
   const followers = Number(p.profiles?.followers ?? 0);
-  const borderType = getTierFromFollowers(followers);
+  const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
   const isAd = p.content?.trim().startsWith('[AD]');
   let finalImage = p.youtube_url
     ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
@@ -105,7 +105,7 @@ const Popular = () => {
 
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
         .order('likes', { ascending: false })
         .range(from, to);
 

@@ -218,7 +218,7 @@ const PostListOverlay = ({
 
       let { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
         .gte('latitude', latMin)
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
@@ -256,7 +256,7 @@ const PostListOverlay = ({
         const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
         let borderType: string = 'none';
-        if (Number(p.likes || 0) >= 9000) {
+        if (p.hot_since) {
           borderType = 'popular';
         } else {
           borderType = getTierFromFollowers(Number(p.profiles?.followers ?? 0));
