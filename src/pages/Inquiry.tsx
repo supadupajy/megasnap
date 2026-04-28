@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const categories = ['계정/로그인', '포스팅', '버그/오류', '기타'];
 
@@ -11,26 +12,48 @@ const Inquiry = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!category) { showError('문의 유형을 선택해주세요.'); return; }
     if (!title.trim()) { showError('제목을 입력해주세요.'); return; }
     if (content.trim().length < 10) { showError('내용을 10자 이상 입력해주세요.'); return; }
-    setSubmitted(true);
-    showSuccess('문의가 접수되었습니다. 1~2 영업일 내에 답변드리겠습니다.');
+
+    setIsSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showError('로그인이 필요합니다.');
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke('send-inquiry', {
+        body: { category, title, content },
+      });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      showSuccess('문의가 접수되었습니다. 1~2 영업일 내에 답변드리겠습니다.');
+    } catch (err: any) {
+      console.error('[Inquiry] 전송 실패:', err);
+      showError('문의 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (submitted) {
     return (
       <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
-          <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate('/settings'); }} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]" style={{ pointerEvents: 'auto' }}>
-              <ChevronLeft className="w-6 h-6 text-gray-400" />
-            </button>
-            <div className="flex-1 flex justify-center -ml-10">
-              <h1 className="text-[17px] font-black text-gray-900">1:1 문의</h1>
-            </div>
+        <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate('/settings'); }} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]" style={{ pointerEvents: 'auto' }}>
+            <ChevronLeft className="w-6 h-6 text-gray-400" />
+          </button>
+          <div className="flex-1 flex justify-center -ml-10">
+            <h1 className="text-[17px] font-black text-gray-900">1:1 문의</h1>
           </div>
+        </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-indigo-600" />
@@ -110,11 +133,14 @@ const Inquiry = () => {
           </div>
 
           <button
-            onPointerDown={handleSubmit}
-            className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100"
+            onClick={handleSubmit}
+            disabled={isSending}
+            className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100 disabled:opacity-60 disabled:pointer-events-none"
           >
-            <Send className="w-4 h-4" />
-            문의 보내기
+            {isSending
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> 전송 중...</>
+              : <><Send className="w-4 h-4" /> 문의 보내기</>
+            }
           </button>
 
           <p className="text-center text-[11px] text-gray-300 font-medium">
