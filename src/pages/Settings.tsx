@@ -235,7 +235,7 @@ const Settings = () => {
         <Header />
       </div>
 
-      <div className="flex-none h-16 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <button 
             onClick={(e) => {
