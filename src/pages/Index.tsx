@@ -379,15 +379,17 @@ const Index = () => {
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김
   useEffect(() => {
+    if (currentZoom >= 7) {
+      setDisplayedMarkers([]);
+      return;
+    }
+
     const filtered = allPosts.filter(post => {
       if (!post || post.lat == null || post.lng == null) return false;
       if (blockedIds.has(post.user?.id)) return false;
 
-      // 광고 마커는 줌 레벨·카테고리 필터 무관하게 항상 표시
+      // 광고 마커는 카테고리 필터 무관하게 항상 표시
       if (post.isAd) return true;
-
-      // 일반 마커는 줌 레벨 7 이상이면 숨김
-      if (currentZoom >= 7) return false;
 
       if (selectedCategories.includes('mine')) {
         return !!(authUser && post.user?.id === authUser.id);
