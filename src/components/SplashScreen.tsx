@@ -3,14 +3,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera } from 'lucide-react';
-import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
   const { ad, loading, now } = useAd('splash');
 
-  // 기간 기반으로 현재 or 다음 광고 슬롯 결정 (now가 바뀌면 자동 재계산)
-  const slot = ad ? resolveActiveSlot(ad, now) : null;
-  const showAd = !loading && ad?.is_active && !!slot?.image_url;
+  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
+  // 광고가 없거나 비활성이면 구인 슬롯 사용
+  const slot = !loading 
+    ? (ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT)
+    : null;
 
   return (
     <motion.div
@@ -70,8 +72,8 @@ const SplashScreen = () => {
             </motion.p>
           </div>
 
-          {/* 광고 — 기간 기반으로 현재/다음 슬롯 자동 선택 */}
-          {showAd && slot && (
+          {/* 광고 슬롯 — 만료 시 구인 이미지 표시 */}
+          {slot && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -81,26 +83,28 @@ const SplashScreen = () => {
             >
               <img 
                 src={slot.image_url}
-                alt={slot.brand_name}
+                alt={slot.isRecruitment ? '광고 문의' : slot.brand_name}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
-                    {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
-                  </div>
-                  {slot.brand_logo_url && (
-                    <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
-                      <img 
-                        src={slot.brand_logo_url}
-                        alt={slot.brand_name}
-                        className="w-full h-full object-contain" 
-                      />
+              {!slot.isRecruitment && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
+                      {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
                     </div>
-                  )}
+                    {slot.brand_logo_url && (
+                      <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
+                        <img 
+                          src={slot.brand_logo_url}
+                          alt={slot.brand_name}
+                          className="w-full h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </div>

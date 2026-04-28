@@ -35,7 +35,20 @@ export interface AdSlot {
   brand_name: string;
   brand_logo_url: string;
   isNext: boolean; // 다음 광고가 현재로 승격된 경우 true
+  isRecruitment: boolean; // 만료 후 구인 광고 슬롯인 경우 true
 }
+
+// 광고 만료 시 보여줄 구인 슬롯
+export const RECRUITMENT_SLOT: AdSlot = {
+  image_url: '/assets/ad-recruitment-banner.png',
+  title: '광고 문의',
+  subtitle: 'chorasnap@gmail.com',
+  link_url: 'mailto:chorasnap@gmail.com',
+  brand_name: 'ChoraSnap',
+  brand_logo_url: '',
+  isNext: false,
+  isRecruitment: true,
+};
 
 /**
  * 현재 시각 기준으로 유효한 광고 슬롯을 반환.
@@ -54,17 +67,9 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
   const currentExpired =
     ad.end_date != null && new Date(ad.end_date) <= now;
 
-  // 아직 시작 전이면 빈 슬롯
+  // 아직 시작 전이면 구인 슬롯
   if (!currentStarted) {
-    return {
-      image_url: '',
-      title: '',
-      subtitle: '',
-      link_url: '',
-      brand_name: '',
-      brand_logo_url: '',
-      isNext: false,
-    };
+    return RECRUITMENT_SLOT;
   }
 
   const nextAvailable =
@@ -80,20 +85,13 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
       brand_name: ad.next_brand_name || '',
       brand_logo_url: ad.next_brand_logo_url || '',
       isNext: true,
+      isRecruitment: false,
     };
   }
 
-  // 만료됐는데 다음 광고도 없으면 빈 슬롯
+  // 만료됐는데 다음 광고도 없으면 구인 슬롯
   if (currentExpired) {
-    return {
-      image_url: '',
-      title: '',
-      subtitle: '',
-      link_url: '',
-      brand_name: '',
-      brand_logo_url: '',
-      isNext: false,
-    };
+    return RECRUITMENT_SLOT;
   }
 
   return {
@@ -104,6 +102,7 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
     brand_name: ad.brand_name,
     brand_logo_url: ad.brand_logo_url,
     isNext: false,
+    isRecruitment: false,
   };
 }
 

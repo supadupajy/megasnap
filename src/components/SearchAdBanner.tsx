@@ -3,7 +3,7 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
 
 const SearchAdBanner = () => {
   const { ad, loading, now } = useAd('search');
@@ -12,11 +12,26 @@ const SearchAdBanner = () => {
     return <div className="h-[120px] w-full rounded-[24px] bg-gray-100 animate-pulse mb-8" />;
   }
 
-  if (!ad || !ad.is_active) return null;
+  // 광고가 없거나 비활성이면 구인 슬롯 사용
+  const slot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
 
-  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
-  const slot = resolveActiveSlot(ad, now);
-  if (!slot.image_url) return null;
+  // 구인 슬롯인 경우 별도 UI
+  if (slot.isRecruitment) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative h-[120px] w-full rounded-[24px] overflow-hidden mb-8 group cursor-pointer shadow-lg shadow-black/10"
+        onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
+      >
+        <img
+          src={slot.image_url}
+          alt="광고 문의"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+        />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 

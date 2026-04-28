@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as Scro
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
-import { useAd, resolveActiveSlot } from "@/hooks/use-ad";
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from "@/hooks/use-ad";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -118,11 +118,29 @@ const TrendingAdBanner: React.FC = () => {
     );
   }
 
-  if (!ad || !ad.is_active) return null;
+  // 광고가 없거나 비활성이면 구인 슬롯 사용
+  const slot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
 
-  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
-  const slot = resolveActiveSlot(ad, now);
-  if (!slot.image_url) return null;
+  // 구인 슬롯인 경우 별도 UI
+  if (slot.isRecruitment) {
+    return (
+      <div className="px-5 py-3 border-b border-gray-100">
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open('mailto:chorasnap@gmail.com', '_blank');
+          }}
+          className="rounded-2xl overflow-hidden h-32 cursor-pointer group relative"
+        >
+          <img
+            src={slot.image_url}
+            alt="광고 문의"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-5 py-3 border-b border-gray-100">
