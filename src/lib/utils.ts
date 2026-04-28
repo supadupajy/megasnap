@@ -43,3 +43,20 @@ export const getPlaceholderImage = (width: number = 800, height: number = 600, s
 };
 
 export const isMobilePlatform = () => Capacitor.isNativePlatform();
+
+/**
+ * 숫자를 읽기 좋은 형식으로 포맷
+ * - 1,000,000 이상: 1.5M 형식
+ * - 1,000 이상: 1,500 형식 (천 단위 콤마)
+ * - 그 외: 그대로 표시
+ */
+export const formatCount = (n: number): string => {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return (Number.isInteger(m) ? m.toString() : m.toFixed(1).replace(/\.0$/, '')) + 'M';
+  }
+  if (n >= 1_000) {
+    return n.toLocaleString();
+  }
+  return n.toString();
+};

@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatCount } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
@@ -349,15 +349,15 @@ const Profile = () => {
                 <p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p>
                 <div className="flex gap-4">
                   <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={handleScrollToPosts}>
-                    <p className="font-bold text-gray-900">{myPosts.length}</p>
+                    <p className="font-bold text-gray-900">{formatCount(myPosts.length)}</p>
                     <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
                   </div>
                   <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}>
-                    <p className="font-bold text-gray-900">{followerCount.toLocaleString()}</p>
+                    <p className="font-bold text-gray-900">{formatCount(followerCount)}</p>
                     <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
                   </div>
                   <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}>
-                    <p className="font-bold text-gray-900">{followingCount.toLocaleString()}</p>
+                    <p className="font-bold text-gray-900">{formatCount(followingCount)}</p>
                     <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
                   </div>
                 </div>
