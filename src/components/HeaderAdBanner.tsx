@@ -31,7 +31,7 @@ const HeaderAdBanner = () => {
             <Mail className="w-3.5 h-3.5 text-white/90 shrink-0" />
             <div className="flex flex-col">
               <span className="text-[8px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
-              <span className="text-[6px] font-bold text-white/70 leading-none mt-0.5">chorasnap@gmail.com</span>
+              <span className="text-[6px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.04em]">chorasnap@gmail.com</span>
             </div>
           </div>
           <div className="flex items-center gap-1 bg-white/15 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20 group-hover:bg-white/25 transition-colors">
