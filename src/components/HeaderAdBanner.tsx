@@ -49,12 +49,12 @@ const HeaderAdBanner = () => {
         key={slot.image_url}
         src={slot.image_url}
         alt={slot.brand_name || 'Ad'}
-        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700"
+        className="absolute inset-0 w-full h-full object-cover object-center opacity-70 group-hover:scale-110 transition-transform duration-700"
       />
       
       {/* Overlay Content */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black/40 flex items-center justify-between px-3">
-        <div className="flex items-center gap-2">
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40 flex items-center justify-between px-2">
+        <div className="flex items-center gap-1.5">
           <div className="absolute inset-0 z-10 pointer-events-none shine-overlay opacity-30" />
           {slot.brand_logo_url && (
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center p-0.5 shrink-0 shadow-sm relative z-20">
