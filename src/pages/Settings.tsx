@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip, isAdmin }: {
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: {
   icon: any,
   label: string,
   sublabel?: string,
@@ -71,23 +71,9 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
   iconBg?: string,
   iconColor?: string,
   wip?: boolean,
-  isAdmin?: boolean,
-}) => {
-  const handleClick = () => {
-    if (wip) {
-      if (isAdmin) {
-        showInfo('admin 계정 확인');
-        onClick?.();
-      } else {
-        showInfo('아직 개발 중인 기능입니다.');
-      }
-      return;
-    }
-    onClick?.();
-  };
-  return (
+}) => (
   <button
-    onClick={handleClick}
+    onClick={onClick}
     className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
   >
     <div className="flex items-center gap-3">
@@ -113,8 +99,7 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
     </div>
     <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
   </button>
-  );
-};
+);
 
 const SectionHeader = ({ title }: { title: string }) => (
   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">{title}</p>
@@ -278,26 +263,28 @@ const Settings = () => {
               iconColor="text-blue-500"
               onClick={() => navigate('/settings/password')}
             />
-            <SettingItem
-              icon={Link2}
-              label="연결된 소셜 계정"
-              sublabel="구글, 카카오 등 소셜 로그인 연동"
-              iconBg="bg-sky-50"
-              iconColor="text-sky-500"
-              onClick={() => navigate('/settings/connected-accounts')}
-              wip
-              isAdmin={isAdmin}
-            />
-            <SettingItem
-              icon={Smartphone}
-              label="로그인 기기 관리"
-              sublabel="현재 로그인된 기기 확인 및 원격 로그아웃"
-              iconBg="bg-violet-50"
-              iconColor="text-violet-500"
-              onClick={() => navigate('/settings/devices')}
-              wip
-              isAdmin={isAdmin}
-            />
+            {isAdmin && (
+              <SettingItem
+                icon={Link2}
+                label="연결된 소셜 계정"
+                sublabel="구글, 카카오 등 소셜 로그인 연동"
+                iconBg="bg-sky-50"
+                iconColor="text-sky-500"
+                onClick={() => navigate('/settings/connected-accounts')}
+                wip
+              />
+            )}
+            {isAdmin && (
+              <SettingItem
+                icon={Smartphone}
+                label="로그인 기기 관리"
+                sublabel="현재 로그인된 기기 확인 및 원격 로그아웃"
+                iconBg="bg-violet-50"
+                iconColor="text-violet-500"
+                onClick={() => navigate('/settings/devices')}
+                wip
+              />
+            )}
             <SettingItem
               icon={Bell}
               label="알림 설정"
@@ -310,56 +297,58 @@ const Settings = () => {
         </div>
 
         {/* ── 구독 & 결제 ── */}
-        <div className="px-4 pt-4 pb-1">
-          <SectionHeader title="구독 & 결제" />
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem
-              icon={CreditCard}
-              label="구독 플랜 관리"
-              sublabel="현재 플랜 확인 및 업그레이드"
-              iconBg="bg-emerald-50"
-              iconColor="text-emerald-500"
-              onClick={() => navigate('/settings/subscription')}
-              wip
-              isAdmin={isAdmin}
-            />
-            <SettingItem
-              icon={Receipt}
-              label="결제 내역"
-              sublabel="영수증 및 결제 기록 확인"
-              iconBg="bg-teal-50"
-              iconColor="text-teal-500"
-              onClick={() => navigate('/settings/billing')}
-              wip
-              isAdmin={isAdmin}
-            />
+        {isAdmin && (
+          <div className="px-4 pt-4 pb-1">
+            <SectionHeader title="구독 & 결제" />
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+              <SettingItem
+                icon={CreditCard}
+                label="구독 플랜 관리"
+                sublabel="현재 플랜 확인 및 업그레이드"
+                iconBg="bg-emerald-50"
+                iconColor="text-emerald-500"
+                onClick={() => navigate('/settings/subscription')}
+                wip
+              />
+              <SettingItem
+                icon={Receipt}
+                label="결제 내역"
+                sublabel="영수증 및 결제 기록 확인"
+                iconBg="bg-teal-50"
+                iconColor="text-teal-500"
+                onClick={() => navigate('/settings/billing')}
+                wip
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── 앱 설정 ── */}
         <div className="px-4 pt-4 pb-1">
           <SectionHeader title="앱 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem
-              icon={Languages}
-              label="언어 설정"
-              sublabel="앱 표시 언어 변경"
-              iconBg="bg-orange-50"
-              iconColor="text-orange-500"
-              onClick={() => navigate('/settings/language')}
-              wip
-              isAdmin={isAdmin}
-            />
-            <SettingItem
-              icon={Moon}
-              label="다크 모드"
-              sublabel="화면 테마 설정"
-              iconBg="bg-slate-100"
-              iconColor="text-slate-500"
-              onClick={() => navigate('/settings/appearance')}
-              wip
-              isAdmin={isAdmin}
-            />
+            {isAdmin && (
+              <SettingItem
+                icon={Languages}
+                label="언어 설정"
+                sublabel="앱 표시 언어 변경"
+                iconBg="bg-orange-50"
+                iconColor="text-orange-500"
+                onClick={() => navigate('/settings/language')}
+                wip
+              />
+            )}
+            {isAdmin && (
+              <SettingItem
+                icon={Moon}
+                label="다크 모드"
+                sublabel="화면 테마 설정"
+                iconBg="bg-slate-100"
+                iconColor="text-slate-500"
+                onClick={() => navigate('/settings/appearance')}
+                wip
+              />
+            )}
             <SettingItem
               icon={HardDrive}
               label="저장공간 및 캐시"
