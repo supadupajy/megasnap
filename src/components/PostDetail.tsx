@@ -502,7 +502,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                       <AlertCircle className="w-4 h-4 text-gray-600" />
                                       <span className="text-sm font-bold text-gray-700">신고</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                                       <Ban className="w-4 h-4 text-red-600" />
                                       <span className="text-sm font-bold text-red-600">차단</span>
                                     </DropdownMenuItem>
@@ -735,7 +735,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <AlertCircle className="w-4 h-4 text-gray-600" />
                                   <span className="text-sm font-bold text-gray-700">신고</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                                   <Ban className="w-4 h-4 text-red-600" />
                                   <span className="text-sm font-bold text-red-600">차단</span>
                                 </DropdownMenuItem>
