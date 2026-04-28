@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, Send, MoreVertical, Phone, Loader2, Bell, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Send, Loader2, Bell, MessageSquare } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -331,10 +331,6 @@ const Chat = () => {
                 </span>
               </div>
             </div>
-          </div>
-          <div className="ml-auto flex items-center gap-0.5 z-10 shrink-0">
-            <button className="p-2 text-gray-400 hover:text-gray-600"><Phone className="w-5 h-5" /></button>
-            <button className="p-2 text-gray-400 hover:text-gray-600"><MoreVertical className="w-5 h-5" /></button>
           </div>
         </div>
       </header>
