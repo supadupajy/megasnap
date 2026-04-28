@@ -164,13 +164,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // admin 여부는 profileFetchingRef 가드와 무관하게 독립적으로 조회
   const fetchIsAdmin = async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("id", userId)
-        .maybeSingle();
-      setIsAdmin(data?.role === "admin");
-    } catch {
+        .limit(1);
+      console.log("[AuthProvider] fetchIsAdmin result:", { userId, data, error });
+      const isAdminUser = Array.isArray(data) && data.length > 0 && data[0].role === "admin";
+      setIsAdmin(isAdminUser);
+    } catch (e) {
+      console.error("[AuthProvider] fetchIsAdmin error:", e);
       setIsAdmin(false);
     }
   };
@@ -186,6 +189,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (initialSession?.user) {
           const userId = initialSession.user.id;
+          console.log("[AuthProvider] initSession user found:", userId);
           fetchProfile(userId, initialSession.user.email);
           fetchIsAdmin(userId);
           startLastSeenInterval(userId);
@@ -202,7 +206,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (event === "INITIAL_SESSION") return;
+        console.log("[AuthProvider] onAuthStateChange event:", event, "userId:", currentSession?.user?.id);
 
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
@@ -210,7 +214,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (currentSession?.user) {
           const userId = currentSession.user.id;
-          // 프로필은 유저가 바뀌었을 때만 새로 fetch (TOKEN_REFRESHED 등에서 중복 방지)
           if (currentUserIdRef.current !== userId) {
             fetchProfile(userId, currentSession.user.email);
             fetchIsAdmin(userId);
@@ -218,7 +221,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             registerVisibilityEvents(userId);
             blockedStore.loadFromDB(userId);
           } else if (event === "USER_UPDATED") {
-            // 프로필 정보가 변경된 경우에만 재조회
             profileFetchingRef.current = null;
             fetchProfile(userId, currentSession.user.email);
             fetchIsAdmin(userId);
