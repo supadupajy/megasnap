@@ -303,6 +303,15 @@ const AdCard = ({
   const colors = AD_COLORS[ad.id] || AD_COLORS.splash;
   const hasChanges = JSON.stringify(form) !== JSON.stringify(ad);
 
+  // ad prop(lat/lng 포함)이 외부에서 바뀌면 form에 동기화
+  useEffect(() => {
+    setForm(prev => ({ ...prev, lat: ad.lat, lng: ad.lng }));
+    // map_marker이고 위치가 새로 설정됐으면 카드 자동 펼치기
+    if (ad.id === 'map_marker' && ad.lat != null && ad.lng != null) {
+      setIsExpanded(true);
+    }
+  }, [ad.lat, ad.lng]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -315,6 +324,8 @@ const AdCard = ({
   };
 
   const toggleActive = () => setForm(f => ({ ...f, is_active: !f.is_active }));
+
+  const hasLocation = form.lat != null && form.lng != null;
 
   return (
     <div className={cn('rounded-3xl border overflow-hidden shadow-sm', colors.border, 'bg-white')}>
@@ -355,8 +366,19 @@ const AdCard = ({
         </div>
       </div>
 
-      {/* 배너 미리보기 (접힌 상태) */}
-      {form.image_url && !isExpanded && (
+      {/* map_marker 전용: 위치 요약 (접힌 상태에서도 항상 표시) */}
+      {ad.id === 'map_marker' && !isExpanded && (
+        <div className="px-4 pb-3">
+          <LocationField
+            lat={form.lat}
+            lng={form.lng}
+            onSelect={() => onSelectLocation(ad.id)}
+          />
+        </div>
+      )}
+
+      {/* 배너 미리보기 (접힌 상태, map_marker 제외) */}
+      {form.image_url && !isExpanded && ad.id !== 'map_marker' && (
         <div className="px-4 pb-3">
           <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
             <img
@@ -417,7 +439,7 @@ const AdCard = ({
             previewType="logo"
           />
 
-          {/* map_marker 전용: 위치 선택 */}
+          {/* map_marker 전용: 위치 선택 (펼쳐진 상태) */}
           {ad.id === 'map_marker' && (
             <LocationField
               lat={form.lat}
