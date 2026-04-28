@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, UserPlus, Check, Users } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Check, Users, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SearchAdBanner from '@/components/SearchAdBanner';
 import { Button } from '@/components/ui/button';
@@ -156,26 +156,21 @@ const Search = () => {
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
       {/* 고정 상단 헤더 */}
       <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
-        <div className="px-4 py-4 bg-gray-50/50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <SearchIcon className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Find your friends</p>
-              </div>
-            </div>
-            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-              <Users className="w-5 h-5 text-indigo-600" />
-            </div>
+        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
+          <button
+            onClick={() => navigate('/friends')}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
           </div>
         </div>
       </div>
 
       {/* 검색 입력창 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+148px)]">
+      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
         <div className="px-4 pb-2">
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
