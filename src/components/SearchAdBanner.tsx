@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT } from '@/hooks/use-ad';
 
@@ -21,14 +21,14 @@ const SearchAdBanner = () => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative h-[120px] w-full rounded-[24px] overflow-hidden mb-8 group cursor-pointer shadow-lg shadow-black/10"
+        className="w-full h-[120px] bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[24px] flex items-center justify-center gap-4 mb-8 shadow-lg shadow-indigo-100 cursor-pointer"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
-        <img
-          src={slot.image_url}
-          alt="광고 문의"
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-        />
+        <Mail className="w-8 h-8 text-white/90 shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-lg font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
+          <span className="text-sm font-bold text-white/70 leading-none mt-1.5 tracking-[-0.04em]">chorasnap@gmail.com</span>
+        </div>
       </motion.div>
     );
   }

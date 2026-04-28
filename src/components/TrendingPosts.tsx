@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles, Mail } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
@@ -130,13 +130,13 @@ const TrendingAdBanner: React.FC = () => {
             e.stopPropagation();
             window.open('mailto:chorasnap@gmail.com', '_blank');
           }}
-          className="rounded-2xl overflow-hidden h-32 cursor-pointer group relative"
+          className="w-full h-32 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center gap-4 shadow-lg shadow-indigo-100 cursor-pointer"
         >
-          <img
-            src={slot.image_url}
-            alt="광고 문의"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+          <Mail className="w-8 h-8 text-white/90 shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-lg font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
+            <span className="text-sm font-bold text-white/70 leading-none mt-1.5 tracking-[-0.04em]">chorasnap@gmail.com</span>
+          </div>
         </div>
       </div>
     );
