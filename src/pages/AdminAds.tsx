@@ -445,7 +445,8 @@ const AdminAds = () => {
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button
           onClick={() => navigate('/settings')}
-          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer"
+          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
+          style={{ pointerEvents: 'auto' }}
         >
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
