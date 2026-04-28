@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast, showInfo } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -62,8 +62,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: { 
-  icon: any, 
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: {
+  icon: any,
   label: string,
   sublabel?: string,
   onClick?: () => void,
@@ -71,9 +71,17 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
   iconBg?: string,
   iconColor?: string,
   wip?: boolean,
-}) => (
-  <button 
-    onClick={onClick}
+}) => {
+  const handleClick = () => {
+    if (wip) {
+      showInfo('아직 개발 중인 기능입니다.');
+      return;
+    }
+    onClick?.();
+  };
+  return (
+  <button
+    onClick={handleClick}
     className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
   >
     <div className="flex items-center gap-3">
@@ -99,7 +107,8 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
     </div>
     <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
   </button>
-);
+  );
+};
 
 const SectionHeader = ({ title }: { title: string }) => (
   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">{title}</p>
