@@ -113,7 +113,7 @@ const Index = () => {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSelectingAdLocation, setIsSelectingAdLocation] = useState(false);
-  const [tempAdLocation, setTempAdLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [tempAdLocation, setTempAdLocation] = useState<{ lat: number; lng: number } | null>(mapCache.lastCenter || null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [markerPage, setMarkerPage] = useState(0);
 
@@ -679,7 +679,11 @@ const Index = () => {
     }
     if (routeState.startAdLocationSelection) {
       setIsPostListOpen(false);
-      setTimeout(() => { setIsSelectingAdLocation(true); setTempAdLocation(mapData?.center || mapCache.lastCenter); }, 500);
+      // 즉시 현재 지도 중심으로 초기화 (mapCache.lastCenter는 항상 최신값)
+      setTempAdLocation(mapCache.lastCenter || null);
+      setTimeout(() => {
+        setIsSelectingAdLocation(true);
+      }, 300);
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
@@ -801,7 +805,7 @@ const Index = () => {
                         onClick={() => {
                           setIsSelectingAdLocation(false);
                           setTempAdLocation(null);
-                          setTimeout(() => navigate('/settings/admin-ads', { state: null }), 100);
+                          setTimeout(() => navigate('/settings/admin-ads'), 100);
                         }}
                         variant="secondary"
                         className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"
@@ -810,11 +814,12 @@ const Index = () => {
                       </Button>
                       <Button
                         onClick={() => {
-                          if (tempAdLocation) {
+                          const loc = tempAdLocation || mapCache.lastCenter;
+                          if (loc) {
                             setIsSelectingAdLocation(false);
-                            setTimeout(() => navigate('/settings/admin-ads', {
-                              state: { adLocationSelected: true, lat: tempAdLocation.lat, lng: tempAdLocation.lng }
-                            }), 100);
+                            // sessionStorage로 전달 (navigate state는 fetchAds에 의해 덮어써짐)
+                            sessionStorage.setItem('adLocationPending', JSON.stringify({ lat: loc.lat, lng: loc.lng }));
+                            setTimeout(() => navigate('/settings/admin-ads'), 100);
                           }
                         }}
                         className="flex-1 h-12 rounded-2xl font-bold bg-violet-600 text-white shadow-lg shadow-violet-100"

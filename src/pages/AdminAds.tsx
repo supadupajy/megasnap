@@ -464,9 +464,10 @@ const AdCard = ({
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 const AdminAds = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [ads, setAds] = useState<AdData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const mapMarkerCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -479,30 +480,37 @@ const AdminAds = () => {
         console.error('[AdminAds] fetch error:', error);
       } else {
         const ORDER = ['splash', 'header', 'search', 'trending', 'map_marker'];
-        const sorted = [...(data || [])].sort(
+        let sorted = [...(data || [])].sort(
           (a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)
-        );
-        setAds(sorted as AdData[]);
+        ) as AdData[];
+
+        // 지도에서 위치 선택 후 돌아온 경우 sessionStorage에서 좌표 읽기
+        const pending = sessionStorage.getItem('adLocationPending');
+        if (pending) {
+          sessionStorage.removeItem('adLocationPending');
+          try {
+            const { lat, lng } = JSON.parse(pending);
+            sorted = sorted.map(a =>
+              a.id === 'map_marker' ? { ...a, lat, lng } : a
+            );
+            // 데이터 로드 후 map_marker 카드로 스크롤
+            setTimeout(() => {
+              mapMarkerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          } catch (e) {
+            console.error('[AdminAds] pending location parse error:', e);
+          }
+        }
+
+        setAds(sorted);
       }
       setIsLoading(false);
     };
     fetchAds();
   }, []);
 
-  // 지도에서 위치 선택 후 돌아왔을 때 처리
-  useEffect(() => {
-    const state = location.state as any;
-    if (!state?.adLocationSelected) return;
-    const { lat, lng } = state;
-    setAds(prev => prev.map(a =>
-      a.id === 'map_marker' ? { ...a, lat, lng } : a
-    ));
-    // state 초기화
-    navigate(location.pathname, { replace: true, state: null });
-  }, [location.state]);
-
   const handleSave = async (updated: AdData) => {
-    const { error, data, count, status, statusText } = await supabase
+    const { error, data } = await supabase
       .from('ads')
       .update({
         label: updated.label,
@@ -520,15 +528,12 @@ const AdminAds = () => {
       .eq('id', updated.id)
       .select();
 
-    console.log('[AdminAds] save result:', { error, data, count, status, statusText, updated_id: updated.id, is_active: updated.is_active });
-
     if (error) {
       showError('저장에 실패했습니다: ' + error.message);
       throw error;
     }
 
     if (!data || data.length === 0) {
-      console.warn('[AdminAds] update returned 0 rows — RLS blocked or row not found');
       showError('저장 권한이 없거나 해당 광고를 찾을 수 없습니다.');
       throw new Error('0 rows updated');
     }
@@ -563,6 +568,7 @@ const AdminAds = () => {
       </div>
 
       <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto no-scrollbar"
         style={{
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px + 56px)',
@@ -597,7 +603,9 @@ const AdminAds = () => {
             ))
           ) : (
             ads.map(ad => (
-              <AdCard key={ad.id} ad={ad} onSave={handleSave} onSelectLocation={handleSelectLocation} />
+              <div key={ad.id} ref={ad.id === 'map_marker' ? mapMarkerCardRef : undefined}>
+                <AdCard ad={ad} onSave={handleSave} onSelectLocation={handleSelectLocation} />
+              </div>
             ))
           )}
         </div>
