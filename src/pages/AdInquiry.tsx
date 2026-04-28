@@ -9,10 +9,10 @@ import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const AD_TYPES = [
-  { id: 'map', icon: MapPin, label: '지도 마커 광고', desc: '지도 위에 브랜드 마커를 노출합니다' },
-  { id: 'feed', icon: MessageSquare, label: '피드 광고', desc: '포스팅 사이에 광고를 보여줍니다' },
-  { id: 'banner', icon: TrendingUp, label: '배너 광고', desc: '앱 배너 영역을 활용합니다' },
-  { id: 'sponsored', icon: Sparkles, label: '스폰서드 콘텐츠', desc: '브랜드 스토리를 콘텐츠로 제작합니다' },
+  { id: 'map', icon: MapPin, label: '지도 마커 광고', desc: '지도 위에 브랜드 마커를 노출합니다', disabled: false },
+  { id: 'feed', icon: MessageSquare, label: '피드 광고', desc: '포스팅 사이에 광고를 보여줍니다', disabled: false },
+  { id: 'banner', icon: TrendingUp, label: '배너 광고', desc: '앱 배너 영역을 활용합니다', disabled: false },
+  { id: 'sponsored', icon: Sparkles, label: '스폰서드 콘텐츠', desc: '브랜드 스토리를 콘텐츠로 제작합니다', disabled: true },
 ];
 
 const BackButton = ({ onPress }: { onPress: () => void }) => (
@@ -160,21 +160,30 @@ const AdInquiry = () => {
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">광고 유형 선택</p>
             <div className="grid grid-cols-2 gap-3">
-              {AD_TYPES.map(({ id, icon: Icon, label, desc }) => {
+              {AD_TYPES.map(({ id, icon: Icon, label, desc, disabled }) => {
                 const isSelected = selectedTypes.includes(id);
                 return (
                   <button
                     key={id}
                     type="button"
-                    onClick={() => toggleType(id)}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 relative ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
-                        : 'border-gray-100 bg-white hover:border-indigo-200'
+                    disabled={disabled}
+                    onClick={() => !disabled && toggleType(id)}
+                    className={`p-4 rounded-2xl border-2 text-left transition-all relative ${
+                      disabled
+                        ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                        : isSelected
+                          ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100 active:scale-95'
+                          : 'border-gray-100 bg-white hover:border-indigo-200 active:scale-95'
                     }`}
                   >
+                    {/* 준비 중 뱃지 */}
+                    {disabled && (
+                      <span className="absolute top-2.5 right-2.5 bg-gray-200 text-gray-500 text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                        준비 중
+                      </span>
+                    )}
                     {/* 선택 체크 뱃지 */}
-                    {isSelected && (
+                    {!disabled && isSelected && (
                       <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center">
                         <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -182,11 +191,13 @@ const AdInquiry = () => {
                       </span>
                     )}
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
-                      isSelected ? 'bg-indigo-600' : 'bg-gray-100'
+                      disabled ? 'bg-gray-100' : isSelected ? 'bg-indigo-600' : 'bg-gray-100'
                     }`}>
-                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                      <Icon className={`w-4 h-4 ${disabled ? 'text-gray-300' : isSelected ? 'text-white' : 'text-gray-500'}`} />
                     </div>
-                    <p className={`text-xs font-black leading-tight mb-1 ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>
+                    <p className={`text-xs font-black leading-tight mb-1 ${
+                      disabled ? 'text-gray-400' : isSelected ? 'text-indigo-700' : 'text-gray-800'
+                    }`}>
                       {label}
                     </p>
                     <p className="text-[10px] text-gray-400 font-medium leading-tight">{desc}</p>
