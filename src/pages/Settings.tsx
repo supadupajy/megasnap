@@ -14,13 +14,25 @@ import {
   MapPin,
   Megaphone,
   Tv2,
-  Bug
+  Bug,
+  User,
+  Smartphone,
+  CreditCard,
+  HelpCircle,
+  FileText,
+  Building2,
+  Trash2,
+  Moon,
+  HardDrive,
+  MessageSquare,
+  BookOpen,
+  Link2,
+  Receipt,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { useAuth } from '@/components/AuthProvider';
-import { Button } from '@/components/ui/button';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,30 +63,41 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: { 
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor }: { 
   icon: any, 
-  label: string, 
+  label: string,
+  sublabel?: string,
   onClick?: () => void,
-  variant?: "default" | "danger"
+  variant?: "default" | "danger",
+  iconBg?: string,
+  iconColor?: string,
 }) => (
   <button 
     onClick={onClick}
-    className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
+    className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
   >
     <div className="flex items-center gap-3">
       <div className={cn(
-        "w-8 h-8 rounded-lg flex items-center justify-center",
-        variant === "danger" ? "bg-red-50 text-red-500" : "bg-gray-100 text-gray-600"
+        "w-9 h-9 rounded-xl flex items-center justify-center",
+        iconBg || (variant === "danger" ? "bg-red-50" : "bg-gray-100"),
+        iconColor || (variant === "danger" ? "text-red-500" : "text-gray-600")
       )}>
         <Icon className="w-5 h-5" />
       </div>
-      <span className={cn(
-        "text-sm font-bold",
-        variant === "danger" ? "text-red-500" : "text-gray-700"
-      )}>{label}</span>
+      <div className="flex flex-col items-start text-left">
+        <span className={cn(
+          "text-sm font-bold",
+          variant === "danger" ? "text-red-500" : "text-gray-800"
+        )}>{label}</span>
+        {sublabel && <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">{sublabel}</span>}
+      </div>
     </div>
-    <ChevronRight className="w-4 h-4 text-gray-300" />
+    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
   </button>
+);
+
+const SectionHeader = ({ title }: { title: string }) => (
+  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">{title}</p>
 );
 
 const Settings = () => {
@@ -90,24 +113,15 @@ const Settings = () => {
   const [showBugReport, setShowBugReport] = useState(false);
   const [bugContent, setBugContent] = useState('');
 
-  // [NEW] 관리자 권한 확인
   React.useEffect(() => {
     if (user) {
-      console.log('[Settings] Checking admin status for user:', user.email);
       const checkAdmin = async () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('id', user.id)
           .maybeSingle();
-        
-        if (error) {
-          console.error('[Settings] Admin check error:', error);
-          return;
-        }
-
-        console.log('[Settings] Admin check result:', data);
-        if (data && data.role === 'admin') {
+        if (!error && data && data.role === 'admin') {
           setIsAdmin(true);
         }
       };
@@ -151,39 +165,6 @@ const Settings = () => {
     } catch (err: any) {
       dismissToast(toastId);
       showError(`수치 변경 실패: ${err.message || 'RPC 함수를 찾을 수 없거나 권한이 없습니다.'}`);
-      console.error("Randomize Error Details:", err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleCleanupYoutubePosts = async () => {
-    setIsProcessing(true);
-    const toastId = showLoading('재생 불가 유튜브 포스팅을 검수하는 중...');
-    try {
-      const count = await cleanupInvalidYoutubePosts();
-      dismissToast(toastId);
-      showSuccess(`${count}개 포스팅의 재생 불가 유튜브 링크를 정리했습니다! 🧹`);
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`유튜브 정리 실패: ${err.message || '알 수 없는 오류'}`);
-      console.error("Cleanup YouTube Error Details:", err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleEnrichLocations = async () => {
-    setIsProcessing(true);
-    const toastId = showLoading('기존 포스팅의 지역명을 상세하게 보정하는 중...');
-    try {
-      const count = await enrichExistingPostLocations();
-      dismissToast(toastId);
-      showSuccess(`${count}개 포스팅의 지역명이 상세 주소 형식으로 보정되었습니다! 🗺️`);
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`지역명 보정 실패: ${err.message || '알 수 없는 오류'}`);
-      console.error("Enrich Location Error Details:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -191,14 +172,11 @@ const Settings = () => {
 
   const handleGenerateInView = async () => {
     if (!user) return;
-    
-    // Get bounds from local storage where Map component saves them
     const storedBounds = localStorage.getItem('map_bounds');
     if (!storedBounds) {
-      showError('지도를 한 번 이상 확인해야 화면 범위를 알 수 있습니다. 지도로 돌아가 화면을 움직여보세요!');
+      showError('지도를 한 번 이상 확인해야 화면 범위를 알 수 있습니다.');
       return;
     }
-
     setIsProcessing(true);
     const toastId = showLoading('현재 화면 안에 포스팅을 생성 중입니다...');
     try {
@@ -206,8 +184,6 @@ const Settings = () => {
       const count = await seedInBoundsPosts(user.id, bounds, profile?.nickname);
       dismissToast(toastId);
       showSuccess(`현재 화면 안에 ${count}개의 포스팅이 생성되었습니다! 📍`);
-      
-      // ✅ [FIX] 포스팅 생성 후 지도 데이터를 즉시 새로고침하기 위해 커스텀 이벤트 발생
       window.dispatchEvent(new CustomEvent('refresh-map-data'));
     } catch (err: any) {
       dismissToast(toastId);
@@ -223,7 +199,6 @@ const Settings = () => {
       showError('지도를 한 번 이상 확인해야 삭제 범위를 알 수 있습니다.');
       return;
     }
-
     setIsProcessing(true);
     const toastId = showLoading('현재 화면 내 포스팅을 삭제 중...');
     try {
@@ -254,11 +229,12 @@ const Settings = () => {
   };
 
   return (
-    <div className="h-screen bg-white relative flex flex-col">
+    <div className="h-screen bg-gray-50 relative flex flex-col">
       <div className="flex-none h-16">
         <Header />
       </div>
 
+      {/* 타이틀 바 */}
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={() => navigate('/profile')}
@@ -272,45 +248,216 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-20 no-scrollbar">
-        <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">계정 설정</p>
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+
+        {/* ── 계정 설정 ── */}
+        <div className="px-4 pt-5 pb-1">
+          <SectionHeader title="계정 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Lock} label="비밀번호 변경 및 보안" onClick={() => navigate('/settings/password')} />
-            <SettingItem icon={Bell} label="알림 설정" onClick={() => navigate('/settings/notifications')} />
+            <SettingItem
+              icon={User}
+              label="프로필 편집"
+              sublabel="닉네임, 프로필 사진, 소개 수정"
+              iconBg="bg-indigo-50"
+              iconColor="text-indigo-500"
+              onClick={() => navigate('/settings/profile-edit')}
+            />
+            <SettingItem
+              icon={Lock}
+              label="비밀번호 변경 및 보안"
+              sublabel="비밀번호, 2단계 인증"
+              iconBg="bg-blue-50"
+              iconColor="text-blue-500"
+              onClick={() => navigate('/settings/password')}
+            />
+            <SettingItem
+              icon={Link2}
+              label="연결된 소셜 계정"
+              sublabel="구글, 카카오 등 소셜 로그인 연동"
+              iconBg="bg-sky-50"
+              iconColor="text-sky-500"
+              onClick={() => navigate('/settings/connected-accounts')}
+            />
+            <SettingItem
+              icon={Smartphone}
+              label="로그인 기기 관리"
+              sublabel="현재 로그인된 기기 확인 및 원격 로그아웃"
+              iconBg="bg-violet-50"
+              iconColor="text-violet-500"
+              onClick={() => navigate('/settings/devices')}
+            />
+            <SettingItem
+              icon={Bell}
+              label="알림 설정"
+              sublabel="푸시, 이메일, 마케팅 알림 관리"
+              iconBg="bg-amber-50"
+              iconColor="text-amber-500"
+              onClick={() => navigate('/settings/notifications')}
+            />
           </div>
         </div>
 
-        <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">앱 설정</p>
+        {/* ── 구독 & 결제 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="구독 & 결제" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Languages} label="언어 설정" onClick={() => navigate('/settings/language')} />
-            <SettingItem icon={Shield} label="개인정보 보호" onClick={() => navigate('/settings/privacy')} />
+            <SettingItem
+              icon={CreditCard}
+              label="구독 플랜 관리"
+              sublabel="현재 플랜 확인 및 업그레이드"
+              iconBg="bg-emerald-50"
+              iconColor="text-emerald-500"
+              onClick={() => navigate('/settings/subscription')}
+            />
+            <SettingItem
+              icon={Receipt}
+              label="결제 내역"
+              sublabel="영수증 및 결제 기록 확인"
+              iconBg="bg-teal-50"
+              iconColor="text-teal-500"
+              onClick={() => navigate('/settings/billing')}
+            />
           </div>
         </div>
 
-        <div className="px-4 py-4">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">광고</p>
+        {/* ── 앱 설정 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="앱 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Megaphone} label="광고 문의" onClick={() => navigate('/settings/ad')} />
+            <SettingItem
+              icon={Languages}
+              label="언어 설정"
+              sublabel="앱 표시 언어 변경"
+              iconBg="bg-orange-50"
+              iconColor="text-orange-500"
+              onClick={() => navigate('/settings/language')}
+            />
+            <SettingItem
+              icon={Moon}
+              label="다크 모드"
+              sublabel="화면 테마 설정"
+              iconBg="bg-slate-100"
+              iconColor="text-slate-500"
+              onClick={() => navigate('/settings/appearance')}
+            />
+            <SettingItem
+              icon={HardDrive}
+              label="저장공간 및 캐시"
+              sublabel="캐시 삭제, 데이터 절약 모드"
+              iconBg="bg-gray-100"
+              iconColor="text-gray-500"
+              onClick={() => navigate('/settings/storage')}
+            />
+            <SettingItem
+              icon={Shield}
+              label="개인정보 보호"
+              sublabel="차단 목록, 활동 공개 범위"
+              iconBg="bg-rose-50"
+              iconColor="text-rose-500"
+              onClick={() => navigate('/settings/privacy')}
+            />
           </div>
         </div>
 
+        {/* ── 고객 지원 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="고객 지원" />
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <SettingItem
+              icon={BookOpen}
+              label="공지사항"
+              sublabel="서비스 업데이트 및 점검 안내"
+              iconBg="bg-blue-50"
+              iconColor="text-blue-500"
+              onClick={() => navigate('/settings/notices')}
+            />
+            <SettingItem
+              icon={HelpCircle}
+              label="자주 묻는 질문 (FAQ)"
+              sublabel="궁금한 점을 빠르게 해결하세요"
+              iconBg="bg-cyan-50"
+              iconColor="text-cyan-500"
+              onClick={() => navigate('/settings/faq')}
+            />
+            <SettingItem
+              icon={MessageSquare}
+              label="1:1 문의"
+              sublabel="직접 문의하기"
+              iconBg="bg-indigo-50"
+              iconColor="text-indigo-500"
+              onClick={() => navigate('/settings/inquiry')}
+            />
+            <SettingItem
+              icon={Bug}
+              label="버그 신고"
+              sublabel="불편한 점을 알려주세요"
+              iconBg="bg-orange-50"
+              iconColor="text-orange-500"
+              onClick={() => setShowBugReport(true)}
+            />
+          </div>
+        </div>
+
+        {/* ── 광고 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="광고" />
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <SettingItem
+              icon={Megaphone}
+              label="광고 문의"
+              sublabel="ChoraSnap에 광고를 게재하세요"
+              iconBg="bg-pink-50"
+              iconColor="text-pink-500"
+              onClick={() => navigate('/settings/ad')}
+            />
+          </div>
+        </div>
+
+        {/* ── 법적 고지 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="법적 고지" />
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <SettingItem
+              icon={FileText}
+              label="개인정보 처리방침"
+              iconBg="bg-gray-100"
+              iconColor="text-gray-500"
+              onClick={() => navigate('/settings/privacy-policy')}
+            />
+            <SettingItem
+              icon={FileText}
+              label="서비스 이용약관"
+              iconBg="bg-gray-100"
+              iconColor="text-gray-500"
+              onClick={() => navigate('/settings/terms')}
+            />
+            <SettingItem
+              icon={Building2}
+              label="사업자 정보"
+              sublabel="회사명, 대표자, 사업자번호"
+              iconBg="bg-gray-100"
+              iconColor="text-gray-500"
+              onClick={() => navigate('/settings/company-info')}
+            />
+          </div>
+        </div>
+
+        {/* ── 관리자 도구 ── */}
         {isAdmin && (
-          <div className="px-4 py-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">관리자 도구</p>
+          <div className="px-4 pt-4 pb-1">
+            <SectionHeader title="관리자 도구" />
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
               <button
                 onClick={() => navigate('/settings/admin-ads')}
-                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-violet-50 active:bg-violet-100 transition-colors border-b border-gray-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-violet-50 active:bg-violet-100 transition-colors border-b border-gray-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-100 text-violet-600">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-violet-100 text-violet-600">
                     <Tv2 className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-violet-600">광고 만들기</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">앱 내 모든 광고 이미지와 설명을 수정합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">앱 내 모든 광고 이미지와 설명을 수정합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -319,15 +466,15 @@ const Settings = () => {
               <button 
                 onClick={() => setShowGenerateConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-600">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-indigo-600">현재 화면 안에 포스팅 생성</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 보이는 영역에 5개의 다양한 포스팅을 랜덤하게 배치합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">지도의 현재 보이는 영역에 5개의 다양한 포스팅을 랜덤하게 배치합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -336,15 +483,15 @@ const Settings = () => {
               <button 
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-100 text-rose-600">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-100 text-rose-600">
                     <RefreshCw className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-rose-600">현재 화면 내 포스팅 일괄 삭제</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -353,15 +500,15 @@ const Settings = () => {
               <button 
                 onClick={() => setShowSeedConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-600">
                     <Database className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-gray-700">전국 데이터 대량 생성</span>
-                    <span className="text-[10px] text-gray-400 font-medium leading-tight">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -370,40 +517,42 @@ const Settings = () => {
               <button 
                 onClick={() => setShowRandomizeConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between py-2.5 px-4 hover:bg-orange-50 active:bg-orange-100 transition-colors border-b border-gray-50 last:border-none disabled:opacity-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-orange-50 active:bg-orange-100 transition-colors last:border-none disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-orange-100 text-orange-600">
                     <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
-                    <span className="text-[10px] text-gray-400 font-medium">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium mt-0.5">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
               </button>
-
             </div>
           </div>
         )}
 
-        <div className="px-4 py-8">
+        {/* ── 로그아웃 & 회원탈퇴 ── */}
+        <div className="px-4 pt-4 pb-8">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem 
-              icon={Bug} 
-              label="버그 신고" 
-              onClick={() => setShowBugReport(true)}
-            />
             <SettingItem 
               icon={LogOut} 
               label="로그아웃" 
-              variant="danger" 
+              variant="danger"
               onClick={() => setShowLogoutConfirm(true)}
+            />
+            <SettingItem 
+              icon={Trash2} 
+              label="회원 탈퇴" 
+              sublabel="계정 및 모든 데이터가 영구 삭제됩니다"
+              variant="danger"
+              onClick={() => navigate('/settings/delete-account')}
             />
           </div>
           <p className="text-center text-[10px] text-gray-300 font-bold mt-8 uppercase tracking-tighter">
-            Chora Version 1.0.0
+            ChoraSnap Version 1.0.0
           </p>
         </div>
       </div>
@@ -425,7 +574,7 @@ const Settings = () => {
             <Textarea
               value={bugContent}
               onChange={(e) => setBugContent(e.target.value)}
-              placeholder="버그 내용을 자세히 작성해주세요.&#10;예) 어떤 화면에서, 어떤 동작을 했을 때, 어떤 문제가 발생했는지 알려주세요."
+              placeholder={"버그 내용을 자세히 작성해주세요.\n예) 어떤 화면에서, 어떤 동작을 했을 때, 어떤 문제가 발생했는지 알려주세요."}
               className="min-h-[140px] rounded-2xl border-gray-200 text-sm font-medium text-gray-700 placeholder:text-gray-300 resize-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300"
             />
           </div>
@@ -446,26 +595,18 @@ const Settings = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 관리자 다이얼로그들 */}
       <AlertDialog open={showGenerateConfirm} onOpenChange={setShowGenerateConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-              포스팅 생성
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">포스팅 생성</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
               현재 화면 안에 5개의 포스팅을 랜덤하게 생성합니다. 진행하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
-              취소
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setShowGenerateConfirm(false); handleGenerateInView(); }}
-              className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all m-0"
-            >
-              생성 실행
-            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowGenerateConfirm(false); handleGenerateInView(); }} className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all m-0">생성 실행</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -473,23 +614,14 @@ const Settings = () => {
       <AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-              전국 데이터 대량 생성
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">전국 데이터 대량 생성</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
               대한민국 전역에 대량의 포스팅을 생성합니다. 진행하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
-              취소
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setShowSeedConfirm(false); handleSeedData(); }}
-              className="flex-1 h-12 rounded-2xl bg-gray-700 text-white font-bold hover:bg-gray-800 shadow-lg shadow-gray-100 transition-all m-0"
-            >
-              생성 실행
-            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowSeedConfirm(false); handleSeedData(); }} className="flex-1 h-12 rounded-2xl bg-gray-700 text-white font-bold hover:bg-gray-800 shadow-lg shadow-gray-100 transition-all m-0">생성 실행</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -497,23 +629,14 @@ const Settings = () => {
       <AlertDialog open={showRandomizeConfirm} onOpenChange={setShowRandomizeConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-              좋아요 수치 랜덤화
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">좋아요 수치 랜덤화</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              모든 포스팅의 좋아요 수치를 무작위로 변경합니다. 이 작업은 되돌릴 수 없습니다. 진행하시겠습니까?
+              모든 포스팅의 좋아요 수치를 무작위로 변경합니다. 이 작업은 되돌릴 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">
-              취소
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setShowRandomizeConfirm(false); handleRandomizeLikes(); }}
-              className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-100 transition-all m-0"
-            >
-              랜덤화 실행
-            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowRandomizeConfirm(false); handleRandomizeLikes(); }} className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-100 transition-all m-0">랜덤화 실행</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -521,25 +644,14 @@ const Settings = () => {
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-              로그아웃
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">로그아웃</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
               로그아웃 하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel 
-              className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0"
-            >
-              취소
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleSignOut}
-              className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0"
-            >
-              로그아웃
-            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut} className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0">로그아웃</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -547,25 +659,14 @@ const Settings = () => {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-              데이터 일괄 삭제
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">데이터 일괄 삭제</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              현재 화면 범위 내의 모든 포스팅이 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 진행하시겠습니까?
+              현재 화면 범위 내의 모든 포스팅이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel 
-              className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0"
-            >
-              취소
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteInView}
-              className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all m-0"
-            >
-              삭제 실행
-            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInView} className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all m-0">삭제 실행</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

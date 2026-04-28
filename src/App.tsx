@@ -37,6 +37,19 @@ import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
 import { initializeYoutubePool } from "./lib/mock-data";
+import ConnectedAccounts from "./pages/ConnectedAccounts";
+import DeviceManagement from "./pages/DeviceManagement";
+import Subscription from "./pages/Subscription";
+import BillingHistory from "./pages/BillingHistory";
+import Notices from "./pages/Notices";
+import FAQ from "./pages/FAQ";
+import Inquiry from "./pages/Inquiry";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CompanyInfo from "./pages/CompanyInfo";
+import AppearanceSettings from "./pages/AppearanceSettings";
+import StorageSettings from "./pages/StorageSettings";
+import DeleteAccount from "./pages/DeleteAccount";
 
 const queryClient = new QueryClient();
 
@@ -187,6 +200,19 @@ const AnimatedRoutes = () => {
               <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
               <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
               <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
+              <Route path="/settings/connected-accounts" element={<ProtectedRoute><ConnectedAccounts /></ProtectedRoute>} />
+              <Route path="/settings/devices" element={<ProtectedRoute><DeviceManagement /></ProtectedRoute>} />
+              <Route path="/settings/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+              <Route path="/settings/billing" element={<ProtectedRoute><BillingHistory /></ProtectedRoute>} />
+              <Route path="/settings/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
+              <Route path="/settings/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+              <Route path="/settings/inquiry" element={<ProtectedRoute><Inquiry /></ProtectedRoute>} />
+              <Route path="/settings/privacy-policy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
+              <Route path="/settings/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
+              <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
+              <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
+              <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
+              <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
