@@ -60,7 +60,7 @@ const PrivacyPolicy = () => {
               </div>
             ))}
           </div>
-          <div style={{ height: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} />
+          <div style={{ height: 'calc(160px + env(safe-area-inset-bottom, 0px))' }} />
         </div>
       </div>
     </div>
