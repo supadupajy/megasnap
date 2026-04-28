@@ -26,17 +26,17 @@ const HeaderAdBanner = () => {
         className="flex-1 mx-4 h-10 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl overflow-hidden relative group cursor-pointer shadow-md"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
-        <div className="absolute inset-0 flex items-center justify-between px-3">
-          <div className="flex items-center gap-2">
-            <Mail className="w-3.5 h-3.5 text-white/90 shrink-0" />
+        <div className="absolute inset-0 flex items-center justify-between pl-2 pr-2">
+          <div className="flex items-center gap-1.5">
+            <Mail className="w-3 h-3 text-white/90 shrink-0" />
             <div className="flex flex-col">
               <span className="text-[8px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
               <span className="text-[6px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-white/15 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20 group-hover:bg-white/25 transition-colors">
+          <div className="flex items-center gap-0.5 bg-white/15 backdrop-blur-md px-1.5 py-1 rounded-lg border border-white/20 group-hover:bg-white/25 transition-colors shrink-0">
             <span className="text-[7px] font-black text-white uppercase">문의</span>
-            <ExternalLink className="w-2.5 h-2.5 text-white" />
+            <ExternalLink className="w-2 h-2 text-white" />
           </div>
         </div>
       </motion.div>
