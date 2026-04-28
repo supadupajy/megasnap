@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Megaphone, Mail, MessageSquare, Send, CheckCircle2, MapPin, Users, TrendingUp, Sparkles } from 'lucide-react';
+import { ChevronLeft, Megaphone, Mail, MessageSquare, Send, CheckCircle2, MapPin, TrendingUp, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,16 @@ const AD_TYPES = [
   { id: 'sponsored', icon: Sparkles, label: '스폰서드 콘텐츠', desc: '브랜드 스토리를 콘텐츠로 제작합니다' },
 ];
 
+const BackButton = ({ onPress }: { onPress: () => void }) => (
+  <button
+    onClick={onPress}
+    className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
+    style={{ pointerEvents: 'auto' }}
+  >
+    <ChevronLeft className="w-6 h-6 text-gray-400" />
+  </button>
+);
+
 const AdInquiry = () => {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -21,6 +31,8 @@ const AdInquiry = () => {
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  const goBack = () => navigate('/settings');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,12 +47,7 @@ const AdInquiry = () => {
     return (
       <div className="h-screen bg-gray-50 flex flex-col">
         <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
-          <button
-            onClick={() => navigate('/settings')}
-            className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-400" />
-          </button>
+          <BackButton onPress={goBack} />
           <div className="flex-1 flex justify-center -ml-10">
             <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>
           </div>
@@ -56,7 +63,7 @@ const AdInquiry = () => {
             영업일 기준 1~2일 내에 담당자가 연락드리겠습니다.
           </p>
           <Button
-            onClick={() => navigate('/settings')}
+            onClick={goBack}
             className="w-full h-12 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100"
           >
             설정으로 돌아가기
@@ -72,12 +79,7 @@ const AdInquiry = () => {
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
-        <button
-          onClick={() => navigate('/settings')}
-          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-400" />
-        </button>
+        <BackButton onPress={goBack} />
         <div className="flex-1 flex justify-center -ml-10">
           <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>
         </div>
@@ -92,12 +94,12 @@ const AdInquiry = () => {
               <Megaphone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white/70 uppercase tracking-widest">ChoraSnap Ads</p>
+              <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Chora Ads</p>
               <p className="text-lg font-black leading-tight">지도 위에서 브랜드를 알리세요</p>
             </div>
           </div>
           <p className="text-sm text-white/80 font-medium leading-relaxed">
-            실시간 위치 기반 플랫폼 ChoraSnap에서 타겟 고객에게 정확하게 도달하세요.
+            실시간 위치 기반 플랫폼 Chora에서 타겟 고객에게 정확하게 도달하세요.
           </p>
           <div className="flex gap-4 mt-4">
             <div className="text-center">
@@ -199,7 +201,7 @@ const AdInquiry = () => {
 
           <Button
             type="submit"
-            className="w-full h-13 rounded-2xl bg-indigo-600 text-white font-black text-base shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 py-3.5"
+            className="w-full rounded-2xl bg-indigo-600 text-white font-black text-base shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 py-3.5"
           >
             <Send className="w-4 h-4" />
             문의 접수하기
