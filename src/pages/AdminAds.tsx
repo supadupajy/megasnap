@@ -273,10 +273,10 @@ const AdCard = ({
         <div className={cn('w-10 h-10 rounded-2xl flex items-center justify-center shrink-0', colors.bg)}>
           <Icon className={cn('w-5 h-5', colors.icon)} />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className="text-sm font-black text-gray-900">{ad.label}</p>
-            <span className={cn('text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider', colors.badge)}>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-[13px] font-black text-gray-900 whitespace-nowrap" style={{ letterSpacing: '-0.04em' }}>{ad.label}</p>
+            <span className={cn('text-[8px] font-black px-1 py-0.5 rounded-md uppercase tracking-wide shrink-0', colors.badge)}>
               {ad.id}
             </span>
           </div>
@@ -444,7 +444,7 @@ const AdminAds = () => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100" style={{ paddingTop: 'env(safe-area-inset-top)', marginTop: '4rem' }}>
         <button
           onClick={() => navigate('/settings')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
@@ -457,7 +457,7 @@ const AdminAds = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
         {/* 히어로 */}
         <div className="mx-4 mt-5 bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-violet-200">
           <div className="flex items-center gap-3">
@@ -491,7 +491,7 @@ const AdminAds = () => {
           )}
         </div>
 
-        <p className="text-center text-[10px] text-gray-300 font-bold mt-6 mb-2">
+        <p className="text-center text-[10px] text-gray-300 font-bold mt-6 mb-4">
           변경사항은 즉시 앱에 반영됩니다
         </p>
       </div>
