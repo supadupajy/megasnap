@@ -259,7 +259,7 @@ const Settings = () => {
         <div className="px-4 py-4">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">광고</p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem icon={Megaphone} label="광고" onClick={() => navigate('/settings/ad')} />
+            <SettingItem icon={Megaphone} label="광고 문의" onClick={() => navigate('/settings/ad')} />
           </div>
         </div>
 
