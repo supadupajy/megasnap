@@ -53,7 +53,9 @@ export function useViewedPosts() {
 
   // 조회 기록 저장
   const markAsViewed = useCallback(async (postId: string) => {
-    if (!user || !postId || viewedIds.has(postId)) return;
+    // UUID 형식이 아닌 ID(광고 마커 등)는 DB 저장 스킵
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!user || !postId || viewedIds.has(postId) || !UUID_REGEX.test(postId)) return;
 
     // 로컬 상태 즉시 업데이트 (UI 반응성)
     setViewedIds(prev => new Set(prev).add(postId));

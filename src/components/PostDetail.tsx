@@ -378,6 +378,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const confirmDelete = async () => {
     if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+    // 광고 마커는 posts 테이블에 없으므로 DB 삭제 불가
+    if (currentPost.isAd) { showError('광고 포스팅은 광고 관리 페이지에서 수정하세요.'); return; }
     const postId = currentPost.id;
 
     // 1. 확인 다이얼로그 닫기
