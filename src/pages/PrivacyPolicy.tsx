@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(9rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5">
           <div className="bg-indigo-50 rounded-2xl p-4 mb-5">
             <p className="text-[12px] text-indigo-700 font-medium leading-relaxed">
