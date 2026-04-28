@@ -9,18 +9,28 @@ import {
   Play,
   UserCheck,
   UserPlus,
-  MessageCircle
+  MessageCircle,
+  MoreHorizontal,
+  AlertCircle,
+  Ban,
 } from 'lucide-react';
 import { Post } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useBlockedUsers } from '@/hooks/use-blocked-users';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
 
@@ -56,6 +66,7 @@ const UserProfile = () => {
   const { userId: profileUserId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  const { blockUser } = useBlockedUsers();
 
   const [userProfile, setUserProfile] = useState<any>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -254,6 +265,40 @@ const UserProfile = () => {
         <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
           <h2 className="text-lg font-black text-gray-900 tracking-tight">유저 프로필</h2>
         </div>
+        {/* 쓰리닷 메뉴 - 본인 프로필이 아닐 때만 표시 */}
+        {authUser?.id !== profileUserId && (
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 rounded-2xl p-2 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[60]">
+                <DropdownMenuItem
+                  onClick={() => showSuccess('신고가 접수되었습니다.')}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"
+                >
+                  <AlertCircle className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">신고</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (profileUserId) {
+                      blockUser(profileUserId);
+                      showError('차단되었습니다.');
+                      navigate(-1);
+                    }
+                  }}
+                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer focus:bg-red-50 outline-none"
+                >
+                  <Ban className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-bold text-red-600">차단</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
       {/* 스크롤 영역 */}
