@@ -240,52 +240,60 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate:
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
 
-  let label = '';
-  let colorClass = '';
-  let isExpired = false;
+  const formatUntilStart = (ms: number): string => {
+    const totalMinutes = Math.ceil(ms / 60000);
+    if (totalMinutes < 60) return `${totalMinutes}분 후 시작 예정`;
+    const hours = Math.floor(totalMinutes / 60);
+    if (hours < 24) return `${hours}시간 후 시작 예정`;
+    const days = Math.floor(hours / 24);
+    return `${days}일 후 시작 예정`;
+  };
 
   const formatRemaining = (ms: number): string => {
     const totalMinutes = Math.ceil(ms / 60000);
-    if (totalMinutes < 60) return `${totalMinutes}분 남음`;
+    if (totalMinutes < 60) return `${totalMinutes}분 남았음`;
     const hours = Math.floor(totalMinutes / 60);
-    if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남음`;
+    if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남았음`;
     const days = Math.floor(hours / 24);
     const remHours = hours % 24;
-    return remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
+    return remHours > 0 ? `${days}일 ${remHours}시간 남았음` : `${days}일 남았음`;
   };
 
-  const formatUntil = (ms: number): string => {
-    const totalMinutes = Math.ceil(ms / 60000);
-    if (totalMinutes < 60) return `${totalMinutes}분 후 시작`;
-    const hours = Math.floor(totalMinutes / 60);
-    if (hours < 24) return `${hours}시간 후 시작`;
-    const days = Math.floor(hours / 24);
-    return `${days}일 후 시작`;
-  };
+  // 상태 판단
+  const isExpired = !!(end && end <= now);
+  const isNotStarted = !!(start && start > now);
+  const isRunning = !isExpired && !isNotStarted && !!(start || end);
 
-  if (end && end <= now) {
-    label = '기간 만료됨';
+  let leftLabel = '';
+  let rightLabel = '';
+  let colorClass = '';
+
+  if (isExpired) {
+    leftLabel = '기간 만료됨';
     colorClass = 'bg-red-50 text-red-600 border-red-100';
-    isExpired = true;
-  } else if (start && start > now) {
-    label = formatUntil(start.getTime() - now.getTime());
+  } else if (isNotStarted) {
+    leftLabel = formatUntilStart(start!.getTime() - now.getTime());
     colorClass = 'bg-amber-50 text-amber-600 border-amber-100';
-  } else if (end) {
-    label = formatRemaining(end.getTime() - now.getTime());
+  } else if (isRunning) {
+    leftLabel = '진행 중';
+    rightLabel = end ? formatRemaining(end.getTime() - now.getTime()) : '';
     colorClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
   } else {
-    label = '종료일 미설정';
+    leftLabel = '종료일 미설정';
     colorClass = 'bg-gray-50 text-gray-400 border-gray-100';
   }
 
   return (
     <div className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-bold', colorClass)}>
       <Clock className="w-3 h-3 shrink-0" />
-      <span className="flex-1">{isNext ? '예정 광고 · ' : '현재 광고 · '}{label}</span>
+      <span className="flex-1">{leftLabel}</span>
+      {rightLabel && (
+        <span className="shrink-0 text-[11px] font-black">{rightLabel}</span>
+      )}
       {isExpired && !isNext && onReset && (
         <button
           onClick={e => { e.stopPropagation(); onReset(); }}
-          className="ml-auto shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 text-[10px] font-black transition-colors"
+          className="ml-1 shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 text-[10px] font-black transition-colors"
         >
           <X className="w-3 h-3" />
           데이터 초기화
