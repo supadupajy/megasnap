@@ -746,7 +746,7 @@ const Index = () => {
               >
                 <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
-                  <span className="text-[9px] font-black mt-1">재검색</span>
+                  <span className="text-[9px] font-black mt-1">다른 포스팅</span>
                 </button>
                 <div className="relative">
                   {visibleMarkers.length > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
