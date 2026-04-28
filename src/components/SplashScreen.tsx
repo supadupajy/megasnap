@@ -6,15 +6,11 @@ import { Camera } from 'lucide-react';
 import { useAd } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
-  const { ad } = useAd('splash');
+  const { ad, loading } = useAd('splash');
 
-  const imageUrl = ad?.image_url || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
-  const title = ad?.title || 'The New i7';
-  const subtitle = ad?.subtitle || 'This is Forwardism.';
-  const brandName = ad?.brand_name || 'BMW';
-  const brandLogoUrl = ad?.brand_logo_url || 'https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg';
-  const linkUrl = ad?.link_url || 'https://www.bmw.co.kr';
-  const isActive = ad?.is_active !== false;
+  // ad가 로드된 후에만 광고 표시 여부 결정
+  // loading 중에는 광고 영역 자체를 렌더링하지 않아 깜빡임 방지
+  const showAd = !loading && ad?.is_active && !!ad?.image_url;
 
   return (
     <motion.div
@@ -74,31 +70,31 @@ const SplashScreen = () => {
             </motion.p>
           </div>
 
-          {/* Ad Image */}
-          {isActive && (
+          {/* Ad Image — loading 완료 후 is_active이고 image_url이 있을 때만 렌더링 */}
+          {showAd && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
               className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group cursor-pointer"
-              onClick={() => linkUrl && window.open(linkUrl, '_blank', 'noopener,noreferrer')}
+              onClick={() => ad!.link_url && window.open(ad!.link_url, '_blank', 'noopener,noreferrer')}
             >
               <img 
-                src={imageUrl}
-                alt={brandName}
+                src={ad!.image_url}
+                alt={ad!.brand_name}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-white uppercase tracking-tighter">{title}</span>
-                    <span className="text-[8px] font-bold text-white/70">{subtitle}</span>
+                    {ad!.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{ad!.title}</span>}
+                    {ad!.subtitle && <span className="text-[8px] font-bold text-white/70">{ad!.subtitle}</span>}
                   </div>
-                  {brandLogoUrl && (
+                  {ad!.brand_logo_url && (
                     <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
                       <img 
-                        src={brandLogoUrl}
-                        alt={brandName}
+                        src={ad!.brand_logo_url}
+                        alt={ad!.brand_name}
                         className="w-full h-full object-contain" 
                       />
                     </div>
