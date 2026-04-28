@@ -582,7 +582,7 @@ const Settings = () => {
               취소
             </button>
             <button
-              onClick={handleBugReport}
+              onPointerDown={handleBugReport}
               disabled={isBugSending}
               className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-100 active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
             >
