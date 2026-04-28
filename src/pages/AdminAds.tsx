@@ -455,6 +455,18 @@ const AdminAds = () => {
     if (updated.id === 'map_marker') setPendingLocation(null);
     invalidateAdCache(updated.id, updated);
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
+
+    // map_marker 저장 시 지도 화면으로 이동하여 해당 위치 포커스
+    if (updated.id === 'map_marker' && updated.lat != null && updated.lng != null) {
+      setTimeout(() => {
+        navigate('/', {
+          state: {
+            center: { lat: updated.lat, lng: updated.lng },
+            adMarkerSaved: true,
+          }
+        });
+      }, 800);
+    }
   };
 
   const handleSelectLocation = (_adId: string) => {

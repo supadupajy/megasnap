@@ -24,6 +24,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { toggleLikeInDb } from '@/utils/like-utils';
+import { useAd } from '@/hooks/use-ad';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
@@ -102,6 +103,9 @@ const Index = () => {
 
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
+
+  // map_marker 광고 데이터 구독
+  const { ad: mapMarkerAd } = useAd('map_marker');
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -276,6 +280,48 @@ const Index = () => {
 
     return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
+
+  // ── map_marker 광고를 allPosts에 주입 ──────────────────────
+  // ads 테이블의 map_marker 광고가 활성화되어 있고 lat/lng가 있으면
+  // 고정 ID 'ad-map-marker'로 allPosts에 추가해 지도 마커로 표시
+  useEffect(() => {
+    const AD_POST_ID = 'ad-map-marker';
+    if (mapMarkerAd && mapMarkerAd.is_active && mapMarkerAd.lat != null && mapMarkerAd.lng != null) {
+      const adPost: Post = {
+        id: AD_POST_ID,
+        user_id: 'ad',
+        owner_id: 'ad',
+        display_user_id: null,
+        isAd: true,
+        isGif: false,
+        isInfluencer: false,
+        user: { id: 'ad', name: mapMarkerAd.brand_name || '광고', avatar: mapMarkerAd.brand_logo_url || '' },
+        content: mapMarkerAd.title || '',
+        location: mapMarkerAd.subtitle || '',
+        lat: mapMarkerAd.lat,
+        lng: mapMarkerAd.lng,
+        latitude: mapMarkerAd.lat,
+        longitude: mapMarkerAd.lng,
+        likes: 0,
+        commentsCount: 0,
+        comments: [],
+        image: mapMarkerAd.image_url || '',
+        image_url: mapMarkerAd.image_url || '',
+        images: mapMarkerAd.image_url ? [mapMarkerAd.image_url] : [],
+        isLiked: false,
+        category: 'food',
+        createdAt: new Date(),
+        borderType: 'none',
+      };
+      setAllPosts(prev => {
+        const without = prev.filter(p => p.id !== AD_POST_ID);
+        return [adPost, ...without];
+      });
+    } else {
+      // 비활성화되거나 위치 없으면 제거
+      setAllPosts(prev => prev.filter(p => p.id !== 'ad-map-marker'));
+    }
+  }, [mapMarkerAd]);
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김
@@ -698,6 +744,14 @@ const Index = () => {
       setTimeout(() => {
         setIsSelectingAdLocation(true);
       }, 300);
+    }
+    if (routeState.adMarkerSaved && routeState.center) {
+      // 광고 마커 저장 후 해당 위치로 이동 + 줌 레벨 조정 + 마커 하이라이트
+      setMapCenter(routeState.center);
+      setCurrentZoom(4);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: 'ad-map-marker', duration: 3000 } }));
+      }, 1000);
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);

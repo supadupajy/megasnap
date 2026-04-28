@@ -11,6 +11,8 @@ export interface AdData {
   brand_name: string;
   brand_logo_url: string;
   is_active: boolean;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 // 인메모리 캐시
