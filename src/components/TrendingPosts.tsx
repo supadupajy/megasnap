@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as Scro
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
-import { useAd } from "@/hooks/use-ad";
+import { useAd, resolveActiveSlot } from "@/hooks/use-ad";
 
 interface TrendingPostsProps {
   posts: Post[];
@@ -108,7 +108,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
 
 const TrendingAdBanner: React.FC = () => {
-  const { ad, loading } = useAd('trending');
+  const { ad, loading, now } = useAd('trending');
 
   if (loading) {
     return (
@@ -120,27 +120,25 @@ const TrendingAdBanner: React.FC = () => {
 
   if (!ad || !ad.is_active) return null;
 
-  const imageUrl = ad.image_url || '/assets/nike-ad-banner.png';
-  const title = ad.title || 'JUST DO IT.';
-  const subtitle = ad.subtitle || '새로운 나이키 러닝 컬렉션';
-  const linkUrl = ad.link_url || 'https://www.nike.com/kr/';
-  const brandLogoUrl = ad.brand_logo_url;
+  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
+  const slot = resolveActiveSlot(ad, now);
+  if (!slot.image_url) return null;
 
   return (
     <div className="px-5 py-3 border-b border-gray-100">
       <div
         onClick={(e) => {
           e.stopPropagation();
-          if (linkUrl) window.open(linkUrl, '_blank', 'noopener,noreferrer');
+          if (slot.link_url) window.open(slot.link_url, '_blank', 'noopener,noreferrer');
         }}
         className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
         <div className="absolute inset-0 z-0">
           <img
-            key={imageUrl}
-            src={imageUrl}
-            alt={ad.brand_name || 'Ad'}
+            key={slot.image_url}
+            src={slot.image_url}
+            alt={slot.brand_name || 'Ad'}
             className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
@@ -148,20 +146,20 @@ const TrendingAdBanner: React.FC = () => {
         <div className="relative z-10 p-4 flex flex-col justify-between h-full">
           <div className="flex items-center gap-2">
             <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
-            {brandLogoUrl && (
+            {slot.brand_logo_url && (
               <img
-                src={brandLogoUrl}
-                alt={ad.brand_name || 'Brand'}
+                src={slot.brand_logo_url}
+                alt={slot.brand_name || 'Brand'}
                 className="h-3.5 invert brightness-200"
               />
             )}
           </div>
           <div>
             <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
-              {title}
+              {slot.title}
             </h3>
             <p className="text-[12px] font-bold text-white/90 drop-shadow-md">
-              {subtitle}
+              {slot.subtitle}
             </p>
           </div>
           <div className="flex items-center justify-between mt-1">
