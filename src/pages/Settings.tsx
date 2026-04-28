@@ -10,7 +10,8 @@ import {
   Languages,
   Database,
   RefreshCw,
-  MapPin
+  MapPin,
+  Megaphone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -252,6 +253,13 @@ const Settings = () => {
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem icon={Languages} label="언어 설정" onClick={() => navigate('/settings/language')} />
             <SettingItem icon={Shield} label="개인정보 보호" onClick={() => navigate('/settings/privacy')} />
+          </div>
+        </div>
+
+        <div className="px-4 py-4">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">광고</p>
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <SettingItem icon={Megaphone} label="광고" onClick={() => navigate('/settings/ad')} />
           </div>
         </div>
 

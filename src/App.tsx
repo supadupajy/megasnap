@@ -25,6 +25,7 @@ import PasswordSecurity from "./pages/PasswordSecurity";
 import NotificationSettings from "./pages/NotificationSettings";
 import LanguageSettings from "./pages/LanguageSettings";
 import PrivacySettings from "./pages/PrivacySettings";
+import AdInquiry from "./pages/AdInquiry";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
@@ -183,6 +184,7 @@ const AnimatedRoutes = () => {
               <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
               <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
               <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
+              <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
