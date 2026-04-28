@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: {
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip, isAdmin }: {
   icon: any,
   label: string,
   sublabel?: string,
@@ -71,10 +71,16 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
   iconBg?: string,
   iconColor?: string,
   wip?: boolean,
+  isAdmin?: boolean,
 }) => {
   const handleClick = () => {
     if (wip) {
-      showInfo('아직 개발 중인 기능입니다.');
+      if (isAdmin) {
+        showInfo('admin 계정 확인');
+        onClick?.();
+      } else {
+        showInfo('아직 개발 중인 기능입니다.');
+      }
       return;
     }
     onClick?.();
@@ -280,6 +286,7 @@ const Settings = () => {
               iconColor="text-sky-500"
               onClick={() => navigate('/settings/connected-accounts')}
               wip
+              isAdmin={isAdmin}
             />
             <SettingItem
               icon={Smartphone}
@@ -289,6 +296,7 @@ const Settings = () => {
               iconColor="text-violet-500"
               onClick={() => navigate('/settings/devices')}
               wip
+              isAdmin={isAdmin}
             />
             <SettingItem
               icon={Bell}
@@ -313,6 +321,7 @@ const Settings = () => {
               iconColor="text-emerald-500"
               onClick={() => navigate('/settings/subscription')}
               wip
+              isAdmin={isAdmin}
             />
             <SettingItem
               icon={Receipt}
@@ -322,6 +331,7 @@ const Settings = () => {
               iconColor="text-teal-500"
               onClick={() => navigate('/settings/billing')}
               wip
+              isAdmin={isAdmin}
             />
           </div>
         </div>
@@ -338,6 +348,7 @@ const Settings = () => {
               iconColor="text-orange-500"
               onClick={() => navigate('/settings/language')}
               wip
+              isAdmin={isAdmin}
             />
             <SettingItem
               icon={Moon}
@@ -347,6 +358,7 @@ const Settings = () => {
               iconColor="text-slate-500"
               onClick={() => navigate('/settings/appearance')}
               wip
+              isAdmin={isAdmin}
             />
             <SettingItem
               icon={HardDrive}
