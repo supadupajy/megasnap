@@ -44,7 +44,7 @@ const getFallbackImage = (postId: string) => {
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
-  const { user: authUser, profile: authProfile } = useAuth();
+  const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -491,7 +491,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                                {isMine ? (
+                                {(isMine || isAdmin) ? (
                                   <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                                     <Trash2 className="w-4 h-4 text-red-600" />
                                     <span className="text-sm font-bold text-red-600">삭제하기</span>
@@ -724,7 +724,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                            {isMine ? (
+                            {(isMine || isAdmin) ? (
                               <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
                                 <Trash2 className="w-4 h-4 text-red-600" />
                                 <span className="text-sm font-bold text-red-600">삭제하기</span>
