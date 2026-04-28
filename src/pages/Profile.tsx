@@ -309,32 +309,29 @@ const Profile = () => {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col">
+    <div className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar" ref={scrollRef}>
       {/* 상단 고정 헤더 */}
-      <div
-        className="fixed left-0 right-0 z-40 px-4 bg-gray-50 border-b border-gray-100 flex items-center h-[56px]"
-        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-              <UserIcon className="w-6 h-6 text-indigo-600" />
+      <div className="sticky top-0 z-40 bg-white pt-[64px]">
+        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <UserIcon className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">내 프로필</h2>
+                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-black text-gray-900 tracking-tight">내 프로필</h2>
-              <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
+            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 cursor-pointer" onClick={() => navigate('/settings')}>
+              <Settings className="w-5 h-5 text-indigo-600" />
             </div>
-          </div>
-          <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 cursor-pointer" onClick={() => navigate('/settings')}>
-            <Settings className="w-5 h-5 text-indigo-600" />
           </div>
         </div>
       </div>
 
       <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)' }}
+        className="bg-white pb-28 no-scrollbar"
       >
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
