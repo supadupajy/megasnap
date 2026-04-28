@@ -3,14 +3,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera } from 'lucide-react';
-import { useAd } from '@/hooks/use-ad';
+import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
 
 const SplashScreen = () => {
   const { ad, loading } = useAd('splash');
 
-  // ad가 로드된 후에만 광고 표시 여부 결정
-  // loading 중에는 광고 영역 자체를 렌더링하지 않아 깜빡임 방지
-  const showAd = !loading && ad?.is_active && !!ad?.image_url;
+  // 기간 기반으로 현재 or 다음 광고 슬롯 결정
+  const slot = ad ? resolveActiveSlot(ad) : null;
+  const showAd = !loading && ad?.is_active && !!slot?.image_url;
 
   return (
     <motion.div
@@ -70,31 +70,31 @@ const SplashScreen = () => {
             </motion.p>
           </div>
 
-          {/* Ad Image — loading 완료 후 is_active이고 image_url이 있을 때만 렌더링 */}
-          {showAd && (
+          {/* 광고 — 기간 기반으로 현재/다음 슬롯 자동 선택 */}
+          {showAd && slot && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
               className="mt-12 w-full max-w-[320px] aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group cursor-pointer"
-              onClick={() => ad!.link_url && window.open(ad!.link_url, '_blank', 'noopener,noreferrer')}
+              onClick={() => slot.link_url && window.open(slot.link_url, '_blank', 'noopener,noreferrer')}
             >
               <img 
-                src={ad!.image_url}
-                alt={ad!.brand_name}
+                src={slot.image_url}
+                alt={slot.brand_name}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    {ad!.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{ad!.title}</span>}
-                    {ad!.subtitle && <span className="text-[8px] font-bold text-white/70">{ad!.subtitle}</span>}
+                    {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
+                    {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
                   </div>
-                  {ad!.brand_logo_url && (
+                  {slot.brand_logo_url && (
                     <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
                       <img 
-                        src={ad!.brand_logo_url}
-                        alt={ad!.brand_name}
+                        src={slot.brand_logo_url}
+                        alt={slot.brand_name}
                         className="w-full h-full object-contain" 
                       />
                     </div>

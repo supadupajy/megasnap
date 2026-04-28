@@ -20,6 +20,10 @@ import {
   Upload,
   X,
   Navigation2,
+  Calendar,
+  ArrowRight,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
@@ -31,7 +35,6 @@ import { cn } from '@/lib/utils';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 
-// 카카오 역지오코딩으로 좌표 → 주소 변환
 const reverseGeocode = (lat: number, lng: number): Promise<string> => {
   return new Promise(resolve => {
     const kakao = (window as any).kakao;
@@ -43,10 +46,7 @@ const reverseGeocode = (lat: number, lng: number): Promise<string> => {
     geocoder.coord2Address(lng, lat, (result: any, status: any) => {
       if (status === kakao.maps.services.Status.OK) {
         const addr = result[0].address;
-        const city = addr.region_1depth_name || '';
-        const gu = addr.region_2depth_name || '';
-        const dong = addr.region_3depth_name || '';
-        resolve([city, gu, dong].filter(Boolean).join(' '));
+        resolve([addr.region_1depth_name, addr.region_2depth_name, addr.region_3depth_name].filter(Boolean).join(' '));
       } else {
         resolve(resolveOfflineLocationName(lat, lng));
       }
@@ -66,6 +66,16 @@ interface AdData {
   is_active: boolean;
   lat?: number | null;
   lng?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  next_image_url?: string | null;
+  next_title?: string | null;
+  next_subtitle?: string | null;
+  next_link_url?: string | null;
+  next_brand_name?: string | null;
+  next_brand_logo_url?: string | null;
+  next_start_date?: string | null;
+  next_end_date?: string | null;
 }
 
 const AD_ICONS: Record<string, React.ElementType> = {
@@ -76,12 +86,12 @@ const AD_ICONS: Record<string, React.ElementType> = {
   map_marker: MapPin,
 };
 
-const AD_COLORS: Record<string, { bg: string; icon: string; border: string; badge: string }> = {
-  splash:     { bg: 'bg-blue-50',    icon: 'text-blue-600',    border: 'border-blue-100',    badge: 'bg-blue-100 text-blue-700' },
-  header:     { bg: 'bg-indigo-50',  icon: 'text-indigo-600',  border: 'border-indigo-100',  badge: 'bg-indigo-100 text-indigo-700' },
-  search:     { bg: 'bg-emerald-50', icon: 'text-emerald-600', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700' },
-  trending:   { bg: 'bg-orange-50',  icon: 'text-orange-600',  border: 'border-orange-100',  badge: 'bg-orange-100 text-orange-700' },
-  map_marker: { bg: 'bg-rose-50',    icon: 'text-rose-600',    border: 'border-rose-100',    badge: 'bg-rose-100 text-rose-700' },
+const AD_COLORS: Record<string, { bg: string; icon: string; border: string; badge: string; accent: string }> = {
+  splash:     { bg: 'bg-blue-50',    icon: 'text-blue-600',    border: 'border-blue-100',    badge: 'bg-blue-100 text-blue-700',    accent: 'bg-blue-600' },
+  header:     { bg: 'bg-indigo-50',  icon: 'text-indigo-600',  border: 'border-indigo-100',  badge: 'bg-indigo-100 text-indigo-700',  accent: 'bg-indigo-600' },
+  search:     { bg: 'bg-emerald-50', icon: 'text-emerald-600', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700', accent: 'bg-emerald-600' },
+  trending:   { bg: 'bg-orange-50',  icon: 'text-orange-600',  border: 'border-orange-100',  badge: 'bg-orange-100 text-orange-700',  accent: 'bg-orange-600' },
+  map_marker: { bg: 'bg-rose-50',    icon: 'text-rose-600',    border: 'border-rose-100',    badge: 'bg-rose-100 text-rose-700',    accent: 'bg-rose-600' },
 };
 
 const AD_DESCRIPTIONS: Record<string, string> = {
@@ -163,7 +173,7 @@ const ImageUploadField = ({
   );
 };
 
-// ─── 일반 텍스트 필드 ─────────────────────────────────────────────────────────
+// ─── 텍스트 필드 ─────────────────────────────────────────────────────────────
 const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
   icon: React.ElementType; label: string; value: string; placeholder: string; onChange: (v: string) => void;
 }) => (
@@ -176,9 +186,123 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
   </div>
 );
 
+// ─── 날짜 필드 ───────────────────────────────────────────────────────────────
+const DateRow = ({ label, value, onChange, min }: {
+  label: string; value: string; onChange: (v: string) => void; min?: string;
+}) => (
+  <div className="bg-gray-50 rounded-2xl p-3">
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <Calendar className="w-3 h-3 text-gray-400" />
+      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{label}</span>
+    </div>
+    <input
+      type="date"
+      value={value || ''}
+      min={min}
+      onChange={e => onChange(e.target.value)}
+      className="w-full bg-white rounded-xl border border-gray-100 px-3 h-9 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
+    />
+  </div>
+);
+
+// ─── 광고 슬롯 폼 (현재 or 다음) ─────────────────────────────────────────────
+const AdSlotForm = ({
+  slot,
+  adId,
+  fieldPrefix,
+  accentColor,
+  onChange,
+}: {
+  slot: {
+    image_url: string;
+    title: string;
+    subtitle: string;
+    link_url: string;
+    brand_name: string;
+    brand_logo_url: string;
+    start_date: string;
+    end_date: string;
+  };
+  adId: string;
+  fieldPrefix: string; // '' | 'next_'
+  accentColor: string;
+  onChange: (key: string, value: string) => void;
+}) => {
+  const isNext = fieldPrefix === 'next_';
+  return (
+    <div className="space-y-2.5">
+      {/* 기간 설정 */}
+      <div className="grid grid-cols-2 gap-2">
+        <DateRow
+          label="시작일"
+          value={slot.start_date}
+          onChange={v => onChange(`${fieldPrefix}start_date`, v)}
+        />
+        <DateRow
+          label="종료일"
+          value={slot.end_date}
+          min={slot.start_date || undefined}
+          onChange={v => onChange(`${fieldPrefix}end_date`, v)}
+        />
+      </div>
+
+      {/* 기간 상태 뱃지 */}
+      {(slot.start_date || slot.end_date) && (
+        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} />
+      )}
+
+      <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
+      <FieldRow icon={Type} label="설명" value={slot.title} placeholder="광고 설명 문구" onChange={v => onChange(`${fieldPrefix}title`, v)} />
+      {adId !== 'map_marker' && (
+        <FieldRow icon={Type} label="부제목" value={slot.subtitle} placeholder="광고 부제목" onChange={v => onChange(`${fieldPrefix}subtitle`, v)} />
+      )}
+      <FieldRow icon={Link} label="랜딩 URL" value={slot.link_url} placeholder="https://example.com" onChange={v => onChange(`${fieldPrefix}link_url`, v)} />
+      <ImageUploadField label="배너 이미지" value={slot.image_url} onChange={v => onChange(`${fieldPrefix}image_url`, v)} adId={adId} fieldKey={`${fieldPrefix}banner`} previewType="banner" />
+      <ImageUploadField label="브랜드 로고" value={slot.brand_logo_url} onChange={v => onChange(`${fieldPrefix}brand_logo_url`, v)} adId={adId} fieldKey={`${fieldPrefix}logo`} previewType="logo" />
+    </div>
+  );
+};
+
+// ─── 기간 상태 뱃지 ───────────────────────────────────────────────────────────
+const PeriodStatusBadge = ({ startDate, endDate, isNext }: { startDate: string; endDate: string; isNext: boolean }) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
+  let status: 'active' | 'upcoming' | 'expired' | 'no-end' = 'no-end';
+  let label = '';
+  let colorClass = '';
+
+  if (end && end < today) {
+    status = 'expired';
+    label = '기간 만료됨';
+    colorClass = 'bg-red-50 text-red-600 border-red-100';
+  } else if (start && start > today) {
+    status = 'upcoming';
+    const diff = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    label = `${diff}일 후 시작`;
+    colorClass = 'bg-amber-50 text-amber-600 border-amber-100';
+  } else if (end) {
+    const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    status = 'active';
+    label = `D-${diff} (${diff}일 남음)`;
+    colorClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+  } else {
+    label = '종료일 미설정';
+    colorClass = 'bg-gray-50 text-gray-400 border-gray-100';
+  }
+
+  return (
+    <div className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-bold', colorClass)}>
+      <Clock className="w-3 h-3 shrink-0" />
+      <span>{isNext ? '예정 광고 · ' : '현재 광고 · '}{label}</span>
+    </div>
+  );
+};
+
 // ─── 광고 카드 ────────────────────────────────────────────────────────────────
-// initialAd를 초기값으로만 사용하고, 이후 form은 완전히 독립적으로 관리
-// key가 바뀌면 컴포넌트가 재마운트되어 initialAd가 새로 적용됨
 const AdCard = ({
   initialAd,
   savedAd,
@@ -187,24 +311,24 @@ const AdCard = ({
   onSave,
   onSelectLocation,
 }: {
-  initialAd: AdData;       // 화면에 표시할 초기값 (pendingLocation 반영됨)
-  savedAd: AdData;         // DB에 실제 저장된 값 (hasChanges 비교 기준)
+  initialAd: AdData;
+  savedAd: AdData;
   defaultExpanded?: boolean;
   locationFieldRef?: React.RefObject<HTMLDivElement>;
   onSave: (updated: AdData) => Promise<void>;
   onSelectLocation: (adId: string) => void;
 }) => {
-  // ✅ useState 초기값으로만 사용 — useEffect로 덮어쓰지 않음
   const [form, setForm] = useState<AdData>(initialAd);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  // 현재/다음 탭
+  const [activeTab, setActiveTab] = useState<'current' | 'next'>('current');
 
   const Icon = AD_ICONS[initialAd.id] || Tv2;
   const colors = AD_COLORS[initialAd.id] || AD_COLORS.splash;
 
-  // lat/lng가 있으면 역지오코딩으로 주소 가져오기
   useEffect(() => {
     if (form.lat != null && form.lng != null) {
       setLocationLabel(null);
@@ -214,17 +338,11 @@ const AdCard = ({
     }
   }, [form.lat, form.lng]);
 
-  // savedAd(DB 원본)와 비교해 변경 여부 판단
-  const hasChanges =
-    form.title !== savedAd.title ||
-    form.subtitle !== savedAd.subtitle ||
-    form.link_url !== savedAd.link_url ||
-    form.brand_name !== savedAd.brand_name ||
-    form.image_url !== savedAd.image_url ||
-    form.brand_logo_url !== savedAd.brand_logo_url ||
-    form.is_active !== savedAd.is_active ||
-    form.lat !== savedAd.lat ||
-    form.lng !== savedAd.lng;
+  const hasChanges = JSON.stringify(form) !== JSON.stringify(savedAd);
+
+  const handleChange = (key: string, value: string) => {
+    setForm(f => ({ ...f, [key]: value || null }));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -239,6 +357,32 @@ const AdCard = ({
 
   const hasLocation = form.lat != null && form.lng != null;
 
+  // 현재 슬롯 데이터
+  const currentSlot = {
+    image_url: form.image_url || '',
+    title: form.title || '',
+    subtitle: form.subtitle || '',
+    link_url: form.link_url || '',
+    brand_name: form.brand_name || '',
+    brand_logo_url: form.brand_logo_url || '',
+    start_date: form.start_date || '',
+    end_date: form.end_date || '',
+  };
+
+  // 다음 슬롯 데이터
+  const nextSlot = {
+    image_url: form.next_image_url || '',
+    title: form.next_title || '',
+    subtitle: form.next_subtitle || '',
+    link_url: form.next_link_url || '',
+    brand_name: form.next_brand_name || '',
+    brand_logo_url: form.next_brand_logo_url || '',
+    start_date: form.next_start_date || '',
+    end_date: form.next_end_date || '',
+  };
+
+  const hasNextAd = !!form.next_image_url;
+
   return (
     <div className={cn('rounded-3xl border overflow-hidden shadow-sm', colors.border, 'bg-white')}>
       {/* 카드 헤더 */}
@@ -250,6 +394,11 @@ const AdCard = ({
           <div className="flex items-center gap-1.5 mb-0.5">
             <p className="text-[13px] font-black text-gray-900 whitespace-nowrap" style={{ letterSpacing: '-0.04em' }}>{initialAd.label}</p>
             <span className={cn('text-[8px] font-black px-1 py-0.5 rounded-md uppercase tracking-wide shrink-0', colors.badge)}>{initialAd.id}</span>
+            {hasNextAd && (
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 shrink-0 flex items-center gap-0.5">
+                <Sparkles className="w-2.5 h-2.5" />예정
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-gray-400 font-medium truncate">{AD_DESCRIPTIONS[initialAd.id]}</p>
         </div>
@@ -268,7 +417,6 @@ const AdCard = ({
       {/* 접힌 상태 미리보기 */}
       {!isExpanded && (
         <>
-          {/* map_marker: 위치 정보(설정된 경우만) + 이미지 미리보기 */}
           {initialAd.id === 'map_marker' && (
             <div className="px-4 pb-3 space-y-2">
               {hasLocation && (
@@ -292,12 +440,37 @@ const AdCard = ({
               )}
             </div>
           )}
-          {/* 그 외: 배너 이미지 미리보기 */}
-          {initialAd.id !== 'map_marker' && form.image_url && (
-            <div className="px-4 pb-3">
-              <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
-                <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              </div>
+          {initialAd.id !== 'map_marker' && (
+            <div className="px-4 pb-3 space-y-2">
+              {/* 현재 광고 미리보기 */}
+              {form.image_url && (
+                <div className="relative w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+                  <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">현재</div>
+                  {form.end_date && (
+                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Calendar className="w-2.5 h-2.5" />
+                      {form.end_date}까지
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* 다음 광고 미리보기 */}
+              {form.next_image_url && (
+                <div className="flex items-center gap-2">
+                  <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <div className="relative flex-1 h-14 rounded-xl overflow-hidden bg-gray-100">
+                    <img src={form.next_image_url} alt="next preview" className="w-full h-full object-cover opacity-80" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="absolute top-1.5 left-1.5 bg-violet-600/80 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">다음 예정</div>
+                    {form.next_start_date && (
+                      <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Calendar className="w-2.5 h-2.5" />
+                        {form.next_start_date}부터
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -305,56 +478,119 @@ const AdCard = ({
 
       {/* 편집 폼 */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3">
-          <FieldRow icon={Type} label="브랜드명" value={form.brand_name} placeholder="브랜드 이름" onChange={v => setForm(f => ({ ...f, brand_name: v }))} />
-          <FieldRow icon={Type} label="설명" value={form.title} placeholder="광고 설명 문구" onChange={v => setForm(f => ({ ...f, title: v }))} />
-          {initialAd.id !== 'map_marker' && (
-            <FieldRow icon={Type} label="부제목" value={form.subtitle} placeholder="광고 부제목" onChange={v => setForm(f => ({ ...f, subtitle: v }))} />
-          )}
-          <FieldRow icon={Link} label="랜딩 URL" value={form.link_url} placeholder="https://example.com" onChange={v => setForm(f => ({ ...f, link_url: v }))} />
-          <ImageUploadField label="배너 이미지" value={form.image_url} onChange={v => setForm(f => ({ ...f, image_url: v }))} adId={initialAd.id} fieldKey="banner" previewType="banner" />
-          <ImageUploadField label="브랜드 로고" value={form.brand_logo_url} onChange={v => setForm(f => ({ ...f, brand_logo_url: v }))} adId={initialAd.id} fieldKey="logo" previewType="logo" />
+        <div className="border-t border-gray-50">
+          {/* 탭 */}
+          <div className="flex px-4 pt-3 gap-2">
+            <button
+              onClick={() => setActiveTab('current')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
+                activeTab === 'current'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              )}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              현재 광고
+            </button>
+            <button
+              onClick={() => setActiveTab('next')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
+                activeTab === 'next'
+                  ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              다음 예정
+            </button>
+          </div>
 
-          {/* map_marker 전용: 위치 선택 */}
-          {initialAd.id === 'map_marker' && (
-            <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                <MapPin className="w-3 h-3 text-gray-400" />
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
-              </div>
-              <button
-                onClick={() => onSelectLocation(initialAd.id)}
-                className={cn(
-                  'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
-                  hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
+          <div className="px-4 pb-4 pt-3 space-y-3">
+            {activeTab === 'current' ? (
+              <>
+                {/* map_marker 위치 선택 */}
+                {initialAd.id === 'map_marker' && (
+                  <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <MapPin className="w-3 h-3 text-gray-400" />
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
+                    </div>
+                    <button
+                      onClick={() => onSelectLocation(initialAd.id)}
+                      className={cn(
+                        'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
+                        hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
+                      )}
+                    >
+                      <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
+                        <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
+                      </div>
+                      <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
+                        {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '지도에서 위치 선택'}
+                      </span>
+                      {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
+                    </button>
+                  </div>
                 )}
-              >
-                <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
-                  <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
+                <AdSlotForm
+                  slot={currentSlot}
+                  adId={initialAd.id}
+                  fieldPrefix=""
+                  accentColor={colors.accent}
+                  onChange={handleChange}
+                />
+              </>
+            ) : (
+              <>
+                {/* 다음 광고 안내 */}
+                <div className="bg-violet-50 rounded-2xl p-3 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-black text-violet-700">다음 예정 광고</p>
+                    <p className="text-[10px] text-violet-500 font-medium mt-0.5 leading-relaxed">
+                      현재 광고 종료일이 지나면 자동으로 이 광고로 전환됩니다. 미리 준비해두세요.
+                    </p>
+                  </div>
                 </div>
-                <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                  {hasLocation
-                    ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`)
-                    : '지도에서 위치 선택'}
-                </span>
-                {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
-              </button>
-              {hasLocation && <p className="text-[10px] text-gray-400 font-medium mt-1.5 px-1">지도에서 이 위치에 광고 마커가 표시됩니다</p>}
-            </div>
-          )}
-
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasChanges}
-            className={cn(
-              'w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
-              saved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-violet-600 text-white shadow-lg shadow-violet-100 hover:bg-violet-700 disabled:opacity-50'
+                <AdSlotForm
+                  slot={nextSlot}
+                  adId={initialAd.id}
+                  fieldPrefix="next_"
+                  accentColor="bg-violet-600"
+                  onChange={handleChange}
+                />
+                {/* 다음 광고 초기화 버튼 */}
+                {hasNextAd && (
+                  <button
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      next_image_url: null, next_title: null, next_subtitle: null,
+                      next_link_url: null, next_brand_name: null, next_brand_logo_url: null,
+                      next_start_date: null, next_end_date: null,
+                    }))}
+                    className="w-full py-2.5 rounded-2xl text-[11px] font-black text-red-400 bg-red-50 hover:bg-red-100 transition-colors"
+                  >
+                    다음 광고 초기화
+                  </button>
+                )}
+              </>
             )}
-          >
-            {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> 저장 중...</>
-              : saved ? <><CheckCircle2 className="w-4 h-4" /> 저장 완료!</>
-              : <><Save className="w-4 h-4" /> 변경사항 저장</>}
-          </Button>
+
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+              className={cn(
+                'w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
+                saved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-violet-600 text-white shadow-lg shadow-violet-100 hover:bg-violet-700 disabled:opacity-50'
+              )}
+            >
+              {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> 저장 중...</>
+                : saved ? <><CheckCircle2 className="w-4 h-4" /> 저장 완료!</>
+                : <><Save className="w-4 h-4" /> 변경사항 저장</>}
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -366,13 +602,11 @@ const AdminAds = () => {
   const navigate = useNavigate();
   const [ads, setAds] = useState<AdData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // 지도에서 선택한 위치 (sessionStorage에서 읽어온 값)
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
   const mapMarkerCardRef = useRef<HTMLDivElement>(null);
   const locationFieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // ✅ 마운트 시 sessionStorage에서 위치 먼저 읽기 (fetchAds보다 먼저)
     const raw = sessionStorage.getItem('adLocationPending');
     if (raw) {
       sessionStorage.removeItem('adLocationPending');
@@ -390,7 +624,6 @@ const AdminAds = () => {
       const { data, error } = await supabase.from('ads').select('*').order('id');
       if (error) {
         showError('광고 데이터를 불러오지 못했습니다.');
-        console.error('[AdminAds] fetch error:', error);
       } else {
         const ORDER = ['splash', 'header', 'search', 'trending', 'map_marker'];
         const sorted = [...(data || [])].sort(
@@ -403,17 +636,13 @@ const AdminAds = () => {
     fetchAds();
   }, []);
 
-  // pendingLocation이 설정되면 위치 필드로 스크롤
   useEffect(() => {
     if (!pendingLocation || isLoading) return;
-    // 카드 펼침 + 렌더링 완료 후 위치 필드로 스크롤
     setTimeout(() => {
       locationFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 400);
   }, [pendingLocation, isLoading]);
 
-  // ✅ ads와 pendingLocation을 합쳐서 최종 렌더용 데이터 생성
-  // pendingLocation이 있으면 map_marker의 lat/lng를 덮어씀
   const adsWithPending = ads.map(a =>
     a.id === 'map_marker' && pendingLocation
       ? { ...a, lat: pendingLocation.lat, lng: pendingLocation.lng }
@@ -421,8 +650,6 @@ const AdminAds = () => {
   );
 
   const handleSave = async (updated: AdData) => {
-    console.log('[AdminAds] saving:', updated.id, 'lat:', updated.lat, 'lng:', updated.lng);
-
     const { error, data } = await supabase
       .from('ads')
       .update({
@@ -436,12 +663,20 @@ const AdminAds = () => {
         is_active: updated.is_active,
         lat: updated.lat ?? null,
         lng: updated.lng ?? null,
+        start_date: updated.start_date ?? null,
+        end_date: updated.end_date ?? null,
+        next_image_url: updated.next_image_url ?? null,
+        next_title: updated.next_title ?? null,
+        next_subtitle: updated.next_subtitle ?? null,
+        next_link_url: updated.next_link_url ?? null,
+        next_brand_name: updated.next_brand_name ?? null,
+        next_brand_logo_url: updated.next_brand_logo_url ?? null,
+        next_start_date: updated.next_start_date ?? null,
+        next_end_date: updated.next_end_date ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', updated.id)
       .select();
-
-    console.log('[AdminAds] save result:', { error, rowCount: data?.length, data });
 
     if (error) {
       showError('저장에 실패했습니다: ' + error.message);
@@ -452,21 +687,14 @@ const AdminAds = () => {
       throw new Error('0 rows updated');
     }
 
-    // 저장 성공 시 ads state 업데이트 + pendingLocation 초기화
     setAds(prev => prev.map(a => (a.id === updated.id ? updated : a)));
     if (updated.id === 'map_marker') setPendingLocation(null);
     invalidateAdCache(updated.id, updated);
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
 
-    // map_marker 저장 시 지도 화면으로 이동하여 해당 위치 포커스
     if (updated.id === 'map_marker' && updated.lat != null && updated.lng != null) {
       setTimeout(() => {
-        navigate('/', {
-          state: {
-            center: { lat: updated.lat, lng: updated.lng },
-            adMarkerSaved: true,
-          }
-        });
+        navigate('/', { state: { center: { lat: updated.lat, lng: updated.lng }, adMarkerSaved: true } });
       }, 800);
     }
   };
@@ -477,8 +705,6 @@ const AdminAds = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      {/* 전역 Header(fixed, z-50) 아래에 위치하는 서브헤더 */}
-      {/* 전역 Header 높이 = safe-area-inset-top + 64px */}
       <div
         className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100"
         style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
@@ -496,9 +722,7 @@ const AdminAds = () => {
 
       <div
         className="flex-1 overflow-y-auto no-scrollbar"
-        style={{
-          paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))',
-        }}
+        style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}
       >
         {/* 히어로 */}
         <div className="mx-4 mt-5 bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-violet-200">
@@ -512,8 +736,22 @@ const AdminAds = () => {
             </div>
           </div>
           <p className="text-sm text-white/80 font-medium leading-relaxed mt-3">
-            스플래시, 헤더, 검색창, 인기 포스팅, 지도 마커 등 앱 내 모든 광고를 한 곳에서 수정하세요.
+            각 광고 구좌마다 <span className="text-white font-black">현재 광고</span>와 <span className="text-white font-black">다음 예정 광고</span>를 설정하고, 기간이 끝나면 자동으로 전환됩니다.
           </p>
+          {/* 자동 전환 흐름 설명 */}
+          <div className="mt-3 flex items-center gap-2 bg-white/10 rounded-2xl px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/80">
+              <Eye className="w-3 h-3" />현재 광고
+            </div>
+            <ArrowRight className="w-3 h-3 text-white/50" />
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/80">
+              <Calendar className="w-3 h-3" />종료일 도달
+            </div>
+            <ArrowRight className="w-3 h-3 text-white/50" />
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-white">
+              <Sparkles className="w-3 h-3" />다음 광고 자동 전환
+            </div>
+          </div>
         </div>
 
         {/* 광고 카드 목록 */}
@@ -529,7 +767,6 @@ const AdminAds = () => {
           ) : (
             adsWithPending.map(ad => (
               <div key={ad.id} ref={ad.id === 'map_marker' ? mapMarkerCardRef : undefined}>
-                {/* ✅ key에 lat/lng를 포함 → 위치가 바뀌면 AdCard가 완전히 재마운트되어 initialAd가 새로 적용됨 */}
                 <AdCard
                   key={`${ad.id}-${ad.lat ?? 'null'}-${ad.lng ?? 'null'}`}
                   initialAd={ad}
