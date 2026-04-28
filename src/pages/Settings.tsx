@@ -328,6 +328,7 @@ const Settings = () => {
               iconBg="bg-orange-50"
               iconColor="text-orange-500"
               onClick={() => navigate('/settings/language')}
+              wip
             />
             <SettingItem
               icon={Moon}
