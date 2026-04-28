@@ -147,36 +147,37 @@ const AdInquiry = () => {
           </div> */}
         </div>
 
-        {/* 광고 유형 선택 */}
-        <div className="px-4 pt-6">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">광고 유형 선택</p>
-          <div className="grid grid-cols-2 gap-3">
-            {AD_TYPES.map(({ id, icon: Icon, label, desc }) => (
-              <button
-                key={id}
-                onClick={() => setSelectedType(id)}
-                className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${
-                  selectedType === id
-                    ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
-                    : 'border-gray-100 bg-white hover:border-indigo-200'
-                }`}
-              >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
-                  selectedType === id ? 'bg-indigo-600' : 'bg-gray-100'
-                }`}>
-                  <Icon className={`w-4 h-4 ${selectedType === id ? 'text-white' : 'text-gray-500'}`} />
-                </div>
-                <p className={`text-xs font-black leading-tight mb-1 ${selectedType === id ? 'text-indigo-700' : 'text-gray-800'}`}>
-                  {label}
-                </p>
-                <p className="text-[10px] text-gray-400 font-medium leading-tight">{desc}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 문의 폼 */}
         <form onSubmit={handleSubmit} className="px-4 pt-6 space-y-4">
+
+          {/* 광고 유형 선택 */}
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">광고 유형 선택</p>
+            <div className="grid grid-cols-2 gap-3">
+              {AD_TYPES.map(({ id, icon: Icon, label, desc }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSelectedType(id)}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${
+                    selectedType === id
+                      ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                      : 'border-gray-100 bg-white hover:border-indigo-200'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
+                    selectedType === id ? 'bg-indigo-600' : 'bg-gray-100'
+                  }`}>
+                    <Icon className={`w-4 h-4 ${selectedType === id ? 'text-white' : 'text-gray-500'}`} />
+                  </div>
+                  <p className={`text-xs font-black leading-tight mb-1 ${selectedType === id ? 'text-indigo-700' : 'text-gray-800'}`}>
+                    {label}
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-medium leading-tight">{desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">문의 정보 입력</p>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
