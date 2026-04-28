@@ -144,10 +144,11 @@ const DatetimeRow = ({ label, value, onChange, min }: {
       value={toDatetimeLocal(value)}
       min={min ? toDatetimeLocal(min) : undefined}
       onChange={e => onChange(e.target.value ? fromDatetimeLocal(e.target.value) : '')}
-      className="w-full bg-white rounded-xl border border-gray-100 px-3 h-9 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
+      className="w-full bg-white rounded-xl border border-gray-100 px-2 h-9 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-300 shadow-sm"
+      style={{ minWidth: 0 }}
     />
     {value && (
-      <p className="text-[10px] text-gray-400 font-medium mt-1 px-1">{formatDatetime(value)}</p>
+      <p className="text-[10px] text-gray-400 font-medium mt-1 px-1 leading-snug">{formatDatetime(value)}</p>
     )}
   </div>
 );
@@ -595,7 +596,7 @@ const AdCard = ({
                   </button>
                 </div>
                 {/* 기간 설정 */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-2">
                   <DatetimeRow
                     label="시작 일시"
                     value={form.start_date || ''}
@@ -708,7 +709,7 @@ const AdSlotForm = ({
   return (
     <div className="space-y-2.5">
       {/* 기간 설정 */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-col gap-2">
         <DatetimeRow
           label="시작 일시"
           value={slot.start_date}
