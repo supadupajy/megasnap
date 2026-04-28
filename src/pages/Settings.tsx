@@ -13,7 +13,8 @@ import {
   RefreshCw,
   MapPin,
   Megaphone,
-  Tv2
+  Tv2,
+  Bug
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -41,6 +42,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const SettingItem = ({ icon: Icon, label, onClick, variant = "default" }: { 
   icon: any, 
@@ -78,6 +87,8 @@ const Settings = () => {
   const [showRandomizeConfirm, setShowRandomizeConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
+  const [bugContent, setBugContent] = useState('');
 
   // [NEW] 관리자 권한 확인
   React.useEffect(() => {
@@ -229,6 +240,19 @@ const Settings = () => {
     }
   };
 
+  const handleBugReport = () => {
+    if (!bugContent.trim()) {
+      showError('버그 내용을 입력해주세요.');
+      return;
+    }
+    const subject = encodeURIComponent('[Chora 버그 신고]');
+    const body = encodeURIComponent(bugContent.trim());
+    window.location.href = `mailto:chorasnap@gmail.com?subject=${subject}&body=${body}`;
+    setShowBugReport(false);
+    setBugContent('');
+    showSuccess('이메일 앱이 열립니다. 전송해주세요!');
+  };
+
   return (
     <div className="h-screen bg-white relative flex flex-col">
       <div className="flex-none h-16">
@@ -367,6 +391,11 @@ const Settings = () => {
         <div className="px-4 py-8">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem 
+              icon={Bug} 
+              label="버그 신고" 
+              onClick={() => setShowBugReport(true)}
+            />
+            <SettingItem 
               icon={LogOut} 
               label="로그아웃" 
               variant="danger" 
@@ -380,6 +409,42 @@ const Settings = () => {
       </div>
 
       <BottomNav />
+
+      {/* 버그 신고 다이얼로그 */}
+      <Dialog open={showBugReport} onOpenChange={(open) => { setShowBugReport(open); if (!open) setBugContent(''); }}>
+        <DialogContent className="rounded-[32px] w-[90%] max-w-[360px] p-6 border-none shadow-2xl">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-center text-xl font-black text-gray-900">
+              🐛 버그 신고
+            </DialogTitle>
+            <p className="text-center text-[13px] text-gray-400 font-medium leading-relaxed">
+              발견하신 버그나 불편한 점을 알려주세요.<br />빠르게 확인하고 수정하겠습니다.
+            </p>
+          </DialogHeader>
+          <div className="mt-4">
+            <Textarea
+              value={bugContent}
+              onChange={(e) => setBugContent(e.target.value)}
+              placeholder="버그 내용을 자세히 작성해주세요.&#10;예) 어떤 화면에서, 어떤 동작을 했을 때, 어떤 문제가 발생했는지 알려주세요."
+              className="min-h-[140px] rounded-2xl border-gray-200 text-sm font-medium text-gray-700 placeholder:text-gray-300 resize-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300"
+            />
+          </div>
+          <DialogFooter className="flex-row gap-3 mt-4 sm:justify-center">
+            <button
+              onClick={() => { setShowBugReport(false); setBugContent(''); }}
+              className="flex-1 h-12 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 active:scale-95 transition-all"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleBugReport}
+              className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-100 active:scale-95 transition-all"
+            >
+              보내기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showGenerateConfirm} onOpenChange={setShowGenerateConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
