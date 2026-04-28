@@ -112,6 +112,8 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isSelectingAdLocation, setIsSelectingAdLocation] = useState(false);
+  const [tempAdLocation, setTempAdLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [markerPage, setMarkerPage] = useState(0);
 
@@ -416,9 +418,10 @@ const Index = () => {
       setMapData(data);
       mapCache.lastCenter = data.center;
       if (isSelectingLocation) setTempSelectedLocation(data.center);
+      if (isSelectingAdLocation) setTempAdLocation(data.center);
       throttleTimer.current = null;
     }, 300);
-  }, [isSelectingLocation]);
+  }, [isSelectingLocation, isSelectingAdLocation]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
@@ -674,6 +677,10 @@ const Index = () => {
       setIsPostListOpen(false);
       setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500);
     }
+    if (routeState.startAdLocationSelection) {
+      setIsPostListOpen(false);
+      setTimeout(() => { setIsSelectingAdLocation(true); setTempAdLocation(mapData?.center || mapCache.lastCenter); }, 500);
+    }
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
 
@@ -765,7 +772,63 @@ const Index = () => {
             )}
           </AnimatePresence>
 
-          {!isSelectingLocation && (
+          {/* 광고 마커 위치 선택 모드 */}
+          <AnimatePresence>
+            {isSelectingAdLocation && (
+              <div className="fixed inset-0 z-[120] pointer-events-none">
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative mb-12">
+                    <div className="relative w-12 h-12">
+                      <div className="absolute top-0 left-0 w-12 h-12 bg-violet-600 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" />
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
+                    </div>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-black/20 blur-sm rounded-full" />
+                  </motion.div>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="absolute bottom-24 left-0 right-0 px-6 pb-[env(safe-area-inset-bottom)] pointer-events-auto"
+                >
+                  <div className="bg-white/90 backdrop-blur-xl p-4 rounded-[32px] shadow-2xl border border-violet-100 flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-violet-600 rounded-full animate-pulse" />
+                      <p className="text-sm font-black text-gray-900">광고 마커를 표시할 위치를 선택하세요</p>
+                    </div>
+                    <div className="flex w-full gap-3">
+                      <Button
+                        onClick={() => {
+                          setIsSelectingAdLocation(false);
+                          setTempAdLocation(null);
+                          setTimeout(() => navigate('/settings/admin-ads', { state: null }), 100);
+                        }}
+                        variant="secondary"
+                        className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600"
+                      >
+                        <X className="w-4 h-4 mr-2" /> 취소
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (tempAdLocation) {
+                            setIsSelectingAdLocation(false);
+                            setTimeout(() => navigate('/settings/admin-ads', {
+                              state: { adLocationSelected: true, lat: tempAdLocation.lat, lng: tempAdLocation.lng }
+                            }), 100);
+                          }
+                        }}
+                        className="flex-1 h-12 rounded-2xl font-bold bg-violet-600 text-white shadow-lg shadow-violet-100"
+                      >
+                        <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {!isSelectingLocation && !isSelectingAdLocation && (
             <>
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}

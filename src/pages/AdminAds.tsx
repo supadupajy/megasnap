@@ -19,8 +19,9 @@ import {
   ChevronUp,
   Upload,
   X,
+  Navigation2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,8 @@ interface AdData {
   brand_name: string;
   brand_logo_url: string;
   is_active: boolean;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 const AD_ICONS: Record<string, React.ElementType> = {
@@ -233,13 +236,63 @@ const FieldRow = ({
   </div>
 );
 
+// ─── 위치 선택 필드 (map_marker 전용) ────────────────────────────────────────
+const LocationField = ({
+  lat,
+  lng,
+  onSelect,
+}: {
+  lat?: number | null;
+  lng?: number | null;
+  onSelect: () => void;
+}) => {
+  const hasLocation = lat != null && lng != null;
+  return (
+    <div className="bg-gray-50 rounded-2xl p-3">
+      <div className="flex items-center gap-1.5 mb-2">
+        <MapPin className="w-3 h-3 text-gray-400" />
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
+      </div>
+      <button
+        onClick={onSelect}
+        className="w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border border-gray-100 active:scale-[0.98] transition-all group hover:border-violet-300"
+      >
+        <div className={cn(
+          'w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors',
+          hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100'
+        )}>
+          <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
+        </div>
+        <span className={cn(
+          'flex-1 text-left text-sm font-medium truncate',
+          hasLocation ? 'text-gray-900' : 'text-gray-400'
+        )}>
+          {hasLocation
+            ? `${lat!.toFixed(5)}, ${lng!.toFixed(5)}`
+            : '지도에서 위치 선택'}
+        </span>
+        {hasLocation && (
+          <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
+        )}
+      </button>
+      {hasLocation && (
+        <p className="text-[10px] text-gray-400 font-medium mt-1.5 px-1">
+          지도에서 이 위치에 광고 마커가 표시됩니다
+        </p>
+      )}
+    </div>
+  );
+};
+
 // ─── 광고 카드 ────────────────────────────────────────────────────────────────
 const AdCard = ({
   ad,
   onSave,
+  onSelectLocation,
 }: {
   ad: AdData;
   onSave: (updated: AdData) => Promise<void>;
+  onSelectLocation: (adId: string) => void;
 }) => {
   const [form, setForm] = useState<AdData>(ad);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -364,6 +417,15 @@ const AdCard = ({
             previewType="logo"
           />
 
+          {/* map_marker 전용: 위치 선택 */}
+          {ad.id === 'map_marker' && (
+            <LocationField
+              lat={form.lat}
+              lng={form.lng}
+              onSelect={() => onSelectLocation(ad.id)}
+            />
+          )}
+
           <Button
             onClick={handleSave}
             disabled={isSaving || (!hasChanges && form.is_active === ad.is_active)}
@@ -391,6 +453,7 @@ const AdCard = ({
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 const AdminAds = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [ads, setAds] = useState<AdData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -415,6 +478,18 @@ const AdminAds = () => {
     fetchAds();
   }, []);
 
+  // 지도에서 위치 선택 후 돌아왔을 때 처리
+  useEffect(() => {
+    const state = location.state as any;
+    if (!state?.adLocationSelected) return;
+    const { lat, lng } = state;
+    setAds(prev => prev.map(a =>
+      a.id === 'map_marker' ? { ...a, lat, lng } : a
+    ));
+    // state 초기화
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state]);
+
   const handleSave = async (updated: AdData) => {
     const { error, data, count, status, statusText } = await supabase
       .from('ads')
@@ -427,6 +502,8 @@ const AdminAds = () => {
         brand_name: updated.brand_name,
         brand_logo_url: updated.brand_logo_url,
         is_active: updated.is_active,
+        lat: updated.lat ?? null,
+        lng: updated.lng ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', updated.id)
@@ -448,6 +525,11 @@ const AdminAds = () => {
     setAds(prev => prev.map(a => (a.id === updated.id ? updated : a)));
     invalidateAdCache(updated.id, updated);
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
+  };
+
+  // 지도 위치 선택 모드로 이동
+  const handleSelectLocation = (adId: string) => {
+    navigate('/', { state: { startAdLocationSelection: true, adId } });
   };
 
   return (
@@ -504,7 +586,7 @@ const AdminAds = () => {
             ))
           ) : (
             ads.map(ad => (
-              <AdCard key={ad.id} ad={ad} onSave={handleSave} />
+              <AdCard key={ad.id} ad={ad} onSave={handleSave} onSelectLocation={handleSelectLocation} />
             ))
           )}
         </div>
