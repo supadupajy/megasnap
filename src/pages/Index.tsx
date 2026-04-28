@@ -1022,7 +1022,7 @@ const Index = () => {
             key="post-list-overlay"
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
-            initialPosts={pagedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
+            initialPosts={visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m)}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
             selectedCategories={selectedCategories}

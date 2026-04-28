@@ -187,9 +187,13 @@ const PostListOverlay = ({
   
   // ✅ [FIX] 지도가 이동할 때마다 initialPosts가 바뀌므로, 이때 hasMore를 다시 true로 리셋해줘야 합니다.
   useEffect(() => {
-    setPosts(initialPosts || []);
+    // 광고 포스트는 목록에서 제외
+    const filtered = (initialPosts || []).filter(p => !p.isAd && !p.content?.trim().startsWith('[AD]'));
+    setPosts(filtered);
     setHasMore(true); 
     setIsLoadingMore(false);
+    // 새 목록으로 바뀌면 스크롤 맨 위로
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [initialPosts]);
 
   // Infinite Scroll Handler
@@ -204,29 +208,20 @@ const PostListOverlay = ({
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // 현재 영역(Bounds) 기준으로 확장 검색 시도
+      // 현재 지도 화면 bounds 그대로 사용 (확장 없음)
       const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
       const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
-      // 현재 영역의 크기(너비/높이) 계산
-      const latDiff = latMax - latMin;
-      const lngDiff = lngMax - lngMin;
-
-      // ✅ [동일 지역 확장 로직] 현재 보고 있는 영역을 기준으로 약 2~3배 넓은 '동일 생활권' 범위까지만 탐색
-      const expandedLatMin = latMin - latDiff;
-      const expandedLatMax = latMax + latDiff;
-      const expandedLngMin = lngMin - lngDiff;
-      const expandedLngMax = lngMax + lngDiff;
-
       let { data, error } = await supabase
         .from('posts')
         .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
-        .gte('latitude', expandedLatMin)
-        .lte('latitude', expandedLatMax)
-        .gte('longitude', expandedLngMin)
-        .lte('longitude', expandedLngMax)
+        .gte('latitude', latMin)
+        .lte('latitude', latMax)
+        .gte('longitude', lngMin)
+        .lte('longitude', lngMax)
+        .not('content', 'ilike', '[AD]%')  // 광고 포스트 제외
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(12);
@@ -258,30 +253,23 @@ const PostListOverlay = ({
         const userName = profile?.nickname || p.user_name || '탐험가';
         const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
-        const isAdPost = !!p.content?.trim().startsWith('[AD]');
         let borderType: string = 'none';
-        if (!isAdPost) {
-          if (Number(p.likes || 0) >= 9000) {
-            borderType = 'popular';
-          } else {
-            borderType = getTierFromId(p.id);
-          }
+        if (Number(p.likes || 0) >= 9000) {
+          borderType = 'popular';
+        } else {
+          borderType = getTierFromId(p.id);
         }
 
         let finalImage = p.image_url;
         if (finalImage?.includes('unsplash.com')) {
           finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
         }
-        const isYoutubeThumb = typeof finalImage === 'string' && finalImage.includes('img.youtube.com');
-        if (isAdPost && (!finalImage || isYoutubeThumb)) {
-          finalImage = getDiverseUnsplashUrl(`ad:${p.id}`, 'food');
-        }
-        const finalImages = isAdPost ? [finalImage] : (p.images || [finalImage]);
+        const finalImages = p.images || [finalImage];
 
         return {
           id: p.id,
           user: { id: p.user_id, name: userName, avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
-          content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+          content: p.content || '',
           location: p.location_name || '알 수 없는 장소',
           lat: p.latitude, lng: p.longitude,
           latitude: p.latitude, longitude: p.longitude,
@@ -289,12 +277,12 @@ const PostListOverlay = ({
           image: finalImage,
           image_url: finalImage,
           images: finalImages,
-          videoUrl: isAdPost ? undefined : p.video_url,
-          youtubeUrl: isAdPost ? undefined : p.youtube_url,
+          videoUrl: p.video_url,
+          youtubeUrl: p.youtube_url,
           createdAt: new Date(p.created_at),
-          category: isAdPost ? 'food' : (p.category || 'none'),
+          category: p.category || 'none',
           commentsCount: 0, comments: [],
-          isLiked: false, isAd: isAdPost, isGif: false,
+          isLiked: false, isAd: false, isGif: false,
           isInfluencer: borderType === 'silver' || borderType === 'gold' || borderType === 'diamond',
           borderType,
         };
