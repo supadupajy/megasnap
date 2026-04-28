@@ -258,7 +258,7 @@ const Settings = () => {
             <SettingItem
               icon={Lock}
               label="비밀번호 변경 및 보안"
-              sublabel="비밀번호, 2단계 인증"
+              sublabel="비밀번호 변경"
               iconBg="bg-blue-50"
               iconColor="text-blue-500"
               onClick={() => navigate('/settings/password')}
