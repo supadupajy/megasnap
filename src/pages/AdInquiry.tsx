@@ -101,7 +101,7 @@ const AdInquiry = () => {
           <p className="text-sm text-white/80 font-medium leading-relaxed">
             실시간 위치 기반 플랫폼 ChoraSnap에서 타겟 고객에게 정확하게 도달하세요.
           </p>
-          {/* 일단 아래 광고 관련 내용은 주석 처리 */}
+          {/* 일단 아래 광고 수치 관련 내용은 주석 처리 */}
           {/* <div className="flex gap-4 mt-4">
             <div className="text-center">
               <p className="text-xl font-black">10만+</p>
