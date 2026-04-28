@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft, Building2, Mail, Phone, MapPin, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 const info = [
-  { icon: Building2, label: '상호명', value: '주식회사 초라스냅' },
+  { icon: Building2, label: '상호명', value: '주식회사 코라' },
   { icon: Building2, label: '대표자', value: '홍길동' },
   { icon: Building2, label: '사업자등록번호', value: '123-45-67890' },
   { icon: Building2, label: '통신판매업 신고번호', value: '제2025-서울강남-0001호' },
