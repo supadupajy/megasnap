@@ -12,7 +12,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, getTierFromId } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 
 const ObservedPostItem = ({ 
@@ -218,7 +218,7 @@ const PostListOverlay = ({
 
       let { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(followers)')
         .gte('latitude', latMin)
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
@@ -259,7 +259,7 @@ const PostListOverlay = ({
         if (Number(p.likes || 0) >= 9000) {
           borderType = 'popular';
         } else {
-          borderType = getTierFromId(p.id);
+          borderType = getTierFromFollowers(Number(p.profiles?.followers ?? 0));
         }
 
         let finalImage = p.image_url;
