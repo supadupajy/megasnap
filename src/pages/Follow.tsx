@@ -140,20 +140,26 @@ const Follow = () => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-white no-scrollbar">
-      <header className="fixed top-0 left-0 right-0 h-[88px] pt-8 bg-white z-50 flex items-center px-4 border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
-          <ChevronLeft className="w-6 h-6 text-gray-800" />
-        </button>
-        <div className="flex-1 text-center mr-10">
-          <h1 className="font-black text-lg text-gray-900">{targetNickname}</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Follow Info</p>
+    <div className="min-h-screen bg-white pb-24 no-scrollbar">
+      {/* 글로벌 헤더(64px) + safe area 아래에 서브 헤더 배치 */}
+      <div className="pt-[64px]">
+        {/* 서브 헤더: 뒤로가기 + 중앙 타이틀 */}
+        <div className="sticky top-[64px] z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">{targetNickname}</h2>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none">Follow Info</p>
+          </div>
         </div>
-      </header>
 
-      <div className="pt-[88px]">
-        <div className="flex border-b border-gray-100 sticky top-[88px] bg-white z-40">
-          <button 
+        {/* 팔로워 / 팔로잉 탭 */}
+        <div className="flex border-b border-gray-100 sticky top-[120px] bg-white z-30">
+          <button
             onClick={() => setActiveTab('followers')}
             className={cn(
               "flex-1 py-4 text-sm font-black transition-all relative",
@@ -163,7 +169,7 @@ const Follow = () => {
             팔로워
             {activeTab === 'followers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('following')}
             className={cn(
               "flex-1 py-4 text-sm font-black transition-all relative",
@@ -181,8 +187,6 @@ const Follow = () => {
           ) : users.length > 0 ? (
             users.map((user) => {
               const isFollowing = followingIds.has(user.id);
-              
-              // 온라인 상태 계산 (최근 5분 이내 활동)
               const isOnline = user.last_seen && (new Date().getTime() - new Date(user.last_seen).getTime()) / (1000 * 60) < 10;
 
               return (
@@ -192,7 +196,6 @@ const Follow = () => {
                       <AvatarImage src={user.avatar_url} />
                       <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
                     </Avatar>
-                    {/* 온라인 상태 점 표시 */}
                     <div className={cn(
                       "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10",
                       isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
@@ -208,10 +211,9 @@ const Follow = () => {
                     <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
                   </div>
                   {authUser?.id !== user.id && (
-
-                    <Button 
-                      variant={isFollowing ? "secondary" : "default"} 
-                      size="sm" 
+                    <Button
+                      variant={isFollowing ? "secondary" : "default"}
+                      size="sm"
                       onClick={(e) => toggleFollow(e, user.id)}
                       className={cn("rounded-xl h-8 px-3 font-bold", isFollowing ? "bg-gray-100 text-gray-900 hover:bg-gray-200" : "bg-indigo-600 hover:bg-indigo-700 text-white")}
                     >
