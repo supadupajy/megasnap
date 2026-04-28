@@ -35,17 +35,11 @@ const SearchAdBanner = () => {
         alt={brandName}
       />
       
-      {/* Gradient Overlay */}
+      {/* Gradient Overlay - 좌측 텍스트 영역 */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent flex flex-col justify-center px-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="bg-white/90 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm">AD</span>
-          {brandLogoUrl ? (
-            <img
-              src={brandLogoUrl}
-              alt={brandName}
-              className="h-4 object-contain"
-            />
-          ) : (
+          {!brandLogoUrl && (
             <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{brandName}</span>
           )}
         </div>
@@ -59,8 +53,19 @@ const SearchAdBanner = () => {
         </div>
       </div>
 
+      {/* 브랜드 로고 - 우측 하단 (배경 없이 PNG 투명도 그대로) */}
+      {brandLogoUrl && (
+        <div className="absolute bottom-3 right-4 pointer-events-none">
+          <img
+            src={brandLogoUrl}
+            alt={brandName}
+            className="h-10 w-auto object-contain drop-shadow-lg"
+          />
+        </div>
+      )}
+
       {/* Decorative Element */}
-      <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-black/30 to-transparent pointer-events-none" />
     </motion.div>
   );
 };
