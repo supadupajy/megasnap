@@ -279,7 +279,7 @@ const Settings = () => {
             {isAdmin && (
               <SettingItem
                 icon={Link2}
-                label="소셜 계정 연동"
+                label="SNS 계정 연동"
                 sublabel="구글, 카카오 등 소셜 로그인 연동"
                 iconBg="bg-sky-50"
                 iconColor="text-sky-500"
