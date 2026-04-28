@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Check, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '@/components/BottomNav';
 import { showSuccess } from '@/utils/toast';
 
 const LANGUAGES = [
@@ -97,7 +96,6 @@ const LanguageSettings = () => {
 
       </div>
 
-      <BottomNav />
     </div>
   );
 };

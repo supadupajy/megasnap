@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Bell, Heart, MessageCircle, UserPlus, MapPin, Megaphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '@/components/BottomNav';
 import { showSuccess } from '@/utils/toast';
 
 const STORAGE_KEY = 'notification_settings';
@@ -210,7 +209,6 @@ const NotificationSettings = () => {
 
       </div>
 
-      <BottomNav />
     </div>
   );
 };

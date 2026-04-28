@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { blockedStore } from '@/utils/blocked-store';
 import { showSuccess, showError } from '@/utils/toast';
-import BottomNav from '@/components/BottomNav';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -221,7 +220,6 @@ const PrivacySettings = () => {
 
       </div>
 
-      <BottomNav />
 
       <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">

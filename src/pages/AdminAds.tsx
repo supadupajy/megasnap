@@ -26,7 +26,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -934,7 +933,6 @@ const AdminAds = () => {
         </p>
       </div>
 
-      <BottomNav />
     </div>
   );
 };

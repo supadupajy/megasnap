@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Megaphone, Mail, MessageSquare, Send, CheckCircle2, MapPin, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,8 +101,6 @@ const AdInquiry = () => {
             설정으로 돌아가기
           </Button>
         </div>
-
-        <BottomNav />
       </div>
     );
   }
@@ -284,8 +281,6 @@ const AdInquiry = () => {
           문의 접수 후 영업일 기준 1~2일 내 회신드립니다
         </p>
       </div>
-
-      <BottomNav />
     </div>
   );
 };

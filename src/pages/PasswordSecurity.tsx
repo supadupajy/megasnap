@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { showSuccess, showError } from '@/utils/toast';
-import BottomNav from '@/components/BottomNav';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -273,7 +272,6 @@ const PasswordSecurity = () => {
         </div>
       </div>
 
-      <BottomNav />
 
       {/* 계정 삭제 확인 다이얼로그 */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

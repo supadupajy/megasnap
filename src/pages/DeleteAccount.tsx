@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { showError, showSuccess } from '@/utils/toast';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import Header from '@/components/Header';
 
 const consequences = [
   '프로필, 포스팅, 댓글 등 모든 데이터가 영구 삭제됩니다.',
@@ -60,7 +59,6 @@ const DeleteAccount = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <Header />
       <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button onClick={() => step === 2 ? setStep(1) : navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
           <ChevronLeft className="w-6 h-6 text-gray-400" />
