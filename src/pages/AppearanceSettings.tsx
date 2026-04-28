@@ -30,7 +30,7 @@ const AppearanceSettings = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="px-4 pt-5 space-y-3">
           {themes.map((theme) => {
             const Icon = theme.icon;

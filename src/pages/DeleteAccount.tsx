@@ -68,7 +68,7 @@ const DeleteAccount = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="px-4 pt-5">
           {step === 1 ? (
             <div className="space-y-5">

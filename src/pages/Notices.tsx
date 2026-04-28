@@ -136,7 +136,7 @@ const Notices = () => {
       </div>
 
       {/* 목록 */}
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="px-4 pt-5 space-y-2">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (

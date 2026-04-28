@@ -62,7 +62,7 @@ const Inquiry = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="px-4 pt-5 space-y-4">
           {/* 문의 유형 */}
           <div>

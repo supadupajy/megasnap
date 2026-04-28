@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-10 no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="px-4 pt-5">
           <div className="bg-indigo-50 rounded-2xl p-4 mb-5">
             <p className="text-[12px] text-indigo-700 font-medium leading-relaxed">

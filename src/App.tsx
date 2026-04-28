@@ -90,6 +90,11 @@ const AnimatedRoutes = () => {
     location.pathname === "/settings" ||
     location.pathname.startsWith("/settings/");
 
+  // BottomNav는 login/splash에서만 숨김 (settings 계열에서는 보여야 함)
+  const hideBottomNav =
+    location.pathname === "/login" ||
+    location.pathname === "/splash";
+
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
   // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화
   // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
@@ -207,7 +212,7 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {(!hideAppChrome || isWritePage) && session && <BottomNav />}
+      {(!hideBottomNav || isWritePage) && session && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
