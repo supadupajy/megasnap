@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { cn } from '@/lib/utils';
 
+const NICKNAME_COOLDOWN_DAYS = 30;
+
 interface ProfileEditDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +34,22 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
   const [nicknameStatus, setNicknameStatus] = useState<'none' | 'available' | 'taken' | 'invalid'>('none');
   const [nicknameMessage, setNicknameMessage] = useState('');
 
+  // Nickname cooldown
+  const [nicknameChangedAt, setNicknameChangedAt] = useState<string | null>(null);
+
+  const nicknameCooldownInfo = (() => {
+    if (!nicknameChangedAt) return null;
+    const changedDate = new Date(nicknameChangedAt);
+    const nextAllowed = new Date(changedDate.getTime() + NICKNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    if (now >= nextAllowed) return null;
+    const diffMs = nextAllowed.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return { daysLeft: diffDays, nextAllowed };
+  })();
+
+  const isNicknameLocked = nicknameCooldownInfo !== null;
+
   useEffect(() => {
     if (isOpen && profile) {
       setNickname(profile.nickname || '');
@@ -39,6 +57,16 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
       setAvatarUrl(profile.avatar_url);
       setNicknameStatus('none');
       setNicknameMessage('');
+
+      // nickname_changed_at 불러오기
+      supabase
+        .from('profiles')
+        .select('nickname_changed_at')
+        .eq('id', profile.id)
+        .single()
+        .then(({ data }) => {
+          setNicknameChangedAt(data?.nickname_changed_at ?? null);
+        });
     }
   }, [isOpen, profile]);
 
@@ -183,6 +211,13 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
       return;
     }
 
+    const nicknameChanged = trimmedNickname !== profile?.nickname;
+
+    if (nicknameChanged && isNicknameLocked) {
+      showError(`닉네임은 ${nicknameCooldownInfo!.daysLeft}일 후에 변경할 수 있습니다.`);
+      return;
+    }
+
     // Base64가 avatarUrl에 들어오는 것을 최종 방어
     const safeAvatarUrl = avatarUrl?.startsWith('data:image')
       ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
@@ -190,15 +225,21 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
     setIsSubmitting(true);
     try {
+      const updatePayload: Record<string, unknown> = {
+        id: user.id,
+        nickname: trimmedNickname,
+        bio: bio.trim(),
+        avatar_url: safeAvatarUrl,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (nicknameChanged) {
+        updatePayload.nickname_changed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          nickname: trimmedNickname,
-          bio: bio.trim(),
-          avatar_url: safeAvatarUrl,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(updatePayload);
 
       if (error) throw error;
 
@@ -262,24 +303,32 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
                   <Type className="w-4 h-4 text-gray-400" />
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">닉네임</p>
                 </div>
-                {isCheckingNickname && (
+                {isCheckingNickname && !isNicknameLocked && (
                   <Loader2 className="w-3 h-3 text-indigo-600 animate-spin" />
+                )}
+                {isNicknameLocked && (
+                  <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">
+                    🔒 {nicknameCooldownInfo!.daysLeft}일 후 변경 가능
+                  </span>
                 )}
               </div>
               <div className="relative">
                 <Input 
                   placeholder="새로운 닉네임을 입력하세요"
                   value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
+                  onChange={(e) => !isNicknameLocked && setNickname(e.target.value)}
+                  readOnly={isNicknameLocked}
                   className={cn(
                     "h-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 text-base font-bold shadow-inner transition-all",
-                    nicknameStatus === 'available' ? "focus-visible:ring-green-500" : 
-                    nicknameStatus === 'taken' || nicknameStatus === 'invalid' ? "focus-visible:ring-red-500" : 
-                    "focus-visible:ring-indigo-600"
+                    isNicknameLocked
+                      ? "opacity-60 cursor-not-allowed focus-visible:ring-amber-400"
+                      : nicknameStatus === 'available' ? "focus-visible:ring-green-500" : 
+                        nicknameStatus === 'taken' || nicknameStatus === 'invalid' ? "focus-visible:ring-red-500" : 
+                        "focus-visible:ring-indigo-600"
                   )}
                   maxLength={15}
                 />
-                {nicknameStatus !== 'none' && (
+                {!isNicknameLocked && nicknameStatus !== 'none' && (
                   <div className={cn(
                     "absolute right-4 top-1/2 -translate-y-1/2",
                     nicknameStatus === 'available' ? "text-green-500" : "text-red-500"
@@ -288,14 +337,18 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
                   </div>
                 )}
               </div>
-              {nicknameMessage && (
+              {isNicknameLocked ? (
+                <p className="text-[11px] font-bold px-1 text-amber-600 animate-in fade-in slide-in-from-top-1">
+                  닉네임은 변경 후 {NICKNAME_COOLDOWN_DAYS}일이 지나야 다시 변경할 수 있습니다.
+                </p>
+              ) : nicknameMessage ? (
                 <p className={cn(
                   "text-[11px] font-bold px-1 animate-in fade-in slide-in-from-top-1",
                   nicknameStatus === 'available' ? "text-green-600" : "text-red-600"
                 )}>
                   {nicknameMessage}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Bio Section */}
