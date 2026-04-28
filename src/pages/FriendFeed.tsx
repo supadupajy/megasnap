@@ -76,87 +76,91 @@ const FriendFeed = () => {
   const { user: authUser, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [followingIds, setFollowingIds] = useState<string[]>([]);
-  const [followingLoaded, setFollowingLoaded] = useState(false);
+  const [followingIds, setFollowingIds] = useState<string[] | null>(null); // null = 아직 로드 안 됨
 
-  const hasLoaded = useRef(false);
-
-  const isLoading = authLoading || (isInitialLoading && posts.length === 0);
+  const isLoading = authLoading || isInitialLoading;
 
   const filteredPosts = useMemo(() => {
     if (!posts) return [];
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  // 팔로잉 목록 로드
+  // 팔로잉 목록 + 포스트를 순서대로 로드 (타이밍 이슈 없이 단일 흐름으로)
   useEffect(() => {
-    if (!authUser?.id) return;
-    supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', authUser.id)
-      .then(({ data }) => {
-        const ids = (data || []).map((f: any) => f.following_id);
-        setFollowingIds(ids);
-        setFollowingLoaded(true);
-      });
-  }, [authUser?.id]);
+    if (authLoading || !authUser?.id) return;
 
-  const fetchFriendPosts = useCallback(async (pageNum: number, ids: string[]) => {
-    if (ids.length === 0) return [];
-    try {
-      const from = pageNum * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+    let cancelled = false;
 
+    const load = async () => {
+      setIsInitialLoading(true);
+      setPosts([]);
+      setPage(0);
+      setHasMore(true);
+
+      // 1단계: 팔로잉 목록 로드
+      const { data: followsData } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', authUser.id);
+
+      if (cancelled) return;
+
+      const ids = (followsData || []).map((f: any) => f.following_id);
+      setFollowingIds(ids);
+
+      // 2단계: 팔로잉이 없으면 바로 종료
+      if (ids.length === 0) {
+        setIsInitialLoading(false);
+        return;
+      }
+
+      // 3단계: 팔로잉 유저들의 포스트 로드
       const { data, error } = await supabase
         .from('posts')
         .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
         .in('user_id', ids)
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .range(0, PAGE_SIZE - 1);
 
-      if (error) throw error;
-      if (!data || data.length < PAGE_SIZE) setHasMore(false);
+      if (cancelled) return;
 
-      return (data || []).map(mapPostImmediate);
-    } catch (err) {
-      console.error('[FriendFeed] fetch error:', err);
-      return [];
-    }
-  }, []);
+      if (!error) {
+        if (!data || data.length < PAGE_SIZE) setHasMore(false);
+        setPosts((data || []).map(mapPostImmediate));
+      }
 
-  const loadInitialData = useCallback(async (ids: string[]) => {
-    if (hasLoaded.current) return;
-    setIsInitialLoading(true);
-    const initialPosts = await fetchFriendPosts(0, ids);
-    setPosts(initialPosts);
-    hasLoaded.current = true;
-    setIsInitialLoading(false);
-  }, [fetchFriendPosts]);
+      setIsInitialLoading(false);
+    };
 
-  useEffect(() => {
-    if (!authLoading && followingLoaded) {
-      if (authUser) loadInitialData(followingIds);
-      else navigate('/login', { replace: true });
-    }
-  }, [authLoading, authUser, followingLoaded, followingIds, loadInitialData, navigate]);
+    load();
+
+    return () => { cancelled = true; };
+  }, [authUser?.id, authLoading]);
 
   const loadMorePosts = useCallback(async () => {
-    if (isLoadingMore || !hasMore || followingIds.length === 0) return;
+    if (isLoadingMore || !hasMore || !followingIds || followingIds.length === 0) return;
     setIsLoadingMore(true);
     const nextPage = page + 1;
-    const newPosts = await fetchFriendPosts(nextPage, followingIds);
-    if (newPosts.length > 0) {
-      setPosts(prev => [...prev, ...newPosts]);
+    const from = nextPage * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+      .in('user_id', followingIds)
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (!error && data && data.length > 0) {
+      setPosts(prev => [...prev, ...data.map(mapPostImmediate)]);
       setPage(nextPage);
-    } else {
-      setHasMore(false);
     }
+    if (!data || data.length < PAGE_SIZE) setHasMore(false);
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, page, fetchFriendPosts, followingIds]);
+  }, [isLoadingMore, hasMore, page, followingIds]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -193,6 +197,9 @@ const FriendFeed = () => {
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
+
+  const noFollowing = followingIds !== null && followingIds.length === 0;
+  const noPostsButHasFriends = !isLoading && followingIds !== null && followingIds.length > 0 && filteredPosts.length === 0;
 
   return (
     <div className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar">
@@ -239,7 +246,7 @@ const FriendFeed = () => {
               </div>
             ))}
 
-            {!isLoading && followingLoaded && followingIds.length === 0 && (
+            {noFollowing && (
               <div className="py-24 flex flex-col items-center justify-center text-center px-10">
                 <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-5">
                   <Users className="w-10 h-10 text-indigo-300" />
@@ -258,7 +265,7 @@ const FriendFeed = () => {
               </div>
             )}
 
-            {!isLoading && followingLoaded && followingIds.length > 0 && filteredPosts.length === 0 && (
+            {noPostsButHasFriends && (
               <div className="py-24 flex flex-col items-center justify-center text-center px-10">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5">
                   <Users className="w-10 h-10 text-gray-200" />
