@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: {
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip, isAdmin }: {
   icon: any,
   label: string,
   sublabel?: string,
@@ -70,35 +70,46 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
   iconBg?: string,
   iconColor?: string,
   wip?: boolean,
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
-  >
-    <div className="flex items-center gap-3">
-      <div className={cn(
-        "w-9 h-9 rounded-xl flex items-center justify-center",
-        iconBg || (variant === "danger" ? "bg-red-50" : "bg-gray-100"),
-        iconColor || (variant === "danger" ? "text-red-500" : "text-gray-600")
-      )}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="flex flex-col items-start text-left">
-        <div className="flex items-center gap-1.5">
-          <span className={cn(
-            "text-sm font-bold",
-            variant === "danger" ? "text-red-500" : "text-gray-800"
-          )}>{label}</span>
-          {wip && (
-            <span className="text-[9px] font-black text-amber-500 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full leading-none">개발 중</span>
-          )}
+  isAdmin?: boolean,
+}) => {
+  const handleClick = () => {
+    if (wip && !isAdmin) {
+      showInfo('개발 중입니다.');
+      return;
+    }
+    onClick?.();
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-none"
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          "w-9 h-9 rounded-xl flex items-center justify-center",
+          iconBg || (variant === "danger" ? "bg-red-50" : "bg-gray-100"),
+          iconColor || (variant === "danger" ? "text-red-500" : "text-gray-600")
+        )}>
+          <Icon className="w-5 h-5" />
         </div>
-        {sublabel && <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">{sublabel}</span>}
+        <div className="flex flex-col items-start text-left">
+          <div className="flex items-center gap-1.5">
+            <span className={cn(
+              "text-sm font-bold",
+              variant === "danger" ? "text-red-500" : "text-gray-800"
+            )}>{label}</span>
+            {wip && (
+              <span className="text-[9px] font-black text-amber-500 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full leading-none">개발 중</span>
+            )}
+          </div>
+          {sublabel && <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">{sublabel}</span>}
+        </div>
       </div>
-    </div>
-    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-  </button>
-);
+      <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+    </button>
+  );
+};
 
 const SectionHeader = ({ title }: { title: string }) => (
   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">{title}</p>
@@ -276,17 +287,16 @@ const Settings = () => {
               iconColor="text-blue-500"
               onClick={() => navigate('/settings/password')}
             />
-            {isAdmin && (
-              <SettingItem
-                icon={Link2}
-                label="SNS 계정 연동"
-                sublabel="구글, 카카오 등 소셜 로그인 연동"
-                iconBg="bg-sky-50"
-                iconColor="text-sky-500"
-                onClick={() => navigate('/settings/connected-accounts')}
-                wip
-              />
-            )}
+            <SettingItem
+              icon={Link2}
+              label="SNS 계정 연동"
+              sublabel="구글, 카카오 등 소셜 로그인 연동"
+              iconBg="bg-sky-50"
+              iconColor="text-sky-500"
+              onClick={() => navigate('/settings/connected-accounts')}
+              wip
+              isAdmin={isAdmin}
+            />
             <SettingItem
               icon={Bell}
               label="알림 설정"
@@ -302,28 +312,26 @@ const Settings = () => {
         <div className="px-4 pt-4 pb-1">
           <SectionHeader title="앱 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            {isAdmin && (
-              <SettingItem
-                icon={Languages}
-                label="언어 설정"
-                sublabel="앱 표시 언어 변경"
-                iconBg="bg-orange-50"
-                iconColor="text-orange-500"
-                onClick={() => navigate('/settings/language')}
-                wip
-              />
-            )}
-            {isAdmin && (
-              <SettingItem
-                icon={Moon}
-                label="다크 모드"
-                sublabel="화면 테마 설정"
-                iconBg="bg-slate-100"
-                iconColor="text-slate-500"
-                onClick={() => navigate('/settings/appearance')}
-                wip
-              />
-            )}
+            <SettingItem
+              icon={Languages}
+              label="언어 설정"
+              sublabel="앱 표시 언어 변경"
+              iconBg="bg-orange-50"
+              iconColor="text-orange-500"
+              onClick={() => navigate('/settings/language')}
+              wip
+              isAdmin={isAdmin}
+            />
+            <SettingItem
+              icon={Moon}
+              label="다크 모드"
+              sublabel="화면 테마 설정"
+              iconBg="bg-slate-100"
+              iconColor="text-slate-500"
+              onClick={() => navigate('/settings/appearance')}
+              wip
+              isAdmin={isAdmin}
+            />
             <SettingItem
               icon={HardDrive}
               label="저장공간 및 캐시"
