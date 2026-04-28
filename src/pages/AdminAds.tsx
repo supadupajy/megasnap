@@ -306,12 +306,12 @@ const AdCard = ({
       {/* 편집 폼 */}
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3">
-          <FieldRow icon={Type} label="제목 (설명)" value={form.title} placeholder="광고 설명 문구" onChange={v => setForm(f => ({ ...f, title: v }))} />
+          <FieldRow icon={Type} label="브랜드명" value={form.brand_name} placeholder="브랜드 이름" onChange={v => setForm(f => ({ ...f, brand_name: v }))} />
+          <FieldRow icon={Type} label="설명" value={form.title} placeholder="광고 설명 문구" onChange={v => setForm(f => ({ ...f, title: v }))} />
           {initialAd.id !== 'map_marker' && (
             <FieldRow icon={Type} label="부제목" value={form.subtitle} placeholder="광고 부제목" onChange={v => setForm(f => ({ ...f, subtitle: v }))} />
           )}
           <FieldRow icon={Link} label="랜딩 URL" value={form.link_url} placeholder="https://example.com" onChange={v => setForm(f => ({ ...f, link_url: v }))} />
-          <FieldRow icon={Type} label="브랜드명" value={form.brand_name} placeholder="브랜드 이름" onChange={v => setForm(f => ({ ...f, brand_name: v }))} />
           <ImageUploadField label="배너 이미지" value={form.image_url} onChange={v => setForm(f => ({ ...f, image_url: v }))} adId={initialAd.id} fieldKey="banner" previewType="banner" />
           <ImageUploadField label="브랜드 로고" value={form.brand_logo_url} onChange={v => setForm(f => ({ ...f, brand_logo_url: v }))} adId={initialAd.id} fieldKey="logo" previewType="logo" />
 
