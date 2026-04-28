@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Megaphone, Mail, MessageSquare, Send, CheckCircle2, MapPin, TrendingUp, Sparkles } from 'lucide-react';
+import { ChevronLeft, Megaphone, Mail, MessageSquare, Send, CheckCircle2, MapPin, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AD_TYPES = [
   { id: 'map', icon: MapPin, label: '지도 마커 광고', desc: '지도 위에 브랜드 마커를 노출합니다' },
@@ -31,16 +32,37 @@ const AdInquiry = () => {
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const goBack = () => navigate('/settings');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType) { showError('광고 유형을 선택해주세요.'); return; }
     if (!company.trim()) { showError('회사/브랜드명을 입력해주세요.'); return; }
     if (!contact.trim()) { showError('연락처(이메일 또는 전화번호)를 입력해주세요.'); return; }
-    setSubmitted(true);
-    showSuccess('광고 문의가 접수되었습니다! 빠른 시일 내에 연락드리겠습니다. 🎉');
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-ad-inquiry', {
+        body: {
+          adType: selectedType,
+          company: company.trim(),
+          contact: contact.trim(),
+          message: message.trim(),
+        },
+      });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      showSuccess('광고 문의가 접수되었습니다! 빠른 시일 내에 연락드리겠습니다. 🎉');
+    } catch (err: any) {
+      console.error('[AdInquiry] 문의 전송 실패:', err);
+      showError('문의 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (submitted) {
@@ -202,10 +224,14 @@ const AdInquiry = () => {
 
           <Button
             type="submit"
-            className="w-full rounded-2xl bg-indigo-600 text-white font-black text-base shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 py-3.5"
+            disabled={isLoading}
+            className="w-full rounded-2xl bg-indigo-600 text-white font-black text-base shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 py-3.5 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <Send className="w-4 h-4" />
-            문의 접수하기
+            {isLoading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> 전송 중...</>
+            ) : (
+              <><Send className="w-4 h-4" /> 문의 접수하기</>
+            )}
           </Button>
         </form>
 
