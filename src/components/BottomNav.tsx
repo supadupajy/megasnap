@@ -16,7 +16,7 @@ const BottomNav = () => {
   const navItems = [
     { icon: Map, label: '지도', path: '/' },
     { icon: Flame, label: '인기', path: '/popular' },
-    { icon: PlusCircle, label: '글쓰기', path: '/write' },
+    { icon: PlusCircle, label: '업로드', path: '/write' },
     { icon: UsersRound, label: '친구', path: '/friends' },
     { icon: User, label: '내정보', path: '/profile' },
   ];
