@@ -737,6 +737,7 @@ const Index = () => {
   useEffect(() => {
     const handleFocusPost = (e: any) => {
       const { post, lat, lng } = e.detail;
+      if (!post) return; // post가 undefined인 경우 방어
       setIsPostListOpen(false);
       handleMarkerClick(post);
       // 오버레이 닫힘 애니메이션(350ms) 완료 후 지도 이동 시작
