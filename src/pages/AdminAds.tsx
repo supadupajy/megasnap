@@ -465,7 +465,7 @@ const AdminAds = () => {
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       <div
-        className="fixed left-0 right-0 z-40 h-14 bg-white flex items-center px-4 border-b border-gray-100"
+        className="fixed left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
       >
         <button
