@@ -107,9 +107,11 @@
   transform-origin: 50% 100%;
 }
 
-/* zoom 클래스가 없는 전환 순간에도 마커가 보이도록 기본 보장 */
+/* zoom 클래스가 없는 전환 순간에도 마커가 올바른 위치에 표시되도록 기본 보장 */
 #kakao-map .marker-container {
   display: block !important;
+  transform: translate(-50%, -100%) scale(1) !important;
+  transform-origin: 50% 100%;
 }
 
 /* zoom-7: 광고 마커만 표시 */
