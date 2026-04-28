@@ -37,7 +37,7 @@ const mapPostImmediate = (p: any): Post => {
   }
   return {
     id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-    user: { id: p.user_id, name: p.user_name || p.profiles?.nickname || '사용자', avatar: p.user_avatar || p.profiles?.avatar_url || '' },
+    user: { id: p.user_id, name: p.profiles?.nickname || p.user_name || '사용자', avatar: p.profiles?.avatar_url || p.user_avatar || '' },
     content: p.content?.replace(/^\[AD\]\s*/, '') || '',
     location: p.location_name, lat: p.latitude, lng: p.longitude,
     likes: Number(p.likes || 0), commentsCount: 0, comments: [],
@@ -117,10 +117,10 @@ const FriendFeed = () => {
         return;
       }
 
-      // 3단계: 팔로잉 유저들의 포스트 로드
+      // 3단계: 팔로잉 유저들의 포스트 + profiles JOIN으로 실제 닉네임/아바타 가져오기
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(nickname, avatar_url)')
         .in('user_id', ids)
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
@@ -149,7 +149,7 @@ const FriendFeed = () => {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(nickname, avatar_url)')
       .in('user_id', followingIds)
       .order('created_at', { ascending: false })
       .range(from, to);
