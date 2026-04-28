@@ -23,6 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
+import { invalidateAdCache } from '@/hooks/use-ad';
 
 interface PostDetailProps {
   posts: any[];
@@ -378,8 +379,47 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const confirmDelete = async () => {
     if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
-    // 광고 마커는 posts 테이블에 없으므로 DB 삭제 불가
-    if (currentPost.isAd) { showError('광고 포스팅은 광고 관리 페이지에서 수정하세요.'); return; }
+
+    // 광고 마커: ads 테이블에서 비활성화 + 데이터 초기화
+    if (currentPost.isAd) {
+      setIsDeleteDialogOpen(false);
+      setTimeout(() => {
+        if (onDelete) onDelete(currentPost.id);
+        onClose();
+      }, 0);
+      try {
+        const { error } = await supabase
+          .from('ads')
+          .update({
+            is_active: false,
+            image_url: '',
+            title: '',
+            subtitle: '',
+            link_url: '',
+            brand_name: '',
+            brand_logo_url: '',
+            lat: null,
+            lng: null,
+            start_date: null,
+            end_date: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', 'map_marker');
+        if (error) throw error;
+        // 인메모리 캐시 즉시 무효화 → 지도에서 마커 즉시 제거
+        invalidateAdCache('map_marker', {
+          id: 'map_marker', label: '지도 마커 광고', image_url: '', title: '', subtitle: '',
+          link_url: '', brand_name: '', brand_logo_url: '', is_active: false,
+          lat: null, lng: null, start_date: null, end_date: null,
+        });
+        showSuccess('광고 마커가 삭제되었습니다.');
+      } catch (err: any) {
+        console.error('[PostDetail] Ad delete error:', err);
+        showError('광고 삭제 중 오류가 발생했습니다.');
+      }
+      return;
+    }
+
     const postId = currentPost.id;
 
     // 1. 확인 다이얼로그 닫기
