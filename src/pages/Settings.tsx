@@ -249,14 +249,6 @@ const Settings = () => {
           <SectionHeader title="계정 설정" />
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <SettingItem
-              icon={User}
-              label="프로필 편집"
-              sublabel="닉네임, 프로필 사진, 소개 수정"
-              iconBg="bg-indigo-50"
-              iconColor="text-indigo-500"
-              onClick={() => navigate('/settings/profile-edit')}
-            />
-            <SettingItem
               icon={Lock}
               label="비밀번호 변경 및 보안"
               sublabel="비밀번호, 2단계 인증"
