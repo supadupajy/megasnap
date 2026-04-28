@@ -399,7 +399,7 @@ const Settings = () => {
         {/* ── 광고 ── */}
         <div className="px-4 pt-4 pb-1">
           <SectionHeader title="광고" />
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border-2 border-pink-300 overflow-hidden shadow-sm">
             <SettingItem
               icon={Megaphone}
               label="광고 문의"
