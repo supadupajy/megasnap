@@ -312,7 +312,7 @@ const Profile = () => {
     <div className="h-screen bg-white flex flex-col">
       {/* 상단 고정 헤더 */}
       <div
-        className="fixed left-0 right-0 z-40 px-4 py-4 bg-white border-b border-gray-100 flex items-center"
+        className="fixed left-0 right-0 z-40 px-4 bg-white border-b border-gray-100 flex items-center h-[56px]"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
       >
         <div className="flex items-center justify-between w-full">
@@ -334,7 +334,7 @@ const Profile = () => {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 136px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)' }}
       >
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
