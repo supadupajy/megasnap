@@ -68,7 +68,7 @@ serve(async (req) => {
       </table>
     </div>
     <div style="background:#f9fafb;padding:16px 28px;border-top:1px solid #f0f0f0;">
-      <p style="font-size:11px;color:#9ca3af;margin:0;text-align:center;">이 메일은 Chora 앱의 광고 문의 폼을 통해 자동 발송되었습니다.</p>
+      <p style="font-size:11px;color:#9ca3af;margin:0;text-align:center;">이 메일은 ChoraSnap 앱의 광고 문의 폼을 통해 자동 발송되었습니다.</p>
     </div>
   </div>
 </body>
@@ -88,9 +88,9 @@ serve(async (req) => {
     console.log("[send-ad-inquiry] nodemailer 전송 시작...");
 
     await transporter.sendMail({
-      from: `"Chora Ads" <${gmailUser}>`,
+      from: `"ChoraSnap Ads" <${gmailUser}>`,
       to: "chorasnap@gmail.com",
-      subject: `[Chora 광고 문의] ${company} - ${adTypeLabel}`,
+      subject: `[ChoraSnap 광고 문의] ${company} - ${adTypeLabel}`,
       html: htmlBody,
     });
 
