@@ -182,11 +182,13 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
 const AdCard = ({
   initialAd,
   defaultExpanded = false,
+  locationFieldRef,
   onSave,
   onSelectLocation,
 }: {
   initialAd: AdData;
   defaultExpanded?: boolean;
+  locationFieldRef?: React.RefObject<HTMLDivElement>;
   onSave: (updated: AdData) => Promise<void>;
   onSelectLocation: (adId: string) => void;
 }) => {
@@ -317,7 +319,7 @@ const AdCard = ({
 
           {/* map_marker 전용: 위치 선택 */}
           {initialAd.id === 'map_marker' && (
-            <div className="bg-gray-50 rounded-2xl p-3">
+            <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <MapPin className="w-3 h-3 text-gray-400" />
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
@@ -369,6 +371,7 @@ const AdminAds = () => {
   // 지도에서 선택한 위치 (sessionStorage에서 읽어온 값)
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
   const mapMarkerCardRef = useRef<HTMLDivElement>(null);
+  const locationFieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // ✅ 마운트 시 sessionStorage에서 위치 먼저 읽기 (fetchAds보다 먼저)
@@ -402,12 +405,13 @@ const AdminAds = () => {
     fetchAds();
   }, []);
 
-  // pendingLocation이 설정되면 map_marker 카드로 스크롤
+  // pendingLocation이 설정되면 위치 필드로 스크롤
   useEffect(() => {
     if (!pendingLocation || isLoading) return;
+    // 카드 펼침 + 렌더링 완료 후 위치 필드로 스크롤
     setTimeout(() => {
-      mapMarkerCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
+      locationFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
   }, [pendingLocation, isLoading]);
 
   // ✅ ads와 pendingLocation을 합쳐서 최종 렌더용 데이터 생성
@@ -520,6 +524,7 @@ const AdminAds = () => {
                   key={`${ad.id}-${ad.lat ?? 'null'}-${ad.lng ?? 'null'}`}
                   initialAd={ad}
                   defaultExpanded={ad.id === 'map_marker' && pendingLocation != null}
+                  locationFieldRef={ad.id === 'map_marker' ? locationFieldRef : undefined}
                   onSave={handleSave}
                   onSelectLocation={handleSelectLocation}
                 />
