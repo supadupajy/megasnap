@@ -301,16 +301,27 @@ const AdCard = ({
 
   const Icon = AD_ICONS[ad.id] || Tv2;
   const colors = AD_COLORS[ad.id] || AD_COLORS.splash;
-  const hasChanges = JSON.stringify(form) !== JSON.stringify(ad);
 
-  // ad prop(lat/lng 포함)이 외부에서 바뀌면 form에 동기화
+  // ad prop 전체가 바뀌면 form 전체 동기화 (lat/lng 포함)
   useEffect(() => {
-    setForm(prev => ({ ...prev, lat: ad.lat, lng: ad.lng }));
+    setForm(ad);
     // map_marker이고 위치가 새로 설정됐으면 카드 자동 펼치기
     if (ad.id === 'map_marker' && ad.lat != null && ad.lng != null) {
       setIsExpanded(true);
     }
-  }, [ad.lat, ad.lng]);
+  }, [ad]);
+
+  // form과 ad를 비교해 변경 여부 판단
+  const hasChanges =
+    form.title !== ad.title ||
+    form.subtitle !== ad.subtitle ||
+    form.link_url !== ad.link_url ||
+    form.brand_name !== ad.brand_name ||
+    form.image_url !== ad.image_url ||
+    form.brand_logo_url !== ad.brand_logo_url ||
+    form.is_active !== ad.is_active ||
+    form.lat !== ad.lat ||
+    form.lng !== ad.lng;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -366,18 +377,59 @@ const AdCard = ({
         </div>
       </div>
 
-      {/* 배너 미리보기 (접힌 상태) */}
-      {form.image_url && !isExpanded && (
-        <div className="px-4 pb-3">
-          <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
-            <img
-              src={form.image_url}
-              alt="preview"
-              className="w-full h-full object-cover"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          </div>
-        </div>
+      {/* 접힌 상태 미리보기 */}
+      {!isExpanded && (
+        <>
+          {/* map_marker: 위치 정보 우선 표시 */}
+          {ad.id === 'map_marker' && (
+            <div className="px-4 pb-3">
+              <button
+                onClick={e => { e.stopPropagation(); onSelectLocation(ad.id); }}
+                className={cn(
+                  'w-full flex items-center gap-3 rounded-2xl px-3 h-11 border transition-all active:scale-[0.98]',
+                  form.lat != null && form.lng != null
+                    ? 'bg-rose-50 border-rose-100 hover:border-rose-300'
+                    : 'bg-gray-50 border-gray-100 hover:border-violet-300'
+                )}
+              >
+                <div className={cn(
+                  'w-7 h-7 rounded-xl flex items-center justify-center shrink-0',
+                  form.lat != null && form.lng != null ? 'bg-rose-100' : 'bg-gray-100'
+                )}>
+                  <Navigation2 className={cn(
+                    'w-3.5 h-3.5',
+                    form.lat != null && form.lng != null ? 'text-rose-500' : 'text-gray-400'
+                  )} />
+                </div>
+                <span className={cn(
+                  'flex-1 text-left text-sm font-semibold truncate',
+                  form.lat != null && form.lng != null ? 'text-gray-900' : 'text-gray-400'
+                )}>
+                  {form.lat != null && form.lng != null
+                    ? `${form.lat.toFixed(5)}, ${form.lng.toFixed(5)}`
+                    : '지도에서 위치 선택'}
+                </span>
+                {form.lat != null && form.lng != null
+                  ? <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
+                  : <span className="text-[10px] font-black text-violet-500 bg-violet-50 px-2 py-0.5 rounded-lg shrink-0">선택하기</span>
+                }
+              </button>
+            </div>
+          )}
+          {/* 그 외 광고: 배너 이미지 미리보기 */}
+          {ad.id !== 'map_marker' && form.image_url && (
+            <div className="px-4 pb-3">
+              <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+                <img
+                  src={form.image_url}
+                  alt="preview"
+                  className="w-full h-full object-cover"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* 편집 폼 */}

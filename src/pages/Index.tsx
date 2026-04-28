@@ -114,6 +114,10 @@ const Index = () => {
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSelectingAdLocation, setIsSelectingAdLocation] = useState(false);
   const [tempAdLocation, setTempAdLocation] = useState<{ lat: number; lng: number } | null>(mapCache.lastCenter || null);
+  // stale closure 방지용 ref
+  const isSelectingLocationRef = useRef(false);
+  const isSelectingAdLocationRef = useRef(false);
+  const tempAdLocationRef = useRef<{ lat: number; lng: number } | null>(mapCache.lastCenter || null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [markerPage, setMarkerPage] = useState(0);
 
@@ -374,6 +378,10 @@ const Index = () => {
     spreadMarkersRef.current = spreadMarkers;
   }, [spreadMarkers]);
 
+  // 위치 선택 모드 ref 동기화 (handleMapChange stale closure 방지)
+  useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
+  useEffect(() => { isSelectingAdLocationRef.current = isSelectingAdLocation; }, [isSelectingAdLocation]);
+
   // currentZoom ref 동기화
   useEffect(() => {
     currentZoomRef.current = currentZoom;
@@ -404,24 +412,30 @@ const Index = () => {
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, selectedCategories]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
+  // ref를 사용해 stale closure 완전 방지
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
-    // ref는 즉시 업데이트 (throttle 없이) → handleRefresh가 항상 최신 bounds 참조 가능
     mapDataRef.current = data;
-    // 줌 레벨은 즉시 업데이트 → 레벨 7 전환 시 마커가 잠깐 보이는 버그 방지
     if (data.level !== undefined) {
       setCurrentZoom(data.level);
       currentZoomRef.current = data.level;
       mapCache.lastZoom = data.level;
     }
+    // 위치 선택 모드일 때 즉시 ref 업데이트 (throttle 전에도 최신값 유지)
+    if (isSelectingAdLocationRef.current && data.center) {
+      tempAdLocationRef.current = data.center;
+    }
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;
-      if (isSelectingLocation) setTempSelectedLocation(data.center);
-      if (isSelectingAdLocation) setTempAdLocation(data.center);
+      if (isSelectingLocationRef.current) setTempSelectedLocation(data.center);
+      if (isSelectingAdLocationRef.current) {
+        setTempAdLocation(data.center);
+        tempAdLocationRef.current = data.center;
+      }
       throttleTimer.current = null;
     }, 300);
-  }, [isSelectingLocation, isSelectingAdLocation]);
+  }, []);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
@@ -814,9 +828,11 @@ const Index = () => {
                       </Button>
                       <Button
                         onClick={() => {
-                          const loc = tempAdLocation || mapCache.lastCenter;
+                          // ref에서 읽어야 stale closure 없이 최신 좌표 사용 가능
+                          const loc = tempAdLocationRef.current || tempAdLocation || mapCache.lastCenter;
                           if (loc) {
                             setIsSelectingAdLocation(false);
+                            isSelectingAdLocationRef.current = false;
                             // sessionStorage로 전달 (navigate state는 fetchAds에 의해 덮어써짐)
                             sessionStorage.setItem('adLocationPending', JSON.stringify({ lat: loc.lat, lng: loc.lng }));
                             setTimeout(() => navigate('/settings/admin-ads'), 100);
