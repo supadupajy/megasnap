@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
+import { blockedStore } from "@/utils/blocked-store";
 
 interface AuthContextType {
   session: Session | null;
@@ -172,6 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           fetchProfile(userId, initialSession.user.email);
           startLastSeenInterval(userId);
           registerVisibilityEvents(userId);
+          blockedStore.loadFromDB(userId);
         }
       } catch (error) {
         console.error("[AuthProvider] Auth init error:", error);
@@ -196,6 +198,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             fetchProfile(userId, currentSession.user.email);
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
+            blockedStore.loadFromDB(userId);
           } else if (event === "USER_UPDATED") {
             // 프로필 정보가 변경된 경우에만 재조회
             profileFetchingRef.current = null;

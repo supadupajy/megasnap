@@ -3,6 +3,7 @@ import { ChevronLeft, Lock, Globe, UserX, Trash2, ChevronRight, Eye, EyeOff } fr
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { blockedStore } from '@/utils/blocked-store';
 import { showSuccess, showError } from '@/utils/toast';
 import BottomNav from '@/components/BottomNav';
 import {
@@ -45,26 +46,21 @@ const PrivacySettings = () => {
   const fetchBlockedUsers = async () => {
     setLoadingBlocks(true);
     try {
-      const { data, error } = await supabase
-        .from('blocks')
-        .select('blocked_id, created_at')
-        .eq('blocker_id', user!.id)
-        .order('created_at', { ascending: false });
+      // DB에서 최신 차단 목록 재로드 후 프로필 조회
+      await blockedStore.loadFromDB(user!.id);
+      const ids = Array.from(blockedStore.getAll());
 
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const ids = data.map(b => b.blocked_id);
+      if (ids.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, nickname, avatar_url')
           .in('id', ids);
 
-        const merged: BlockedUser[] = data.map(b => ({
-          blocked_id: b.blocked_id,
-          created_at: b.created_at,
-          profile: profiles?.find(p => p.id === b.blocked_id)
-            ? { nickname: profiles.find(p => p.id === b.blocked_id)!.nickname, avatar_url: profiles.find(p => p.id === b.blocked_id)!.avatar_url }
+        const merged: BlockedUser[] = ids.map(id => ({
+          blocked_id: id,
+          created_at: '',
+          profile: profiles?.find(p => p.id === id)
+            ? { nickname: profiles.find(p => p.id === id)!.nickname, avatar_url: profiles.find(p => p.id === id)!.avatar_url }
             : null,
         }));
         setBlockedUsers(merged);
@@ -97,12 +93,7 @@ const PrivacySettings = () => {
   const handleUnblock = async () => {
     if (!unblockTarget) return;
     try {
-      const { error } = await supabase
-        .from('blocks')
-        .delete()
-        .eq('blocker_id', user!.id)
-        .eq('blocked_id', unblockTarget.blocked_id);
-      if (error) throw error;
+      await blockedStore.remove(user!.id, unblockTarget.blocked_id);
       setBlockedUsers(prev => prev.filter(b => b.blocked_id !== unblockTarget.blocked_id));
       showSuccess(`${unblockTarget.profile?.nickname ?? '사용자'} 님의 차단이 해제되었습니다.`);
     } catch (err: any) {
