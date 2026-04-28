@@ -498,6 +498,26 @@ const Index = () => {
 
   const hasNextMarkerPage = (markerPage + 1) * MARKERS_PER_PAGE < visibleMarkers.length;
 
+  // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
+  // 원본 좌표(분산 전) 기준으로 계산 → PostListOverlay에 전달되는 수와 일치
+  const visiblePostCount = useMemo(() => {
+    if (!mapData?.bounds) return visibleMarkers.filter(m => !m.isAd).length;
+    const { sw, ne } = mapData.bounds;
+    return allPosts.filter(p =>
+      !p.isAd &&
+      !p.content?.trim().startsWith('[AD]') &&
+      p.lat != null && p.lng != null &&
+      p.lat >= sw.lat && p.lat <= ne.lat &&
+      p.lng >= sw.lng && p.lng <= ne.lng &&
+      !blockedIds.has(p.user?.id) &&
+      (selectedCategories.includes('all') ||
+        (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
+        selectedCategories.includes(p.category || 'none') ||
+        (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
+        (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
+    ).length;
+  }, [allPosts, mapData?.bounds, blockedIds, selectedCategories, authUser, visibleMarkers]);
+
   // bounds나 카테고리가 바뀌면 페이지 리셋
   useEffect(() => {
     setMarkerPage(0);
@@ -970,18 +990,18 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">다른 포스팅</span>
                 </button>
                 <div className="relative">
-                  {visibleMarkers.length > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
+                  {visiblePostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => { if (visibleMarkers.length > 0 && currentZoom < 7) setIsPostListOpen(true); }}
-                    disabled={currentZoom >= 7 || visibleMarkers.length === 0}
-                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || visibleMarkers.length === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
+                    onClick={() => { if (visiblePostCount > 0 && currentZoom < 7) setIsPostListOpen(true); }}
+                    disabled={currentZoom >= 7 || visiblePostCount === 0}
+                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || visiblePostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {visibleMarkers.length > 0 && currentZoom < 7 && (
+                  {visiblePostCount > 0 && currentZoom < 7 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                      {visibleMarkers.length}
+                      {visiblePostCount}
                     </div>
                   )}
                 </div>
@@ -1032,7 +1052,24 @@ const Index = () => {
             key="post-list-overlay"
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
-            initialPosts={visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m)}
+            initialPosts={(() => {
+              if (!mapData?.bounds) return visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m);
+              const { sw, ne } = mapData.bounds;
+              // 원본 좌표(분산 전) 기준으로 bounds 필터링 → 분산으로 밀려난 포스트도 포함
+              return allPosts.filter(p =>
+                !p.isAd &&
+                !p.content?.trim().startsWith('[AD]') &&
+                p.lat != null && p.lng != null &&
+                p.lat >= sw.lat && p.lat <= ne.lat &&
+                p.lng >= sw.lng && p.lng <= ne.lng &&
+                !blockedIds.has(p.user?.id) &&
+                (selectedCategories.includes('all') ||
+                  (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
+                  selectedCategories.includes(p.category || 'none') ||
+                  (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
+                  (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
+              );
+            })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
             selectedCategories={selectedCategories}
