@@ -19,8 +19,8 @@ const Header = () => {
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
-        <div 
-          className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+        <div
+          className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform shrink-0"
           onClick={() => navigate('/')}
         >
           <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
