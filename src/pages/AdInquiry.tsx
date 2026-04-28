@@ -101,22 +101,22 @@ const AdInquiry = () => {
           <p className="text-sm text-white/80 font-medium leading-relaxed">
             실시간 위치 기반 플랫폼 ChoraSnap에서 타겟 고객에게 정확하게 도달하세요.
           </p>
-          // <div className="flex gap-4 mt-4">
-          //  <div className="text-center">
-          //    <p className="text-xl font-black">10만+</p>
-          //    <p className="text-[10px] text-white/70 font-bold">월간 사용자</p>
-          //  </div>
-          //  <div className="w-px bg-white/20" />
-          //  <div className="text-center">
-          //    <p className="text-xl font-black">98%</p>
-          //    <p className="text-[10px] text-white/70 font-bold">위치 정확도</p>
-          //  </div>
-          //  <div className="w-px bg-white/20" />
-          //  <div className="text-center">
-          //    <p className="text-xl font-black">3배</p>
-          //    <p className="text-[10px] text-white/70 font-bold">평균 CTR</p>
-          //  </div>
-          // </div>
+          <div className="flex gap-4 mt-4">
+            <div className="text-center">
+              <p className="text-xl font-black">10만+</p>
+              <p className="text-[10px] text-white/70 font-bold">월간 사용자</p>
+            </div>
+            <div className="w-px bg-white/20" />
+            <div className="text-center">
+              <p className="text-xl font-black">98%</p>
+              <p className="text-[10px] text-white/70 font-bold">위치 정확도</p>
+            </div>
+            <div className="w-px bg-white/20" />
+            <div className="text-center">
+              <p className="text-xl font-black">3배</p>
+              <p className="text-[10px] text-white/70 font-bold">평균 CTR</p>
+            </div>
+          </div>
         </div>
 
         {/* 광고 유형 선택 */}
