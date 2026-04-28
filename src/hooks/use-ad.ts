@@ -72,25 +72,59 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
     return RECRUITMENT_SLOT;
   }
 
-  const nextAvailable =
+  // next 광고가 있고, 이미 시작됐는지 확인
+  const nextStarted =
     !!ad.next_image_url &&
     (ad.next_start_date == null || new Date(ad.next_start_date) <= now);
 
-  if (currentExpired && nextAvailable) {
-    return {
-      image_url: ad.next_image_url!,
-      title: ad.next_title || '',
-      subtitle: ad.next_subtitle || '',
-      link_url: ad.next_link_url || '',
-      brand_name: ad.next_brand_name || '',
-      brand_logo_url: ad.next_brand_logo_url || '',
-      isNext: true,
-      isRecruitment: false,
-    };
+  // next 광고가 만료됐는지 확인
+  const nextExpired =
+    ad.next_end_date != null && new Date(ad.next_end_date) <= now;
+
+  // 현재 광고가 만료된 경우
+  if (currentExpired) {
+    // next 광고가 있고, 시작됐고, 아직 만료 안 됐으면 → next 광고 표시
+    if (nextStarted && !nextExpired) {
+      return {
+        image_url: ad.next_image_url!,
+        title: ad.next_title || '',
+        subtitle: ad.next_subtitle || '',
+        link_url: ad.next_link_url || '',
+        brand_name: ad.next_brand_name || '',
+        brand_logo_url: ad.next_brand_logo_url || '',
+        isNext: true,
+        isRecruitment: false,
+      };
+    }
+    // next도 없거나 만료됐으면 → 구인 슬롯
+    return RECRUITMENT_SLOT;
   }
 
-  // 만료됐는데 다음 광고도 없으면 구인 슬롯
-  if (currentExpired) {
+  // 현재 광고 기간이 없는 경우(end_date = null): next 광고가 있으면 next 상태 확인
+  if (ad.end_date == null && ad.next_image_url) {
+    // next가 시작됐고 아직 만료 안 됐으면 → next 광고 표시
+    if (nextStarted && !nextExpired) {
+      return {
+        image_url: ad.next_image_url!,
+        title: ad.next_title || '',
+        subtitle: ad.next_subtitle || '',
+        link_url: ad.next_link_url || '',
+        brand_name: ad.next_brand_name || '',
+        brand_logo_url: ad.next_brand_logo_url || '',
+        isNext: true,
+        isRecruitment: false,
+      };
+    }
+    // next가 만료됐으면 → 구인 슬롯
+    if (nextExpired) {
+      return RECRUITMENT_SLOT;
+    }
+    // next가 아직 시작 전이면 → 현재 광고 표시 (예약 대기 중)
+  }
+
+  // 현재 광고가 유효한 경우
+  // image_url이 없으면 구인 슬롯
+  if (!ad.image_url) {
     return RECRUITMENT_SLOT;
   }
 
