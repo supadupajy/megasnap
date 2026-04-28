@@ -82,13 +82,10 @@ const AnimatedRoutes = () => {
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
 
-  // App 레벨 Header/BottomNav를 숨길 페이지
-  // settings 계열은 자체 fixed 타이틀 바를 사용하므로 App Header 숨김
+  // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
     location.pathname === "/login" ||
-    location.pathname === "/splash" ||
-    location.pathname === "/settings" ||
-    location.pathname.startsWith("/settings/");
+    location.pathname === "/splash";
 
   // BottomNav는 login/splash에서만 숨김 (settings 계열에서는 보여야 함)
   const hideBottomNav =

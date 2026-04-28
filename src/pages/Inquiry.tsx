@@ -22,7 +22,7 @@ const Inquiry = () => {
 
   if (submitted) {
     return (
-      <div className="h-screen bg-gray-50 flex flex-col">
+      <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
           <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate('/settings'); }} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]" style={{ pointerEvents: 'auto' }}>
               <ChevronLeft className="w-6 h-6 text-gray-400" />
@@ -52,7 +52,7 @@ const Inquiry = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
       <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate('/settings'); }} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]" style={{ pointerEvents: 'auto' }}>
           <ChevronLeft className="w-6 h-6 text-gray-400" />

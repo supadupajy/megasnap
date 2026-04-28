@@ -312,12 +312,12 @@ const Profile = () => {
     <div className="h-screen bg-white flex flex-col">
       {/* 상단 고정 헤더 */}
       <div
-        className="fixed left-0 right-0 z-40 px-4 bg-white border-b border-gray-100 flex items-center h-[56px]"
+        className="fixed left-0 right-0 z-40 px-4 bg-gray-50 border-b border-gray-100 flex items-center h-[56px]"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
               <UserIcon className="w-6 h-6 text-indigo-600" />
             </div>
             <div>

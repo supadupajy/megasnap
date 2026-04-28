@@ -234,7 +234,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 relative flex flex-col">
+    <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 relative flex flex-col">
       {/* 타이틀 바 */}
       <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
