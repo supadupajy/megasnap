@@ -416,10 +416,9 @@ const AdminAds = () => {
   }, []);
 
   const handleSave = async (updated: AdData) => {
-    const { error } = await supabase
+    const { error, data, count, status, statusText } = await supabase
       .from('ads')
-      .upsert({
-        id: updated.id,
+      .update({
         label: updated.label,
         image_url: updated.image_url,
         title: updated.title,
@@ -429,11 +428,21 @@ const AdminAds = () => {
         brand_logo_url: updated.brand_logo_url,
         is_active: updated.is_active,
         updated_at: new Date().toISOString(),
-      });
+      })
+      .eq('id', updated.id)
+      .select();
+
+    console.log('[AdminAds] save result:', { error, data, count, status, statusText, updated_id: updated.id, is_active: updated.is_active });
 
     if (error) {
       showError('저장에 실패했습니다: ' + error.message);
       throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('[AdminAds] update returned 0 rows — RLS blocked or row not found');
+      showError('저장 권한이 없거나 해당 광고를 찾을 수 없습니다.');
+      throw new Error('0 rows updated');
     }
 
     setAds(prev => prev.map(a => (a.id === updated.id ? updated : a)));
