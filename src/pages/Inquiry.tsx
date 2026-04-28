@@ -3,7 +3,7 @@ import { ChevronLeft, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 
-const categories = ['계정/로그인', '포스팅', '결제/구독', '버그/오류', '기타'];
+const categories = ['계정/로그인', '포스팅', '버그/오류', '기타'];
 
 const Inquiry = () => {
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ const Inquiry = () => {
           </div>
 
           <button
-            onClick={handleSubmit}
+            onPointerDown={handleSubmit}
             className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-100"
           >
             <Send className="w-4 h-4" />
