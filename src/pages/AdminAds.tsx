@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { invalidateAdCache } from '@/hooks/use-ad';
 
 interface AdData {
   id: string;
@@ -436,6 +437,7 @@ const AdminAds = () => {
     }
 
     setAds(prev => prev.map(a => (a.id === updated.id ? updated : a)));
+    invalidateAdCache(updated.id, updated);
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
   };
 

@@ -19,6 +19,7 @@ const SearchAdBanner = () => {
   const subtitle = ad.subtitle || 'Summit Series 2026';
   const linkUrl = ad.link_url || 'https://www.thenorthface.com';
   const brandName = ad.brand_name || 'The North Face';
+  const brandLogoUrl = ad.brand_logo_url;
 
   return (
     <motion.div 
@@ -38,9 +39,15 @@ const SearchAdBanner = () => {
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent flex flex-col justify-center px-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="bg-white/90 text-black text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm">AD</span>
-          <div className="flex items-center gap-1">
+          {brandLogoUrl ? (
+            <img
+              src={brandLogoUrl}
+              alt={brandName}
+              className="h-4 object-contain"
+            />
+          ) : (
             <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{brandName}</span>
-          </div>
+          )}
         </div>
         
         <h3 className="text-white font-black text-xl leading-tight mb-1 tracking-tighter uppercase italic drop-shadow-lg">
