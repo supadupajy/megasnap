@@ -64,7 +64,7 @@ const ConnectedAccounts = () => {
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
         <div className="flex-1 flex justify-center -ml-10">
-          <h1 className="text-[17px] font-black text-gray-900">연결된 소셜 계정</h1>
+          <h1 className="text-[17px] font-black text-gray-900">SNS 계정 연동</h1>
         </div>
       </div>
 
