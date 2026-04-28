@@ -237,13 +237,14 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
 );
 
 // ─── 기간 상태 뱃지 (시간 단위) ───────────────────────────────────────────────
-const PeriodStatusBadge = ({ startDate, endDate, isNext }: { startDate: string; endDate: string; isNext: boolean }) => {
+const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate: string; endDate: string; isNext: boolean; onReset?: () => void }) => {
   const now = new Date();
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
 
   let label = '';
   let colorClass = '';
+  let isExpired = false;
 
   const formatRemaining = (ms: number): string => {
     const totalMinutes = Math.ceil(ms / 60000);
@@ -267,6 +268,7 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext }: { startDate: string; 
   if (end && end <= now) {
     label = '기간 만료됨';
     colorClass = 'bg-red-50 text-red-600 border-red-100';
+    isExpired = true;
   } else if (start && start > now) {
     label = formatUntil(start.getTime() - now.getTime());
     colorClass = 'bg-amber-50 text-amber-600 border-amber-100';
@@ -281,7 +283,16 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext }: { startDate: string; 
   return (
     <div className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-bold', colorClass)}>
       <Clock className="w-3 h-3 shrink-0" />
-      <span>{isNext ? '예정 광고 · ' : '현재 광고 · '}{label}</span>
+      <span className="flex-1">{isNext ? '예정 광고 · ' : '현재 광고 · '}{label}</span>
+      {isExpired && !isNext && onReset && (
+        <button
+          onClick={e => { e.stopPropagation(); onReset(); }}
+          className="ml-auto shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 text-[10px] font-black transition-colors"
+        >
+          <X className="w-3 h-3" />
+          데이터 초기화
+        </button>
+      )}
     </div>
   );
 };
@@ -313,6 +324,36 @@ const AdCard = ({
   const Icon = AD_ICONS[initialAd.id] || Tv2;
   const colors = AD_COLORS[initialAd.id] || AD_COLORS.splash;
 
+  // 다음 예정 광고 시작 시 현재 광고로 자동 전환
+  useEffect(() => {
+    if (initialAd.id === 'map_marker') return;
+    const nextStart = form.next_start_date ? new Date(form.next_start_date) : null;
+    if (!nextStart || !form.next_image_url) return;
+    const now = new Date();
+    if (nextStart <= now) {
+      setForm(f => ({
+        ...f,
+        image_url: f.next_image_url ?? f.image_url,
+        title: f.next_title ?? f.title,
+        subtitle: f.next_subtitle ?? f.subtitle,
+        link_url: f.next_link_url ?? f.link_url,
+        brand_name: f.next_brand_name ?? f.brand_name,
+        brand_logo_url: f.next_brand_logo_url ?? f.brand_logo_url,
+        start_date: f.next_start_date ?? f.start_date,
+        end_date: f.next_end_date ?? f.end_date,
+        next_image_url: null,
+        next_title: null,
+        next_subtitle: null,
+        next_link_url: null,
+        next_brand_name: null,
+        next_brand_logo_url: null,
+        next_start_date: null,
+        next_end_date: null,
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (form.lat != null && form.lng != null) {
       setLocationLabel(null);
@@ -326,6 +367,21 @@ const AdCard = ({
 
   const handleChange = (key: string, value: string) => {
     setForm(f => ({ ...f, [key]: value || null }));
+  };
+
+  // 현재 광고 데이터 초기화
+  const handleResetCurrentSlot = () => {
+    setForm(f => ({
+      ...f,
+      image_url: '',
+      title: '',
+      subtitle: '',
+      link_url: '',
+      brand_name: '',
+      brand_logo_url: '',
+      start_date: null,
+      end_date: null,
+    }));
   };
 
   const handleSave = async () => {
@@ -548,6 +604,7 @@ const AdCard = ({
                 fieldPrefix=""
                 accentColor={colors.accent}
                 onChange={handleChange}
+                onReset={handleResetCurrentSlot}
               />
             ) : (
               <>
@@ -609,6 +666,7 @@ const AdSlotForm = ({
   fieldPrefix,
   accentColor,
   onChange,
+  onReset,
 }: {
   slot: {
     image_url: string;
@@ -624,6 +682,7 @@ const AdSlotForm = ({
   fieldPrefix: string;
   accentColor: string;
   onChange: (key: string, value: string) => void;
+  onReset?: () => void;
 }) => {
   const isNext = fieldPrefix === 'next_';
   return (
@@ -645,7 +704,7 @@ const AdSlotForm = ({
 
       {/* 기간 상태 뱃지 */}
       {(slot.start_date || slot.end_date) && (
-        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} />
+        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} onReset={!isNext ? onReset : undefined} />
       )}
 
       <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
