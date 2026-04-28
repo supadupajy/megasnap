@@ -150,26 +150,20 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    <div className={`relative bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
+    <div className={`bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
       {/* Header: hideAppChrome이 아닐 때 또는 write 페이지일 때 표시 */}
       {(!hideAppChrome || isWritePage) && session && (
         <Header />
       )}
 
-      <main className={`relative ${isChatPage ? "h-full" : ""}`}>
+      <main className={isChatPage ? "h-full" : ""}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname === '/write' ? '/' : location.pathname}
             initial={false}
-            animate={{ 
-              opacity: 1, 
-              x: 0,
-              scale: 1
-            }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 1 }}
-            transition={{ 
-              duration: 0
-            }}
+            transition={{ duration: 0 }}
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
             <Routes location={location}>

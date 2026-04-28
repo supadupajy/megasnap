@@ -78,7 +78,7 @@ const AdInquiry = () => {
   if (submitted) {
     return (
       <div className="h-screen bg-gray-50 flex flex-col">
-        <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+        <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
           <BackButton onPress={goBack} />
           <div className="flex-1 flex justify-center -ml-10">
             <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>
@@ -108,7 +108,7 @@ const AdInquiry = () => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <BackButton onPress={goBack} />
         <div className="flex-1 flex justify-center -ml-10">
           <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 문의</h1>

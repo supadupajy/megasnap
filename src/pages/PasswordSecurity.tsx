@@ -105,7 +105,7 @@ const PasswordSecurity = () => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* 서브 헤더 */}
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={(e) => {
             e.preventDefault();
