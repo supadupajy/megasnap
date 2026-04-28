@@ -27,7 +27,7 @@ const BackButton = ({ onPress }: { onPress: () => void }) => (
 
 const AdInquiry = () => {
   const navigate = useNavigate();
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [company, setCompany] = useState('');
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
@@ -37,9 +37,15 @@ const AdInquiry = () => {
 
   const goBack = () => navigate('/settings');
 
+  const toggleType = (id: string) => {
+    setSelectedTypes(prev =>
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedType) { showError('광고 유형을 선택해주세요.'); return; }
+    if (selectedTypes.length === 0) { showError('광고 유형을 선택해주세요.'); return; }
     if (!company.trim()) { showError('회사/브랜드명을 입력해주세요.'); return; }
     if (!contact.trim()) { showError('연락처(이메일 또는 전화번호)를 입력해주세요.'); return; }
 
@@ -47,7 +53,7 @@ const AdInquiry = () => {
     try {
       const { data, error } = await supabase.functions.invoke('send-ad-inquiry', {
         body: {
-          adType: selectedType,
+          adType: selectedTypes.join(', '),
           company: company.trim(),
           manager: manager.trim(),
           contact: contact.trim(),
@@ -154,28 +160,39 @@ const AdInquiry = () => {
           <div>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">광고 유형 선택</p>
             <div className="grid grid-cols-2 gap-3">
-              {AD_TYPES.map(({ id, icon: Icon, label, desc }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setSelectedType(id)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${
-                    selectedType === id
-                      ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
-                      : 'border-gray-100 bg-white hover:border-indigo-200'
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
-                    selectedType === id ? 'bg-indigo-600' : 'bg-gray-100'
-                  }`}>
-                    <Icon className={`w-4 h-4 ${selectedType === id ? 'text-white' : 'text-gray-500'}`} />
-                  </div>
-                  <p className={`text-xs font-black leading-tight mb-1 ${selectedType === id ? 'text-indigo-700' : 'text-gray-800'}`}>
-                    {label}
-                  </p>
-                  <p className="text-[10px] text-gray-400 font-medium leading-tight">{desc}</p>
-                </button>
-              ))}
+              {AD_TYPES.map(({ id, icon: Icon, label, desc }) => {
+                const isSelected = selectedTypes.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleType(id)}
+                    className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 relative ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                        : 'border-gray-100 bg-white hover:border-indigo-200'
+                    }`}
+                  >
+                    {/* 선택 체크 뱃지 */}
+                    {isSelected && (
+                      <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    )}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${
+                      isSelected ? 'bg-indigo-600' : 'bg-gray-100'
+                    }`}>
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                    </div>
+                    <p className={`text-xs font-black leading-tight mb-1 ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>
+                      {label}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-medium leading-tight">{desc}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">문의 정보 입력</p>
