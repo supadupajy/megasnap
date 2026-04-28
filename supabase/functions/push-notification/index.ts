@@ -6,24 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// [FCM v1] 서비스 계정 정보 - 제공해주신 정보를 기반으로 구성
-const FB_SERVICE_ACCOUNT = {
-  "project_id": "gen-lang-client-0536770943",
-  "client_email": "firebase-adminsdk-fbsvc@gen-lang-client-0536770943.iam.gserviceaccount.com",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCccimy/uiZWoey\n+iQR2ClnaCGl7ixBzFRt7eq16gFahzNLEL297Sw8UCnbt2Ub1wgRIHGs/m/qFJ5r\nmxl7foqed4R7AVg9R9WV05j7lMbMmM8gfMHJ+HxwZrnZnbar/uQqB82lPvbo54nm\npCvkqUNqAWP/PEt/huiRQf8zz/MLWElo+QadsCksCVlq7Xr5SzSHNX5411nuGVc/\negNsctfrOpOZxsk+pQaxNQ+opM22QbxlkPG3rpOjm3bFzOn8B0GCJoYVNKmTNw74\nabVk5gBFNLBaQ2AV5ahf8KX+MHKSRGwsVtKc/6utCXMdDERGcAjOTlJ0Rssvt07Q\notj3VBqPAgMBAAECggEAF/xO1VvMozpkhLW3famOYNrFEeYWu03NrKml6xcXTF8J\n0lqc5KIYvp8saRHQkCNN4CZWbLH5IZfgrq8cXzky8oHGJNUQx3Bx2CNAGLj3fnB3\n4nYOK142t0Wgp93MycjuCAhN6KW4gFPYv4JFx9cwTUUs+iRZ5Ob1ACmbVsEX9RHq\nPe15Qps0Dba9JHdJYPWbujILBs3cuSYsJrWN+fe2J3CqOzdioe493Qvrf+N/1sge\nScGgMkOEE7Y2gMm+3FeNdPQEMsv+Ltns9NskLKbe6zCdhk8KzU4kmlmtnWUuAZXZ\ngS8LNR5BrsqCm/ClpEJWCXSWGpuWjsi0ZjeW1QF7qQKBgQDNWDLy6I6mGsEZI6nW\nCzaQviU7oT5Vd1uAm7yMW5uvWPDvZ+zjuMu0dyjQBi0I7NkhB2AWVLiFVot/LGhG\nZ6UW7Odk8hkDKhnsvhXwzJbOx8uE+K39CPo7SkA6NH2y9N7i6jttqqnQQpDLCita\nAKEXRuUT0OFELV6XEgcxDebOpwKBgQDDCfLXbbIGK+zGiM773it8EwHEUlmVri4t\nNXT/DxlSdCBMexXHPQBsMcGIZG7Q2hs7d5ptQ7CZGZ5vdxw2rxHcMwq1ZRdr0sgV\niFWitLDaewPXerl5Tztr2WV/zr1Zk6AMc+gy5AWWzVWTYNbhAEQx3L85LlYwh/oW\nWeFrAy552QKBgBrRTP4aTx70WYmd9b1Fg5/NpXEvMsPYrbOTI0G1aRSyaezqRq7K\n4Je2BDd+xvzmacj9fJgOAncvgVJfi1K+kHn5AJNXZtrZ8b7QaG8lWQCyaSr5i0eD\nl6KMpOy1FEF952n9Kzu8UScoul45+sVrVZ6DnMFEw1azEipqqVPHu//7AoGAHZQd\nqwQs0njI4NcQpOvtplRvmSlwAp42zI5l3uSYT4Pi/hZQmDWtIbtuAVRR5gSdyqf5\n2IZCewWCnJ7wvW5RhBaNkjLxmV2PEIzrh9BlXcz4KS6ogDg+571Bgl+FIdeclybg\n2Q7xtgwP5VjzXY4fyXwT2AUp9xQ4HjmlUQhbfQkCgYATRrBb8JUkyJ1SaKF3lo/q\nToSLpCM25qNb23/APGSF+vtAo2C34QeJlU3F7ujdZo7P7oTAsmyYVBg8izI9Fl3+\nnZcU8FB8mKikuIoJTVOv2l9WIzUkwcvKhb2pequl9cFuza68+ZrcT04hepWe2b/H\nNCJoFGy9i3NhOASWo4CTwg==\n-----END PRIVATE KEY-----\n"
-};
+/**
+ * Firebase 서비스 계정 정보를 Supabase Secret에서 읽어옵니다.
+ * Secret 이름: FIREBASE_SERVICE_ACCOUNT
+ * Secret 값 형식 (JSON 문자열):
+ * {
+ *   "project_id": "...",
+ *   "client_email": "...",
+ *   "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+ * }
+ */
+function getFirebaseServiceAccount() {
+  const raw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+  if (!raw) {
+    throw new Error('[push-notification] FIREBASE_SERVICE_ACCOUNT secret is not set.');
+  }
+  try {
+    return JSON.parse(raw) as {
+      project_id: string;
+      client_email: string;
+      private_key: string;
+    };
+  } catch {
+    throw new Error('[push-notification] FIREBASE_SERVICE_ACCOUNT secret is not valid JSON.');
+  }
+}
 
 /**
  * Google OAuth2 Access Token 획득 (FCM v1 필수)
- * 에지 펑션 라이브러리 제약으로 인해 가장 순수한 Deno 방식으로 구현 시도
+ * Web Crypto API를 활용한 JWT 서명 로직
  */
-async function getAccessToken(): Promise<string> {
-  // Web Crypto API를 활용한 JWT 서명 로직
+async function getAccessToken(serviceAccount: { project_id: string; client_email: string; private_key: string }): Promise<string> {
   const header = { alg: "RS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
   const payload = {
-    iss: FB_SERVICE_ACCOUNT.client_email,
-    sub: FB_SERVICE_ACCOUNT.client_email,
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
     exp: now + 3600,
@@ -37,9 +55,9 @@ async function getAccessToken(): Promise<string> {
   // Private Key 파싱
   const pemHeader = "-----BEGIN PRIVATE KEY-----";
   const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = FB_SERVICE_ACCOUNT.private_key.substring(
-    FB_SERVICE_ACCOUNT.private_key.indexOf(pemHeader) + pemHeader.length,
-    FB_SERVICE_ACCOUNT.private_key.indexOf(pemFooter)
+  const pemContents = serviceAccount.private_key.substring(
+    serviceAccount.private_key.indexOf(pemHeader) + pemHeader.length,
+    serviceAccount.private_key.indexOf(pemFooter)
   ).replace(/\s/g, "");
 
   const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
@@ -64,7 +82,6 @@ async function getAccessToken(): Promise<string> {
 
   const signedJwt = `${unsignedToken}.${sSignature}`;
 
-  // 엑세스 토큰 요청
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -87,6 +104,9 @@ serve(async (req) => {
   }
 
   try {
+    // Secret에서 Firebase 서비스 계정 로드
+    const FB_SERVICE_ACCOUNT = getFirebaseServiceAccount();
+
     const payload = await req.json()
     // 트리거(record) 또는 직접 호출({chatId, ...}) 모두 대응
     const record = payload.record || payload;
@@ -129,7 +149,7 @@ serve(async (req) => {
     const body = content;
 
     // 3. OAuth2 토큰 생성 (FCM v1용)
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken(FB_SERVICE_ACCOUNT);
 
     // 4. FCM v1 전송 페이로드
     const fcmV1Payload = {
