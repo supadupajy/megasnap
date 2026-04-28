@@ -273,7 +273,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* ── 계정 설정 ── */}
         <div className="px-4 pt-5 pb-1">

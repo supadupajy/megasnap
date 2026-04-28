@@ -309,7 +309,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar" ref={scrollRef}>
+    <div className="h-screen overflow-y-auto bg-white no-scrollbar" ref={scrollRef} style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 상단 고정 헤더 */}
       <div className="sticky top-0 z-40 bg-white pt-[64px]">
         <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
@@ -331,7 +331,7 @@ const Profile = () => {
       </div>
 
       <div
-        className="bg-white pb-28 no-scrollbar"
+        className="bg-white no-scrollbar"
       >
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />

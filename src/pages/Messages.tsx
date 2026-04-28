@@ -207,7 +207,8 @@ const Messages = () => {
 
   return (
     <div
-      className="min-h-screen bg-white pb-24 no-scrollbar"
+      className="min-h-screen bg-white no-scrollbar"
+      style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">

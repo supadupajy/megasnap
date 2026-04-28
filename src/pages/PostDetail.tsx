@@ -248,7 +248,7 @@ const PostDetail = () => {
         </div>
 
         {/* Scrollable Content Area */}
-        <main className="pb-28">
+        <main style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}>
           {allPosts.map((p) => (
             <div key={p.id} id={`post-${p.id}`} className="scroll-mt-[144px]">
               <PostItem

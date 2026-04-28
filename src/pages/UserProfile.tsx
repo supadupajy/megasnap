@@ -318,8 +318,8 @@ const UserProfile = () => {
       {/* 스크롤 영역 */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-white pb-28 no-scrollbar"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)' }}
+        className="flex-1 overflow-y-auto bg-white no-scrollbar"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {loading ? (
           <ProfileSkeleton />

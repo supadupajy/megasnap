@@ -368,7 +368,7 @@ const Write = () => {
             </div>
           </div>
 
-          <div className="px-5 py-6 space-y-8 pb-32">
+          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -491,7 +491,7 @@ const Write = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-5 pb-20">
+              <div className="space-y-5">
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>

@@ -205,7 +205,7 @@ const Popular = () => {
   }, []);
 
   return (
-    <div className="h-screen overflow-y-auto bg-white pb-32 no-scrollbar">
+    <div className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 고정 상단 헤더 */}
       <div className="sticky top-0 z-40 bg-white pt-[64px]">
         <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
