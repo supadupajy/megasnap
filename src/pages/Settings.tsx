@@ -62,7 +62,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor }: { 
+const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default", iconBg, iconColor, wip }: { 
   icon: any, 
   label: string,
   sublabel?: string,
@@ -70,6 +70,7 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
   variant?: "default" | "danger",
   iconBg?: string,
   iconColor?: string,
+  wip?: boolean,
 }) => (
   <button 
     onClick={onClick}
@@ -84,10 +85,15 @@ const SettingItem = ({ icon: Icon, label, sublabel, onClick, variant = "default"
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex flex-col items-start text-left">
-        <span className={cn(
-          "text-sm font-bold",
-          variant === "danger" ? "text-red-500" : "text-gray-800"
-        )}>{label}</span>
+        <div className="flex items-center gap-1.5">
+          <span className={cn(
+            "text-sm font-bold",
+            variant === "danger" ? "text-red-500" : "text-gray-800"
+          )}>{label}</span>
+          {wip && (
+            <span className="text-[9px] font-black text-amber-500 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full leading-none">개발 중</span>
+          )}
+        </div>
         {sublabel && <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">{sublabel}</span>}
       </div>
     </div>
@@ -264,6 +270,7 @@ const Settings = () => {
               iconBg="bg-sky-50"
               iconColor="text-sky-500"
               onClick={() => navigate('/settings/connected-accounts')}
+              wip
             />
             <SettingItem
               icon={Smartphone}
@@ -272,6 +279,7 @@ const Settings = () => {
               iconBg="bg-violet-50"
               iconColor="text-violet-500"
               onClick={() => navigate('/settings/devices')}
+              wip
             />
             <SettingItem
               icon={Bell}
@@ -295,6 +303,7 @@ const Settings = () => {
               iconBg="bg-emerald-50"
               iconColor="text-emerald-500"
               onClick={() => navigate('/settings/subscription')}
+              wip
             />
             <SettingItem
               icon={Receipt}
@@ -303,6 +312,7 @@ const Settings = () => {
               iconBg="bg-teal-50"
               iconColor="text-teal-500"
               onClick={() => navigate('/settings/billing')}
+              wip
             />
           </div>
         </div>
@@ -326,6 +336,7 @@ const Settings = () => {
               iconBg="bg-slate-100"
               iconColor="text-slate-500"
               onClick={() => navigate('/settings/appearance')}
+              wip
             />
             <SettingItem
               icon={HardDrive}
