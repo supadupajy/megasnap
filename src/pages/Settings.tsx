@@ -27,6 +27,7 @@ import {
   BookOpen,
   Link2,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
@@ -115,6 +116,7 @@ const Settings = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
   const [bugContent, setBugContent] = useState('');
+  const [isBugSending, setIsBugSending] = useState(false);
 
   React.useEffect(() => {
     if (user) {
@@ -218,17 +220,30 @@ const Settings = () => {
     }
   };
 
-  const handleBugReport = () => {
+  const handleBugReport = async () => {
     if (!bugContent.trim()) {
       showError('버그 내용을 입력해주세요.');
       return;
     }
-    const subject = encodeURIComponent('[Chora 버그 신고]');
-    const body = encodeURIComponent(bugContent.trim());
-    window.location.href = `mailto:chorasnap@gmail.com?subject=${subject}&body=${body}`;
-    setShowBugReport(false);
-    setBugContent('');
-    showSuccess('이메일 앱이 열립니다. 전송해주세요!');
+    setIsBugSending(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-inquiry', {
+        body: {
+          category: '버그/오류',
+          title: '[버그 신고]',
+          content: bugContent.trim(),
+        },
+      });
+      if (error) throw error;
+      setShowBugReport(false);
+      setBugContent('');
+      showSuccess('버그 신고가 접수되었습니다. 빠르게 확인하겠습니다!');
+    } catch (err: any) {
+      console.error('[BugReport] 전송 실패:', err);
+      showError('전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsBugSending(false);
+    }
   };
 
   return (
@@ -540,7 +555,7 @@ const Settings = () => {
       </div>
 
       {/* 버그 신고 다이얼로그 */}
-      <Dialog open={showBugReport} onOpenChange={(open) => { setShowBugReport(open); if (!open) setBugContent(''); }}>
+      <Dialog open={showBugReport} onOpenChange={(open) => { if (!isBugSending) { setShowBugReport(open); if (!open) setBugContent(''); } }}>
         <DialogContent className="rounded-[32px] w-[90%] max-w-[360px] p-6 border-none shadow-2xl">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-center text-xl font-black text-gray-900">
@@ -561,15 +576,20 @@ const Settings = () => {
           <DialogFooter className="flex-row gap-3 mt-4 sm:justify-center">
             <button
               onClick={() => { setShowBugReport(false); setBugContent(''); }}
-              className="flex-1 h-12 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 active:scale-95 transition-all"
+              disabled={isBugSending}
+              className="flex-1 h-12 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 active:scale-95 transition-all disabled:opacity-50"
             >
               취소
             </button>
             <button
               onClick={handleBugReport}
-              className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-100 active:scale-95 transition-all"
+              disabled={isBugSending}
+              className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-100 active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              보내기
+              {isBugSending
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> 전송 중...</>
+                : '보내기'
+              }
             </button>
           </DialogFooter>
         </DialogContent>
