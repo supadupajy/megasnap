@@ -463,78 +463,83 @@ const AdCard = ({
       {/* 편집 폼 */}
       {isExpanded && (
         <div className="border-t border-gray-50">
-          {/* 탭 */}
-          <div className="flex px-4 pt-3 gap-2">
-            <button
-              onClick={() => setActiveTab('current')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
-                activeTab === 'current'
-                  ? 'bg-gray-900 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              )}
-            >
-              <Eye className="w-3.5 h-3.5" />
-              현재 광고
-            </button>
-            <button
-              onClick={() => setActiveTab('next')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
-                activeTab === 'next'
-                  ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
-                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              )}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              다음 예정
-            </button>
-          </div>
+          {/* 탭 — map_marker는 단일 슬롯이므로 탭 없음 */}
+          {initialAd.id !== 'map_marker' && (
+            <div className="flex px-4 pt-3 gap-2">
+              <button
+                onClick={() => setActiveTab('current')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
+                  activeTab === 'current'
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                )}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                현재 광고
+              </button>
+              <button
+                onClick={() => setActiveTab('next')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
+                  activeTab === 'next'
+                    ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                다음 예정
+              </button>
+            </div>
+          )}
 
           <div className="px-4 pb-4 pt-3 space-y-3">
-            {activeTab === 'current' ? (
+            {/* map_marker: 위치 + 단일 슬롯 (기간 설정 없음) */}
+            {initialAd.id === 'map_marker' ? (
               <>
-                {/* map_marker 위치 선택 */}
-                {initialAd.id === 'map_marker' && (
-                  <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <MapPin className="w-3 h-3 text-gray-400" />
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
-                    </div>
-                    <button
-                      onClick={() => onSelectLocation(initialAd.id)}
-                      className={cn(
-                        'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
-                        hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
-                      )}
-                    >
-                      <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
-                        <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
-                      </div>
-                      <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                        {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '지도에서 위치 선택'}
-                      </span>
-                      {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
-                    </button>
+                <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <MapPin className="w-3 h-3 text-gray-400" />
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
                   </div>
-                )}
-                <AdSlotForm
-                  slot={currentSlot}
-                  adId={initialAd.id}
-                  fieldPrefix=""
-                  accentColor={colors.accent}
-                  onChange={handleChange}
-                />
+                  <button
+                    onClick={() => onSelectLocation(initialAd.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
+                      hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
+                    )}
+                  >
+                    <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
+                      <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
+                    </div>
+                    <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
+                      {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '지도에서 위치 선택'}
+                    </span>
+                    {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
+                  </button>
+                </div>
+                <FieldRow icon={Type} label="브랜드명" value={form.brand_name || ''} placeholder="브랜드 이름" onChange={v => handleChange('brand_name', v)} />
+                <FieldRow icon={Type} label="설명" value={form.title || ''} placeholder="광고 설명 문구" onChange={v => handleChange('title', v)} />
+                <FieldRow icon={Link} label="랜딩 URL" value={form.link_url || ''} placeholder="https://example.com" onChange={v => handleChange('link_url', v)} />
+                <ImageUploadField label="배너 이미지" value={form.image_url || ''} onChange={v => handleChange('image_url', v)} adId={initialAd.id} fieldKey="banner" previewType="banner" />
+                <ImageUploadField label="브랜드 로고" value={form.brand_logo_url || ''} onChange={v => handleChange('brand_logo_url', v)} adId={initialAd.id} fieldKey="logo" previewType="logo" />
               </>
+            ) : activeTab === 'current' ? (
+              <AdSlotForm
+                slot={currentSlot}
+                adId={initialAd.id}
+                fieldPrefix=""
+                accentColor={colors.accent}
+                onChange={handleChange}
+              />
             ) : (
               <>
-                {/* 다음 광고 안내 */}
                 <div className="bg-violet-50 rounded-2xl p-3 flex items-start gap-2.5">
                   <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[11px] font-black text-violet-700">다음 예정 광고</p>
                     <p className="text-[10px] text-violet-500 font-medium mt-0.5 leading-relaxed">
-                      현재 광고 종료일이 지나면 자동으로 이 광고로 전환됩니다. 미리 준비해두세요.
+                      현재 광고 종료 일시가 지나면 자동으로 이 광고로 전환됩니다.
                     </p>
                   </div>
                 </div>
@@ -545,7 +550,6 @@ const AdCard = ({
                   accentColor="bg-violet-600"
                   onChange={handleChange}
                 />
-                {/* 다음 광고 초기화 버튼 */}
                 {hasNextAd && (
                   <button
                     onClick={() => setForm(f => ({
