@@ -22,6 +22,7 @@ import {
   Navigation2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -462,12 +463,14 @@ const AdminAds = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      {/* 헤더 */}
-      <div
-        className="fixed left-0 right-0 z-[60] h-14 bg-white flex items-center px-4 border-b border-gray-100"
-        style={{ top: 'env(safe-area-inset-top, 0px)' }}
-      >
+    <div className="h-screen bg-white flex flex-col">
+      {/* 전역 Header 자리 (Settings.tsx와 동일한 방식) */}
+      <div className="flex-none h-16">
+        <Header />
+      </div>
+
+      {/* 페이지 자체 헤더 (인라인, fixed 아님) */}
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
         <button
           onClick={() => navigate('/settings')}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer"
@@ -480,9 +483,8 @@ const AdminAds = () => {
       </div>
 
       <div
-        className="flex-1 overflow-y-auto no-scrollbar"
+        className="flex-1 overflow-y-auto no-scrollbar bg-gray-50"
         style={{
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
           paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))',
         }}
       >
