@@ -154,18 +154,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (data) {
         setProfile(data);
       }
-
-      // admin 여부 확인
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
-      setIsAdmin(roleData?.role === "admin");
     } catch (err) {
       console.error("[AuthProvider] Profile fetch error:", err);
     } finally {
       profileFetchingRef.current = null;
+    }
+  };
+
+  // admin 여부는 profileFetchingRef 가드와 무관하게 독립적으로 조회
+  const fetchIsAdmin = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+      setIsAdmin(data?.role === "admin");
+    } catch {
+      setIsAdmin(false);
     }
   };
 
@@ -181,6 +187,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (initialSession?.user) {
           const userId = initialSession.user.id;
           fetchProfile(userId, initialSession.user.email);
+          fetchIsAdmin(userId);
           startLastSeenInterval(userId);
           registerVisibilityEvents(userId);
           blockedStore.loadFromDB(userId);
@@ -206,6 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // 프로필은 유저가 바뀌었을 때만 새로 fetch (TOKEN_REFRESHED 등에서 중복 방지)
           if (currentUserIdRef.current !== userId) {
             fetchProfile(userId, currentSession.user.email);
+            fetchIsAdmin(userId);
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
             blockedStore.loadFromDB(userId);
@@ -213,6 +221,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // 프로필 정보가 변경된 경우에만 재조회
             profileFetchingRef.current = null;
             fetchProfile(userId, currentSession.user.email);
+            fetchIsAdmin(userId);
           }
         } else {
           setProfile(null);
