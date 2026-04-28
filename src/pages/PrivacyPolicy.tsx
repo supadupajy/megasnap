@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
 const sections = [
   {
     title: '1. 수집하는 개인정보 항목',
@@ -32,9 +33,21 @@ const PrivacyPolicy = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
-      <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
-        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate('/settings'); }} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]" style={{ pointerEvents: 'auto' }}>
+    <div
+      className="fixed bg-gray-50 flex flex-col"
+      style={{
+        top: 'calc(64px + env(safe-area-inset-top, 0px))',
+        left: 0,
+        right: 0,
+        bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      {/* 서브 헤더 */}
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+        <button
+          onClick={() => navigate('/settings')}
+          className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all"
+        >
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
         <div className="flex-1 flex justify-center -ml-10">
@@ -42,8 +55,9 @@ const PrivacyPolicy = () => {
         </div>
       </div>
 
+      {/* 스크롤 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="px-4 pt-5" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="px-4 pt-5 pb-10">
           <div className="bg-indigo-50 rounded-2xl p-4 mb-5">
             <p className="text-[12px] text-indigo-700 font-medium leading-relaxed">
               시행일: 2025년 5월 1일<br />
