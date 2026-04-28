@@ -426,16 +426,19 @@ const Index = () => {
     };
     const minDist = minDistByLevel[currentZoom] ?? 0.0065;
 
+    // 광고 마커는 분산 로직에서 제외 → 항상 원래 좌표 유지
+    const adMarkers = displayedMarkers.filter(p => p.isAd);
+    const nonAdMarkers = displayedMarkers.filter(p => !p.isAd);
+
     // 중요도 순 정렬 (중요한 마커가 원래 위치 유지)
     const priority = (p: Post) => {
       if (p.borderType === 'diamond') return 5;
       if (p.borderType === 'gold') return 4;
       if (p.borderType === 'silver') return 3;
       if (p.borderType === 'popular') return 3;
-      if (p.isAd) return 2;
       return 1;
     };
-    const sorted = [...displayedMarkers].sort((a, b) => priority(b) - priority(a));
+    const sorted = [...nonAdMarkers].sort((a, b) => priority(b) - priority(a));
 
     // 그리드 기반 빠른 겹침 감지 + 분산
     const placed: { lat: number; lng: number; id: string }[] = [];
@@ -470,6 +473,9 @@ const Index = () => {
         : { ...post, lat, lng }
       );
     }
+
+    // 광고 마커는 원래 좌표 그대로 맨 앞에 추가
+    result.unshift(...adMarkers);
 
     return result;
   }, [displayedMarkers, currentZoom]);
