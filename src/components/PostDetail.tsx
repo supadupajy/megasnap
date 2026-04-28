@@ -224,6 +224,51 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   if (!currentPost) return null;
 
+  // 광고 대기 중 마커 클릭 시 간단한 안내 화면
+  if (currentPost.isAdPending) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/40" />
+          <DialogPrimitive.Content className="fixed inset-0 z-50 max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+            <VisuallyHidden.Root>
+              <DialogTitle>광고 준비 중</DialogTitle>
+              <DialogDescription>광고 시작 시간 전입니다.</DialogDescription>
+            </VisuallyHidden.Root>
+            <div className="relative flex-1 flex flex-col min-h-0">
+              <div className="absolute top-0 left-0 right-0 z-50 flex items-start justify-end px-4 pt-7 pointer-events-none">
+                <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all pointer-events-auto">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="relative w-full h-full flex items-center justify-center px-4" style={{ paddingTop: '16px', paddingBottom: '60px' }}>
+                <div className="w-full max-w-[420px] bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] p-8 flex flex-col items-center gap-5">
+                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-black text-gray-900 mb-1">광고 준비 중</p>
+                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                      광고 시작 시간이 되면<br />자동으로 활성화됩니다.
+                    </p>
+                    {currentPost.user?.name && currentPost.user.name !== '광고' && (
+                      <p className="text-xs text-slate-400 font-bold mt-3 bg-slate-50 px-3 py-1.5 rounded-full inline-block">
+                        {currentPost.user.name}
+                      </p>
+                    )}
+                  </div>
+                  <button onClick={onClose} className="w-full h-12 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm active:scale-95 transition-all">
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
+    );
+  }
+
   // [CRITICAL FIX] 이미지 URL 유효성 검사 강화
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;

@@ -295,8 +295,16 @@ const Index = () => {
 
     // start_date / end_date 기반으로 현재 유효한 슬롯 결정
     const slot = resolveActiveSlot(mapMarkerAd, mapMarkerNow);
-    if (!slot.image_url) {
-      // 기간 밖이면 마커 제거
+
+    // 만료 후 구인 슬롯이면 마커 제거 (광고 문의 마커는 표시 안 함)
+    if (slot.isRecruitment) {
+      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
+      return;
+    }
+
+    // isPending: 시작 전 대기 중 → 반투명 마커로 표시 (image_url 없어도 마커 생성)
+    // 완전히 기간 밖(image_url도 없고 isPending도 아님)이면 마커 제거
+    if (!slot.image_url && !slot.isPending) {
       setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
       return;
     }
@@ -328,16 +336,22 @@ const Index = () => {
     };
 
     getLocation().then(locationName => {
+      // 대기 중 마커는 광고 이미지 대신 브랜드 로고 또는 빈 이미지 사용
+      const displayImage = slot.isPending
+        ? (mapMarkerAd.brand_logo_url || mapMarkerAd.image_url || '')
+        : slot.image_url;
+
       const adPost: Post = {
         id: AD_POST_ID,
         user_id: 'ad',
         owner_id: 'ad',
         display_user_id: null,
         isAd: true,
+        isAdPending: slot.isPending,
         isGif: false,
         isInfluencer: false,
-        user: { id: 'ad', name: slot.brand_name || '광고', avatar: slot.brand_logo_url || '' },
-        content: slot.title || '',
+        user: { id: 'ad', name: slot.brand_name || mapMarkerAd.brand_name || '광고', avatar: slot.brand_logo_url || mapMarkerAd.brand_logo_url || '' },
+        content: slot.isPending ? '광고 준비 중' : (slot.title || ''),
         location: locationName,
         lat,
         lng,
@@ -346,9 +360,9 @@ const Index = () => {
         likes: 0,
         commentsCount: 0,
         comments: [],
-        image: slot.image_url,
-        image_url: slot.image_url,
-        images: [slot.image_url],
+        image: displayImage,
+        image_url: displayImage,
+        images: displayImage ? [displayImage] : [],
         isLiked: false,
         category: 'food',
         createdAt: new Date(),

@@ -601,7 +601,8 @@ const MapContainer = ({
           isMineKey = !!(displayId && String(displayId) === String(authUser.id));
         }
       }
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}`;
+      const isAdPendingKey = !!(post as any).isAdPending;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -938,8 +939,24 @@ const MapContainer = ({
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
+    const isAdPending = !!(post as any).isAdPending;
     const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
+    // 광고 대기 중 마커: 반투명 + 시계 아이콘
+    if (isAdPending) {
+      return `<div class="marker-content-wrapper" style="opacity:0.45;filter:grayscale(0.3);">
+        <div class="marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
+          <div style="width:100%;background:linear-gradient(90deg,#94a3b8,#cbd5e1,#94a3b8);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;line-height:1.2;">AD</div>
+          <div style="width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:3px solid #94a3b8;box-shadow:0 4px 12px rgba(0,0,0,0.1);background-color:#f1f5f9;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span style="font-size:8px;font-weight:800;color:#94a3b8;letter-spacing:-0.02em;line-height:1;">준비중</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     let isMine = false;
     const currentUser = authUserRef.current;
     if (currentUser) {

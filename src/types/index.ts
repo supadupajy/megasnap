@@ -52,4 +52,5 @@ export interface Post {
   hot_since?: string | null; // HOT 상태 시작 시각 (1시간 내 좋아요 1000개 이상 달성 시 설정)
   user_followers?: number; // 작성자 follower 수 (tier 판별용)
   link_url?: string; // 광고 랜딩 URL
+  isAdPending?: boolean; // 광고 시작 시간 전 대기 중 (반투명 마커 표시용)
 }

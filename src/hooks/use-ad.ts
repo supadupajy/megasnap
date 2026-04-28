@@ -36,6 +36,7 @@ export interface AdSlot {
   brand_logo_url: string;
   isNext: boolean; // 다음 광고가 현재로 승격된 경우 true
   isRecruitment: boolean; // 만료 후 구인 광고 슬롯인 경우 true
+  isPending: boolean; // 시작 시간 전 대기 중인 경우 true
 }
 
 // https:// 없는 URL에 자동으로 프로토콜 추가
@@ -56,6 +57,20 @@ export const RECRUITMENT_SLOT: AdSlot = {
   brand_logo_url: '',
   isNext: false,
   isRecruitment: true,
+  isPending: false,
+};
+
+// 시작 전 대기 중 슬롯 (마커는 보이되 반투명 처리)
+export const PENDING_SLOT: AdSlot = {
+  image_url: '',
+  title: '광고 준비 중',
+  subtitle: '',
+  link_url: '',
+  brand_name: '',
+  brand_logo_url: '',
+  isNext: false,
+  isRecruitment: false,
+  isPending: true,
 };
 
 /**
@@ -75,9 +90,9 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
   const currentExpired =
     ad.end_date != null && new Date(ad.end_date) <= now;
 
-  // 아직 시작 전이면 구인 슬롯
+  // 아직 시작 전이면 → 반투명 대기 마커 (RECRUITMENT_SLOT 대신 PENDING_SLOT)
   if (!currentStarted) {
-    return RECRUITMENT_SLOT;
+    return PENDING_SLOT;
   }
 
   // next 광고가 있고, 이미 시작됐는지 확인
@@ -102,6 +117,7 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
         brand_logo_url: ad.next_brand_logo_url || '',
         isNext: true,
         isRecruitment: false,
+        isPending: false,
       };
     }
     // next도 없거나 만료됐으면 → 구인 슬롯
@@ -121,6 +137,7 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
         brand_logo_url: ad.next_brand_logo_url || '',
         isNext: true,
         isRecruitment: false,
+        isPending: false,
       };
     }
     // next가 만료됐으면 → 구인 슬롯
@@ -145,6 +162,7 @@ export function resolveActiveSlot(ad: AdData, now: Date = new Date()): AdSlot {
     brand_logo_url: ad.brand_logo_url,
     isNext: false,
     isRecruitment: false,
+    isPending: false,
   };
 }
 
