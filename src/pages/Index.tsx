@@ -208,6 +208,7 @@ const Index = () => {
       borderType,
       is_seed_data: p.is_seed_data ?? prev?.is_seed_data,
       hot_since: hotSince,
+      link_url: isAd ? (p.link_url ?? prev?.link_url ?? '') : undefined,
     };
   };
 
@@ -352,6 +353,7 @@ const Index = () => {
         category: 'food',
         createdAt: new Date(),
         borderType: 'none',
+        link_url: slot.link_url || mapMarkerAd.link_url || '',
       };
       setAllPosts(prev => {
         const without = prev.filter(p => p.id !== AD_POST_ID);
@@ -576,6 +578,8 @@ const Index = () => {
   // ── 마커 클릭 ────────────────────────────────────────────────
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
     setSelectedPostId(lightPost.id);
+    // 광고 마커는 posts 테이블에 없으므로 DB fetch 스킵
+    if (lightPost.isAd) return;
     try {
       // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase

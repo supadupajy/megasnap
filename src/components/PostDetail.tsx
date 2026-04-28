@@ -253,7 +253,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
+    const url = currentPost?.link_url || currentPost?.user?.id === 'ad' ? (currentPost?.link_url || '') : '';
+    if (url) {
+      window.open(url.startsWith('http') ? url : `https://${url}`, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
@@ -278,7 +281,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       baseImages = [displayImage];
     }
     
-    // 코카콜라 광고 삽입 로직
+    // [FIX] 광고 포스트는 코카콜라 이미지 삽입 안 함 - 광고 자체 이미지만 표시
+    if (isAd) {
+      return baseImages;
+    }
+
+    // 코카콜라 광고 삽입 로직 (일반 포스트만)
     const imagesWithAd = [...baseImages];
     if (imagesWithAd.length > 0) {
       imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);
@@ -287,7 +295,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     
     return imagesWithAd;
-  }, [currentPost, displayImage]);
+  }, [currentPost, displayImage, isAd]);
 
   const adLink = useMemo(() => {
     if (!currentPost) return "https://www.coca-cola.co.kr/";
@@ -630,18 +638,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   )}
                                 </div>
                               </div>
+                              {currentPost.link_url && (
                               <div className="flex justify-end mt-[-4px]">
                                 <a
-                                  href="https://s.baemin.com/t3000fBqlbHGL"
+                                  href={currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
+                                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
                                 >
-                                  <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                                  <span className="text-[10px] font-black">주문하기</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span className="text-[10px] font-black">사이트 방문</span>
                                 </a>
                               </div>
+                              )}
                             </div>
                             <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
                               <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
@@ -871,18 +881,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </div>
                           </div>
 
-                          {/* 하단: 광고 전용 주문하기 버튼 (광고일 때만 표시) */}
-                          {isAd && (
+                          {/* 하단: 광고 전용 사이트 방문 버튼 (광고이고 link_url이 있을 때만 표시) */}
+                          {isAd && currentPost.link_url && (
                             <div className="flex justify-end mt-[-4px]">
-                              <a 
-                                href="https://s.baemin.com/t3000fBqlbHGL" 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                onClick={(e) => e.stopPropagation()} 
-                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
+                              <a
+                                href={currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
                               >
-                                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                                <span className="text-[10px] font-black">주문하기</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black">사이트 방문</span>
                               </a>
                             </div>
                           )}

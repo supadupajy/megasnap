@@ -51,4 +51,5 @@ export interface Post {
   display_user_id?: string; // 화면 표시용 유저 ID (시드 데이터에서 다른 유저 ID)
   hot_since?: string | null; // HOT 상태 시작 시각 (1시간 내 좋아요 1000개 이상 달성 시 설정)
   user_followers?: number; // 작성자 follower 수 (tier 판별용)
+  link_url?: string; // 광고 랜딩 URL
 }
