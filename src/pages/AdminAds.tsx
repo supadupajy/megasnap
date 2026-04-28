@@ -318,7 +318,14 @@ const AdCard = ({
   onSave: (updated: AdData) => Promise<void>;
   onSelectLocation: (adId: string) => void;
 }) => {
-  const [form, setForm] = useState<AdData>(initialAd);
+  // map_marker가 삭제(is_active:false + 빈 데이터)된 상태로 로드되면 새 광고 입력을 위해 is_active를 true로 초기화
+  const getInitialForm = (ad: AdData): AdData => {
+    if (ad.id === 'map_marker' && !ad.is_active && !ad.image_url) {
+      return { ...ad, is_active: true };
+    }
+    return ad;
+  };
+  const [form, setForm] = useState<AdData>(() => getInitialForm(initialAd));
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -797,6 +804,11 @@ const AdminAds = () => {
   );
 
   const handleSave = async (updated: AdData) => {
+    // map_marker는 image_url이 있으면 자동으로 is_active: true로 설정
+    const finalIsActive = updated.id === 'map_marker'
+      ? !!(updated.image_url && updated.lat != null && updated.lng != null)
+      : updated.is_active;
+
     const { error, data } = await supabase
       .from('ads')
       .update({
@@ -807,7 +819,7 @@ const AdminAds = () => {
         link_url: updated.link_url,
         brand_name: updated.brand_name,
         brand_logo_url: updated.brand_logo_url,
-        is_active: updated.is_active,
+        is_active: finalIsActive,
         lat: updated.lat ?? null,
         lng: updated.lng ?? null,
         start_date: updated.start_date ?? null,
@@ -834,14 +846,15 @@ const AdminAds = () => {
       throw new Error('0 rows updated');
     }
 
-    setAds(prev => prev.map(a => (a.id === updated.id ? updated : a)));
+    const savedAd = { ...updated, is_active: finalIsActive };
+    setAds(prev => prev.map(a => (a.id === updated.id ? savedAd : a)));
     if (updated.id === 'map_marker') setPendingLocation(null);
-    invalidateAdCache(updated.id, updated);
+    invalidateAdCache(updated.id, savedAd);
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
 
-    if (updated.id === 'map_marker' && updated.lat != null && updated.lng != null) {
+    if (savedAd.id === 'map_marker' && savedAd.lat != null && savedAd.lng != null) {
       setTimeout(() => {
-        navigate('/', { state: { center: { lat: updated.lat, lng: updated.lng }, adMarkerSaved: true } });
+        navigate('/', { state: { center: { lat: savedAd.lat, lng: savedAd.lng }, adMarkerSaved: true } });
       }, 800);
     }
   };
