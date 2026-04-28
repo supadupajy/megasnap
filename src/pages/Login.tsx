@@ -10,6 +10,34 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { showError, showSuccess } from '@/utils/toast';
 import { useNavigate } from 'react-router-dom';
 
+// Supabase 에러 메시지 → 한국어 매핑 (User Enumeration 방지)
+const getAuthErrorMessage = (message: string): string => {
+  if (!message) return '인증에 실패했습니다. 다시 시도해주세요.';
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials') || m.includes('invalid email or password')) {
+    return '이메일 또는 비밀번호가 올바르지 않습니다.';
+  }
+  if (m.includes('email not confirmed')) {
+    return '이메일 인증이 완료되지 않았습니다. 메일함을 확인해주세요.';
+  }
+  if (m.includes('user already registered') || m.includes('already been registered')) {
+    return '이미 가입된 이메일입니다. 로그인을 시도해보세요.';
+  }
+  if (m.includes('password should be at least')) {
+    return '비밀번호는 8자 이상이어야 합니다.';
+  }
+  if (m.includes('unable to validate email address') || m.includes('invalid email')) {
+    return '유효하지 않은 이메일 형식입니다.';
+  }
+  if (m.includes('email rate limit') || m.includes('too many requests') || m.includes('over_email_send_rate_limit')) {
+    return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  }
+  if (m.includes('network') || m.includes('fetch')) {
+    return '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.';
+  }
+  return '인증에 실패했습니다. 다시 시도해주세요.';
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -32,6 +60,17 @@ const Login = () => {
     if (!email || !password) {
       showError('이메일과 비밀번호를 입력해주세요.');
       return;
+    }
+
+    if (isSignUp) {
+      if (password.length < 8) {
+        showError('비밀번호는 8자 이상이어야 합니다.');
+        return;
+      }
+      if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        showError('비밀번호는 영문과 숫자를 모두 포함해야 합니다.');
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -68,7 +107,7 @@ const Login = () => {
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      showError(err.message || '인증에 실패했습니다.');
+      showError(getAuthErrorMessage(err.message));
     } finally {
       setIsLoading(false);
     }
@@ -143,6 +182,11 @@ const Login = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {isSignUp && (
+                <p className="text-[10px] text-gray-400 font-medium px-1">
+                  영문 + 숫자 조합 8자 이상
+                </p>
+              )}
             </div>
 
             {!isSignUp && (

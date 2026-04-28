@@ -26,8 +26,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const lastSeenIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
-  // Capacitor 리스너 핸들 보관 (cleanup용)
   const capListenerRef = useRef<{ remove: () => void } | null>(null);
+  // 중복 fetchProfile 호출 방지
+  const profileFetchingRef = useRef<string | null>(null);
 
   const updateLastSeen = async (userId: string) => {
     try {
@@ -119,6 +120,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const fetchProfile = async (userId: string, userEmail?: string) => {
+    // 동일 유저에 대해 이미 fetch 중이면 skip
+    if (profileFetchingRef.current === userId) return;
+    profileFetchingRef.current = userId;
+
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -148,6 +153,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (err) {
       console.error("[AuthProvider] Profile fetch error:", err);
+    } finally {
+      profileFetchingRef.current = null;
     }
   };
 
@@ -184,11 +191,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (currentSession?.user) {
           const userId = currentSession.user.id;
-          fetchProfile(userId, currentSession.user.email);
-
+          // 프로필은 유저가 바뀌었을 때만 새로 fetch (TOKEN_REFRESHED 등에서 중복 방지)
           if (currentUserIdRef.current !== userId) {
+            fetchProfile(userId, currentSession.user.email);
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
+          } else if (event === "USER_UPDATED") {
+            // 프로필 정보가 변경된 경우에만 재조회
+            profileFetchingRef.current = null;
+            fetchProfile(userId, currentSession.user.email);
           }
         } else {
           setProfile(null);
