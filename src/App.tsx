@@ -18,6 +18,7 @@ import Messages from "./pages/Messages";
 import Chat from "./pages/Chat";
 import WritePage from "./pages/Write";
 import FriendList from "./pages/FriendList";
+import FriendFeed from "./pages/FriendFeed";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -65,7 +66,7 @@ const AnimatedRoutes = () => {
 
   // 하단 탭 메뉴(메인 메뉴) 및 글쓰기 페이지인지 확인
 
-  const isMainTab = ["/", "/popular", "/search", "/messages", "/profile", "/write"].includes(location.pathname);
+  const isMainTab = ["/", "/popular", "/search", "/friends", "/messages", "/profile", "/write"].includes(location.pathname);
   const isBackAction = (location.state as any)?.direction === 'back';
 
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
@@ -166,7 +167,7 @@ const AnimatedRoutes = () => {
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-              <Route path="/friends" element={<ProtectedRoute><FriendList /></ProtectedRoute>} />
+              <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/post/:id" element={<PostDetail />} />
               <Route path="/profile/follow/:userId" element={<Follow />} />
