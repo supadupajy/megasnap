@@ -113,6 +113,10 @@ const Index = () => {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [markerPage, setMarkerPage] = useState(0);
+
+  const MARKERS_PER_PAGE = 30;
+
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
   const highlightTimeoutRef = useRef<number | null>(null);
@@ -379,6 +383,19 @@ const Index = () => {
     );
   }, [spreadMarkers, mapData?.bounds]);
 
+  // ── pagedMarkers: visibleMarkers에서 현재 페이지 30개만 ──────
+  const pagedMarkers = useMemo(() => {
+    const start = markerPage * MARKERS_PER_PAGE;
+    return visibleMarkers.slice(start, start + MARKERS_PER_PAGE);
+  }, [visibleMarkers, markerPage]);
+
+  const hasNextMarkerPage = (markerPage + 1) * MARKERS_PER_PAGE < visibleMarkers.length;
+
+  // bounds나 카테고리가 바뀌면 페이지 리셋
+  useEffect(() => {
+    setMarkerPage(0);
+  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, selectedCategories]);
+
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   const handleMapChange = useCallback((data: any) => {
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
@@ -408,6 +425,14 @@ const Index = () => {
       mapCache.posts = combined;
       return combined;
     });
+
+    // 해당 포스트가 현재 페이지에 없으면 포함된 페이지로 이동
+    const spreadAll = spreadMarkersRef.current;
+    const postIdx = spreadAll.findIndex(p => p.id === post.id);
+    if (postIdx !== -1) {
+      const targetPage = Math.floor(postIdx / MARKERS_PER_PAGE);
+      setMarkerPage(targetPage);
+    }
 
     setSelectedPostId(null);
     setSearchResultLocation(null);
@@ -501,6 +526,12 @@ const Index = () => {
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
   }, [fetchGlobalTrending]);
+
+  // ── 다른 포스팅 버튼 핸들러 ──────────────────────────────────
+  const handleNextMarkerPage = useCallback(() => {
+    if (!hasNextMarkerPage) return;
+    setMarkerPage(prev => prev + 1);
+  }, [hasNextMarkerPage]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
   const handleCurrentLocation = async () => {
@@ -681,7 +712,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={spreadMarkers}
+              posts={pagedMarkers}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
@@ -744,7 +775,7 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-50 border border-indigo-100">
+                <button onClick={handleNextMarkerPage} disabled={isRefreshing || !hasNextMarkerPage} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">다른 포스팅</span>
                 </button>
@@ -811,7 +842,7 @@ const Index = () => {
             key="post-list-overlay"
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
-            initialPosts={visibleMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
+            initialPosts={pagedMarkers.map(m => allPosts.find(p => p.id === m.id) || m)}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
             selectedCategories={selectedCategories}
