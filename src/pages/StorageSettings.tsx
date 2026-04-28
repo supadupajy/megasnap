@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, HardDrive, Trash2, Wifi, Image } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import { showSuccess } from '@/utils/toast';
 import {
   AlertDialog,
@@ -29,9 +28,7 @@ const StorageSettings = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="flex-none h-16"><Header /></div>
-
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button onClick={() => navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>

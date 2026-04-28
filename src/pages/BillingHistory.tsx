@@ -1,8 +1,6 @@
 import React from 'react';
 import { ChevronLeft, Receipt, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
-
 const mockBilling = [
   { id: '1', date: '2025.04.01', plan: 'Pro 월간', amount: '₩4,900', status: '결제 완료' },
   { id: '2', date: '2025.03.01', plan: 'Pro 월간', amount: '₩4,900', status: '결제 완료' },
@@ -14,9 +12,7 @@ const BillingHistory = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="flex-none h-16"><Header /></div>
-
-      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100">
+      <div className="flex-none h-14 bg-white flex items-center px-4 border-b border-gray-100 mt-16">
         <button onClick={() => navigate('/settings')} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all">
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
