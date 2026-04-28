@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { adType, company, contact, message } = await req.json();
+    const { adType, company, manager, contact, message } = await req.json();
 
     console.log("[send-ad-inquiry] 광고 문의 접수 시작:", { adType, company, contact });
 
@@ -53,6 +53,10 @@ serve(async (req) => {
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">회사/브랜드</td>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${company}</td>
         </tr>
+        ${manager ? `<tr>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">담당자명</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${manager}</td>
+        </tr>` : ''}
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">연락처</td>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${contact}</td>

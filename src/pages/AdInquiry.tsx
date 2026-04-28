@@ -29,6 +29,7 @@ const AdInquiry = () => {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [company, setCompany] = useState('');
+  const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -48,6 +49,7 @@ const AdInquiry = () => {
         body: {
           adType: selectedType,
           company: company.trim(),
+          manager: manager.trim(),
           contact: contact.trim(),
           message: message.trim(),
         },
@@ -186,6 +188,17 @@ const AdInquiry = () => {
                 value={company}
                 onChange={e => setCompany(e.target.value)}
                 placeholder="예: 스타벅스 코리아"
+                className="border-none bg-gray-50 rounded-xl focus-visible:ring-indigo-300 font-medium text-sm"
+              />
+            </div>
+            <div className="p-4 border-b border-gray-50">
+              <label className="text-[11px] font-black text-gray-500 uppercase tracking-wider block mb-2">
+                담당자명
+              </label>
+              <Input
+                value={manager}
+                onChange={e => setManager(e.target.value)}
+                placeholder="예: 홍길동"
                 className="border-none bg-gray-50 rounded-xl focus-visible:ring-indigo-300 font-medium text-sm"
               />
             </div>
