@@ -230,7 +230,9 @@ const Chat = () => {
         .order('created_at', { ascending: true });
       if (!data) return;
       setMessages(data);
-      playNotificationSound(isPageVisibleRef.current);
+      // Chat 창 안에 있을 때는 항상 in-chat 소리 재생
+      // (out-chat 소리는 NotificationProvider에서 activeChatId 확인 후 재생)
+      playNotificationSound(true);
       markAsRead();
       setTimeout(scrollToBottom, 10);
     };

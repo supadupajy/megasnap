@@ -16,6 +16,8 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
+const OUT_CHAT_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+
 interface NotificationContextType {
   unreadMessages: number;
   unreadNotifs: number;
@@ -35,6 +37,34 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // 오디오 잠금 해제 여부 (모바일 브라우저 정책)
+  const audioUnlockedRef = useRef(false);
+
+  // 모바일 브라우저 오디오 잠금 해제: 첫 사용자 인터랙션 시 실행
+  useEffect(() => {
+    const unlock = () => {
+      if (audioUnlockedRef.current) return;
+      const audio = new Audio(OUT_CHAT_SOUND);
+      audio.volume = 0;
+      audio.play().then(() => {
+        audioUnlockedRef.current = true;
+      }).catch(() => {});
+    };
+    window.addEventListener('click', unlock, { once: false });
+    window.addEventListener('touchstart', unlock, { once: false });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
+
+  const playOutChatSound = useCallback(() => {
+    try {
+      const audio = new Audio(OUT_CHAT_SOUND);
+      audio.volume = 1.0;
+      audio.play().catch(() => {});
+    } catch (e) {}
+  }, []);
 
   const fetchCounts = useCallback(async (userId: string) => {
     const [{ data: mData }, { data: nData }] = await Promise.all([
@@ -83,16 +113,20 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
      */
     const channel = supabase
       .channel(`global-badge-${userId}`)
-      // messages INSERT + UPDATE 를 단일 구독으로 처리
-      // ⚠️ .on()을 같은 테이블에 2번 호출하면 realtime.subscription에 2행이 생겨 WAL 폴링 2배 발생
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
         (payload) => {
           fetchCounts(userId);
-          // 새 메시지(INSERT)일 때만 메시지 목록 갱신 이벤트 발생
           if (payload.eventType === 'INSERT') {
             window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+
+            // 현재 해당 발신자와의 채팅방 안에 있지 않을 때만 소리 재생
+            const activeChatId = localStorage.getItem('activeChatId');
+            const senderId = (payload.new as any)?.sender_id;
+            if (!activeChatId || activeChatId !== senderId) {
+              playOutChatSound();
+            }
           }
         }
       )
@@ -120,7 +154,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       }
       window.removeEventListener('refresh-unread-counts', handleRefresh);
     };
-  }, [user?.id, fetchCounts]);
+  }, [user?.id, fetchCounts, playOutChatSound]);
 
   return (
     <NotificationContext.Provider value={{ unreadMessages, unreadNotifs, refreshCounts }}>
