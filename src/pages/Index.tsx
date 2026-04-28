@@ -154,6 +154,9 @@ const Index = () => {
     // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
     const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || `https://i.pravatar.cc/150?u=${p.user_id}`;
+    // [FIX] display_user_id: 시드 데이터에서 표시용 유저 ID. 없으면 user_id(실제 소유자)
+    // user.id는 화면 표시/프로필 이동용이므로 display_user_id를 우선 사용
+    const displayUserId = p.display_user_id || prev?.user?.id || p.user_id || '';
     let img = p.image_url ?? prev?.image_url ?? '';
 
     // [AD 보정] 광고 포스트는 영상/유튜브 썸네일/빈 이미지를 모두 무시하고
@@ -171,10 +174,11 @@ const Index = () => {
     return {
       id: p.id,
       user_id: p.user_id || prev?.user_id || '',
+      owner_id: p.user_id || prev?.owner_id || '', // [FIX] RLS 소유자 ID (isMine 판별용)
       isAd,
       isGif: false,
       isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-      user: { id: p.user_id || prev?.user?.id || '', name: userName, avatar: userAvatar },
+      user: { id: displayUserId, name: userName, avatar: userAvatar }, // [FIX] display_user_id 우선 사용
       content: content.replace(/^\[AD\]\s*/, ''),
       location: p.location_name ?? prev?.location ?? '알 수 없는 장소',
       lat: p.latitude ?? prev?.lat,
@@ -207,7 +211,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, user_name, user_avatar')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
@@ -473,7 +477,7 @@ const Index = () => {
       // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, profiles:user_id(nickname, avatar_url)')
         .eq('id', lightPost.id)
         .single();
       if (!error && data) {

@@ -310,8 +310,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const isMine = useMemo(() => {
     if (!currentPost || !authUser) return false;
-    // owner_id(실제 DB user_id)를 우선 사용 — 시드 데이터도 실제 소유자면 삭제 가능
-    const ownerId = currentPost.owner_id || currentPost.user.id;
+    // [FIX] owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 판별
+    // user.id는 display_user_id(표시용)이므로 isMine 판별에 사용하면 안 됨
+    const ownerId = currentPost.owner_id || currentPost.user_id;
     return ownerId === authUser.id || ownerId === 'me';
   }, [currentPost, authUser]);
 
@@ -333,9 +334,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
-    // [FIX] isMine 판정을 사용하여 본인 프로필로 갈지 타인 프로필로 갈지 결정
-    if (isMine) navigate('/profile');
-    else navigate(`/profile/${currentPost.user.id}`);
+    if (isMine) {
+      navigate('/profile');
+    } else if (currentPost.user.id && currentPost.user.id !== currentPost.owner_id && currentPost.user.id !== currentPost.user_id) {
+      // display_user_id가 실제 다른 유저 ID인 경우에만 프로필 이동
+      navigate(`/profile/${currentPost.user.id}`);
+    }
+    // display_user_id가 없는 경우(랜덤 닉네임 풀) → 이동 없음
   };
 
   const handleSaveToggle = async (e: React.MouseEvent) => {

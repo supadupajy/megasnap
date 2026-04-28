@@ -47,5 +47,6 @@ export interface Post {
   borderType?: string;
   isNewRealtime?: boolean;
   is_seed_data?: boolean;
-  owner_id?: string; // 실제 DB user_id (RLS 소유자 판별용)
+  owner_id?: string; // 실제 DB user_id (RLS 소유자 판별용, mapRawToPost에서 p.user_id로 설정)
+  display_user_id?: string; // 화면 표시용 유저 ID (시드 데이터에서 다른 유저 ID)
 }

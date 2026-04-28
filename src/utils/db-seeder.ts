@@ -90,7 +90,7 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         const detailedLocation = resolveOfflineLocationName(p.lat, p.lng);
         const finalLikes = getRandomLikesFlat();
         const isAd = p.isAd;
-        const category = CATEGORIES[globalIndex % CATEGORIES.length]; // 카테고리 할당
+        const category = CATEGORIES[globalIndex % CATEGORIES.length];
 
         let finalYoutubeUrl = null;
         let finalImage = "";
@@ -100,12 +100,11 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
         } else if (globalIndex % 2 === 0) {
           const candidateUrl = getVerifiedYoutubeUrlByIndex(globalIndex);
           finalYoutubeUrl = candidateUrl;
-          // [FIX] 유튜브 포스팅 생성 시 썸네일을 우선적으로 image_url에 저장
           const ytThumbnail = getYoutubeThumbnail(candidateUrl);
           finalImage = ytThumbnail || getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i);
           console.log(`[Seeder] YouTube Post Created - URL: ${candidateUrl}, Thumbnail: ${finalImage}`);
         } else {
-          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i); // 카테고리 적용
+          finalImage = getDiverseUnsplashUrl(`${city.shortName}:${randomUser.id}:${globalIndex}`, category, i);
         }
 
         const finalContent = isAd
@@ -119,11 +118,12 @@ export const seedGlobalPosts = async (currentUserId: string, currentNickname: st
           longitude: p.lng,
           image_url: finalImage,
           youtube_url: finalYoutubeUrl,
-          user_id: currentUserId, // [FIX] RLS INSERT 정책 준수를 위해 현재 로그인한 사용자의 ID로 고정
-          user_name: '탐험가', // [FIX] 생성 시 모든 user_name을 '탐험가'로 고정
+          user_id: currentUserId,       // RLS INSERT 정책 준수 (실제 소유자)
+          display_user_id: randomUser.id, // [NEW] 화면에 표시될 유저 ID
+          user_name: randomUser.nickname || '탐험가', // [FIX] 랜덤 유저 닉네임 사용
           user_avatar: randomUser.avatar_url || `https://i.pravatar.cc/150?u=${randomUser.id}`,
           likes: finalLikes,
-          category: category, // 카테고리 추가
+          category: category,
           created_at: new Date(Date.now() - Math.random() * 48 * 3600000).toISOString(),
         });
 
@@ -402,15 +402,18 @@ export const seedInBoundsPosts = async (
       
       let userName = "";
       let userAvatar = "";
+      let displayUserId: string | null = null; // [NEW] 표시용 유저 ID
 
       if (type === 'ad') {
         userName = "sponsored";
         userAvatar = "https://cdn-icons-png.flaticon.com/512/300/300221.png";
+        displayUserId = null;
       } else if (filteredProfiles.length > 0) {
         // 본인 닉네임이 제외된 다른 유저 프로필에서 선택
         const p = filteredProfiles[Math.floor(Math.random() * filteredProfiles.length)];
         userName = p.nickname;
         userAvatar = p.avatar_url;
+        displayUserId = p.id; // [NEW] 실제 다른 유저의 ID 저장
       } else {
         // 다른 유저가 없으면 랜덤 닉네임 풀에서 선택 (본인 닉네임 완전 제외)
         const availableNames = currentNickname 
@@ -418,6 +421,7 @@ export const seedInBoundsPosts = async (
           : RANDOM_NICKNAMES;
         userName = availableNames[Math.floor(Math.random() * availableNames.length)];
         userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`;
+        displayUserId = null; // 실제 유저 없음 → null
       }
 
       let likes = Math.floor(Math.random() * 500);
@@ -459,8 +463,9 @@ export const seedInBoundsPosts = async (
         longitude: lng,
         image_url: finalImage,
         youtube_url: finalYoutubeUrl,
-        user_id: currentUserId,  // RLS 정책 준수 (실제 소유자)
-        user_name: userName,     // 화면에 표시될 랜덤 닉네임
+        user_id: currentUserId,       // RLS 정책 준수 (실제 소유자)
+        display_user_id: displayUserId, // [NEW] 화면에 표시될 유저 ID (다른 사람이면 그 사람 ID, 없으면 null)
+        user_name: userName,           // 화면에 표시될 랜덤 닉네임
         user_avatar: userAvatar, 
         likes: likes,
         category: category,
@@ -471,6 +476,7 @@ export const seedInBoundsPosts = async (
     }
 
     console.log("📤 [Seeder] Inserting with user_names:", insertData.map(d => d.user_name));
+    console.log("📤 [Seeder] display_user_ids:", insertData.map(d => d.display_user_id));
 
     const { error } = await supabase.from('posts').insert(insertData);
     

@@ -91,13 +91,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const { user, content, isAd } = post;
   
-  // owner_id(실제 DB user_id)를 우선 사용하여 isMine 판별
-  // 시드 데이터는 user.id가 다른 사람 이름이지만 owner_id는 실제 소유자 ID
+  // [FIX] isMine 판별: owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 판별
+  // user.id는 display_user_id(표시용)이므로 isMine 판별에 사용하면 안 됨
   const isMine = useMemo(() => {
     if (!authUser?.id) return false;
-    const ownerId = post.owner_id || user?.id;
+    // owner_id: mapRawToPost에서 p.user_id로 설정된 실제 소유자 ID
+    // post.user_id: 직접 접근 가능한 경우
+    const ownerId = post.owner_id || post.user_id;
     return ownerId === authUser.id || ownerId === 'me';
-  }, [authUser?.id, post.owner_id, user?.id]);
+  }, [authUser?.id, post.owner_id, post.user_id]);
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -397,8 +399,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isMine) navigate('/profile');
-    else navigate(`/profile/${user.id}`);
+    if (isMine) {
+      navigate('/profile');
+    } else if (user.id && user.id !== post.owner_id && user.id !== post.user_id) {
+      // display_user_id가 실제 다른 유저 ID인 경우에만 프로필 이동
+      navigate(`/profile/${user.id}`);
+    }
+    // display_user_id가 없는 경우(랜덤 닉네임 풀) → 이동 없음
   };
 
   const handleLocationClick = (e: React.MouseEvent) => {
