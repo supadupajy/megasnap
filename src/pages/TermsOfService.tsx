@@ -203,7 +203,7 @@ const TermsOfService = ({ fromSignup = false }: { fromSignup?: boolean }) => {
         <div className="px-4 pt-5">
           <div className="bg-amber-50 rounded-2xl p-4 mb-5">
             <p className="text-[12px] text-amber-700 font-medium leading-relaxed">
-              시행일: 2025년 5월 1일<br />
+              시행일: 2026년 5월 1일<br />
               서비스를 이용하시기 전에 이용약관을 주의 깊게 읽어 주시기 바랍니다. 본 약관은 ChoraSnap 서비스 이용에 관한 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정합니다.
             </p>
           </div>
