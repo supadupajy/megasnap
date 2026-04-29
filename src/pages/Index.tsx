@@ -120,7 +120,6 @@ const Index = () => {
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
-    pinnedMarkerIdsRef.current.clear();
     setSelectedCategories(cats);
   }, []);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -143,8 +142,6 @@ const Index = () => {
   const spreadMarkersRef = useRef<Post[]>([]);
   // 분산 좌표 캐시: post.id → { lat, lng } — 한 번 결정된 위치는 고정
   const spreadCacheRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
-  // 한 번 선택된 마커 ID 집합 — 새 포스트가 추가되어도 기존 마커는 제거하지 않음
-  const pinnedMarkerIdsRef = useRef<Set<string>>(new Set());
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
@@ -263,10 +260,6 @@ const Index = () => {
         const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
         if (cancelled) return;
         if (raw.length === 0) return;
-
-        // fetch 완료 후 pinned 초기화 → 새 영역 기준으로 마커 재선택
-        // (fetch 전에 초기화하면 이전 영역 포스트로 30개가 채워지는 버그 발생)
-        pinnedMarkerIdsRef.current.clear();
 
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
@@ -542,95 +535,22 @@ const Index = () => {
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
   const visibleMarkers = spreadMarkers;
 
-  // ── limitedVisibleMarkers: 최대 30개로 제한 (성능 보호) ──────
-  // 한 지역에 포스트가 너무 많을 때 렌더링 부하 및 서버 부담 방지.
-  //
-  // 선택 기준:
-  //   1. viewport(bounds) 안 포스트가 30개 이하 → 전부 표시
-  //   2. viewport 안 포스트가 30개 초과 → 최신순 30개 표시
-  //      (나머지는 새로고침 버튼 또는 "여기보기"에서 추가 로딩으로 확인 가능)
-  //   3. viewport 밖 포스트(지도 이동 중 화면 밖으로 나간 것)는 pinned로 유지 (깜빡임 방지)
-  const limitedVisibleMarkers = useMemo(() => {
-    const adMarkers = spreadMarkers.filter(m => m.isAd);
-    const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
-
-    if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
-      nonAdMarkers.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-      return spreadMarkers;
-    }
-
-    // mapData.level과 currentZoom이 동시에 업데이트되므로 항상 일치함
-    // bounds는 현재 줌 레벨에 맞는 올바른 viewport를 반영
-    const bounds = mapData?.bounds;
-
-    // viewport 안/밖 분류
-    const inViewport = bounds
-      ? nonAdMarkers.filter(m =>
-          m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-          m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
-        )
-      : nonAdMarkers;
-    const outOfViewport = bounds
-      ? nonAdMarkers.filter(m =>
-          !(m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-            m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng)
-        )
-      : [];
-
-    // viewport 안 포스트가 30개 초과 → 최신순 30개 선택
-    if (inViewport.length > MAX_VISIBLE_MARKERS) {
-      const sortByNewest = (a: Post, b: Post) => {
-        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-        return bTime - aTime;
-      };
-      const newest30 = [...inViewport].sort(sortByNewest).slice(0, MAX_VISIBLE_MARKERS);
-      const newest30Ids = new Set(newest30.map(m => m.id));
-      // pinned를 최신 30개로 교체
-      pinnedMarkerIdsRef.current.clear();
-      newest30.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-      return [...adMarkers, ...newest30];
-    }
-
-    // viewport 안이 30개 이하 → 전부 표시 + 남은 슬롯을 pinned(viewport 밖)로 채움
-    // 현재 spreadMarkers에 없는 id는 pinned에서 제거
-    const currentNonAdIds = new Set(nonAdMarkers.map(m => m.id));
-    pinnedMarkerIdsRef.current.forEach(id => {
-      if (!currentNonAdIds.has(id)) pinnedMarkerIdsRef.current.delete(id);
-    });
-
-    inViewport.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-    const pinned = nonAdMarkers.filter(m => pinnedMarkerIdsRef.current.has(m.id));
-
-    if (pinned.length >= MAX_VISIBLE_MARKERS) {
-      return [...adMarkers, ...pinned];
-    }
-
-    // 남은 슬롯을 viewport 밖 포스트로 보충 (likes 높은 순)
-    const remaining = MAX_VISIBLE_MARKERS - pinned.length;
-    const unpinnedOut = outOfViewport.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
-    const sortByLikes = (a: Post, b: Post) => (b.likes ?? 0) - (a.likes ?? 0);
-    const extra = [...unpinnedOut].sort(sortByLikes).slice(0, remaining);
-    extra.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-
-    return [...adMarkers, ...pinned, ...extra];
-  }, [spreadMarkers, mapData?.bounds]);
-
-  // viewport 안 전체 포스트 수 (마커 제한 전 실제 개수)
+  // viewport 안 전체 포스트 수 (모두보기 배지용)
+  // 원래 좌표(분산 전) 기준으로 계산 - displayedMarkers 사용
   const viewportPostCount = useMemo(() => {
-    const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
+    const nonAdMarkers = displayedMarkers.filter(m => !m.isAd);
     if (!mapData?.bounds) return nonAdMarkers.length;
     const { sw, ne } = mapData.bounds;
     return nonAdMarkers.filter(m =>
       m.lat >= sw.lat && m.lat <= ne.lat &&
       m.lng >= sw.lng && m.lng <= ne.lng
     ).length;
-  }, [spreadMarkers, mapData?.bounds]);
+  }, [displayedMarkers, mapData?.bounds]);
 
-  // 배지 숫자: viewport 안 전체 포스트 수 (30개 초과 시에도 실제 개수 표시)
+  // 배지 숫자: viewport 안 전체 포스트 수
   const displayedPostCount = viewportPostCount;
 
-  // 새로고침 버튼 비활성화 조건용 (30개 초과 시 활성화)
+  // 새로고침 버튼 비활성화 조건용
   const visiblePostCount = viewportPostCount;
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
@@ -770,9 +690,8 @@ const Index = () => {
       }
     }
 
-    // 새로운 랜덤 시드로 마커 셔플 + pinned 초기화 (새로고침 시 마커 재선택)
+    // 새로운 랜덤 시드로 마커 셔플 (새로고침 시 마커 재선택)
     setRandomSeed(Math.random());
-    pinnedMarkerIdsRef.current.clear();
 
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
@@ -993,7 +912,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={limitedVisibleMarkers}
+              posts={spreadMarkers}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
