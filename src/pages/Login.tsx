@@ -143,8 +143,7 @@ const Login = () => {
             <div className="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
               <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
-                인증 메일이 오지 않는다면 스팸함을 확인하거나, 잠시 후 다시 시도해주세요. (Supabase 무료 플랜 제한)
-              </p>
+                인증 메일이 오지 않는다면 스팸함을 확인하거나, 잠시 후 다시 시도해주세요.</p>
             </div>
           )}
 
