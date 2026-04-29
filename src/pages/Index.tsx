@@ -119,6 +119,10 @@ const Index = () => {
   // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const handleCategorySelect = useCallback((cats: string[]) => {
+    pinnedMarkerIdsRef.current.clear();
+    setSelectedCategories(cats);
+  }, []);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -139,6 +143,8 @@ const Index = () => {
   const spreadMarkersRef = useRef<Post[]>([]);
   // 분산 좌표 캐시: post.id → { lat, lng } — 한 번 결정된 위치는 고정
   const spreadCacheRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  // 한 번 선택된 마커 ID 집합 — 새 포스트가 추가되어도 기존 마커는 제거하지 않음
+  const pinnedMarkerIdsRef = useRef<Set<string>>(new Set());
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
@@ -525,10 +531,11 @@ const Index = () => {
   useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
   useEffect(() => { isSelectingAdLocationRef.current = isSelectingAdLocation; }, [isSelectingAdLocation]);
 
-  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 초기화 (minDist가 달라지므로)
+  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 및 pinned 초기화 (minDist가 달라지므로)
   useEffect(() => {
     currentZoomRef.current = currentZoom;
     spreadCacheRef.current.clear();
+    pinnedMarkerIdsRef.current.clear();
   }, [currentZoom]);
 
   // ── visibleMarkers: bounds 필터 없이 spreadMarkers 그대로 사용 ──────
@@ -536,24 +543,45 @@ const Index = () => {
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
   const visibleMarkers = spreadMarkers;
 
-  // ── limitedVisibleMarkers: 최대 30개로 제한 (최신순) ──
-  // bounds 필터 없이 전체 spreadMarkers 중 최신 30개를 MapContainer에 전달
+  // ── limitedVisibleMarkers: 최대 30개로 제한 (sticky 방식) ──
+  // 한 번 선택된 마커는 고정(pinned)되어 새 포스트가 추가되어도 제거되지 않음.
+  // 이렇게 해야 지도 이동 시 기존 마커가 갑자기 사라지는 버그를 방지할 수 있음.
   const limitedVisibleMarkers = useMemo(() => {
     const adMarkers = spreadMarkers.filter(m => m.isAd);
     const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
 
     if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
+      // 30개 이하면 전부 pinned로 등록
+      nonAdMarkers.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
       return spreadMarkers;
     }
 
-    // 최신순(created_at 내림차순)으로 정렬 후 상위 30개 선택
-    const sorted = [...nonAdMarkers].sort((a, b) => {
+    // 현재 spreadMarkers에 없는 id는 pinned에서 제거
+    const currentNonAdIds = new Set(nonAdMarkers.map(m => m.id));
+    pinnedMarkerIdsRef.current.forEach(id => {
+      if (!currentNonAdIds.has(id)) pinnedMarkerIdsRef.current.delete(id);
+    });
+
+    // 이미 pinned된 마커는 그대로 유지
+    const pinned = nonAdMarkers.filter(m => pinnedMarkerIdsRef.current.has(m.id));
+
+    if (pinned.length >= MAX_VISIBLE_MARKERS) {
+      // pinned가 이미 30개 이상이면 pinned만 반환 (새 마커 추가 안 함)
+      return [...adMarkers, ...pinned];
+    }
+
+    // pinned가 30개 미만이면 나머지 슬롯을 최신순으로 채움
+    const remaining = MAX_VISIBLE_MARKERS - pinned.length;
+    const unpinned = nonAdMarkers.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
+    const sorted = [...unpinned].sort((a, b) => {
       const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
       const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
+    const newlySelected = sorted.slice(0, remaining);
+    newlySelected.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
 
-    const selected = sorted.slice(0, MAX_VISIBLE_MARKERS);
+    const selected = [...pinned, ...newlySelected];
     return [...adMarkers, ...selected];
   }, [spreadMarkers]);
 
@@ -706,8 +734,9 @@ const Index = () => {
       }
     }
 
-    // 새로운 랜덤 시드로 마커 셔플
+    // 새로운 랜덤 시드로 마커 셔플 + pinned 초기화 (새로고침 시 마커 재선택)
     setRandomSeed(Math.random());
+    pinnedMarkerIdsRef.current.clear();
 
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
@@ -1078,7 +1107,7 @@ const Index = () => {
         </div>
       </motion.div>
 
-      <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={setSelectedCategories} onClose={() => setIsCategoryOpen(false)} />
+      <CategoryMenu isOpen={isCategoryOpen} selectedCategories={selectedCategories} onSelect={handleCategorySelect} onClose={() => setIsCategoryOpen(false)} />
 
       <AnimatePresence>
         {isTrendingExpanded && !isPostListOpen && !isSearchOpen && (
