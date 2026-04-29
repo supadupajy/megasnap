@@ -291,13 +291,16 @@ const Write = () => {
       // Index.tsx에서 이 데이터를 기반으로 위치를 잡고 마커를 보여줌
       const mappedPost = {
         id: createdPost.id,
+        user_id: authUser.id,
+        owner_id: authUser.id,
+        display_user_id: null,
         isAd: createdPost.content?.startsWith('[AD]'),
         isGif: false,
         isInfluencer: false,
-        user: { 
-          id: authUser.id, 
-          name: profile?.nickname || '탐험가', 
-          avatar: profile?.avatar_url 
+        user: {
+          id: authUser.id,
+          name: profile?.nickname || '탐험가',
+          avatar: profile?.avatar_url
         },
         content: createdPost.content,
         location: createdPost.location_name,
@@ -305,11 +308,13 @@ const Write = () => {
         lng: createdPost.longitude,
         likes: 0,
         image: uploadedUrls[0],
+        image_url: uploadedUrls[0],
         images: uploadedUrls,
         videoUrl: createdPost.video_url,
         createdAt: new Date(createdPost.created_at),
         category: createdPost.category,
-        borderType: 'none'
+        borderType: 'none',
+        is_seed_data: false,
       };
 
       showSuccess('게시물이 등록되었습니다! ✨');
