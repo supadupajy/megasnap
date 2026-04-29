@@ -546,76 +546,92 @@ const Index = () => {
 
   // ── limitedVisibleMarkers: 최대 30개로 제한 (성능 보호) ──────
   // 한 지역에 포스트가 너무 많을 때 렌더링 부하 및 서버 부담 방지.
-  // 선택 기준: 현재 bounds 안 포스트 우선 → 그 중 likes 높은 순.
-  // pinned 방식으로 한 번 선택된 마커는 지도 이동 중에도 유지 (깜빡임 방지).
+  //
+  // 선택 기준:
+  //   1. viewport(bounds) 안 포스트가 30개 이하 → 전부 표시
+  //   2. viewport 안 포스트가 30개 초과 → 최신순 30개 표시
+  //      (나머지는 새로고침 버튼 또는 "여기보기"에서 추가 로딩으로 확인 가능)
+  //   3. viewport 밖 포스트(지도 이동 중 화면 밖으로 나간 것)는 pinned로 유지 (깜빡임 방지)
   const limitedVisibleMarkers = useMemo(() => {
     const adMarkers = spreadMarkers.filter(m => m.isAd);
     const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
 
     if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
-      // 30개 이하면 전부 표시
       nonAdMarkers.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
       return spreadMarkers;
     }
 
+    const bounds = mapData?.bounds;
+
+    // viewport 안/밖 분류
+    const inViewport = bounds
+      ? nonAdMarkers.filter(m =>
+          m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+          m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
+        )
+      : nonAdMarkers;
+    const outOfViewport = bounds
+      ? nonAdMarkers.filter(m =>
+          !(m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+            m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng)
+        )
+      : [];
+
+    // viewport 안 포스트가 30개 초과 → 최신순 30개 선택
+    if (inViewport.length > MAX_VISIBLE_MARKERS) {
+      const sortByNewest = (a: Post, b: Post) => {
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      };
+      const newest30 = [...inViewport].sort(sortByNewest).slice(0, MAX_VISIBLE_MARKERS);
+      const newest30Ids = new Set(newest30.map(m => m.id));
+      // pinned를 최신 30개로 교체
+      pinnedMarkerIdsRef.current.clear();
+      newest30.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
+      return [...adMarkers, ...newest30];
+    }
+
+    // viewport 안이 30개 이하 → 전부 표시 + 남은 슬롯을 pinned(viewport 밖)로 채움
     // 현재 spreadMarkers에 없는 id는 pinned에서 제거
     const currentNonAdIds = new Set(nonAdMarkers.map(m => m.id));
     pinnedMarkerIdsRef.current.forEach(id => {
       if (!currentNonAdIds.has(id)) pinnedMarkerIdsRef.current.delete(id);
     });
 
-    // 이미 pinned된 마커는 그대로 유지 (지도 이동 중 깜빡임 방지)
+    inViewport.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
     const pinned = nonAdMarkers.filter(m => pinnedMarkerIdsRef.current.has(m.id));
 
     if (pinned.length >= MAX_VISIBLE_MARKERS) {
       return [...adMarkers, ...pinned];
     }
 
-    // 빈 슬롯을 채울 때: 현재 bounds 안 포스트를 likes 높은 순으로 우선 선택
+    // 남은 슬롯을 viewport 밖 포스트로 보충 (likes 높은 순)
     const remaining = MAX_VISIBLE_MARKERS - pinned.length;
-    const unpinned = nonAdMarkers.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
-
-    const bounds = mapData?.bounds;
-    const inBounds = bounds
-      ? unpinned.filter(m =>
-          m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-          m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
-        )
-      : unpinned;
-    const outOfBounds = bounds
-      ? unpinned.filter(m =>
-          !(m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-            m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng)
-        )
-      : [];
-
-    // bounds 안 포스트를 likes 높은 순으로 먼저 채우고, 부족하면 bounds 밖으로 보충
+    const unpinnedOut = outOfViewport.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
     const sortByLikes = (a: Post, b: Post) => (b.likes ?? 0) - (a.likes ?? 0);
-    const candidates = [
-      ...inBounds.sort(sortByLikes),
-      ...outOfBounds.sort(sortByLikes),
-    ];
+    const extra = [...unpinnedOut].sort(sortByLikes).slice(0, remaining);
+    extra.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
 
-    const newlySelected = candidates.slice(0, remaining);
-    newlySelected.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-
-    return [...adMarkers, ...pinned, ...newlySelected];
+    return [...adMarkers, ...pinned, ...extra];
   }, [spreadMarkers, mapData?.bounds]);
 
-  // 배지 숫자: 현재 지도 bounds 안에 있는 마커 카운트 (광고 포함)
-  const displayedPostCount = useMemo(() => {
-    if (!mapData?.bounds) {
-      return limitedVisibleMarkers.length;
-    }
+  // viewport 안 전체 포스트 수 (마커 제한 전 실제 개수)
+  const viewportPostCount = useMemo(() => {
+    const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
+    if (!mapData?.bounds) return nonAdMarkers.length;
     const { sw, ne } = mapData.bounds;
-    return limitedVisibleMarkers.filter(m => {
-      return m.lat >= sw.lat && m.lat <= ne.lat &&
-             m.lng >= sw.lng && m.lng <= ne.lng;
-    }).length;
-  }, [limitedVisibleMarkers, mapData?.bounds]);
+    return nonAdMarkers.filter(m =>
+      m.lat >= sw.lat && m.lat <= ne.lat &&
+      m.lng >= sw.lng && m.lng <= ne.lng
+    ).length;
+  }, [spreadMarkers, mapData?.bounds]);
 
-  // 새로고침 버튼 비활성화 조건용
-  const visiblePostCount = displayedPostCount;
+  // 배지 숫자: viewport 안 전체 포스트 수 (30개 초과 시에도 실제 개수 표시)
+  const displayedPostCount = viewportPostCount;
+
+  // 새로고침 버튼 비활성화 조건용 (30개 초과 시 활성화)
+  const visiblePostCount = viewportPostCount;
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
@@ -1163,26 +1179,25 @@ const Index = () => {
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
             initialPosts={(() => {
-              // 배지 숫자와 동일한 기준: limitedVisibleMarkers(실제 지도에 표시된 마커) 중
-              // 현재 bounds 안에 있는 포스트 (광고 포함)
-              const boundsFiltered = (() => {
-                if (!mapData?.bounds) return limitedVisibleMarkers;
-                const { sw, ne } = mapData.bounds;
-                return limitedVisibleMarkers.filter(m =>
-                  m.lat >= sw.lat && m.lat <= ne.lat &&
-                  m.lng >= sw.lng && m.lng <= ne.lng
-                );
-              })();
-              // allPosts에서 전체 데이터(댓글 수 등)를 병합
-              const filtered = boundsFiltered.map(m => allPosts.find(p => p.id === m.id) || m);
+              // "여기보기"는 bounds 안 allPosts 전체를 최신순으로 보여줌
+              // (지도 마커는 30개 제한이지만, 여기보기에서는 전체 + 무한스크롤로 추가 로딩 가능)
+              const bounds = mapData?.bounds;
+              const boundsFiltered = bounds
+                ? allPosts.filter(m =>
+                    !m.isAd &&
+                    m.lat != null && m.lng != null &&
+                    m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+                    m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
+                  )
+                : allPosts.filter(m => !m.isAd);
               // 최신순 정렬 후 안 본 포스팅 우선
-              filtered.sort((a, b) => {
+              const sorted = [...boundsFiltered].sort((a, b) => {
                 const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
                 const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
                 return bTime - aTime;
               });
-              const unseen = filtered.filter(p => !viewedIds.has(p.id));
-              const seen = filtered.filter(p => viewedIds.has(p.id));
+              const unseen = sorted.filter(p => !viewedIds.has(p.id));
+              const seen = sorted.filter(p => viewedIds.has(p.id));
               return [...unseen, ...seen];
             })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
