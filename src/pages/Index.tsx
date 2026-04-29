@@ -41,7 +41,7 @@ const Index = () => {
   const location = useLocation();
   const { user: authUser, session } = useAuth();
 
-  const MAX_VISIBLE_MARKERS = 200;
+  const MAX_VISIBLE_MARKERS = 30;
   const [randomSeed, setRandomSeed] = useState(() => Math.random());
 
   const [showCssConfetti, setShowCssConfetti] = useState(false);
@@ -256,9 +256,6 @@ const Index = () => {
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
-    // 새 영역으로 이동 시 pinned 초기화 → 새 영역 마커가 표시되도록
-    pinnedMarkerIdsRef.current.clear();
-
     let cancelled = false;
 
     const doFetch = async () => {
@@ -267,10 +264,13 @@ const Index = () => {
         if (cancelled) return;
         if (raw.length === 0) return;
 
+        // fetch 완료 후 pinned 초기화 → 새 영역 기준으로 마커 재선택
+        // (fetch 전에 초기화하면 이전 영역 포스트로 30개가 채워지는 버그 발생)
+        pinnedMarkerIdsRef.current.clear();
+
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
           raw.forEach(r => {
-            // 광고 마커는 ads 테이블에서 별도 관리 — bounds fetch로 덮어쓰지 않음
             if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
             existingMap.set(r.id, mapRawToPost(r, prevPost));
@@ -544,21 +544,63 @@ const Index = () => {
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
   const visibleMarkers = spreadMarkers;
 
-  // ── limitedVisibleMarkers: 최대 MAX_VISIBLE_MARKERS개로 제한 ──
-  // 200개 제한으로 대부분의 경우 전부 표시됨.
-  // 초과 시 likes 높은 순 + 광고 우선으로 선택.
+  // ── limitedVisibleMarkers: 최대 30개로 제한 (성능 보호) ──────
+  // 한 지역에 포스트가 너무 많을 때 렌더링 부하 및 서버 부담 방지.
+  // 선택 기준: 현재 bounds 안 포스트 우선 → 그 중 likes 높은 순.
+  // pinned 방식으로 한 번 선택된 마커는 지도 이동 중에도 유지 (깜빡임 방지).
   const limitedVisibleMarkers = useMemo(() => {
     const adMarkers = spreadMarkers.filter(m => m.isAd);
     const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
 
     if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
+      // 30개 이하면 전부 표시
+      nonAdMarkers.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
       return spreadMarkers;
     }
 
-    // 200개 초과 시 likes 높은 순으로 자름
-    const sorted = [...nonAdMarkers].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
-    return [...adMarkers, ...sorted.slice(0, MAX_VISIBLE_MARKERS)];
-  }, [spreadMarkers]);
+    // 현재 spreadMarkers에 없는 id는 pinned에서 제거
+    const currentNonAdIds = new Set(nonAdMarkers.map(m => m.id));
+    pinnedMarkerIdsRef.current.forEach(id => {
+      if (!currentNonAdIds.has(id)) pinnedMarkerIdsRef.current.delete(id);
+    });
+
+    // 이미 pinned된 마커는 그대로 유지 (지도 이동 중 깜빡임 방지)
+    const pinned = nonAdMarkers.filter(m => pinnedMarkerIdsRef.current.has(m.id));
+
+    if (pinned.length >= MAX_VISIBLE_MARKERS) {
+      return [...adMarkers, ...pinned];
+    }
+
+    // 빈 슬롯을 채울 때: 현재 bounds 안 포스트를 likes 높은 순으로 우선 선택
+    const remaining = MAX_VISIBLE_MARKERS - pinned.length;
+    const unpinned = nonAdMarkers.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
+
+    const bounds = mapData?.bounds;
+    const inBounds = bounds
+      ? unpinned.filter(m =>
+          m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+          m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
+        )
+      : unpinned;
+    const outOfBounds = bounds
+      ? unpinned.filter(m =>
+          !(m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+            m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng)
+        )
+      : [];
+
+    // bounds 안 포스트를 likes 높은 순으로 먼저 채우고, 부족하면 bounds 밖으로 보충
+    const sortByLikes = (a: Post, b: Post) => (b.likes ?? 0) - (a.likes ?? 0);
+    const candidates = [
+      ...inBounds.sort(sortByLikes),
+      ...outOfBounds.sort(sortByLikes),
+    ];
+
+    const newlySelected = candidates.slice(0, remaining);
+    newlySelected.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
+
+    return [...adMarkers, ...pinned, ...newlySelected];
+  }, [spreadMarkers, mapData?.bounds]);
 
   // 배지 숫자: 현재 지도 bounds 안에 있는 마커 카운트 (광고 포함)
   const displayedPostCount = useMemo(() => {
@@ -1053,7 +1095,7 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
+                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
