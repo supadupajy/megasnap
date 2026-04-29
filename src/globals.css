@@ -624,14 +624,12 @@
   isolation: isolate;
 }
 
-/* 코너 브라켓 공통 - SVG 방식, border 없음 */
+/* 코너 브라켓 공통 - SVG 방식, opacity만 애니메이션 */
 .shutter-corner {
   position: absolute;
   width: 44px;
   height: 44px;
   pointer-events: none;
-  overflow: visible;
-  will-change: opacity, transform;
   animation: shutter-corner-in 0.45s ease-out forwards;
 }
 
@@ -641,12 +639,11 @@
 .shutter-corner-bl { bottom: 12px; left: 12px;  }
 .shutter-corner-br { bottom: 12px; right: 12px; }
 
-/* transform/opacity만 사용 → 모바일 GPU 합성 레이어에서 처리 */
+/* opacity만 사용 - scale 제거로 모바일 GPU 레이어 overflow 침범 방지 */
 @keyframes shutter-corner-in {
-  0%   { opacity: 0; transform: scale(1.5); }
-  30%  { opacity: 1; transform: scale(1.0); }
-  60%  { opacity: 1; transform: scale(0.88); }
-  100% { opacity: 1; transform: scale(0.88); }
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 1; }
 }
 
 /* 플래시: 순수 흰색, will-change로 GPU 처리 */
