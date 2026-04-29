@@ -343,13 +343,11 @@ const Index = () => {
         ? (mapMarkerAd.brand_logo_url || mapMarkerAd.image_url || '')
         : slot.image_url;
 
-      // 광고 시작일(start_date) → 없으면 updated_at → 없으면 먼 과거로 설정
-      // (모두보기에서 시간 순 정렬 시 광고가 항상 맨 앞에 오는 문제 방지)
+      // 광고 시작일(start_date)이 있으면 그 날짜, 없으면 new Date(0)(1970년 = 맨 뒤)
+      // updated_at은 최근 날짜일 수 있어 사용하지 않음 (모두보기 정렬 시 맨 앞에 오는 문제 방지)
       const adCreatedAt = mapMarkerAd.start_date
         ? new Date(mapMarkerAd.start_date)
-        : (mapMarkerAd as any).updated_at
-          ? new Date((mapMarkerAd as any).updated_at)
-          : new Date(0);
+        : new Date(0);
 
       const adPost: Post = {
         id: AD_POST_ID,

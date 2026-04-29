@@ -1,0 +1,1 @@
+SELECT id, label, start_date, end_date, updated_at FROM ads WHERE is_active = true LIMIT 10;
