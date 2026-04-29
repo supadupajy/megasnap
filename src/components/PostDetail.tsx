@@ -732,7 +732,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
+                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
                                   >
                                     <ExternalLink className="w-3.5 h-3.5" />
                                     <span className="text-[10px] font-black">주문하기</span>
@@ -976,7 +976,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
+                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 <span className="text-[10px] font-black">주문하기</span>
