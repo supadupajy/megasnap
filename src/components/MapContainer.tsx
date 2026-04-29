@@ -1051,19 +1051,26 @@ const MapContainer = ({
 
     const adSparklesHtml = '';
 
-    // 글로우를 z-index:-1 별도 레이어로 분리 → 라벨/이미지 뒤에 완전히 숨음
+    // 글로우: 이미지 박스(60x60) 기준 중앙에 정확히 배치 — 라벨 높이만큼 아래로 오프셋(라벨 약 14px)
     const adGlowLayer = isAd
-      ? `<div style="position:absolute;top:50%;left:50%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.6) 0%,rgba(59,130,246,0.3) 50%,transparent 75%);filter:blur(8px);z-index:-1;pointer-events:none;"></div>`
+      ? `<div style="position:absolute;top:calc(100% - 30px);left:50%;transform:translate(-50%,-50%);width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.55) 0%,rgba(59,130,246,0.25) 55%,transparent 75%);filter:blur(10px);z-index:-1;pointer-events:none;"></div>`
       : '';
 
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:0 0 20px rgba(37,99,235,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;animation:_ad_flip 4s ease-in-out infinite;transform-style:preserve-3d;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:0 0 20px rgba(37,99,235,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
+
+    // AD 마커: 라벨+이미지 박스를 하나의 wrapper로 감싸서 함께 회전
+    const adFlipWrapperStart = isAd
+      ? `<div style="display:flex;flex-direction:column;align-items:center;width:60px;animation:_ad_flip 4s ease-in-out infinite;transform-style:preserve-3d;">`
+      : '';
+    const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="marker-highlight-ping"></div>
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adGlowLayer : ''}
+        ${isAd ? adFlipWrapperStart : ''}
         ${isAd ? adLabelHtml : labelHtml}
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
@@ -1078,6 +1085,7 @@ const MapContainer = ({
             ${videoIconHtml}
           </div>
         </div>
+        ${isAd ? adFlipWrapperEnd : ''}
       </div>
     </div>`;
   };
