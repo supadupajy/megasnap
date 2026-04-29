@@ -143,8 +143,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-y-auto">
-      <div className="flex flex-col items-center px-6 py-12 min-h-screen">
+    <div
+      className="fixed inset-0 bg-white overflow-y-auto"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+      <div className="flex flex-col items-center px-6 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
