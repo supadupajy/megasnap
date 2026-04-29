@@ -374,9 +374,29 @@ const PostListOverlay = ({
 
   if (!isOpen) return null;
 
-  // 첫 번째 "이미 본" 포스팅의 인덱스 계산 (외부에서 주입된 스냅샷 기준)
-  // 광고 포스팅은 항상 맨 앞에 배치되므로 이미 본 것으로 간주하여 건너뜀
-  const firstViewedIndex = posts.findIndex(p => !p.isAd && openedViewedIds.has(p.id));
+  // 구분선 위치 계산:
+  // - 광고 포스팅은 seen/unseen 구분 없이 항상 맨 앞에 표시
+  // - 일반 포스팅 중 "이미 본" 항목이 시작되는 첫 번째 인덱스를 찾음
+  // - 단, 모든 일반 포스팅이 이미 본 경우 → 광고 바로 다음이 아닌 맨 첫 번째 일반 포스팅 앞에 표시
+  const firstViewedIndex = (() => {
+    // 광고가 아닌 포스팅 중 "이미 본" 것이 있는지 확인
+    const hasAnyViewedNormal = posts.some(p => !p.isAd && openedViewedIds.has(p.id));
+    if (!hasAnyViewedNormal) return -1; // 이미 본 일반 포스팅 없음 → 구분선 없음
+
+    // 광고가 아닌 포스팅 중 "아직 안 본" 것이 있는지 확인
+    const hasAnyUnseenNormal = posts.some(p => !p.isAd && !openedViewedIds.has(p.id));
+
+    if (!hasAnyUnseenNormal) {
+      // 모든 일반 포스팅이 이미 본 경우 → 첫 번째 일반 포스팅 앞에 구분선
+      return posts.findIndex(p => !p.isAd);
+    }
+
+    // 일반 포스팅 중 첫 번째 "이미 본" 항목 앞에 구분선 (unseen → seen 경계)
+    for (let i = 0; i < posts.length; i++) {
+      if (!posts[i].isAd && openedViewedIds.has(posts[i].id)) return i;
+    }
+    return -1;
+  })();
 
   return (
     <motion.div 
