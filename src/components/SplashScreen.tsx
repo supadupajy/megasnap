@@ -84,8 +84,8 @@ const SplashScreen = () => {
               {slot.isRecruitment ? (
                 <div className="w-full aspect-[16/9] bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl shadow-2xl shadow-indigo-200 relative overflow-hidden p-5 flex flex-col justify-between">
                   {/* 장식 원형 */}
-                  <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
-                  <div className="absolute -top-2 -right-2 w-16 h-16 bg-white/10 rounded-full" />
+                  <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+                  <div className="absolute -top-3 -right-3 w-20 h-20 bg-white/10 rounded-full" />
                   {/* 상단 레이블 */}
                   <span className="text-[11px] font-bold text-white/70 tracking-wide">광고 문의</span>
                   {/* 메인 카피 */}
