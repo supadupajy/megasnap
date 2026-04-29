@@ -624,27 +624,6 @@
   isolation: isolate;
 }
 
-/* 코너 브라켓 공통 - SVG 방식, opacity만 애니메이션 */
-.shutter-corner {
-  position: absolute;
-  width: 44px;
-  height: 44px;
-  pointer-events: none;
-  animation: shutter-corner-in 0.45s ease-out forwards;
-}
-
-/* 각 모서리 위치 */
-.shutter-corner-tl { top: 12px;    left: 12px;  }
-.shutter-corner-tr { top: 12px;    right: 12px; }
-.shutter-corner-bl { bottom: 12px; left: 12px;  }
-.shutter-corner-br { bottom: 12px; right: 12px; }
-
-/* opacity만 사용 - scale 제거로 모바일 GPU 레이어 overflow 침범 방지 */
-@keyframes shutter-corner-in {
-  0%   { opacity: 0; }
-  25%  { opacity: 1; }
-  100% { opacity: 1; }
-}
 
 /* 플래시: 순수 흰색, will-change로 GPU 처리 */
 .shutter-flash {
