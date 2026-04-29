@@ -171,6 +171,7 @@ const sections = [
   {
     title: '부칙',
     content: `이 약관은 2026년 5월 1일부터 시행합니다.
+,
   },
 ];
 
