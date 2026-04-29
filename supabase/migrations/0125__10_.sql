@@ -1,0 +1,1 @@
+SELECT id, post_id, user_name, content, created_at FROM comments ORDER BY created_at DESC LIMIT 10;
