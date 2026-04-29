@@ -649,9 +649,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
               <div className="flex gap-2 items-start">
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-                  <div className="ad-badge-fancy"><span>AD</span></div>
-                </div>
+                    <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+                  </div>
                 <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
