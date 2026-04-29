@@ -436,7 +436,7 @@ const Index = () => {
     // 중복 제거
     const unique = Array.from(new Map(filtered.map(p => [p.id, p])).values());
     setDisplayedMarkers(unique);
-  }, [allPosts, selectedCategories, blockedIds, authUser, currentZoom]);
+  }, [allPosts, selectedCategories, blockedIds, authUser]);
 
   // ── 줌 레벨별 마커 겹침 방지 분산 ──────────────────────────
   // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
@@ -559,6 +559,8 @@ const Index = () => {
       return spreadMarkers;
     }
 
+    // mapData.level과 currentZoom이 동시에 업데이트되므로 항상 일치함
+    // bounds는 현재 줌 레벨에 맞는 올바른 viewport를 반영
     const bounds = mapData?.bounds;
 
     // viewport 안/밖 분류
@@ -637,7 +639,9 @@ const Index = () => {
     // mapDataRef는 즉시 업데이트 (throttle 전에도 최신값 유지)
     mapDataRef.current = data;
     if (data.level !== undefined) {
-      setCurrentZoom(data.level);
+      // ref만 즉시 업데이트 - state는 throttle과 함께 setMapData와 동시에 업데이트
+      // (currentZoom과 mapData.bounds가 서로 다른 타이밍에 업데이트되면
+      //  limitedVisibleMarkers가 불일치한 bounds로 계산되어 마커가 줄어드는 버그 발생)
       currentZoomRef.current = data.level;
       mapCache.lastZoom = data.level;
     }
@@ -648,6 +652,10 @@ const Index = () => {
 
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
     throttleTimer.current = setTimeout(() => {
+      // currentZoom과 mapData를 동시에 업데이트하여 bounds 불일치 방지
+      if (data.level !== undefined) {
+        setCurrentZoom(data.level);
+      }
       setMapData(data);
       mapCache.lastCenter = data.center;
       if (isSelectingLocationRef.current) setTempSelectedLocation(data.center);
