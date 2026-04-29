@@ -25,6 +25,8 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
+import { formatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface PostDetailProps {
   posts: any[];
@@ -361,6 +363,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
+  const formattedDate = currentPost?.createdAt
+    ? formatDistanceToNow(new Date(currentPost.createdAt), { addSuffix: true, locale: ko })
+    : null;
+
   const displayLocation = useLocationDisplay(
     currentPost?.location || '',
     currentPost?.lat ?? currentPost?.latitude,
@@ -584,7 +590,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               </div>
                             </div>
                           </div>
-                          <div onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            {formattedDate && (
+                              <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
@@ -819,7 +828,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           </div>
                         </div>
                       </div>
-                      <div onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {formattedDate && (
+                          <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
