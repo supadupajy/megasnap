@@ -8,7 +8,7 @@ import PostDetail from '@/components/PostDetail';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
-import ShutterOverlay from '@/components/ShutterOverlay';
+import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
@@ -120,8 +120,8 @@ const Index = () => {
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   // 오버레이가 열릴 때 한 번만 계산된 포스트 목록 (viewedIds 변화로 재정렬 방지)
   const [postListInitialPosts, setPostListInitialPosts] = useState<Post[]>([]);
-  // 모두보기 카메라 셔터 애니메이션 상태
-  const [shutterActive, setShutterActive] = useState(false);
+  // 모두보기 셔터 애니메이션 - state 없이 ref로 직접 제어
+  const shutterRef = useRef<ShutterOverlayHandle>(null);
   const viewAllBtnRef = useRef<HTMLButtonElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
@@ -830,7 +830,7 @@ const Index = () => {
       >
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
-          <ShutterOverlay active={shutterActive} />
+          <ShutterOverlay ref={shutterRef} />
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
@@ -999,13 +999,10 @@ const Index = () => {
                         });
                         setPostListInitialPosts(finalList);
 
-                        // 카메라 셔터 애니메이션 시작
-                        setShutterActive(true);
-                        // 플래시(~400ms) 후 오버레이 열기, 셔터 종료
-                        setTimeout(() => {
+                        // 플래시 애니메이션 - state 변경 없이 ref로 직접 실행
+                        shutterRef.current?.trigger(() => {
                           setIsPostListOpen(true);
-                          setShutterActive(false);
-                        }, 500);
+                        });
                       }
                     }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}

@@ -614,30 +614,14 @@
    모두보기 버튼 카메라 셔터 전환 애니메이션
    ============================================= */
 
-/* 셔터 컨테이너 - 지도 영역 전체를 덮는 레이어 */
-.shutter-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 25;
-  pointer-events: none;
-  /* 새 stacking context 생성 → 자식 z-index가 외부에 영향 안 줌 */
-  isolation: isolate;
-}
-
-
-/* 플래시: 순수 흰색, will-change로 GPU 처리 */
-.shutter-flash {
-  position: absolute;
-  inset: 0;
-  background: white;
-  pointer-events: none;
-  will-change: opacity;
-  animation: shutter-flash 0.45s ease-out forwards;
+/* 플래시: 클래스 토글 방식 - DOM 마운트/언마운트 없이 opacity만 변경 */
+.shutter-flash-active {
+  animation: shutter-flash 0.42s ease-out forwards !important;
 }
 
 @keyframes shutter-flash {
   0%   { opacity: 0; }
-  30%  { opacity: 0.8; }
-  60%  { opacity: 0.8; }
+  25%  { opacity: 0.85; }
+  55%  { opacity: 0.85; }
   100% { opacity: 0; }
 }
