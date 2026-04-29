@@ -830,14 +830,12 @@ const Index = () => {
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           {shutterActive && (
-            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
-              {/* 플래시 오버레이 - 코너 브라켓 아래 */}
-              <div className="shutter-flash" style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
-              {/* 네 모서리 코너 브라켓 - 플래시 위 */}
-              <div className="shutter-corner shutter-corner-tl" style={{ zIndex: 2 }} />
-              <div className="shutter-corner shutter-corner-tr" style={{ zIndex: 2 }} />
-              <div className="shutter-corner shutter-corner-bl" style={{ zIndex: 2 }} />
-              <div className="shutter-corner shutter-corner-br" style={{ zIndex: 2 }} />
+            <div className="shutter-overlay">
+              <div className="shutter-flash" />
+              <div className="shutter-corner shutter-corner-tl" />
+              <div className="shutter-corner shutter-corner-tr" />
+              <div className="shutter-corner shutter-corner-bl" />
+              <div className="shutter-corner shutter-corner-br" />
             </div>
           )}
           <div className="absolute inset-0 z-0">

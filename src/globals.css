@@ -614,40 +614,51 @@
    모두보기 버튼 카메라 셔터 전환 애니메이션
    ============================================= */
 
-/* 코너 브라켓 공통 */
+/* 셔터 컨테이너 - 지도 영역 전체를 덮는 레이어 */
+.shutter-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  /* 새 stacking context 생성 → 자식 z-index가 외부에 영향 안 줌 */
+  isolation: isolate;
+}
+
+/* 코너 브라켓 공통 - will-change로 GPU 레이어 확보, box-shadow 제거 */
 .shutter-corner {
   position: absolute;
   width: 44px;
   height: 44px;
   pointer-events: none;
-  animation: shutter-corner-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  animation: shutter-corner-in 0.45s ease-out forwards;
 }
 
-/* 각 모서리 위치 */
-.shutter-corner-tl { top: 14px;    left: 14px;    border-top: 4px solid #4f46e5;  border-left: 4px solid #4f46e5;  border-radius: 3px 0 0 0; box-shadow: -2px -2px 8px rgba(79,70,229,0.5); }
-.shutter-corner-tr { top: 14px;    right: 14px;   border-top: 4px solid #4f46e5;  border-right: 4px solid #4f46e5; border-radius: 0 3px 0 0; box-shadow: 2px -2px 8px rgba(79,70,229,0.5); }
-.shutter-corner-bl { bottom: 14px; left: 14px;    border-bottom: 4px solid #4f46e5; border-left: 4px solid #4f46e5;  border-radius: 0 0 0 3px; box-shadow: -2px 2px 8px rgba(79,70,229,0.5); }
-.shutter-corner-br { bottom: 14px; right: 14px;   border-bottom: 4px solid #4f46e5; border-right: 4px solid #4f46e5; border-radius: 0 0 3px 0; box-shadow: 2px 2px 8px rgba(79,70,229,0.5); }
+/* 각 모서리 위치 - box-shadow 없이 border만 */
+.shutter-corner-tl { top: 16px;    left: 16px;    border-top: 4px solid #4f46e5;  border-left: 4px solid #4f46e5;  border-radius: 4px 0 0 0; }
+.shutter-corner-tr { top: 16px;    right: 16px;   border-top: 4px solid #4f46e5;  border-right: 4px solid #4f46e5; border-radius: 0 4px 0 0; }
+.shutter-corner-bl { bottom: 16px; left: 16px;    border-bottom: 4px solid #4f46e5; border-left: 4px solid #4f46e5;  border-radius: 0 0 0 4px; }
+.shutter-corner-br { bottom: 16px; right: 16px;   border-bottom: 4px solid #4f46e5; border-right: 4px solid #4f46e5; border-radius: 0 0 4px 0; }
 
-/* 코너가 안쪽으로 살짝 조여드는 느낌 - 전체 시간 동안 선명하게 유지 */
+/* transform/opacity만 사용 → 모바일 GPU 합성 레이어에서 처리 */
 @keyframes shutter-corner-in {
-  0%   { opacity: 0;   transform: scale(1.6); }
-  20%  { opacity: 1;   transform: scale(1.0); }
-  55%  { opacity: 1;   transform: scale(0.85); }
-  100% { opacity: 1;   transform: scale(0.85); }
+  0%   { opacity: 0; transform: scale(1.5); }
+  30%  { opacity: 1; transform: scale(1.0); }
+  60%  { opacity: 1; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(0.88); }
 }
 
-/* 플래시: 순수 흰색 번쩍 */
+/* 플래시: 순수 흰색, will-change로 GPU 처리 */
 .shutter-flash {
   background: white;
   pointer-events: none;
-  animation: shutter-flash 0.5s ease-out forwards;
+  will-change: opacity;
+  animation: shutter-flash 0.45s ease-out forwards;
 }
 
 @keyframes shutter-flash {
   0%   { opacity: 0; }
-  20%  { opacity: 0.6; }
-  45%  { opacity: 0.85; }
-  70%  { opacity: 0.35; }
+  30%  { opacity: 0.8; }
+  60%  { opacity: 0.8; }
   100% { opacity: 0; }
 }
