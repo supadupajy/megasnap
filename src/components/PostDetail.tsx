@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId } from '@/lib/utils';
@@ -53,50 +53,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   
   // [FIX] currentPostIndex가 바뀔 때마다 최신 포스트 데이터를 안전하게 참조
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  
-  // [FIX] youtubeId 변수 선언 위치를 상단으로 고정
-  // 광고는 절대 영상으로 재생하지 않음 → 음식 이미지로만 표시
   const youtubeId = useMemo(() => {
-    if (!currentPost) return '';
-    if (currentPost.isAd) return '';
+    if (!currentPost || currentPost.isAd) return '';
     return getYoutubeId(currentPost.youtubeUrl || '');
   }, [currentPost]);
-
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
-  
-  // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-
-  // 마우스 드래그 핸들러
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!imageScrollRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
-    setScrollLeft(imageScrollRef.current.scrollLeft);
-  };
-
-  const onMouseUp = () => {
-    setIsDragging(false);
-    if (imageScrollRef.current) {
-      const container = imageScrollRef.current;
-      const index = Math.round(container.scrollLeft / container.clientWidth);
-      setCurrentImageIndex(index);
-    }
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !imageScrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - imageScrollRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    imageScrollRef.current.scrollLeft = scrollLeft - walk;
-  };
-
   const [localComments, setLocalComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -118,6 +83,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!imageScrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
+    setScrollLeft(imageScrollRef.current.scrollLeft);
+  };
+  const onMouseUp = () => {
+    setIsDragging(false);
+    if (imageScrollRef.current) {
+      const index = Math.round(imageScrollRef.current.scrollLeft / imageScrollRef.current.clientWidth);
+      setCurrentImageIndex(index);
+    }
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !imageScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - imageScrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    imageScrollRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   // 키보드 대응
   useEffect(() => {
@@ -144,7 +132,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (isOpen && !hasInitialized && initialIndex !== -1) {
       setCurrentPostIndex(initialIndex);
       setHasInitialized(true);
-      setShowComments(false);
       setCurrentImageIndex(0);
       const post = posts[initialIndex];
       if (post) {
@@ -159,7 +146,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     const currentPost = posts[currentPostIndex];
     if (isOpen && currentPost) {
       if (onViewPost) onViewPost(currentPost.id);
-      setShowComments(false);
       setCurrentImageIndex(0);
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
@@ -405,7 +391,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowComments(true);
     setTimeout(() => {
       if (commentSectionRef.current && scrollContainerRef.current) {
         const container = scrollContainerRef.current;
@@ -775,30 +760,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <Send className="w-4 h-4" />
                                 </button>
                               </form>
-                              <button
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
-                                className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
-                              >
-                                <span className="text-xs text-gray-400 font-medium pointer-events-none">
-                                  {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                                </span>
-                                {showComments ?
-                                  <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
-                                  <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-                                }
-                              </button>
-                              <div
-                                className={cn("overflow-hidden transition-all duration-300 ease-in-out", showComments ? "max-height-[500px] opacity-100 mt-2" : "max-height-0 opacity-0")}
-                                style={{ maxHeight: showComments ? '1000px' : '0px' }}
-                              >
-                                <div className="space-y-2 pb-2">
-                                  {localComments.slice(0, -1).map((c, i) => (
-                                    <div key={i} className="flex gap-2 items-start">
-                                      <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                      <span className="text-sm text-gray-500">{c.text}</span>
-                                    </div>
-                                  ))}
-                                </div>
+                              <div className="space-y-2 mt-2">
+                                {localComments.slice(0, -1).map((c, i) => (
+                                  <div key={i} className="flex gap-2 items-start">
+                                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                                    <span className="text-sm text-gray-500">{c.text}</span>
+                                  </div>
+                                ))}
                               </div>
                               {lastComment && (
                                 <div className="flex gap-2 items-start mt-1">
@@ -1021,38 +989,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </button>
                           </form>
 
-                          <button 
-                            onClick={(e) => { 
-                              e.preventDefault();
-                              e.stopPropagation(); 
-                              setShowComments(!showComments); 
-                            }} 
-                            className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
-                          >
-                            <span className="text-xs text-gray-400 font-medium pointer-events-none">
-                              {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                            </span>
-                            {showComments ? 
-                              <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> : 
-                              <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-                            }
-                          </button>
-
-                          <div 
-                            className={cn(
-                              "overflow-hidden transition-all duration-300 ease-in-out",
-                              showComments ? "max-height-[500px] opacity-100 mt-2" : "max-height-0 opacity-0"
-                            )}
-                            style={{ maxHeight: showComments ? '1000px' : '0px' }}
-                          >
-                            <div className="space-y-2 pb-2">
-                              {localComments.slice(0, -1).map((c, i) => (
-                                <div key={i} className="flex gap-2 items-start">
-                                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                  <span className="text-sm text-gray-500">{c.text}</span>
-                                </div>
-                              ))}
-                            </div>
+                          <div className="space-y-2 mt-2">
+                            {localComments.slice(0, -1).map((c, i) => (
+                              <div key={i} className="flex gap-2 items-start">
+                                <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                                <span className="text-sm text-gray-500">{c.text}</span>
+                              </div>
+                            ))}
                           </div>
 
                           {lastComment && (

@@ -68,7 +68,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(post.comments || []);
-  const [showComments, setShowComments] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
@@ -430,7 +429,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowComments(true);
     setTimeout(() => {
       commentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 50);
@@ -637,28 +635,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 </button>
               </form>
 
-              <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-                <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-                {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-              </button>
-
-              <AnimatePresence>
-                {showComments && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden space-y-2 mt-2"
-                  >
-                    {localComments.slice(0, -1).map((c, i) => (
-                      <div key={i} className="flex gap-2 items-start">
-                        <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                        <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="space-y-2 mt-2">
+                {localComments.slice(0, -1).map((c, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                    <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                  </div>
+                ))}
+              </div>
 
               {lastComment && (
                 <div ref={commentSectionRef} className="flex gap-2 items-start mt-1">
@@ -722,28 +706,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </button>
             </form>
 
-            <button className="w-full py-1 flex items-center justify-between group" onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
-              <span className="text-xs text-gray-400 font-medium">{showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}</span>
-              {showComments ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />}
-            </button>
-
-            <AnimatePresence>
-              {showComments && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden space-y-2 mt-2"
-                >
-                  {localComments.slice(0, -1).map((c, i) => (
-                    <div key={i} className="flex gap-2 items-start">
-                      <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                      <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="space-y-2 mt-2">
+              {localComments.slice(0, -1).map((c, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                  <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                </div>
+              ))}
+            </div>
 
             {lastComment && (
               <div ref={commentSectionRef} className="flex gap-2 items-start mt-1">
