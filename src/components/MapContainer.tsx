@@ -1045,8 +1045,7 @@ const MapContainer = ({
       @keyframes _ad_flip { 0%,75%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
       @keyframes _tornado_outer { 0%{transform:rotate(0deg) scale(1)} 25%{transform:rotate(90deg) scale(1.15)} 50%{transform:rotate(180deg) scale(1)} 75%{transform:rotate(270deg) scale(1.15)} 100%{transform:rotate(360deg) scale(1)} }
       @keyframes _tornado_inner { 0%{transform:rotate(0deg) scale(1.2)} 100%{transform:rotate(-360deg) scale(1.2)} }
-      @keyframes _tornado_glow { 0%,100%{box-shadow:0 0 7px 3px rgba(59,130,246,0.95),0 0 16px 6px rgba(99,102,241,0.65),0 0 30px 10px rgba(59,130,246,0.35)} 50%{box-shadow:0 0 12px 5px rgba(59,130,246,1),0 0 26px 10px rgba(99,102,241,0.85),0 0 44px 16px rgba(59,130,246,0.55)} }
-      ._ad_lbl { position:relative; overflow:hidden; width:100%; color:white; font-size:9px; font-weight:900; padding:2px 0 16px 0; border-radius:14px 14px 0 0; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-16px; z-index:1; line-height:1.2; animation:_tornado_glow 1.8s ease-in-out infinite; }
+      ._ad_lbl { position:relative; overflow:hidden; width:100%; color:white; font-size:9px; font-weight:900; padding:2px 0 16px 0; border-radius:14px 14px 0 0; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-16px; z-index:1; line-height:1.2; }
       ._ad_lbl::before { content:""; position:absolute; inset:-60%; border-radius:50%; background:conic-gradient(from 0deg,#1d4ed8 0deg,#3b82f6 60deg,#60a5fa 90deg,#93c5fd 120deg,#2563eb 180deg,#1e40af 240deg,#3b82f6 300deg,#1d4ed8 360deg); animation:_tornado_outer 1.2s linear infinite; z-index:0; }
       ._ad_lbl::after { content:""; position:absolute; inset:-40%; border-radius:50%; background:conic-gradient(from 0deg,rgba(99,102,241,0.9) 0deg,rgba(59,130,246,0.7) 90deg,rgba(147,197,253,0.5) 150deg,rgba(37,99,235,0.9) 210deg,rgba(99,102,241,0.7) 270deg,rgba(59,130,246,0.9) 330deg,rgba(99,102,241,0.9) 360deg); animation:_tornado_inner 0.8s linear infinite; z-index:1; }
       ._ad_lbl_txt { position:relative; z-index:2; text-shadow:0 1px 3px rgba(0,0,0,0.5); }
@@ -1058,13 +1057,10 @@ const MapContainer = ({
 
     const adSparklesHtml = '';
 
-    // 글로우: 이미지 박스(60x60) 기준 중앙에 정확히 배치 — 라벨 높이만큼 아래로 오프셋(라벨 약 14px)
-    const adGlowLayer = isAd
-      ? `<div style="position:absolute;top:calc(100% - 30px);left:50%;transform:translate(-50%,-50%);width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.55) 0%,rgba(59,130,246,0.25) 55%,transparent 75%);filter:blur(10px);z-index:-1;pointer-events:none;"></div>`
-      : '';
+    const adGlowLayer = '';
 
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:0 0 20px rgba(37,99,235,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     // AD 마커: 라벨+이미지 박스를 하나의 wrapper로 감싸서 함께 회전
