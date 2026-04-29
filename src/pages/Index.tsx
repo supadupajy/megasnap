@@ -827,14 +827,32 @@ const Index = () => {
           paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
-        <div ref={mapAreaRef} className={`flex-1 relative overflow-hidden flex flex-col${shutterActive ? ' shutter-border' : ''}`}>
+        <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           {shutterActive && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
               {/* 플래시 오버레이 */}
-              <div className="shutter-flash" style={{ position: 'absolute', inset: 0 }} />
+              <div className="shutter-flash" style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
             </div>
           )}
+          {/* 인디고 테두리 - 헤더/네비 위로 올라오도록 fixed + 지도 영역 좌표 사용 */}
+          {shutterActive && mapAreaRef.current && (() => {
+            const r = mapAreaRef.current!.getBoundingClientRect();
+            return (
+              <div
+                className="shutter-border"
+                style={{
+                  position: 'fixed',
+                  top: r.top,
+                  left: r.left,
+                  width: r.width,
+                  height: r.height,
+                  zIndex: 9999,
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          })()}
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
