@@ -531,32 +531,19 @@ const Index = () => {
     spreadCacheRef.current.clear();
   }, [currentZoom]);
 
-  // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
-  // [BUG FIX] 원래 좌표(post.lat/lng)로 bounds 필터링해야 함
-  // spreadMarkers의 분산된 좌표로 필터링하면 레벨 변경 시 캐시 초기화로
-  // 분산 좌표가 달라져 bounds 안/밖 판정이 달라지는 버그 발생
-  const visibleMarkers = useMemo(() => {
-    if (!mapData?.bounds) return spreadMarkers;
-    const { sw, ne } = mapData.bounds;
-    return spreadMarkers.filter(p => {
-      // 광고 마커는 bounds 밖이어도 항상 포함
-      if (p.isAd) return true;
-      // 원래 좌표(분산 전)로 bounds 필터링
-      const origPost = allPosts.find(op => op.id === p.id);
-      const origLat = origPost?.lat ?? p.lat;
-      const origLng = origPost?.lng ?? p.lng;
-      return origLat >= sw.lat && origLat <= ne.lat &&
-             origLng >= sw.lng && origLng <= ne.lng;
-    });
-  }, [spreadMarkers, mapData?.bounds, allPosts]);
+  // ── visibleMarkers: bounds 필터 없이 spreadMarkers 그대로 사용 ──────
+  // 카카오맵 CustomOverlay는 화면 밖 마커를 자동으로 렌더링하지 않으므로
+  // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
+  const visibleMarkers = spreadMarkers;
 
   // ── limitedVisibleMarkers: 최대 30개로 제한 (최신순) ──
+  // bounds 필터 없이 전체 spreadMarkers 중 최신 30개를 MapContainer에 전달
   const limitedVisibleMarkers = useMemo(() => {
-    const adMarkers = visibleMarkers.filter(m => m.isAd);
-    const nonAdMarkers = visibleMarkers.filter(m => !m.isAd);
+    const adMarkers = spreadMarkers.filter(m => m.isAd);
+    const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
 
     if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
-      return visibleMarkers;
+      return spreadMarkers;
     }
 
     // 최신순(created_at 내림차순)으로 정렬 후 상위 30개 선택
@@ -568,10 +555,10 @@ const Index = () => {
 
     const selected = sorted.slice(0, MAX_VISIBLE_MARKERS);
     return [...adMarkers, ...selected];
-  }, [visibleMarkers]);
+  }, [spreadMarkers]);
 
-  // 실제 화면(viewport)에 보이는 마커 수 — 배지 숫자 및 여기보기 버튼용
-  // limitedVisibleMarkers 중 현재 지도 bounds 안에 원래 좌표가 있는 것만 카운트
+  // 배지 숫자: 현재 지도 bounds 안에 원래 좌표가 있는 마커만 카운트
+  // (MapContainer에 전달된 마커 중 실제 화면에 보이는 것)
   const displayedPostCount = useMemo(() => {
     if (!mapData?.bounds) {
       return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
@@ -579,15 +566,15 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     return limitedVisibleMarkers.filter(m => {
       if (m.isAd || m.content?.trim().startsWith('[AD]')) return false;
-      const origPost = allPosts.find(op => op.id === m.id);
-      const origLat = origPost?.lat ?? m.lat;
-      const origLng = origPost?.lng ?? m.lng;
+      // 원래 좌표(분산 전)로 bounds 체크
+      const origLat = m.lat;
+      const origLng = m.lng;
       return origLat >= sw.lat && origLat <= ne.lat &&
              origLng >= sw.lng && origLng <= ne.lng;
     }).length;
-  }, [limitedVisibleMarkers, mapData?.bounds, allPosts]);
+  }, [limitedVisibleMarkers, mapData?.bounds]);
 
-  // 새로고침 버튼 비활성화 조건용 (bounds 안 마커 수)
+  // 새로고침 버튼 비활성화 조건용
   const visiblePostCount = displayedPostCount;
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
