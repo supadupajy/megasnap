@@ -42,7 +42,6 @@ const Index = () => {
   const { user: authUser, session } = useAuth();
 
   const MAX_VISIBLE_MARKERS = 30;
-  const [randomSeed, setRandomSeed] = useState(() => Math.random());
 
   const [showCssConfetti, setShowCssConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
@@ -142,8 +141,7 @@ const Index = () => {
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
-  // 분산 좌표 캐시: post.id → { lat, lng } — 한 번 결정된 위치는 고정
-  const spreadCacheRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
@@ -433,95 +431,10 @@ const Index = () => {
     setDisplayedMarkers(unique);
   }, [allPosts, selectedCategories, blockedIds, authUser]);
 
-  // ── 줌 레벨별 마커 겹침 방지 분산 ──────────────────────────
-  // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
-  // 너무 가까운 마커들을 방사형으로 분산시킴
-  const spreadMarkers = useMemo(() => {
-    // 줌이 바뀌면 minDist가 달라지므로 캐시를 여기서 초기화 (useEffect보다 먼저 실행 보장)
-    spreadCacheRef.current.clear();
-
-    if (displayedMarkers.length === 0) {
-      return displayedMarkers;
-    }
-
-    const minDistByLevel: Record<number, number> = {
-      1: 0.0010, 2: 0.0015, 3: 0.0020, 4: 0.0040,
-      5: 0.0065,
-      6: 0.0090,
-      7: 0.0150,
-    };
-    const minDist = minDistByLevel[currentZoom] ?? 0.0065;
-
-    const adMarkers = displayedMarkers.filter(p => p.isAd);
-    const nonAdMarkers = displayedMarkers.filter(p => !p.isAd);
-
-    const priority = (p: Post) => {
-      if (p.borderType === 'diamond') return 5;
-      if (p.borderType === 'gold') return 4;
-      if (p.borderType === 'silver') return 3;
-      if (p.borderType === 'popular') return 3;
-      return 1;
-    };
-    const sorted = [...nonAdMarkers].sort((a, b) => priority(b) - priority(a));
-
-    // 현재 displayedMarkers에 없는 포스트의 캐시 항목 제거
-    const currentIds = new Set(nonAdMarkers.map(p => p.id));
-    spreadCacheRef.current.forEach((_, id) => {
-      if (!currentIds.has(id)) spreadCacheRef.current.delete(id);
-    });
-
-    const placed: { lat: number; lng: number; id: string }[] = [];
-    const result: Post[] = [];
-
-    for (const post of sorted) {
-      // 캐시에 이미 분산 좌표가 있으면 그대로 사용 (위치 고정)
-      const cached = spreadCacheRef.current.get(post.id);
-      if (cached) {
-        placed.push({ lat: cached.lat, lng: cached.lng, id: post.id });
-        result.push(cached.lat === post.lat && cached.lng === post.lng
-          ? post
-          : { ...post, lat: cached.lat, lng: cached.lng }
-        );
-        continue;
-      }
-
-      let lat = post.lat;
-      let lng = post.lng;
-
-      let attempts = 0;
-      const maxAttempts = 8;
-      while (attempts < maxAttempts) {
-        const conflict = placed.find(p => {
-          const dlat = Math.abs(p.lat - lat);
-          const dlng = Math.abs(p.lng - lng);
-          return dlat < minDist && dlng < minDist * 1.3;
-        });
-
-        if (!conflict) break;
-
-        const angle = (attempts * Math.PI * 2) / maxAttempts;
-        lat = post.lat + Math.cos(angle) * minDist * 0.9;
-        lng = post.lng + Math.sin(angle) * minDist * 1.1;
-        attempts++;
-      }
-
-      // 결정된 좌표를 캐시에 저장
-      spreadCacheRef.current.set(post.id, { lat, lng });
-      placed.push({ lat, lng, id: post.id });
-      result.push(lat === post.lat && lng === post.lng
-        ? post
-        : { ...post, lat, lng }
-      );
-    }
-
-    result.unshift(...adMarkers);
-    return result;
-  }, [displayedMarkers, currentZoom]);
-
-  // spreadMarkers가 바뀔 때마다 ref 동기화 (focusPostOnMap에서 분산 좌표 참조용)
+  // spreadMarkersRef를 displayedMarkers로 동기화 (focusPostOnMap에서 참조용)
   useEffect(() => {
-    spreadMarkersRef.current = spreadMarkers;
-  }, [spreadMarkers]);
+    spreadMarkersRef.current = displayedMarkers;
+  }, [displayedMarkers]);
 
   // 위치 선택 모드 ref 동기화 (handleMapChange stale closure 방지)
   useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
@@ -532,13 +445,12 @@ const Index = () => {
     currentZoomRef.current = currentZoom;
   }, [currentZoom]);
 
-  // ── visibleMarkers: bounds 필터 없이 spreadMarkers 그대로 사용 ──────
+  // ── visibleMarkers: displayedMarkers 그대로 사용 (분산 없음) ──────
   // 카카오맵 CustomOverlay는 화면 밖 마커를 자동으로 렌더링하지 않으므로
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
-  const visibleMarkers = spreadMarkers;
 
   // viewport 안 전체 포스트 수 (모두보기 배지용) - 광고 포함
-  // 원래 좌표(분산 전) 기준으로 계산 - displayedMarkers 사용
+  // 원래 좌표 기준으로 계산 - displayedMarkers 사용
   const viewportPostCount = useMemo(() => {
     if (!mapData?.bounds) return displayedMarkers.length;
     const { sw, ne } = mapData.bounds;
@@ -606,11 +518,8 @@ const Index = () => {
     // 이전 타이머/리스너 취소
     if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
 
-    // spreadMarkers에서 분산된 실제 표시 좌표를 찾아 그 위치로 지도 이동
-    const spreadPost = spreadMarkersRef.current.find(p => p.id === post.id);
-    const targetCenter = spreadPost
-      ? { lat: spreadPost.lat, lng: spreadPost.lng }
-      : (center || { lat: post.lat, lng: post.lng });
+    // 원래 좌표(분산 없음)로 지도 이동
+    const targetCenter = center || { lat: post.lat, lng: post.lng };
 
     setMapCenter(targetCenter);
 
@@ -691,9 +600,6 @@ const Index = () => {
         });
       }
     }
-
-    // 새로운 랜덤 시드로 마커 셔플 (새로고침 시 마커 재선택)
-    setRandomSeed(Math.random());
 
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
@@ -914,7 +820,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={spreadMarkers}
+              posts={displayedMarkers}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
