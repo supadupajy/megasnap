@@ -535,13 +535,13 @@ const Index = () => {
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
   const visibleMarkers = spreadMarkers;
 
-  // viewport 안 전체 포스트 수 (모두보기 배지용)
+  // viewport 안 전체 포스트 수 (모두보기 배지용) - 광고 포함
   // 원래 좌표(분산 전) 기준으로 계산 - displayedMarkers 사용
   const viewportPostCount = useMemo(() => {
-    const nonAdMarkers = displayedMarkers.filter(m => !m.isAd);
-    if (!mapData?.bounds) return nonAdMarkers.length;
+    if (!mapData?.bounds) return displayedMarkers.length;
     const { sw, ne } = mapData.bounds;
-    return nonAdMarkers.filter(m =>
+    return displayedMarkers.filter(m =>
+      m.lat != null && m.lng != null &&
       m.lat >= sw.lat && m.lat <= ne.lat &&
       m.lng >= sw.lng && m.lng <= ne.lng
     ).length;
