@@ -1022,7 +1022,7 @@ const MapContainer = ({
       inlineBorderStyle = "border: 4.5px solid #4f46e5;"; 
       inlineShadow = "0 0 15px rgba(79, 70, 229, 0.4)"; 
     }
-    else if (isAd) { inlineBorderStyle = "border: none;"; inlineShadow = "0 0 20px rgba(251,191,36,0.7), 0 0 40px rgba(139,92,246,0.3)"; influencerClass = ""; }
+    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "0 0 20px rgba(37,99,235,0.6), 0 0 40px rgba(59,130,246,0.3)"; influencerClass = ""; }
     else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
     else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
     else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
@@ -1046,9 +1046,7 @@ const MapContainer = ({
 
     const adGlowLayer = '';
 
-    const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:none;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
-      : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
+    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     // AD 마커: 라벨+이미지 박스를 하나의 wrapper로 감싸서 함께 회전
     const adFlipWrapperStart = isAd
