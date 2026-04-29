@@ -624,21 +624,22 @@
   isolation: isolate;
 }
 
-/* 코너 브라켓 공통 - will-change로 GPU 레이어 확보, box-shadow 제거 */
+/* 코너 브라켓 공통 - SVG 방식, border 없음 */
 .shutter-corner {
   position: absolute;
   width: 44px;
   height: 44px;
   pointer-events: none;
-  will-change: transform, opacity;
+  overflow: visible;
+  will-change: opacity, transform;
   animation: shutter-corner-in 0.45s ease-out forwards;
 }
 
-/* 각 모서리 위치 - box-shadow 없이 border만 */
-.shutter-corner-tl { top: 16px;    left: 16px;    border-top: 4px solid #4f46e5;  border-left: 4px solid #4f46e5;  border-radius: 4px 0 0 0; }
-.shutter-corner-tr { top: 16px;    right: 16px;   border-top: 4px solid #4f46e5;  border-right: 4px solid #4f46e5; border-radius: 0 4px 0 0; }
-.shutter-corner-bl { bottom: 16px; left: 16px;    border-bottom: 4px solid #4f46e5; border-left: 4px solid #4f46e5;  border-radius: 0 0 0 4px; }
-.shutter-corner-br { bottom: 16px; right: 16px;   border-bottom: 4px solid #4f46e5; border-right: 4px solid #4f46e5; border-radius: 0 0 4px 0; }
+/* 각 모서리 위치 */
+.shutter-corner-tl { top: 12px;    left: 12px;  }
+.shutter-corner-tr { top: 12px;    right: 12px; }
+.shutter-corner-bl { bottom: 12px; left: 12px;  }
+.shutter-corner-br { bottom: 12px; right: 12px; }
 
 /* transform/opacity만 사용 → 모바일 GPU 합성 레이어에서 처리 */
 @keyframes shutter-corner-in {
