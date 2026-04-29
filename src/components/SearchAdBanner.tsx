@@ -21,13 +21,28 @@ const SearchAdBanner = () => {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full h-[120px] bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[24px] flex items-center justify-center gap-4 mb-8 shadow-lg shadow-indigo-100 cursor-pointer"
+        className="w-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-[24px] mb-8 shadow-lg shadow-indigo-100 cursor-pointer relative overflow-hidden p-5 flex flex-col justify-between gap-3"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
-        <Mail className="w-8 h-8 text-white/90 shrink-0" />
-        <div className="flex flex-col">
-          <span className="text-lg font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
-          <span className="text-sm font-bold text-white/70 leading-none mt-1.5 tracking-[-0.04em]">chorasnap@gmail.com</span>
+        {/* 장식 원형 */}
+        <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full pointer-events-none" />
+        <div className="absolute -top-2 -right-2 w-16 h-16 bg-white/10 rounded-full pointer-events-none" />
+        {/* 상단 레이블 */}
+        <span className="text-[11px] font-bold text-white/70 tracking-wide">광고 문의</span>
+        {/* 메인 카피 */}
+        <div>
+          <h2 className="text-[20px] font-black text-white leading-tight tracking-tight">
+            좋은 브랜드를<br />기다리고 있어요.
+          </h2>
+          <p className="text-[12px] font-medium text-white/70 mt-1">광고 문의는 언제든 환영이에요.</p>
+        </div>
+        {/* 이메일 버튼 */}
+        <div className="flex items-center gap-3 bg-white/15 rounded-xl px-3 py-2.5">
+          <Mail className="w-4 h-4 text-white/80 shrink-0" />
+          <span className="flex-1 text-[13px] font-bold text-white tracking-tight">chorasnap@gmail.com</span>
+          <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </div>
         </div>
       </motion.div>
     );
