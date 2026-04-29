@@ -533,24 +533,10 @@ const Index = () => {
   }, [spreadMarkers, mapData?.bounds]);
 
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
-  // 원본 좌표(분산 전) 기준으로 계산 → PostListOverlay에 전달되는 수와 일치
+  // visibleMarkers(실제 지도에 표시되는 마커) 기준으로 계산 → 화면에 보이는 마커 수와 일치
   const visiblePostCount = useMemo(() => {
-    if (!mapData?.bounds) return visibleMarkers.filter(m => !m.isAd).length;
-    const { sw, ne } = mapData.bounds;
-    return allPosts.filter(p =>
-      !p.isAd &&
-      !p.content?.trim().startsWith('[AD]') &&
-      p.lat != null && p.lng != null &&
-      p.lat >= sw.lat && p.lat <= ne.lat &&
-      p.lng >= sw.lng && p.lng <= ne.lng &&
-      !blockedIds.has(p.user?.id) &&
-      (selectedCategories.includes('all') ||
-        (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
-        selectedCategories.includes(p.category || 'none') ||
-        (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
-        (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
-    ).length;
-  }, [allPosts, mapData?.bounds, blockedIds, selectedCategories, authUser, visibleMarkers]);
+    return visibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+  }, [visibleMarkers]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
