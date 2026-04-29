@@ -16,6 +16,28 @@ export const getPostShareUrl = (postId: string): string => {
   return `${baseUrl}/post/${postId}`;
 };
 
+const copyToClipboard = async (text: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    showSuccess('포스팅 주소가 복사되었습니다.');
+  } catch {
+    // clipboard API 실패 시 execCommand fallback
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showSuccess('포스팅 주소가 복사되었습니다.');
+    } catch {
+      // 복사 자체가 실패한 경우 아무것도 하지 않음
+    }
+  }
+};
+
 /**
  * 공유하기 버튼 핸들러
  * - URL을 클립보드에 복사
@@ -29,35 +51,25 @@ export const handleShare = async (
 
   const shareUrl = getPostShareUrl(postId);
 
-  try {
-    // Web Share API 지원 시 네이티브 공유 시트 사용 (모바일)
-    if (navigator.share) {
+  // Web Share API 지원 시 네이티브 공유 시트 사용 (모바일)
+  if (navigator.share) {
+    try {
       await navigator.share({
         title: 'ChoraSnap 포스팅',
         url: shareUrl,
       });
-      return;
+      // 공유 성공 시에도 별도 토스트 없음 (OS 공유 시트가 처리)
+    } catch (err: any) {
+      // AbortError: 사용자가 공유 시트를 닫은 경우 → 아무것도 하지 않음
+      if (err?.name === 'AbortError') return;
+      // 그 외 오류는 클립보드 복사로 fallback
+      await copyToClipboard(shareUrl);
     }
-
-    // 클립보드 복사 (데스크탑 / Web Share 미지원)
-    await navigator.clipboard.writeText(shareUrl);
-    showSuccess('포스팅 주소가 복사되었습니다.');
-  } catch {
-    // clipboard API 실패 시 fallback
-    try {
-      const textarea = document.createElement('textarea');
-      textarea.value = shareUrl;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      showSuccess('포스팅 주소가 복사되었습니다.');
-    } catch {
-      showSuccess('포스팅 주소가 복사되었습니다.');
-    }
+    return;
   }
+
+  // 클립보드 복사 (데스크탑 / Web Share 미지원)
+  await copyToClipboard(shareUrl);
 };
 
 /**
