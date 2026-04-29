@@ -121,6 +121,7 @@ const Index = () => {
   const [postListInitialPosts, setPostListInitialPosts] = useState<Post[]>([]);
   // 모두보기 카메라 셔터 애니메이션 상태
   const [shutterActive, setShutterActive] = useState(false);
+  const [shutterRect, setShutterRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const viewAllBtnRef = useRef<HTMLButtonElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
@@ -818,6 +819,25 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
+
+      {/* 모두보기 셔터 애니메이션 - fixed로 헤더/네비 위에 정확히 표시 */}
+      {shutterActive && shutterRect && (
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'fixed',
+            top: shutterRect.top,
+            left: shutterRect.left,
+            width: shutterRect.width,
+            height: shutterRect.height,
+            zIndex: 9999,
+          }}
+        >
+          <div className="shutter-flash" style={{ position: 'absolute', inset: 0 }} />
+          <div className="shutter-border" style={{ position: 'absolute', inset: 0 }} />
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
@@ -828,13 +848,6 @@ const Index = () => {
         }}
       >
         <div ref={mapAreaRef} className="flex-1 relative flex flex-col">
-          {/* 모두보기 카메라 셔터 애니메이션 */}
-          {shutterActive && (
-            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
-              <div className="shutter-flash" style={{ position: 'absolute', inset: 0 }} />
-              <div className="shutter-border" style={{ position: 'absolute', inset: 0 }} />
-            </div>
-          )}
           <div className="absolute inset-0 z-0 overflow-hidden">
             <MapContainer
               posts={displayedMarkers}
@@ -1003,12 +1016,16 @@ const Index = () => {
                         });
                         setPostListInitialPosts(finalList);
 
-                        // 카메라 셔터 애니메이션 시작
+                        // 카메라 셔터 애니메이션 시작 - mapAreaRef 좌표를 fixed 기준으로 저장
+                        const rect = mapAreaRef.current?.getBoundingClientRect();
+                        if (rect) {
+                          setShutterRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+                        }
                         setShutterActive(true);
-                        // 플래시(~400ms) 후 오버레이 열기, 셔터 종료
                         setTimeout(() => {
                           setIsPostListOpen(true);
                           setShutterActive(false);
+                          setShutterRect(null);
                         }, 500);
                       }
                     }}
