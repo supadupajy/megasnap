@@ -614,6 +614,29 @@
    모두보기 버튼 카메라 셔터 전환 애니메이션
    ============================================= */
 
+/* 코너 브라켓 공통 */
+.shutter-corner {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  animation: shutter-corner-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 각 모서리 위치 */
+.shutter-corner-tl { top: 14px;    left: 14px;    border-top: 4px solid #4f46e5;  border-left: 4px solid #4f46e5;  border-radius: 3px 0 0 0; box-shadow: -2px -2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-tr { top: 14px;    right: 14px;   border-top: 4px solid #4f46e5;  border-right: 4px solid #4f46e5; border-radius: 0 3px 0 0; box-shadow: 2px -2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-bl { bottom: 14px; left: 14px;    border-bottom: 4px solid #4f46e5; border-left: 4px solid #4f46e5;  border-radius: 0 0 0 3px; box-shadow: -2px 2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-br { bottom: 14px; right: 14px;   border-bottom: 4px solid #4f46e5; border-right: 4px solid #4f46e5; border-radius: 0 0 3px 0; box-shadow: 2px 2px 8px rgba(79,70,229,0.5); }
+
+/* 코너가 안쪽으로 살짝 조여드는 느낌 - 전체 시간 동안 선명하게 유지 */
+@keyframes shutter-corner-in {
+  0%   { opacity: 0;   transform: scale(1.6); }
+  20%  { opacity: 1;   transform: scale(1.0); }
+  55%  { opacity: 1;   transform: scale(0.85); }
+  100% { opacity: 1;   transform: scale(0.85); }
+}
+
 /* 플래시: 순수 흰색 번쩍 */
 .shutter-flash {
   background: white;
@@ -626,20 +649,5 @@
   20%  { opacity: 0.6; }
   45%  { opacity: 0.85; }
   70%  { opacity: 0.35; }
-  100% { opacity: 0; }
-}
-
-/* 인디고 테두리: 플래시와 함께 나타났다 사라짐 */
-.shutter-border {
-  pointer-events: none;
-  border: 4px solid #4f46e5;
-  box-shadow: inset 0 0 0 4px #4f46e5, 0 0 0 4px #4f46e5, inset 0 0 24px rgba(79,70,229,0.25);
-  animation: shutter-border 0.5s ease-out forwards;
-}
-
-@keyframes shutter-border {
-  0%   { opacity: 0; }
-  20%  { opacity: 1; }
-  55%  { opacity: 1; }
   100% { opacity: 0; }
 }
