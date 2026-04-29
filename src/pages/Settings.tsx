@@ -448,7 +448,7 @@ const Settings = () => {
                     <Tv2 className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-violet-600">광고 만들기</span>
+                    <span className="text-sm font-bold text-violet-600">광고 관리</span>
                     <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">앱 내 모든 광고 이미지와 설명을 수정합니다.</span>
                   </div>
                 </div>
