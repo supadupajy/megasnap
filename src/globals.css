@@ -617,39 +617,39 @@
 /* 코너 브라켓 공통 */
 .shutter-corner {
   position: absolute;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   pointer-events: none;
-  animation: shutter-corner-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: shutter-corner-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* 각 모서리 위치 */
-.shutter-corner-tl { top: 12px;    left: 12px;    border-top: 3px solid rgba(255,255,255,0.95);  border-left: 3px solid rgba(255,255,255,0.95); }
-.shutter-corner-tr { top: 12px;    right: 12px;   border-top: 3px solid rgba(255,255,255,0.95);  border-right: 3px solid rgba(255,255,255,0.95); }
-.shutter-corner-bl { bottom: 12px; left: 12px;    border-bottom: 3px solid rgba(255,255,255,0.95); border-left: 3px solid rgba(255,255,255,0.95); }
-.shutter-corner-br { bottom: 12px; right: 12px;   border-bottom: 3px solid rgba(255,255,255,0.95); border-right: 3px solid rgba(255,255,255,0.95); }
+.shutter-corner-tl { top: 14px;    left: 14px;    border-top: 4px solid #4f46e5;  border-left: 4px solid #4f46e5;  border-radius: 3px 0 0 0; box-shadow: -2px -2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-tr { top: 14px;    right: 14px;   border-top: 4px solid #4f46e5;  border-right: 4px solid #4f46e5; border-radius: 0 3px 0 0; box-shadow: 2px -2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-bl { bottom: 14px; left: 14px;    border-bottom: 4px solid #4f46e5; border-left: 4px solid #4f46e5;  border-radius: 0 0 0 3px; box-shadow: -2px 2px 8px rgba(79,70,229,0.5); }
+.shutter-corner-br { bottom: 14px; right: 14px;   border-bottom: 4px solid #4f46e5; border-right: 4px solid #4f46e5; border-radius: 0 0 3px 0; box-shadow: 2px 2px 8px rgba(79,70,229,0.5); }
 
 /* 코너가 안쪽으로 살짝 조여드는 느낌 */
 @keyframes shutter-corner-in {
-  0%   { opacity: 0; transform: scale(1.4); }
-  40%  { opacity: 1; transform: scale(1.0); }
-  70%  { opacity: 1; transform: scale(0.88); }
-  100% { opacity: 0.6; transform: scale(0.88); }
+  0%   { opacity: 0; transform: scale(1.5); }
+  30%  { opacity: 1; transform: scale(1.0); }
+  65%  { opacity: 1; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(0.85); }
 }
 
-/* 플래시: 순간 하얗게 번쩍 */
+/* 플래시: 인디고 틴트로 순간 번쩍 */
 .shutter-flash {
   position: absolute;
   inset: 0;
-  background: white;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(255,255,255,1) 50%, rgba(99,102,241,0.15) 100%);
   pointer-events: none;
   animation: shutter-flash 0.5s ease-out forwards;
 }
 
 @keyframes shutter-flash {
   0%   { opacity: 0; }
-  25%  { opacity: 0.55; }
-  50%  { opacity: 0.75; }
-  70%  { opacity: 0.3; }
+  20%  { opacity: 0.6; }
+  45%  { opacity: 0.85; }
+  70%  { opacity: 0.35; }
   100% { opacity: 0; }
 }
