@@ -570,16 +570,25 @@ const Index = () => {
     return [...adMarkers, ...selected];
   }, [visibleMarkers]);
 
-  // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
-  // [BUG FIX] limitedVisibleMarkers 기준으로 통일 (실제 지도에 표시되는 마커와 일치)
-  const visiblePostCount = useMemo(() => {
-    return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
-  }, [limitedVisibleMarkers]);
-
-  // 실제 화면에 표시되는 마커 수 (광고 제외, 최대 30개 제한 후)
+  // 실제 화면(viewport)에 보이는 마커 수 — 배지 숫자 및 여기보기 버튼용
+  // limitedVisibleMarkers 중 현재 지도 bounds 안에 원래 좌표가 있는 것만 카운트
   const displayedPostCount = useMemo(() => {
-    return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
-  }, [limitedVisibleMarkers]);
+    if (!mapData?.bounds) {
+      return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+    }
+    const { sw, ne } = mapData.bounds;
+    return limitedVisibleMarkers.filter(m => {
+      if (m.isAd || m.content?.trim().startsWith('[AD]')) return false;
+      const origPost = allPosts.find(op => op.id === m.id);
+      const origLat = origPost?.lat ?? m.lat;
+      const origLng = origPost?.lng ?? m.lng;
+      return origLat >= sw.lat && origLat <= ne.lat &&
+             origLng >= sw.lng && origLng <= ne.lng;
+    }).length;
+  }, [limitedVisibleMarkers, mapData?.bounds, allPosts]);
+
+  // 새로고침 버튼 비활성화 조건용 (bounds 안 마커 수)
+  const visiblePostCount = displayedPostCount;
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
