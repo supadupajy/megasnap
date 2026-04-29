@@ -117,7 +117,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const commentSectionRef = useRef<HTMLDivElement>(null);
 
   // 키보드 대응
   useEffect(() => {
@@ -401,6 +401,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       onClose();
       navigate(`/profile/${targetUserId}`);
     }
+  };
+
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowComments(true);
+    setTimeout(() => {
+      if (commentSectionRef.current && scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const target = commentSectionRef.current;
+        const targetTop = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+        container.scrollTo({ top: targetTop, behavior: 'smooth' });
+      }
+    }, 50);
   };
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
@@ -706,7 +719,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
                                     <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
+                                  <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
                                     <MessageCircle className="w-6 h-6 text-gray-700" />
                                   </button>
                                   <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)}>
@@ -748,7 +761,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                               </div>
                             </div>
-                            <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+                            <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
                               <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                                 <Input
                                   ref={commentInputRef}
@@ -947,7 +960,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }} >
                                 <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} >
+                              <button onClick={handleCommentClick} className="active:scale-110 transition-transform" >
                                 <MessageCircle className="w-6 h-6 text-gray-700" />
                               </button>
                               <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)} >
@@ -993,7 +1006,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                           </div>
                         </div>
-                        <div className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()} >
+                        <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()} >
                           <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                             <Input
                               ref={commentInputRef}

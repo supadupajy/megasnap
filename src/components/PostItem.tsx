@@ -84,6 +84,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+  const commentSectionRef = useRef<HTMLDivElement>(null);
   
   // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
@@ -427,6 +428,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   };
 
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowComments(true);
+    setTimeout(() => {
+      commentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  };
+
   const confirmDelete = () => {
     setIsDeleteDialogOpen(false);
     // 다음 tick에서 실행해 Radix AlertDialog cleanup이 먼저 완료되도록 함
@@ -520,7 +529,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
               <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="active:scale-110 transition-transform">
+            <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </button>
             <button onClick={(e) => handleShare(e, post.id)} className="active:scale-110 transition-transform">
@@ -652,7 +661,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </AnimatePresence>
 
               {lastComment && (
-                <div className="flex gap-2 items-start mt-1">
+                <div ref={commentSectionRef} className="flex gap-2 items-start mt-1">
                   <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
                   <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
                 </div>
@@ -737,7 +746,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </AnimatePresence>
 
             {lastComment && (
-              <div className="flex gap-2 items-start mt-1">
+              <div ref={commentSectionRef} className="flex gap-2 items-start mt-1">
                 <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
                 <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
               </div>
