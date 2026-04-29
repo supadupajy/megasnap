@@ -343,6 +343,14 @@ const Index = () => {
         ? (mapMarkerAd.brand_logo_url || mapMarkerAd.image_url || '')
         : slot.image_url;
 
+      // 광고 시작일(start_date) → 없으면 updated_at → 없으면 먼 과거로 설정
+      // (모두보기에서 시간 순 정렬 시 광고가 항상 맨 앞에 오는 문제 방지)
+      const adCreatedAt = mapMarkerAd.start_date
+        ? new Date(mapMarkerAd.start_date)
+        : (mapMarkerAd as any).updated_at
+          ? new Date((mapMarkerAd as any).updated_at)
+          : new Date(0);
+
       const adPost: Post = {
         id: AD_POST_ID,
         user_id: 'ad',
@@ -367,7 +375,7 @@ const Index = () => {
         images: displayImage ? [displayImage] : [],
         isLiked: false,
         category: 'food',
-        createdAt: new Date(),
+        createdAt: adCreatedAt,
         borderType: 'none',
         link_url: slot.link_url || mapMarkerAd.link_url || '',
       };
@@ -981,16 +989,15 @@ const Index = () => {
                               m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
                             )
                           : displayedMarkers;
-                        const adPosts = boundsFiltered.filter(p => p.isAd);
-                        const normalPosts = boundsFiltered.filter(p => !p.isAd);
-                        const sorted = [...normalPosts].sort((a, b) => {
+                        // 광고 포함 전체를 시간 순으로 정렬 (광고는 start_date 기준)
+                        const sorted = [...boundsFiltered].sort((a, b) => {
                           const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
                           const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
                           return bTime - aTime;
                         });
                         const unseen = sorted.filter(p => !viewedIds.has(p.id));
                         const seen = sorted.filter(p => viewedIds.has(p.id));
-                        setPostListInitialPosts([...unseen, ...adPosts, ...seen]);
+                        setPostListInitialPosts([...unseen, ...seen]);
 
                         // 카메라 셔터 애니메이션 시작
                         setShutterActive(true);
