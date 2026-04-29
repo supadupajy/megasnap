@@ -524,10 +524,20 @@ const Index = () => {
   }, [spreadMarkers, mapData?.bounds]);
 
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
-  // visibleMarkers(실제 지도에 표시되는 마커) 기준으로 계산 → 화면에 보이는 마커 수와 일치
+  // spreadMarkers(실제 지도에 렌더링되는 마커) 중 현재 bounds 안에 있는 것만 카운트
+  // → 분산된 좌표 기준으로 필터링해야 화면에 보이는 마커 수와 정확히 일치
   const visiblePostCount = useMemo(() => {
-    return visibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
-  }, [visibleMarkers]);
+    if (!mapData?.bounds) {
+      return spreadMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+    }
+    const { sw, ne } = mapData.bounds;
+    return spreadMarkers.filter(m =>
+      !m.isAd &&
+      !m.content?.trim().startsWith('[AD]') &&
+      m.lat >= sw.lat && m.lat <= ne.lat &&
+      m.lng >= sw.lng && m.lng <= ne.lng
+    ).length;
+  }, [spreadMarkers, mapData?.bounds]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
