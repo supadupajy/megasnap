@@ -51,7 +51,25 @@ export const handleShare = async (
 
   const shareUrl = getPostShareUrl(postId);
 
-  // 클립보드 복사 (Web Share API 사용하지 않고 항상 직접 복사)
+  // Web Share API 지원 시 네이티브 공유 시트 사용 (모바일)
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'ChoraSnap 포스팅',
+        url: shareUrl,
+      });
+      // 공유 시트에서 어떤 항목을 선택했든 성공이면 토스트 표시
+      showSuccess('포스팅 주소가 복사되었습니다.');
+    } catch (err: any) {
+      // AbortError: 사용자가 공유 시트를 닫은 경우 → 아무것도 하지 않음
+      if (err?.name === 'AbortError') return;
+      // 그 외 오류는 클립보드 복사로 fallback
+      await copyToClipboard(shareUrl);
+    }
+    return;
+  }
+
+  // 클립보드 복사 (데스크탑 / Web Share 미지원)
   await copyToClipboard(shareUrl);
 };
 
