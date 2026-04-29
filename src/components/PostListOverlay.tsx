@@ -180,6 +180,16 @@ const PostListOverlay = ({
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // viewedIds의 최신값을 ref로 유지 (스냅샷 찍을 때 stale closure 방지)
+  const viewedIdsRef = useRef(viewedIds);
+  useEffect(() => { viewedIdsRef.current = viewedIds; }, [viewedIds]);
+
+  // ✅ 오버레이가 열릴 때 딱 한 번만 viewedIds 스냅샷 저장
+  useEffect(() => {
+    if (isOpen) {
+      setInitialViewedIds(new Set(viewedIdsRef.current));
+    }
+  }, [isOpen]);
 
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
@@ -197,8 +207,6 @@ const PostListOverlay = ({
     setPosts(filtered);
     setHasMore(true); 
     setIsLoadingMore(false);
-    // 오버레이가 열릴 때의 viewedIds 스냅샷 저장 (구분선 위치 고정)
-    setInitialViewedIds(new Set(viewedIds));
     // 새 목록으로 바뀌면 스크롤 맨 위로
     if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [initialPosts]);
@@ -420,10 +428,10 @@ const PostListOverlay = ({
               <React.Fragment key={post.id}>
                 {/* 이미 본 포스팅 구분선 */}
                 {firstViewedIndex !== -1 && index === firstViewedIndex && (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-y border-gray-200 sticky top-0 z-10">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-y border-gray-200">
                     <div className="flex-1 h-px bg-gray-300" />
                     <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
-                      여기서 부터는 이미 본 포스팅입니다
+                      여기서부터는 이미 조회한 포스팅입니다
                     </span>
                     <div className="flex-1 h-px bg-gray-300" />
                   </div>
