@@ -157,6 +157,7 @@ interface PostListOverlayProps {
   selectedCategories: string[];
   authUserId?: string | null;
   onDeletePost?: (id: string) => void;
+  openedViewedIds: Set<string>; // 오버레이가 열릴 때의 viewedIds 스냅샷 (외부에서 주입)
 }
 
 const PostListOverlay = ({ 
@@ -167,7 +168,8 @@ const PostListOverlay = ({
   currentBounds, 
   selectedCategories,
   authUserId,
-  onDeletePost
+  onDeletePost,
+  openedViewedIds,
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -175,21 +177,9 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
-  // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
-  const [initialViewedIds, setInitialViewedIds] = useState<Set<string>>(new Set());
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // viewedIds의 최신값을 ref로 유지 (스냅샷 찍을 때 stale closure 방지)
-  const viewedIdsRef = useRef(viewedIds);
-  useEffect(() => { viewedIdsRef.current = viewedIds; }, [viewedIds]);
-
-  // ✅ 오버레이가 열릴 때 딱 한 번만 viewedIds 스냅샷 저장
-  useEffect(() => {
-    if (isOpen) {
-      setInitialViewedIds(new Set(viewedIdsRef.current));
-    }
-  }, [isOpen]);
 
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
@@ -385,8 +375,8 @@ const PostListOverlay = ({
 
   if (!isOpen) return null;
 
-  // 첫 번째 "이미 본" 포스팅의 인덱스 계산 (오버레이 열릴 때 스냅샷 기준)
-  const firstViewedIndex = posts.findIndex(p => initialViewedIds.has(p.id));
+  // 첫 번째 "이미 본" 포스팅의 인덱스 계산 (외부에서 주입된 스냅샷 기준)
+  const firstViewedIndex = posts.findIndex(p => openedViewedIds.has(p.id));
 
   return (
     <motion.div 

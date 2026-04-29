@@ -116,6 +116,8 @@ const Index = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
+  // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
+  const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
@@ -1065,7 +1067,7 @@ const Index = () => {
                 <div className="relative">
                   {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => { if (displayedPostCount > 0 && currentZoom < 7) setIsPostListOpen(true); }}
+                    onClick={() => { if (displayedPostCount > 0 && currentZoom < 7) { setPostListOpenedViewedIds(new Set(viewedIds)); setIsPostListOpen(true); } }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}
                     className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
@@ -1160,6 +1162,7 @@ const Index = () => {
             selectedCategories={selectedCategories}
             authUserId={authUser?.id}
             onDeletePost={handlePostDeleted}
+            openedViewedIds={postListOpenedViewedIds}
           />
         )}
       </AnimatePresence>
