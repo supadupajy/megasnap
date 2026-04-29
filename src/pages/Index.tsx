@@ -122,6 +122,7 @@ const Index = () => {
   // 모두보기 ripple 애니메이션 상태
   const [viewAllRipple, setViewAllRipple] = useState<{ x: number; y: number; size: number } | null>(null);
   const viewAllBtnRef = useRef<HTMLButtonElement>(null);
+  const mapAreaRef = useRef<HTMLDivElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
     setSelectedCategories(cats);
@@ -811,21 +812,6 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
-
-      {/* 모두보기 ripple 전환 오버레이 */}
-      {viewAllRipple && (
-        <div className="view-all-ripple-overlay">
-          <div
-            className="view-all-ripple-circle"
-            style={{
-              left: viewAllRipple.x,
-              top: viewAllRipple.y,
-              width: viewAllRipple.size,
-              height: viewAllRipple.size,
-            }}
-          />
-        </div>
-      )}
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
@@ -835,7 +821,21 @@ const Index = () => {
           paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
-        <div className="flex-1 relative overflow-hidden flex flex-col">
+        <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
+          {/* 모두보기 ripple 전환 오버레이 - 지도 영역 안에만 표시 */}
+          {viewAllRipple && (
+            <div className="absolute inset-0 z-[25] pointer-events-none overflow-hidden">
+              <div
+                className="view-all-ripple-circle"
+                style={{
+                  left: viewAllRipple.x,
+                  top: viewAllRipple.y,
+                  width: viewAllRipple.size,
+                  height: viewAllRipple.size,
+                }}
+              />
+            </div>
+          )}
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
@@ -972,16 +972,20 @@ const Index = () => {
                     ref={viewAllBtnRef}
                     onClick={(e) => {
                       if (displayedPostCount > 0 && currentZoom < 7) {
-                        // 버튼 위치 계산 (화면 기준 중심점)
+                        // 버튼 위치를 지도 컨테이너 기준 상대 좌표로 계산
                         const btn = viewAllBtnRef.current;
-                        const rect = btn?.getBoundingClientRect();
-                        const cx = rect ? rect.left + rect.width / 2 : e.clientX;
-                        const cy = rect ? rect.top + rect.height / 2 : e.clientY;
+                        const mapArea = mapAreaRef.current;
+                        const btnRect = btn?.getBoundingClientRect();
+                        const mapRect = mapArea?.getBoundingClientRect();
+                        const cx = btnRect && mapRect ? btnRect.left + btnRect.width / 2 - mapRect.left : e.clientX;
+                        const cy = btnRect && mapRect ? btnRect.top + btnRect.height / 2 - mapRect.top : e.clientY;
 
-                        // 버튼 중심에서 화면 모서리까지의 최대 거리 × 2 = ripple 지름
+                        // 버튼 중심에서 컨테이너 모서리까지의 최대 거리 × 2 = ripple 지름
+                        const containerW = mapRect?.width ?? window.innerWidth;
+                        const containerH = mapRect?.height ?? window.innerHeight;
                         const maxDist = Math.sqrt(
-                          Math.pow(Math.max(cx, window.innerWidth - cx), 2) +
-                          Math.pow(Math.max(cy, window.innerHeight - cy), 2)
+                          Math.pow(Math.max(cx, containerW - cx), 2) +
+                          Math.pow(Math.max(cy, containerH - cy), 2)
                         );
                         const rippleSize = maxDist * 2.2;
 
