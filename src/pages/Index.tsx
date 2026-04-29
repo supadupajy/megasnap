@@ -258,6 +258,8 @@ const Index = () => {
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
           raw.forEach(r => {
+            // 광고 마커는 ads 테이블에서 별도 관리 — bounds fetch로 덮어쓰지 않음
+            if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
             existingMap.set(r.id, mapRawToPost(r, prevPost));
           });
@@ -684,6 +686,8 @@ const Index = () => {
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
           raw.forEach(r => {
+            // 광고 마커는 ads 테이블에서 별도 관리 — 새로고침으로 덮어쓰지 않음
+            if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
             existingMap.set(r.id, mapRawToPost(r, prevPost));
           });
