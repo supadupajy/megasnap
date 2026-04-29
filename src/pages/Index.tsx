@@ -225,7 +225,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar, hot_since')
+        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar, hot_since, is_seed_data')
         .order('likes', { ascending: false })
         .limit(20);
       if (!error && data) {
