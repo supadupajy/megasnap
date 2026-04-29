@@ -312,7 +312,7 @@ const MapContainer = ({
               targetOverlay?.setMap(null);
               overlaysRef.current.delete(postId);
             }
-          }, 500);
+          }, 520);
         }
       } catch (err) {
         console.error('[MapContainer] Delete animation error:', err);
@@ -572,7 +572,7 @@ const MapContainer = ({
               overlay.setMap(null);
               overlaysRef.current.delete(id);
             }
-          }, 450);
+          }, 520);
           removalTimeoutsRef.current.set(id, removalTimer);
         } else if (!content) {
           overlay.setMap(null);

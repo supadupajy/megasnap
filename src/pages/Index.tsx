@@ -371,8 +371,30 @@ const Index = () => {
 
     Promise.all(promises).then(results => {
       const newAdPosts = results.filter((p): p is Post => p !== null);
+      const newAdIds = new Set(newAdPosts.map(p => p.id));
+
       setAllPosts(prev => {
-        // 기존 ad-map-marker- 접두사 포스트 모두 제거 후 새 것으로 교체
+        // 사라지는 광고 마커에 애니메이션 트리거
+        prev.forEach(p => {
+          if (p.id.startsWith(AD_POST_PREFIX) && !newAdIds.has(p.id)) {
+            window.dispatchEvent(new CustomEvent('animate-marker-delete', { detail: { id: p.id } }));
+          }
+        });
+
+        // 기존 ad-map-marker- 접두사 포스트 중 사라지는 것은 애니메이션 후 제거 (450ms 대기)
+        const disappearingIds = prev
+          .filter(p => p.id.startsWith(AD_POST_PREFIX) && !newAdIds.has(p.id))
+          .map(p => p.id);
+
+        if (disappearingIds.length > 0) {
+          setTimeout(() => {
+            setAllPosts(current => current.filter(p => !disappearingIds.includes(p.id)));
+          }, 480);
+          // 사라지는 마커는 아직 남겨두고, 새 마커만 추가
+          const withoutNewAdSlots = prev.filter(p => !p.id.startsWith(AD_POST_PREFIX) || disappearingIds.includes(p.id));
+          return [...newAdPosts, ...withoutNewAdSlots];
+        }
+
         const withoutOldAds = prev.filter(p => !p.id.startsWith(AD_POST_PREFIX));
         return [...newAdPosts, ...withoutOldAds];
       });
