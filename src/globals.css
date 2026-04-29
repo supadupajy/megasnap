@@ -650,6 +650,8 @@
 
 /* 플래시: 순수 흰색, will-change로 GPU 처리 */
 .shutter-flash {
+  position: absolute;
+  inset: 0;
   background: white;
   pointer-events: none;
   will-change: opacity;
