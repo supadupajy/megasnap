@@ -69,6 +69,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(post.comments || []);
+  const commentsFetchedRef = useRef(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
@@ -138,6 +139,20 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       fetchProfile();
     }
   }, [authUser, authProfile]);
+
+  // 댓글 lazy-load: post.comments가 비어있을 때 DB에서 가져옴
+  useEffect(() => {
+    if (commentsFetchedRef.current) return;
+    if (!isPersistedPostId(post.id)) return;
+    if (post.comments && post.comments.length > 0) {
+      commentsFetchedRef.current = true;
+      return;
+    }
+    commentsFetchedRef.current = true;
+    fetchCommentsByPostId(post.id).then(dbComments => {
+      if (dbComments.length > 0) setLocalComments(dbComments);
+    }).catch(() => {});
+  }, [post.id]);
 
   // Intersection Observer to track visibility and control playback
   useEffect(() => {
