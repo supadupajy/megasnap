@@ -135,6 +135,8 @@ const Index = () => {
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
+  // 분산 좌표 캐시: post.id → { lat, lng } — 한 번 결정된 위치는 고정
+  const spreadCacheRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
@@ -433,25 +435,22 @@ const Index = () => {
   // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
   // 너무 가까운 마커들을 방사형으로 분산시킴
   const spreadMarkers = useMemo(() => {
-    if (displayedMarkers.length === 0) return displayedMarkers;
+    if (displayedMarkers.length === 0) {
+      spreadCacheRef.current.clear();
+      return displayedMarkers;
+    }
 
-    // 줌 레벨별 마커 60px이 차지하는 위도/경도 거리 (카카오 지도 기준)
-    // level 5: 1px ≈ 0.000135도, 60px ≈ 0.0081도 (약 900m)
-    // level 6: 1px ≈ 0.00027도,  60px ≈ 0.0162도
-    // level 7: 1px ≈ 0.00054도,  60px ≈ 0.0324도
     const minDistByLevel: Record<number, number> = {
       1: 0.0010, 2: 0.0015, 3: 0.0020, 4: 0.0040,
-      5: 0.0065, // 약 720m - 마커 크기보다 약간 작게 (살짝 겹쳐도 OK)
-      6: 0.0090, // 줌아웃 시 더 넓게
+      5: 0.0065,
+      6: 0.0090,
       7: 0.0150,
     };
     const minDist = minDistByLevel[currentZoom] ?? 0.0065;
 
-    // 광고 마커는 분산 로직에서 제외 → 항상 원래 좌표 유지
     const adMarkers = displayedMarkers.filter(p => p.isAd);
     const nonAdMarkers = displayedMarkers.filter(p => !p.isAd);
 
-    // 중요도 순 정렬 (중요한 마커가 원래 위치 유지)
     const priority = (p: Post) => {
       if (p.borderType === 'diamond') return 5;
       if (p.borderType === 'gold') return 4;
@@ -461,33 +460,49 @@ const Index = () => {
     };
     const sorted = [...nonAdMarkers].sort((a, b) => priority(b) - priority(a));
 
-    // 그리드 기반 빠른 겹침 감지 + 분산
+    // 현재 displayedMarkers에 없는 포스트의 캐시 항목 제거
+    const currentIds = new Set(nonAdMarkers.map(p => p.id));
+    spreadCacheRef.current.forEach((_, id) => {
+      if (!currentIds.has(id)) spreadCacheRef.current.delete(id);
+    });
+
     const placed: { lat: number; lng: number; id: string }[] = [];
     const result: Post[] = [];
 
     for (const post of sorted) {
+      // 캐시에 이미 분산 좌표가 있으면 그대로 사용 (위치 고정)
+      const cached = spreadCacheRef.current.get(post.id);
+      if (cached) {
+        placed.push({ lat: cached.lat, lng: cached.lng, id: post.id });
+        result.push(cached.lat === post.lat && cached.lng === post.lng
+          ? post
+          : { ...post, lat: cached.lat, lng: cached.lng }
+        );
+        continue;
+      }
+
       let lat = post.lat;
       let lng = post.lng;
 
-      // 이미 배치된 마커들과 겹치는지 확인
       let attempts = 0;
       const maxAttempts = 8;
       while (attempts < maxAttempts) {
         const conflict = placed.find(p => {
           const dlat = Math.abs(p.lat - lat);
           const dlng = Math.abs(p.lng - lng);
-          return dlat < minDist && dlng < minDist * 1.3; // 경도는 위도보다 약간 넓게
+          return dlat < minDist && dlng < minDist * 1.3;
         });
 
         if (!conflict) break;
 
-        // 충돌 시 방사형으로 밀어냄 (8방향 순환)
         const angle = (attempts * Math.PI * 2) / maxAttempts;
         lat = post.lat + Math.cos(angle) * minDist * 0.9;
         lng = post.lng + Math.sin(angle) * minDist * 1.1;
         attempts++;
       }
 
+      // 결정된 좌표를 캐시에 저장
+      spreadCacheRef.current.set(post.id, { lat, lng });
       placed.push({ lat, lng, id: post.id });
       result.push(lat === post.lat && lng === post.lng
         ? post
@@ -495,9 +510,7 @@ const Index = () => {
       );
     }
 
-    // 광고 마커는 원래 좌표 그대로 맨 앞에 추가
     result.unshift(...adMarkers);
-
     return result;
   }, [displayedMarkers, currentZoom]);
 
@@ -510,9 +523,10 @@ const Index = () => {
   useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
   useEffect(() => { isSelectingAdLocationRef.current = isSelectingAdLocation; }, [isSelectingAdLocation]);
 
-  // currentZoom ref 동기화
+  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 초기화 (minDist가 달라지므로)
   useEffect(() => {
     currentZoomRef.current = currentZoom;
+    spreadCacheRef.current.clear();
   }, [currentZoom]);
 
   // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
