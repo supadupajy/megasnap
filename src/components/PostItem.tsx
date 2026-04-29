@@ -80,6 +80,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -643,7 +644,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
             {renderInteractionButtons()}
 
-            {/* Content Section */}
+            {/* Content Section - AD */}
             <div className="px-4 pb-4 space-y-1">
               <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
               <div className="flex gap-2 items-start">
@@ -660,20 +661,40 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 </button>
               </form>
 
-              <div className="space-y-2 mt-2">
-                {localComments.slice(0, -1).map((c, i) => (
-                  <div key={i} className="flex items-start justify-between gap-2">
-                    <div className="flex gap-2 items-start flex-1 min-w-0">
-                      <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                      <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+              {localComments.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+                  className="w-full py-1 flex items-center justify-between cursor-pointer mb-1"
+                >
+                  <span className="text-xs text-gray-400 font-medium">
+                    {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+                  </span>
+                  {showComments
+                    ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
+                    : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
+                  }
+                </button>
+              )}
+
+              <div
+                className="overflow-hidden transition-all duration-300 ease-in-out"
+                style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
+              >
+                <div className="space-y-2 pb-1">
+                  {localComments.slice(0, -1).map((c, i) => (
+                    <div key={i} className="flex items-start justify-between gap-2">
+                      <div className="flex gap-2 items-start flex-1 min-w-0">
+                        <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
+                        <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                      </div>
+                      {c.createdAt && (
+                        <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                          {formatRelativeTime(new Date(c.createdAt))}
+                        </span>
+                      )}
                     </div>
-                    {c.createdAt && (
-                      <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                        {formatRelativeTime(new Date(c.createdAt))}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               {lastComment && (
@@ -734,7 +755,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
           {renderInteractionButtons()}
 
-          {/* Content Section */}
+          {/* Content Section - 일반 */}
           <div className="px-4 pb-4 space-y-1">
             <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
             <div className="flex gap-2 items-start">
@@ -750,20 +771,40 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </button>
             </form>
 
-            <div className="space-y-2 mt-2">
-              {localComments.slice(0, -1).map((c, i) => (
-                <div key={i} className="flex items-start justify-between gap-2">
-                  <div className="flex gap-2 items-start flex-1 min-w-0">
-                    <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                    <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+            {localComments.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+                className="w-full py-1 flex items-center justify-between cursor-pointer mb-1"
+              >
+                <span className="text-xs text-gray-400 font-medium">
+                  {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+                </span>
+                {showComments
+                  ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
+                  : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
+                }
+              </button>
+            )}
+
+            <div
+              className="overflow-hidden transition-all duration-300 ease-in-out"
+              style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
+            >
+              <div className="space-y-2 pb-1">
+                {localComments.slice(0, -1).map((c, i) => (
+                  <div key={i} className="flex items-start justify-between gap-2">
+                    <div className="flex gap-2 items-start flex-1 min-w-0">
+                      <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
+                      <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                    </div>
+                    {c.createdAt && (
+                      <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                        {formatRelativeTime(new Date(c.createdAt))}
+                      </span>
+                    )}
                   </div>
-                  {c.createdAt && (
-                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                      {formatRelativeTime(new Date(c.createdAt))}
-                    </span>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {lastComment && (
