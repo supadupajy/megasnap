@@ -143,11 +143,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center px-6 py-12">
+    <div className="min-h-screen bg-white overflow-y-auto">
+      <div className="flex flex-col items-center px-6 py-12 min-h-screen">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[400px] space-y-8 my-auto"
+        className="w-full max-w-[400px] space-y-8"
       >
         <div className="flex flex-col items-center gap-4">
           <motion.div 
@@ -329,6 +330,7 @@ const Login = () => {
           </div>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 };
