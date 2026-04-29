@@ -1043,7 +1043,14 @@ const Index = () => {
                 <div className="relative">
                   {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => { if (displayedPostCount > 0 && currentZoom < 7) { setPostListOpenedViewedIds(new Set(viewedIds)); setIsPostListOpen(true); } }}
+                    onClick={() => {
+                      if (displayedPostCount > 0 && currentZoom < 7) {
+                        // 광고 포스팅 ID도 스냅샷에 포함 (광고는 항상 맨 앞이므로 이미 본 것으로 처리)
+                        const adIds = allPosts.filter(p => p.isAd).map(p => p.id);
+                        setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
+                        setIsPostListOpen(true);
+                      }
+                    }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}
                     className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >

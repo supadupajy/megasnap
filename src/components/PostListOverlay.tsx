@@ -375,7 +375,8 @@ const PostListOverlay = ({
   if (!isOpen) return null;
 
   // 첫 번째 "이미 본" 포스팅의 인덱스 계산 (외부에서 주입된 스냅샷 기준)
-  const firstViewedIndex = posts.findIndex(p => openedViewedIds.has(p.id));
+  // 광고 포스팅은 항상 맨 앞에 배치되므로 이미 본 것으로 간주하여 건너뜀
+  const firstViewedIndex = posts.findIndex(p => !p.isAd && openedViewedIds.has(p.id));
 
   return (
     <motion.div 
