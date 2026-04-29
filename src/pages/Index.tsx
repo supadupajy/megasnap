@@ -119,8 +119,8 @@ const Index = () => {
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   // 오버레이가 열릴 때 한 번만 계산된 포스트 목록 (viewedIds 변화로 재정렬 방지)
   const [postListInitialPosts, setPostListInitialPosts] = useState<Post[]>([]);
-  // 모두보기 ripple 애니메이션 상태
-  const [viewAllRipple, setViewAllRipple] = useState<{ x: number; y: number; size: number } | null>(null);
+  // 모두보기 카메라 셔터 애니메이션 상태
+  const [shutterActive, setShutterActive] = useState(false);
   const viewAllBtnRef = useRef<HTMLButtonElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
@@ -822,18 +822,16 @@ const Index = () => {
         }}
       >
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
-          {/* 모두보기 ripple 전환 오버레이 - 지도 영역 안에만 표시 */}
-          {viewAllRipple && (
-            <div className="absolute inset-0 z-[25] pointer-events-none overflow-hidden">
-              <div
-                className="view-all-ripple-circle"
-                style={{
-                  left: viewAllRipple.x,
-                  top: viewAllRipple.y,
-                  width: viewAllRipple.size,
-                  height: viewAllRipple.size,
-                }}
-              />
+          {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
+          {shutterActive && (
+            <div className="absolute inset-0 z-[25] pointer-events-none">
+              {/* 네 모서리 코너 브라켓 */}
+              <div className="shutter-corner shutter-corner-tl" />
+              <div className="shutter-corner shutter-corner-tr" />
+              <div className="shutter-corner shutter-corner-bl" />
+              <div className="shutter-corner shutter-corner-br" />
+              {/* 플래시 오버레이 */}
+              <div className="shutter-flash" />
             </div>
           )}
           <div className="absolute inset-0 z-0">
@@ -970,33 +968,11 @@ const Index = () => {
                   {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
                     ref={viewAllBtnRef}
-                    onClick={(e) => {
+                    onClick={() => {
                       if (displayedPostCount > 0 && currentZoom < 7) {
-                        // 버튼 위치를 지도 컨테이너 기준 상대 좌표로 계산
-                        const btn = viewAllBtnRef.current;
-                        const mapArea = mapAreaRef.current;
-                        const btnRect = btn?.getBoundingClientRect();
-                        const mapRect = mapArea?.getBoundingClientRect();
-                        const cx = btnRect && mapRect ? btnRect.left + btnRect.width / 2 - mapRect.left : e.clientX;
-                        const cy = btnRect && mapRect ? btnRect.top + btnRect.height / 2 - mapRect.top : e.clientY;
-
-                        // 버튼 중심에서 컨테이너 모서리까지의 최대 거리 × 2 = ripple 지름
-                        const containerW = mapRect?.width ?? window.innerWidth;
-                        const containerH = mapRect?.height ?? window.innerHeight;
-                        const maxDist = Math.sqrt(
-                          Math.pow(Math.max(cx, containerW - cx), 2) +
-                          Math.pow(Math.max(cy, containerH - cy), 2)
-                        );
-                        const rippleSize = maxDist * 2.2;
-
-                        setViewAllRipple({ x: cx, y: cy, size: rippleSize });
-
-                        // 광고 포스팅 ID도 스냅샷에 포함
+                        // 포스트 목록 미리 계산
                         const adIds = displayedMarkers.filter(p => p.isAd).map(p => p.id);
-                        const snapshotViewedIds = new Set([...viewedIds, ...adIds]);
-                        setPostListOpenedViewedIds(snapshotViewedIds);
-
-                        // initialPosts를 클릭 시점에 한 번만 계산 (viewedIds 변화로 재정렬 방지)
+                        setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
                         const bounds = mapData?.bounds;
                         const boundsFiltered = bounds
                           ? displayedMarkers.filter(m =>
@@ -1016,11 +992,13 @@ const Index = () => {
                         const seen = sorted.filter(p => viewedIds.has(p.id));
                         setPostListInitialPosts([...unseen, ...adPosts, ...seen]);
 
-                        // ripple 애니메이션(0.55s) 후 오버레이 열기
+                        // 카메라 셔터 애니메이션 시작
+                        setShutterActive(true);
+                        // 플래시(~400ms) 후 오버레이 열기, 셔터 종료
                         setTimeout(() => {
-                          setViewAllRipple(null);
                           setIsPostListOpen(true);
-                        }, 480);
+                          setShutterActive(false);
+                        }, 500);
                       }
                     }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}

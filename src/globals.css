@@ -611,24 +611,45 @@
 }
 
 /* =============================================
-   모두보기 버튼 Ripple 전환 애니메이션
+   모두보기 버튼 카메라 셔터 전환 애니메이션
    ============================================= */
 
-@keyframes view-all-ripple {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0.75;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0;
-  }
+/* 코너 브라켓 공통 */
+.shutter-corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  animation: shutter-corner-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.view-all-ripple-circle {
+/* 각 모서리 위치 */
+.shutter-corner-tl { top: 12px;    left: 12px;    border-top: 3px solid rgba(255,255,255,0.95);  border-left: 3px solid rgba(255,255,255,0.95); }
+.shutter-corner-tr { top: 12px;    right: 12px;   border-top: 3px solid rgba(255,255,255,0.95);  border-right: 3px solid rgba(255,255,255,0.95); }
+.shutter-corner-bl { bottom: 12px; left: 12px;    border-bottom: 3px solid rgba(255,255,255,0.95); border-left: 3px solid rgba(255,255,255,0.95); }
+.shutter-corner-br { bottom: 12px; right: 12px;   border-bottom: 3px solid rgba(255,255,255,0.95); border-right: 3px solid rgba(255,255,255,0.95); }
+
+/* 코너가 안쪽으로 살짝 조여드는 느낌 */
+@keyframes shutter-corner-in {
+  0%   { opacity: 0; transform: scale(1.4); }
+  40%  { opacity: 1; transform: scale(1.0); }
+  70%  { opacity: 1; transform: scale(0.88); }
+  100% { opacity: 0.6; transform: scale(0.88); }
+}
+
+/* 플래시: 순간 하얗게 번쩍 */
+.shutter-flash {
   position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.85) 0%, rgba(79, 70, 229, 0.7) 40%, rgba(67, 56, 202, 0.5) 70%, rgba(55, 48, 163, 0) 100%);
+  inset: 0;
+  background: white;
   pointer-events: none;
-  animation: view-all-ripple 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: shutter-flash 0.5s ease-out forwards;
+}
+
+@keyframes shutter-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 0.55; }
+  50%  { opacity: 0.75; }
+  70%  { opacity: 0.3; }
+  100% { opacity: 0; }
 }
