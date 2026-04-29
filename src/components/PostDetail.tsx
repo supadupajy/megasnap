@@ -980,7 +980,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                <span className="text-[10px] font-black">주문하기</span>
+                                <span className="text-[10px] font-black">상세정보</span>
                               </a>
                             </div>
                           )}
