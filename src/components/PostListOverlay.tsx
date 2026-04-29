@@ -175,6 +175,8 @@ const PostListOverlay = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
+  // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
+  const [initialViewedIds, setInitialViewedIds] = useState<Set<string>>(new Set());
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -195,6 +197,8 @@ const PostListOverlay = ({
     setPosts(filtered);
     setHasMore(true); 
     setIsLoadingMore(false);
+    // 오버레이가 열릴 때의 viewedIds 스냅샷 저장 (구분선 위치 고정)
+    setInitialViewedIds(new Set(viewedIds));
     // 새 목록으로 바뀌면 스크롤 맨 위로
     if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [initialPosts]);
@@ -373,6 +377,9 @@ const PostListOverlay = ({
 
   if (!isOpen) return null;
 
+  // 첫 번째 "이미 본" 포스팅의 인덱스 계산 (오버레이 열릴 때 스냅샷 기준)
+  const firstViewedIndex = posts.findIndex(p => initialViewedIds.has(p.id));
+
   return (
     <motion.div 
       initial={{ y: "100vh" }}
@@ -409,20 +416,31 @@ const PostListOverlay = ({
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
-            {posts.map((post) => (
-              <ObservedPostItem 
-                key={post.id}
-                post={post}
-                isViewed={viewedIds.has(post.id)}
-                onVisible={(id) => markAsViewed(id)}
-                onLikeToggle={handleLikeToggle}
-                onLocationClick={(e, lat, lng, fullPost) => {
-                  window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
-                }}
-                onDelete={(id) => onDeletePost?.(id)}
-                isPlaying={playingPostId === post.id}
-                onPlayingChange={handlePlayingChange}
-              />
+            {posts.map((post, index) => (
+              <React.Fragment key={post.id}>
+                {/* 이미 본 포스팅 구분선 */}
+                {firstViewedIndex !== -1 && index === firstViewedIndex && (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-y border-gray-200 sticky top-0 z-10">
+                    <div className="flex-1 h-px bg-gray-300" />
+                    <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
+                      여기서 부터는 이미 본 포스팅입니다
+                    </span>
+                    <div className="flex-1 h-px bg-gray-300" />
+                  </div>
+                )}
+                <ObservedPostItem 
+                  post={post}
+                  isViewed={viewedIds.has(post.id)}
+                  onVisible={(id) => markAsViewed(id)}
+                  onLikeToggle={handleLikeToggle}
+                  onLocationClick={(e, lat, lng, fullPost) => {
+                    window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
+                  }}
+                  onDelete={(id) => onDeletePost?.(id)}
+                  isPlaying={playingPostId === post.id}
+                  onPlayingChange={handlePlayingChange}
+                />
+              </React.Fragment>
             ))}
             
             {/* Infinite scroll sentinel */}

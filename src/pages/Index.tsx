@@ -526,7 +526,7 @@ const Index = () => {
     );
   }, [spreadMarkers, mapData?.bounds]);
 
-  // ── limitedVisibleMarkers: 최대 30개로 제한 (랜덤 시드 기반 셔플) ──
+  // ── limitedVisibleMarkers: 최대 30개로 제한 (최신순) ──
   const limitedVisibleMarkers = useMemo(() => {
     const adMarkers = visibleMarkers.filter(m => m.isAd);
     const nonAdMarkers = visibleMarkers.filter(m => !m.isAd);
@@ -535,19 +535,16 @@ const Index = () => {
       return visibleMarkers;
     }
 
-    // randomSeed 기반으로 결정론적 셔플 (같은 seed면 같은 결과)
-    const seeded = [...nonAdMarkers].sort((a, b) => {
-      const hashA = (randomSeed * 31 + a.id.charCodeAt(0)) % 1;
-      const hashB = (randomSeed * 31 + b.id.charCodeAt(0)) % 1;
-      // 더 안정적인 해시: id 전체를 활용
-      const scoreA = Array.from(a.id).reduce((acc, c, i) => acc + c.charCodeAt(0) * (randomSeed * (i + 1)), 0) % 1000;
-      const scoreB = Array.from(b.id).reduce((acc, c, i) => acc + c.charCodeAt(0) * (randomSeed * (i + 1)), 0) % 1000;
-      return scoreA - scoreB;
+    // 최신순(created_at 내림차순)으로 정렬 후 상위 30개 선택
+    const sorted = [...nonAdMarkers].sort((a, b) => {
+      const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+      const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+      return bTime - aTime;
     });
 
-    const selected = seeded.slice(0, MAX_VISIBLE_MARKERS);
+    const selected = sorted.slice(0, MAX_VISIBLE_MARKERS);
     return [...adMarkers, ...selected];
-  }, [visibleMarkers, randomSeed]);
+  }, [visibleMarkers]);
 
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
   // spreadMarkers(실제 지도에 렌더링되는 마커) 중 현재 bounds 안에 있는 것만 카운트
@@ -1111,21 +1108,34 @@ const Index = () => {
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
             initialPosts={(() => {
-              if (!mapData?.bounds) return visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m);
-              const { sw, ne } = mapData.bounds;
-              return allPosts.filter(p =>
-                !p.isAd &&
-                !p.content?.trim().startsWith('[AD]') &&
-                p.lat != null && p.lng != null &&
-                p.lat >= sw.lat && p.lat <= ne.lat &&
-                p.lng >= sw.lng && p.lng <= ne.lng &&
-                !blockedIds.has(p.user?.id) &&
-                (selectedCategories.includes('all') ||
-                  (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
-                  selectedCategories.includes(p.category || 'none') ||
-                  (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
-                  (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
-              );
+              let filtered: Post[];
+              if (!mapData?.bounds) {
+                filtered = visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m);
+              } else {
+                const { sw, ne } = mapData.bounds;
+                filtered = allPosts.filter(p =>
+                  !p.isAd &&
+                  !p.content?.trim().startsWith('[AD]') &&
+                  p.lat != null && p.lng != null &&
+                  p.lat >= sw.lat && p.lat <= ne.lat &&
+                  p.lng >= sw.lng && p.lng <= ne.lng &&
+                  !blockedIds.has(p.user?.id) &&
+                  (selectedCategories.includes('all') ||
+                    (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
+                    selectedCategories.includes(p.category || 'none') ||
+                    (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
+                    (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
+                );
+              }
+              // 최신순 정렬 후 안 본 포스팅 우선
+              filtered.sort((a, b) => {
+                const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+                const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+                return bTime - aTime;
+              });
+              const unseen = filtered.filter(p => !viewedIds.has(p.id));
+              const seen = filtered.filter(p => viewedIds.has(p.id));
+              return [...unseen, ...seen];
             })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
