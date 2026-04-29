@@ -1184,21 +1184,22 @@ const Index = () => {
               const bounds = mapData?.bounds;
               const boundsFiltered = bounds
                 ? allPosts.filter(m =>
-                    !m.isAd &&
                     m.lat != null && m.lng != null &&
                     m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
                     m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
                   )
-                : allPosts.filter(m => !m.isAd);
-              // 최신순 정렬 후 안 본 포스팅 우선
-              const sorted = [...boundsFiltered].sort((a, b) => {
+                : allPosts;
+              // 광고는 맨 앞, 일반 포스트는 최신순 + 안 본 것 우선
+              const adPosts = boundsFiltered.filter(p => p.isAd);
+              const normalPosts = boundsFiltered.filter(p => !p.isAd);
+              const sorted = [...normalPosts].sort((a, b) => {
                 const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
                 const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
                 return bTime - aTime;
               });
               const unseen = sorted.filter(p => !viewedIds.has(p.id));
               const seen = sorted.filter(p => viewedIds.has(p.id));
-              return [...unseen, ...seen];
+              return [...adPosts, ...unseen, ...seen];
             })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
