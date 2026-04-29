@@ -216,17 +216,20 @@ export function useAd(adId: string) {
   const adRef = useRef<AdData | null>(adCache[adId] ?? null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 전환 타이머 설정 함수
-  const scheduleTransition = (currentAd: AdData) => {
+  // stale closure 방지: 함수 자체를 ref로 관리
+  const scheduleTransitionRef = useRef<(currentAd: AdData) => void>(() => {});
+
+  scheduleTransitionRef.current = (currentAd: AdData) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const ms = msUntilNextTransition(currentAd, new Date());
     if (ms == null) return;
 
     // 전환 시각 + 100ms 여유를 두고 now를 갱신 → resolveActiveSlot 재계산
     timerRef.current = setTimeout(() => {
+      timerRef.current = null;
       setNow(new Date());
-      // 전환 후 다음 전환도 예약
-      if (adRef.current) scheduleTransition(adRef.current);
+      // ref를 통해 항상 최신 함수 + 최신 ad 참조 (stale closure 완전 방지)
+      if (adRef.current) scheduleTransitionRef.current(adRef.current);
     }, ms + 100);
   };
 
@@ -238,7 +241,7 @@ export function useAd(adId: string) {
       adRef.current = data;
       setAd(data);
       setNow(new Date());
-      scheduleTransition(data);
+      scheduleTransitionRef.current(data);
     };
     listeners[adId].add(handler);
 
@@ -253,12 +256,12 @@ export function useAd(adId: string) {
             adCache[adId] = data as AdData;
             adRef.current = data as AdData;
             setAd(data as AdData);
-            scheduleTransition(data as AdData);
+            scheduleTransitionRef.current(data as AdData);
           }
           setLoading(false);
         });
     } else {
-      scheduleTransition(adCache[adId]);
+      scheduleTransitionRef.current(adCache[adId]);
       setLoading(false);
     }
 
@@ -302,7 +305,10 @@ export function useMapMarkerAds() {
   const adsRef = useRef<AdData[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleNextTransition = (adList: AdData[]) => {
+  // stale closure 방지: 함수 자체를 ref로 관리
+  const scheduleNextTransitionRef = useRef<(adList: AdData[]) => void>(() => {});
+
+  scheduleNextTransitionRef.current = (adList: AdData[]) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const currentNow = new Date();
     const candidates: number[] = [];
@@ -327,8 +333,12 @@ export function useMapMarkerAds() {
     if (candidates.length === 0) return;
     const ms = Math.min(...candidates);
     timerRef.current = setTimeout(() => {
+      timerRef.current = null;
       setNow(new Date());
-      if (adsRef.current.length > 0) scheduleNextTransition(adsRef.current);
+      // ref를 통해 항상 최신 함수 + 최신 adList 참조 (stale closure 완전 방지)
+      if (adsRef.current.length > 0) {
+        scheduleNextTransitionRef.current(adsRef.current);
+      }
     }, ms + 100);
   };
 
@@ -342,7 +352,7 @@ export function useMapMarkerAds() {
         const adList = data as AdData[];
         adsRef.current = adList;
         setAds(adList);
-        scheduleNextTransition(adList);
+        scheduleNextTransitionRef.current(adList);
       }
       setLoading(false);
     };
@@ -369,7 +379,7 @@ export function useMapMarkerAds() {
             adsRef.current = adList;
             setAds(adList);
             setNow(new Date());
-            scheduleNextTransition(adList);
+            scheduleNextTransitionRef.current(adList);
           }
         }
       )
