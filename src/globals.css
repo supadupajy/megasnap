@@ -153,9 +153,7 @@
 
 /* 마커 등장: 아래서 튀어오르며 스르륵 나타남 (내부 wrapper에 적용) */
 @keyframes marker-appear {
-  0%   { opacity: 0; transform: scale(0.3) translateY(20px); }
-  55%  { opacity: 1; transform: scale(1.08) translateY(-4px); }
-  75%  { transform: scale(0.97) translateY(1px); }
+  0%   { opacity: 0; transform: scale(0.85) translateY(8px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -169,7 +167,7 @@
 }
 
 .marker-appear-animation .marker-content-wrapper {
-  animation: marker-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: marker-appear 0.4s ease-out forwards;
 }
 
 .marker-appear-animation.is-ad .marker-content-wrapper {
@@ -195,8 +193,7 @@
 /* 마커 사라짐: 위로 살짝 뜨다가 스르륵 사라짐 (내부 wrapper에 적용) */
 @keyframes marker-disappear {
   0%   { opacity: 1; transform: scale(1) translateY(0); }
-  20%  { opacity: 1; transform: scale(1.06) translateY(-5px); }
-  100% { opacity: 0; transform: scale(0.4) translateY(12px); }
+  100% { opacity: 0; transform: scale(0.85) translateY(8px); }
 }
 
 /* 광고 마커 사라짐: 더 극적으로 */
@@ -211,7 +208,7 @@
 }
 
 .marker-disappear-animation .marker-content-wrapper {
-  animation: marker-disappear 0.45s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  animation: marker-disappear 0.4s ease-in forwards;
 }
 
 .marker-disappear-animation.is-ad .marker-content-wrapper {
