@@ -81,6 +81,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -104,6 +105,29 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     const ownerId = post.owner_id || post.user_id;
     return ownerId === authUser.id || ownerId === 'me';
   }, [authUser?.id, post.owner_id, post.user_id]);
+
+  // 프로필 이미지 fallback: 이니셜 표시
+  const renderAvatar = (size: 'sm' | 'md' = 'md') => {
+    const sizeClass = size === 'md' ? 'w-10 h-10' : 'w-9 h-9';
+    const initial = (user.name || '?')[0].toUpperCase();
+    if (avatarError || !user.avatar) {
+      return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white`}>
+          <span className="text-white font-bold text-sm">{initial}</span>
+        </div>
+      );
+    }
+    return (
+      <div className={`${sizeClass} rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative`}>
+        <img
+          src={user.avatar}
+          alt={user.name}
+          className="w-full h-full rounded-full object-cover border-2 border-white"
+          onError={() => setAvatarError(true)}
+        />
+      </div>
+    );
+  };
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -606,13 +630,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             {/* Header Section */}
             <div className="flex items-center justify-between p-4 pb-3">
               <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-full h-full rounded-full object-cover border-2 border-white"
-                  />
-                </div>
+                {renderAvatar('md')}
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
@@ -717,13 +735,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {/* Header Section */}
           <div className="flex items-center justify-between p-4 pb-3">
             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-              <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover border-2 border-white"
-                />
-              </div>
+              {renderAvatar('md')}
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">

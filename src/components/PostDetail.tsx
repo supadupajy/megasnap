@@ -70,6 +70,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [showComments, setShowComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Dialog가 모두 닫힌 뒤 body 잠금 강제 해제
   useEffect(() => {
@@ -80,6 +81,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       document.body.removeAttribute('data-scroll-locked');
     }
   }, [isOpen, isDeleteDialogOpen]);
+
+  // 포스트가 바뀌면 avatarError 초기화
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentPostIndex]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -575,14 +581,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         {/* 헤더 고정 영역 */}
                         <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                           <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                            <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                              <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
-                                <div className="ad-badge-fancy"><span>AD</span></div>
-                              </div>
+                              {avatarError || !currentPost.user.avatar ? (
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
+                                  <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
+                                </div>
+                              ) : (
+                                <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                                  <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
+                                </div>
+                              )}
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
+                                  <div className="ad-badge-fancy"><span>AD</span></div>
+                                </div>
                               <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
                                 <MapPin className="w-3 h-3" />
                                 <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
@@ -828,9 +840,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     {/* 헤더 고정 영역 */}
                     <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                       <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                        <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                          <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" />
-                        </div>
+                        {avatarError || !currentPost.user.avatar ? (
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
+                            <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
+                          </div>
+                        ) : (
+                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+                            <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
+                          </div>
+                        )}
                         <div>
                           <div className="flex items-center gap-1.5">
                             <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
