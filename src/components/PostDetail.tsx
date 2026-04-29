@@ -789,17 +789,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               >
                                 <div className="space-y-2 pb-2">
                                   {localComments.slice(0, -1).map((c, i) => (
-                                    <div key={i} className="flex gap-2 items-start">
-                                      <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                      <span className="text-sm text-gray-500">{c.text}</span>
+                                    <div key={i} className="flex items-start justify-between gap-2">
+                                      <div className="flex gap-2 items-start flex-1 min-w-0">
+                                        <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
+                                        <span className="text-sm text-gray-500">{c.text}</span>
+                                      </div>
+                                      {c.createdAt && (
+                                        <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                                          {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                                        </span>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
                               </div>
                               {lastComment && (
-                                <div className="flex gap-2 items-start mt-1">
-                                  <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-                                  <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                                <div className="flex items-start justify-between gap-2 mt-1">
+                                  <div className="flex gap-2 items-start flex-1 min-w-0">
+                                    <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
+                                    <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                                  </div>
+                                  {lastComment.createdAt && (
+                                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                                      {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1039,18 +1053,32 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           >
                             <div className="space-y-2 pb-2">
                               {localComments.slice(0, -1).map((c, i) => (
-                                <div key={i} className="flex gap-2 items-start">
-                                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                  <span className="text-sm text-gray-500">{c.text}</span>
+                                <div key={i} className="flex items-start justify-between gap-2">
+                                  <div className="flex gap-2 items-start flex-1 min-w-0">
+                                    <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
+                                    <span className="text-sm text-gray-500">{c.text}</span>
+                                  </div>
+                                  {c.createdAt && (
+                                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>
                           </div>
 
                           {lastComment && (
-                            <div className="flex gap-2 items-start mt-1">
-                              <span className="font-bold text-sm text-gray-900">{lastComment.user}</span>
-                              <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                            <div className="flex items-start justify-between gap-2 mt-1">
+                              <div className="flex gap-2 items-start flex-1 min-w-0">
+                                <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
+                                <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                              </div>
+                              {lastComment.createdAt && (
+                                <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                                  {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>

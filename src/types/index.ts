@@ -13,6 +13,7 @@ export interface User {
 export interface Comment {
   user: string;
   text: string;
+  createdAt?: Date;
 }
 
 export interface Post {

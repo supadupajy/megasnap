@@ -16,9 +16,11 @@ export const isPersistedPostId = (postId: string) => UUID_REGEX.test(postId);
 export const mapCommentRowToComment = (row: {
   user_name: string | null;
   content: string;
+  created_at?: string | null;
 }): Comment => ({
   user: row.user_name || '사용자',
   text: row.content,
+  createdAt: row.created_at ? new Date(row.created_at) : undefined,
 });
 
 export const fetchCommentsByPostId = async (postId: string): Promise<Comment[]> => {
@@ -60,7 +62,7 @@ export const insertComment = async ({
       user_avatar: userAvatar || null,
       content: trimmedContent,
     })
-    .select('user_name, content')
+    .select('user_name, content, created_at')
     .single();
 
   if (error) throw error;
