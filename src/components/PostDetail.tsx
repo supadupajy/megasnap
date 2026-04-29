@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getYoutubeId } from '@/lib/utils';
@@ -66,6 +66,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [commentInput, setCommentInput] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -149,6 +150,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       setCurrentImageIndex(0);
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
+      setShowComments(false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
 
       const checkSaveStatus = async () => {
@@ -760,13 +762,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <Send className="w-4 h-4" />
                                 </button>
                               </form>
-                              <div className="space-y-2 mt-2">
-                                {localComments.slice(0, -1).map((c, i) => (
-                                  <div key={i} className="flex gap-2 items-start">
-                                    <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                    <span className="text-sm text-gray-500">{c.text}</span>
-                                  </div>
-                                ))}
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
+                                className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
+                              >
+                                <span className="text-xs text-gray-400 font-medium pointer-events-none">
+                                  {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+                                </span>
+                                {showComments ?
+                                  <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
+                                  <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+                                }
+                              </button>
+                              <div
+                                className="overflow-hidden transition-all duration-300 ease-in-out"
+                                style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
+                              >
+                                <div className="space-y-2 pb-2">
+                                  {localComments.slice(0, -1).map((c, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                      <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                                      <span className="text-sm text-gray-500">{c.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                               {lastComment && (
                                 <div className="flex gap-2 items-start mt-1">
@@ -989,13 +1008,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </button>
                           </form>
 
-                          <div className="space-y-2 mt-2">
-                            {localComments.slice(0, -1).map((c, i) => (
-                              <div key={i} className="flex gap-2 items-start">
-                                <span className="font-bold text-sm text-gray-900">{c.user}</span>
-                                <span className="text-sm text-gray-500">{c.text}</span>
-                              </div>
-                            ))}
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
+                            className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
+                          >
+                            <span className="text-xs text-gray-400 font-medium pointer-events-none">
+                              {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+                            </span>
+                            {showComments ?
+                              <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
+                              <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+                            }
+                          </button>
+
+                          <div
+                            className="overflow-hidden transition-all duration-300 ease-in-out"
+                            style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
+                          >
+                            <div className="space-y-2 pb-2">
+                              {localComments.slice(0, -1).map((c, i) => (
+                                <div key={i} className="flex gap-2 items-start">
+                                  <span className="font-bold text-sm text-gray-900">{c.user}</span>
+                                  <span className="text-sm text-gray-500">{c.text}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
 
                           {lastComment && (
