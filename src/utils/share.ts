@@ -51,24 +51,7 @@ export const handleShare = async (
 
   const shareUrl = getPostShareUrl(postId);
 
-  // Web Share API 지원 시 네이티브 공유 시트 사용 (모바일)
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: 'ChoraSnap 포스팅',
-        url: shareUrl,
-      });
-      // 공유 성공 시에도 별도 토스트 없음 (OS 공유 시트가 처리)
-    } catch (err: any) {
-      // AbortError: 사용자가 공유 시트를 닫은 경우 → 아무것도 하지 않음
-      if (err?.name === 'AbortError') return;
-      // 그 외 오류는 클립보드 복사로 fallback
-      await copyToClipboard(shareUrl);
-    }
-    return;
-  }
-
-  // 클립보드 복사 (데스크탑 / Web Share 미지원)
+  // 클립보드 복사 (Web Share API 사용하지 않고 항상 직접 복사)
   await copyToClipboard(shareUrl);
 };
 
