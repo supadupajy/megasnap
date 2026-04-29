@@ -471,15 +471,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
     
     try {
-      const newComment = {
+      const saved = await insertComment({
         postId: post.id,
         userId: authUser.id,
         userName: displayName,
         userAvatar: profile?.avatar_url,
         content: newCommentText,
-      };
-
-      setLocalComments(prev => [...prev, { user: displayName, text: newCommentText }]);
+      });
+      setLocalComments(prev => [...prev, saved]);
       setCommentInput('');
       showSuccess('댓글이 등록되었습니다.');
     } catch (err) {
