@@ -24,6 +24,8 @@ import {
   ArrowRight,
   Clock,
   Sparkles,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +33,6 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { invalidateAdCache } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 
 const reverseGeocode = (lat: number, lng: number): Promise<string> => {
@@ -63,6 +64,7 @@ interface AdData {
   brand_name: string;
   brand_logo_url: string;
   is_active: boolean;
+  ad_type?: string | null;
   lat?: number | null;
   lng?: number | null;
   start_date?: string | null;
@@ -102,23 +104,19 @@ const AD_DESCRIPTIONS: Record<string, string> = {
 };
 
 // ─── 날짜+시간 포맷 헬퍼 ─────────────────────────────────────────────────────
-// ISO 문자열 → "YYYY-MM-DDTHH:mm" (datetime-local input value 형식)
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return '';
-  // timestamptz → 로컬 시간 기준 datetime-local 문자열
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// datetime-local 값 → ISO 문자열 (로컬 시간 → UTC)
 function fromDatetimeLocal(val: string): string {
   if (!val) return '';
   return new Date(val).toISOString();
 }
 
-// 표시용 포맷: "2025년 4월 28일 오후 3:00"
 function formatDatetime(iso: string | null | undefined): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -233,7 +231,7 @@ const FieldRow = ({ icon: Icon, label, value, placeholder, onChange }: {
   </div>
 );
 
-// ─── 기간 상태 뱃지 (시간 단위) ───────────────────────────────────────────────
+// ─── 기간 상태 뱃지 ───────────────────────────────────────────────────────────
 const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate: string; endDate: string; isNext: boolean; onReset?: () => void }) => {
   const now = new Date();
   const start = startDate ? new Date(startDate) : null;
@@ -258,7 +256,6 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate:
     return remHours > 0 ? `${days}일 ${remHours}시간 남았음` : `${days}일 남았음`;
   };
 
-  // 상태 판단
   const isExpired = !!(end && end <= now);
   const isNotStarted = !!(start && start > now);
   const isRunning = !isExpired && !isNotStarted && !!(start || end);
@@ -286,9 +283,7 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate:
     <div className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-bold', colorClass)}>
       <Clock className="w-3 h-3 shrink-0" />
       <span className="flex-1">{leftLabel}</span>
-      {rightLabel && (
-        <span className="shrink-0 text-[11px] font-black">{rightLabel}</span>
-      )}
+      {rightLabel && <span className="shrink-0 text-[11px] font-black">{rightLabel}</span>}
       {isExpired && !isNext && onReset && (
         <button
           onClick={e => { e.stopPropagation(); onReset(); }}
@@ -302,43 +297,280 @@ const PeriodStatusBadge = ({ startDate, endDate, isNext, onReset }: { startDate:
   );
 };
 
-// ─── 광고 카드 ────────────────────────────────────────────────────────────────
-const AdCard = ({
-  initialAd,
-  savedAd,
-  defaultExpanded = false,
+// ─── 광고 슬롯 폼 (현재 or 다음) ─────────────────────────────────────────────
+const AdSlotForm = ({
+  slot, adId, fieldPrefix, onChange, onReset,
+}: {
+  slot: { image_url: string; title: string; subtitle: string; link_url: string; brand_name: string; brand_logo_url: string; start_date: string; end_date: string; };
+  adId: string; fieldPrefix: string;
+  onChange: (key: string, value: string) => void;
+  onReset?: () => void;
+}) => {
+  const isNext = fieldPrefix === 'next_';
+  return (
+    <div className="space-y-2.5">
+      <div className="flex flex-col gap-2">
+        <DatetimeRow label="시작 일시" value={slot.start_date} onChange={v => onChange(`${fieldPrefix}start_date`, v)} />
+        <DatetimeRow label="종료 일시" value={slot.end_date} min={slot.start_date || undefined} onChange={v => onChange(`${fieldPrefix}end_date`, v)} />
+      </div>
+      {(slot.start_date || slot.end_date) && (
+        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} onReset={!isNext ? onReset : undefined} />
+      )}
+      <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
+      <FieldRow icon={Type} label="설명" value={slot.title} placeholder="광고 설명 문구" onChange={v => onChange(`${fieldPrefix}title`, v)} />
+      {adId !== 'map_marker' && (
+        <FieldRow icon={Type} label="부제목" value={slot.subtitle} placeholder="광고 부제목" onChange={v => onChange(`${fieldPrefix}subtitle`, v)} />
+      )}
+      <FieldRow icon={Link} label="랜딩 URL" value={slot.link_url} placeholder="https://example.com" onChange={v => onChange(`${fieldPrefix}link_url`, v)} />
+      <ImageUploadField label="배너 이미지" value={slot.image_url} onChange={v => onChange(`${fieldPrefix}image_url`, v)} adId={adId} fieldKey={`${fieldPrefix}banner`} previewType="banner" />
+      <ImageUploadField label="브랜드 로고" value={slot.brand_logo_url} onChange={v => onChange(`${fieldPrefix}brand_logo_url`, v)} adId={adId} fieldKey={`${fieldPrefix}logo`} previewType="logo" />
+    </div>
+  );
+};
+
+// ─── 지도 마커 광고 카드 (여러 개 지원) ──────────────────────────────────────
+const MapMarkerAdCard = ({
+  ad,
+  index,
+  pendingLocation,
   locationFieldRef,
   onSave,
+  onDelete,
   onSelectLocation,
+  defaultExpanded,
 }: {
-  initialAd: AdData;
-  savedAd: AdData;
-  defaultExpanded?: boolean;
+  ad: AdData;
+  index: number;
+  pendingLocation: { lat: number; lng: number } | null;
   locationFieldRef?: React.RefObject<HTMLDivElement>;
+  onSave: (updated: AdData) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onSelectLocation: (adId: string) => void;
+  defaultExpanded?: boolean;
+}) => {
+  const effectiveAd = pendingLocation ? { ...ad, lat: pendingLocation.lat, lng: pendingLocation.lng } : ad;
+  const [form, setForm] = useState<AdData>(effectiveAd);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (pendingLocation) {
+      setForm(f => ({ ...f, lat: pendingLocation.lat, lng: pendingLocation.lng }));
+    }
+  }, [pendingLocation]);
+
+  useEffect(() => {
+    if (form.lat != null && form.lng != null) {
+      setLocationLabel(null);
+      reverseGeocode(form.lat, form.lng).then(addr => setLocationLabel(addr));
+    } else {
+      setLocationLabel(null);
+    }
+  }, [form.lat, form.lng]);
+
+  const hasChanges = JSON.stringify(form) !== JSON.stringify(effectiveAd);
+  const hasLocation = form.lat != null && form.lng != null;
+
+  const handleChange = (key: string, value: string) => {
+    setForm(f => ({ ...f, [key]: value || null }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(ad.id);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // 현재 광고 상태 계산
+  const now = new Date();
+  const startDate = form.start_date ? new Date(form.start_date) : null;
+  const endDate = form.end_date ? new Date(form.end_date) : null;
+  const isPending = !!(startDate && startDate > now);
+  const isExpiredAd = !!(endDate && endDate <= now);
+  const isActive = !isPending && !isExpiredAd && form.is_active;
+
+  return (
+    <div className="rounded-3xl border border-rose-100 overflow-hidden shadow-sm bg-white">
+      {/* 카드 헤더 */}
+      <div className="flex items-center gap-3 p-4 cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setIsExpanded(v => !v)}>
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-rose-50">
+          <MapPin className="w-5 h-5 text-rose-600" />
+        </div>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-[13px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>
+              지도 마커 광고 #{index + 1}
+            </p>
+            {isPending && (
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 shrink-0">준비중</span>
+            )}
+            {isExpiredAd && (
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-red-100 text-red-600 shrink-0">만료됨</span>
+            )}
+            {isActive && (
+              <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 shrink-0">진행중</span>
+            )}
+          </div>
+          <p className="text-[10px] text-gray-400 font-medium truncate">
+            {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '위치 미설정'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
+        </div>
+      </div>
+
+      {/* 접힌 상태 미리보기 */}
+      {!isExpanded && (
+        <div className="px-4 pb-3 space-y-2">
+          {hasLocation && (
+            <button
+              onClick={e => { e.stopPropagation(); onSelectLocation(ad.id); }}
+              className="w-full flex items-center gap-3 rounded-2xl px-3 h-11 border bg-rose-50 border-rose-100 hover:border-rose-300 transition-all active:scale-[0.98]"
+            >
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-rose-100">
+                <Navigation2 className="w-3.5 h-3.5 text-rose-500" />
+              </div>
+              <span className="flex-1 text-left text-sm font-semibold truncate text-gray-900">
+                {locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`}
+              </span>
+              <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
+            </button>
+          )}
+          {form.image_url && (
+            <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+              <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 편집 폼 */}
+      {isExpanded && (
+        <div className="border-t border-gray-50">
+          <div className="px-4 pb-4 pt-3 space-y-3">
+            {/* 위치 선택 */}
+            <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <MapPin className="w-3 h-3 text-gray-400" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
+              </div>
+              <button
+                onClick={() => onSelectLocation(ad.id)}
+                className={cn(
+                  'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
+                  hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
+                )}
+              >
+                <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
+                  <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
+                </div>
+                <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
+                  {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '지도에서 위치 선택'}
+                </span>
+                {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
+              </button>
+            </div>
+
+            {/* 기간 설정 */}
+            <div className="flex flex-col gap-2">
+              <DatetimeRow label="시작 일시" value={form.start_date || ''} onChange={v => handleChange('start_date', v)} />
+              <DatetimeRow label="종료 일시" value={form.end_date || ''} min={form.start_date || undefined} onChange={v => handleChange('end_date', v)} />
+            </div>
+            {(form.start_date || form.end_date) && (
+              <PeriodStatusBadge startDate={form.start_date || ''} endDate={form.end_date || ''} isNext={false} />
+            )}
+
+            <FieldRow icon={Type} label="브랜드명" value={form.brand_name || ''} placeholder="브랜드 이름" onChange={v => handleChange('brand_name', v)} />
+            <FieldRow icon={Type} label="설명" value={form.title || ''} placeholder="광고 설명 문구" onChange={v => handleChange('title', v)} />
+            <FieldRow icon={Link} label="랜딩 URL" value={form.link_url || ''} placeholder="https://example.com" onChange={v => handleChange('link_url', v)} />
+            <ImageUploadField label="배너 이미지" value={form.image_url || ''} onChange={v => handleChange('image_url', v)} adId={ad.id} fieldKey="banner" previewType="banner" />
+            <ImageUploadField label="브랜드 로고" value={form.brand_logo_url || ''} onChange={v => handleChange('brand_logo_url', v)} adId={ad.id} fieldKey="logo" previewType="logo" />
+
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+              className={cn(
+                'w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
+                saved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-violet-600 text-white shadow-lg shadow-violet-100 hover:bg-violet-700 disabled:opacity-50'
+              )}
+            >
+              {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> 저장 중...</>
+                : saved ? <><CheckCircle2 className="w-4 h-4" /> 저장 완료!</>
+                : <><Save className="w-4 h-4" /> 변경사항 저장</>}
+            </Button>
+
+            {/* 삭제 버튼 */}
+            {!showDeleteConfirm ? (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full py-2.5 rounded-2xl text-[11px] font-black text-red-400 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                이 마커 광고 삭제
+              </button>
+            ) : (
+              <div className="bg-red-50 rounded-2xl p-3 space-y-2">
+                <p className="text-[11px] font-black text-red-600 text-center">정말 삭제하시겠습니까?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-2 rounded-xl text-[11px] font-black text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 rounded-xl text-[11px] font-black text-white bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                  >
+                    {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    삭제
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── 일반 광고 카드 (splash, header, search, trending) ────────────────────────
+const AdCard = ({
+  initialAd, savedAd, defaultExpanded = false, onSave, onSelectLocation,
+}: {
+  initialAd: AdData; savedAd: AdData; defaultExpanded?: boolean;
   onSave: (updated: AdData) => Promise<void>;
   onSelectLocation: (adId: string) => void;
 }) => {
-  // map_marker가 삭제(is_active:false + 빈 데이터)된 상태로 로드되면 새 광고 입력을 위해 is_active를 true로 초기화
-  const getInitialForm = (ad: AdData): AdData => {
-    if (ad.id === 'map_marker' && !ad.is_active && !ad.image_url) {
-      return { ...ad, is_active: true };
-    }
-    return ad;
-  };
-  const [form, setForm] = useState<AdData>(() => getInitialForm(initialAd));
+  const [form, setForm] = useState<AdData>(initialAd);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
-  // 현재/다음 탭
   const [activeTab, setActiveTab] = useState<'current' | 'next'>('current');
 
-  const Icon = AD_ICONS[initialAd.id] || Tv2;
-  const colors = AD_COLORS[initialAd.id] || AD_COLORS.splash;
-
-  // 다음 예정 광고 시작 시 현재 광고로 자동 전환
   useEffect(() => {
-    if (initialAd.id === 'map_marker') return;
     const nextStart = form.next_start_date ? new Date(form.next_start_date) : null;
     if (!nextStart || !form.next_image_url) return;
     const now = new Date();
@@ -353,48 +585,17 @@ const AdCard = ({
         brand_logo_url: f.next_brand_logo_url ?? f.brand_logo_url,
         start_date: f.next_start_date ?? f.start_date,
         end_date: f.next_end_date ?? f.end_date,
-        next_image_url: null,
-        next_title: null,
-        next_subtitle: null,
-        next_link_url: null,
-        next_brand_name: null,
-        next_brand_logo_url: null,
-        next_start_date: null,
-        next_end_date: null,
+        next_image_url: null, next_title: null, next_subtitle: null,
+        next_link_url: null, next_brand_name: null, next_brand_logo_url: null,
+        next_start_date: null, next_end_date: null,
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (form.lat != null && form.lng != null) {
-      setLocationLabel(null);
-      reverseGeocode(form.lat, form.lng).then(addr => setLocationLabel(addr));
-    } else {
-      setLocationLabel(null);
-    }
-  }, [form.lat, form.lng]);
-
   const hasChanges = JSON.stringify(form) !== JSON.stringify(savedAd);
-
-  const handleChange = (key: string, value: string) => {
-    setForm(f => ({ ...f, [key]: value || null }));
-  };
-
-  // 현재 광고 데이터 초기화
-  const handleResetCurrentSlot = () => {
-    setForm(f => ({
-      ...f,
-      image_url: '',
-      title: '',
-      subtitle: '',
-      link_url: '',
-      brand_name: '',
-      brand_logo_url: '',
-      start_date: null,
-      end_date: null,
-    }));
-  };
+  const handleChange = (key: string, value: string) => setForm(f => ({ ...f, [key]: value || null }));
+  const handleResetCurrentSlot = () => setForm(f => ({ ...f, image_url: '', title: '', subtitle: '', link_url: '', brand_name: '', brand_logo_url: '', start_date: null, end_date: null }));
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -407,37 +608,15 @@ const AdCard = ({
     }
   };
 
-  const hasLocation = form.lat != null && form.lng != null;
-
-  // 현재 슬롯 데이터
-  const currentSlot = {
-    image_url: form.image_url || '',
-    title: form.title || '',
-    subtitle: form.subtitle || '',
-    link_url: form.link_url || '',
-    brand_name: form.brand_name || '',
-    brand_logo_url: form.brand_logo_url || '',
-    start_date: form.start_date || '',
-    end_date: form.end_date || '',
-  };
-
-  // 다음 슬롯 데이터
-  const nextSlot = {
-    image_url: form.next_image_url || '',
-    title: form.next_title || '',
-    subtitle: form.next_subtitle || '',
-    link_url: form.next_link_url || '',
-    brand_name: form.next_brand_name || '',
-    brand_logo_url: form.next_brand_logo_url || '',
-    start_date: form.next_start_date || '',
-    end_date: form.next_end_date || '',
-  };
-
+  const Icon = AD_ICONS[initialAd.id] || Tv2;
+  const colors = AD_COLORS[initialAd.id] || AD_COLORS.splash;
   const hasNextAd = !!form.next_image_url;
+
+  const currentSlot = { image_url: form.image_url || '', title: form.title || '', subtitle: form.subtitle || '', link_url: form.link_url || '', brand_name: form.brand_name || '', brand_logo_url: form.brand_logo_url || '', start_date: form.start_date || '', end_date: form.end_date || '' };
+  const nextSlot = { image_url: form.next_image_url || '', title: form.next_title || '', subtitle: form.next_subtitle || '', link_url: form.next_link_url || '', brand_name: form.next_brand_name || '', brand_logo_url: form.next_brand_logo_url || '', start_date: form.next_start_date || '', end_date: form.next_end_date || '' };
 
   return (
     <div className={cn('rounded-3xl border overflow-hidden shadow-sm', colors.border, 'bg-white')}>
-      {/* 카드 헤더 */}
       <div className="flex items-center gap-3 p-4 cursor-pointer active:bg-gray-50 transition-colors" onClick={() => setIsExpanded(v => !v)}>
         <div className={cn('w-10 h-10 rounded-2xl flex items-center justify-center shrink-0', colors.bg)}>
           <Icon className={cn('w-5 h-5', colors.icon)} />
@@ -466,204 +645,81 @@ const AdCard = ({
         </div>
       </div>
 
-      {/* 접힌 상태 미리보기 */}
       {!isExpanded && (
-        <>
-          {initialAd.id === 'map_marker' && (
-            <div className="px-4 pb-3 space-y-2">
-              {hasLocation && (
-                <button
-                  onClick={e => { e.stopPropagation(); onSelectLocation(initialAd.id); }}
-                  className="w-full flex items-center gap-3 rounded-2xl px-3 h-11 border bg-rose-50 border-rose-100 hover:border-rose-300 transition-all active:scale-[0.98]"
-                >
-                  <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-rose-100">
-                    <Navigation2 className="w-3.5 h-3.5 text-rose-500" />
+        <div className="px-4 pb-3 space-y-2">
+          {form.image_url && (() => {
+            const isExpiredAd = form.end_date ? new Date(form.end_date) <= new Date() : false;
+            const remaining = (() => {
+              if (!form.end_date) return null;
+              const end = new Date(form.end_date);
+              const now = new Date();
+              if (end <= now) return null;
+              const ms = end.getTime() - now.getTime();
+              const totalMinutes = Math.ceil(ms / 60000);
+              if (totalMinutes < 60) return `${totalMinutes}분 남음`;
+              const hours = Math.floor(totalMinutes / 60);
+              if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남음`;
+              const days = Math.floor(hours / 24);
+              const remHours = hours % 24;
+              return remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
+            })();
+            return (
+              <div className="relative w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+                <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">현재</div>
+                {form.end_date && (
+                  <div className={cn('absolute top-2 right-2 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1', isExpiredAd ? 'bg-red-500/80' : 'bg-black/50')}>
+                    <Calendar className="w-2.5 h-2.5" />
+                    {isExpiredAd ? '기간 만료됨' : remaining ? `${remaining}` : `${formatDatetime(form.end_date)}까지`}
                   </div>
-                  <span className="flex-1 text-left text-sm font-semibold truncate text-gray-900">
-                    {locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`}
-                  </span>
-                  <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
-                </button>
-              )}
-              {form.image_url && (
-                <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
-                  <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                </div>
-              )}
+                )}
+              </div>
+            );
+          })()}
+          {form.next_image_url && (
+            <div className="flex items-center gap-2">
+              <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+              <div className="relative flex-1 h-14 rounded-xl overflow-hidden bg-gray-100">
+                <img src={form.next_image_url} alt="next preview" className="w-full h-full object-cover opacity-80" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <div className="absolute top-1.5 left-1.5 bg-violet-600/80 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">다음 예정</div>
+                {form.next_start_date && (
+                  <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Calendar className="w-2.5 h-2.5" />
+                    {formatDatetime(form.next_start_date)}부터
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          {initialAd.id !== 'map_marker' && (
-            <div className="px-4 pb-3 space-y-2">
-              {/* 현재 광고 미리보기 */}
-              {form.image_url && (() => {
-                const isExpired = form.end_date ? new Date(form.end_date) <= new Date() : false;
-                const remaining = (() => {
-                  if (!form.end_date) return null;
-                  const end = new Date(form.end_date);
-                  const now = new Date();
-                  if (end <= now) return null;
-                  const ms = end.getTime() - now.getTime();
-                  const totalMinutes = Math.ceil(ms / 60000);
-                  if (totalMinutes < 60) return `${totalMinutes}분 남음`;
-                  const hours = Math.floor(totalMinutes / 60);
-                  if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남음`;
-                  const days = Math.floor(hours / 24);
-                  const remHours = hours % 24;
-                  return remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
-                })();
-                return (
-                  <div className="relative w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
-                    <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">현재</div>
-                    {form.end_date && (
-                      <div className={cn(
-                        'absolute top-2 right-2 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1',
-                        isExpired ? 'bg-red-500/80' : 'bg-black/50'
-                      )}>
-                        <Calendar className="w-2.5 h-2.5" />
-                        {isExpired ? '기간 만료됨' : remaining ? `${remaining}` : `${formatDatetime(form.end_date)}까지`}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-              {/* 다음 광고 미리보기 */}
-              {form.next_image_url && (
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                  <div className="relative flex-1 h-14 rounded-xl overflow-hidden bg-gray-100">
-                    <img src={form.next_image_url} alt="next preview" className="w-full h-full object-cover opacity-80" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <div className="absolute top-1.5 left-1.5 bg-violet-600/80 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">다음 예정</div>
-                    {form.next_start_date && (
-                      <div className="absolute top-1.5 right-1.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {formatDatetime(form.next_start_date)}부터
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+        </div>
       )}
 
-      {/* 편집 폼 */}
       {isExpanded && (
         <div className="border-t border-gray-50">
-          {/* 탭 — map_marker는 단일 슬롯이므로 탭 없음 */}
-          {initialAd.id !== 'map_marker' && (
-            <div className="flex px-4 pt-3 gap-2">
-              <button
-                onClick={() => setActiveTab('current')}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
-                  activeTab === 'current'
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                )}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                현재 광고
-              </button>
-              <button
-                onClick={() => setActiveTab('next')}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all',
-                  activeTab === 'next'
-                    ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
-                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                )}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                다음 예정
-              </button>
-            </div>
-          )}
-
+          <div className="flex px-4 pt-3 gap-2">
+            <button onClick={() => setActiveTab('current')} className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all', activeTab === 'current' ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200')}>
+              <Eye className="w-3.5 h-3.5" />현재 광고
+            </button>
+            <button onClick={() => setActiveTab('next')} className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-black transition-all', activeTab === 'next' ? 'bg-violet-600 text-white shadow-sm shadow-violet-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200')}>
+              <Sparkles className="w-3.5 h-3.5" />다음 예정
+            </button>
+          </div>
           <div className="px-4 pb-4 pt-3 space-y-3">
-            {/* map_marker: 위치 + 단일 슬롯 (기간 설정 없음) */}
-            {initialAd.id === 'map_marker' ? (
-              <>
-                <div ref={locationFieldRef} className="bg-gray-50 rounded-2xl p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <MapPin className="w-3 h-3 text-gray-400" />
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">광고 마커 위치</span>
-                  </div>
-                  <button
-                    onClick={() => onSelectLocation(initialAd.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 bg-white rounded-xl px-3 h-11 shadow-sm border active:scale-[0.98] transition-all group',
-                      hasLocation ? 'border-rose-200 hover:border-rose-400' : 'border-gray-100 hover:border-violet-300'
-                    )}
-                  >
-                    <div className={cn('w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors', hasLocation ? 'bg-rose-100' : 'bg-gray-100 group-hover:bg-violet-100')}>
-                      <Navigation2 className={cn('w-3.5 h-3.5', hasLocation ? 'text-rose-500' : 'text-gray-400 group-hover:text-violet-500')} />
-                    </div>
-                    <span className={cn('flex-1 text-left text-sm font-medium truncate', hasLocation ? 'text-gray-900' : 'text-gray-400')}>
-                      {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '지도에서 위치 선택'}
-                    </span>
-                    {hasLocation && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>}
-                  </button>
-                </div>
-                {/* 기간 설정 */}
-                <div className="flex flex-col gap-2">
-                  <DatetimeRow
-                    label="시작 일시"
-                    value={form.start_date || ''}
-                    onChange={v => handleChange('start_date', v)}
-                  />
-                  <DatetimeRow
-                    label="종료 일시"
-                    value={form.end_date || ''}
-                    min={form.start_date || undefined}
-                    onChange={v => handleChange('end_date', v)}
-                  />
-                </div>
-                {(form.start_date || form.end_date) && (
-                  <PeriodStatusBadge startDate={form.start_date || ''} endDate={form.end_date || ''} isNext={false} />
-                )}
-                <FieldRow icon={Type} label="브랜드명" value={form.brand_name || ''} placeholder="브랜드 이름" onChange={v => handleChange('brand_name', v)} />
-                <FieldRow icon={Type} label="설명" value={form.title || ''} placeholder="광고 설명 문구" onChange={v => handleChange('title', v)} />
-                <FieldRow icon={Link} label="랜딩 URL" value={form.link_url || ''} placeholder="https://example.com" onChange={v => handleChange('link_url', v)} />
-                <ImageUploadField label="배너 이미지" value={form.image_url || ''} onChange={v => handleChange('image_url', v)} adId={initialAd.id} fieldKey="banner" previewType="banner" />
-                <ImageUploadField label="브랜드 로고" value={form.brand_logo_url || ''} onChange={v => handleChange('brand_logo_url', v)} adId={initialAd.id} fieldKey="logo" previewType="logo" />
-              </>
-            ) : activeTab === 'current' ? (
-              <AdSlotForm
-                slot={currentSlot}
-                adId={initialAd.id}
-                fieldPrefix=""
-                accentColor={colors.accent}
-                onChange={handleChange}
-                onReset={handleResetCurrentSlot}
-              />
+            {activeTab === 'current' ? (
+              <AdSlotForm slot={currentSlot} adId={initialAd.id} fieldPrefix="" onChange={handleChange} onReset={handleResetCurrentSlot} />
             ) : (
               <>
                 <div className="bg-violet-50 rounded-2xl p-3 flex items-start gap-2.5">
                   <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[11px] font-black text-violet-700">다음 예정 광고</p>
-                    <p className="text-[10px] text-violet-500 font-medium mt-0.5 leading-relaxed">
-                      현재 광고 종료 일시가 지나면 자동으로 이 광고로 전환됩니다.
-                    </p>
+                    <p className="text-[10px] text-violet-500 font-medium mt-0.5 leading-relaxed">현재 광고 종료 일시가 지나면 자동으로 이 광고로 전환됩니다.</p>
                   </div>
                 </div>
-                <AdSlotForm
-                  slot={nextSlot}
-                  adId={initialAd.id}
-                  fieldPrefix="next_"
-                  accentColor="bg-violet-600"
-                  onChange={handleChange}
-                />
+                <AdSlotForm slot={nextSlot} adId={initialAd.id} fieldPrefix="next_" onChange={handleChange} />
                 {hasNextAd && (
                   <button
-                    onClick={() => setForm(f => ({
-                      ...f,
-                      next_image_url: null, next_title: null, next_subtitle: null,
-                      next_link_url: null, next_brand_name: null, next_brand_logo_url: null,
-                      next_start_date: null, next_end_date: null,
-                    }))}
+                    onClick={() => setForm(f => ({ ...f, next_image_url: null, next_title: null, next_subtitle: null, next_link_url: null, next_brand_name: null, next_brand_logo_url: null, next_start_date: null, next_end_date: null }))}
                     className="w-full py-2.5 rounded-2xl text-[11px] font-black text-red-400 bg-red-50 hover:bg-red-100 transition-colors"
                   >
                     다음 광고 초기화
@@ -671,14 +727,10 @@ const AdCard = ({
                 )}
               </>
             )}
-
             <Button
               onClick={handleSave}
               disabled={isSaving || !hasChanges}
-              className={cn(
-                'w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
-                saved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-violet-600 text-white shadow-lg shadow-violet-100 hover:bg-violet-700 disabled:opacity-50'
-              )}
+              className={cn('w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2', saved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-violet-600 text-white shadow-lg shadow-violet-100 hover:bg-violet-700 disabled:opacity-50')}
             >
               {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> 저장 중...</>
                 : saved ? <><CheckCircle2 className="w-4 h-4" /> 저장 완료!</>
@@ -691,83 +743,34 @@ const AdCard = ({
   );
 };
 
-// ─── 광고 슬롯 폼 (현재 or 다음) ─────────────────────────────────────────────
-const AdSlotForm = ({
-  slot,
-  adId,
-  fieldPrefix,
-  accentColor,
-  onChange,
-  onReset,
-}: {
-  slot: {
-    image_url: string;
-    title: string;
-    subtitle: string;
-    link_url: string;
-    brand_name: string;
-    brand_logo_url: string;
-    start_date: string;
-    end_date: string;
-  };
-  adId: string;
-  fieldPrefix: string;
-  accentColor: string;
-  onChange: (key: string, value: string) => void;
-  onReset?: () => void;
-}) => {
-  const isNext = fieldPrefix === 'next_';
-  return (
-    <div className="space-y-2.5">
-      {/* 기간 설정 */}
-      <div className="flex flex-col gap-2">
-        <DatetimeRow
-          label="시작 일시"
-          value={slot.start_date}
-          onChange={v => onChange(`${fieldPrefix}start_date`, v)}
-        />
-        <DatetimeRow
-          label="종료 일시"
-          value={slot.end_date}
-          min={slot.start_date || undefined}
-          onChange={v => onChange(`${fieldPrefix}end_date`, v)}
-        />
-      </div>
-
-      {/* 기간 상태 뱃지 */}
-      {(slot.start_date || slot.end_date) && (
-        <PeriodStatusBadge startDate={slot.start_date} endDate={slot.end_date} isNext={isNext} onReset={!isNext ? onReset : undefined} />
-      )}
-
-      <FieldRow icon={Type} label="브랜드명" value={slot.brand_name} placeholder="브랜드 이름" onChange={v => onChange(`${fieldPrefix}brand_name`, v)} />
-      <FieldRow icon={Type} label="설명" value={slot.title} placeholder="광고 설명 문구" onChange={v => onChange(`${fieldPrefix}title`, v)} />
-      {adId !== 'map_marker' && (
-        <FieldRow icon={Type} label="부제목" value={slot.subtitle} placeholder="광고 부제목" onChange={v => onChange(`${fieldPrefix}subtitle`, v)} />
-      )}
-      <FieldRow icon={Link} label="랜딩 URL" value={slot.link_url} placeholder="https://example.com" onChange={v => onChange(`${fieldPrefix}link_url`, v)} />
-      <ImageUploadField label="배너 이미지" value={slot.image_url} onChange={v => onChange(`${fieldPrefix}image_url`, v)} adId={adId} fieldKey={`${fieldPrefix}banner`} previewType="banner" />
-      <ImageUploadField label="브랜드 로고" value={slot.brand_logo_url} onChange={v => onChange(`${fieldPrefix}brand_logo_url`, v)} adId={adId} fieldKey={`${fieldPrefix}logo`} previewType="logo" />
-    </div>
-  );
-};
-
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 const AdminAds = () => {
   const navigate = useNavigate();
-  const [ads, setAds] = useState<AdData[]>([]);
+  // 일반 광고 (splash, header, search, trending)
+  const [regularAds, setRegularAds] = useState<AdData[]>([]);
+  // 지도 마커 광고 (여러 개)
+  const [mapMarkerAds, setMapMarkerAds] = useState<AdData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const mapMarkerCardRef = useRef<HTMLDivElement>(null);
-  const locationFieldRef = useRef<HTMLDivElement>(null);
+  const [isCreatingMarker, setIsCreatingMarker] = useState(false);
+  // pendingLocation: { adId, lat, lng } — 위치 선택 후 돌아왔을 때 어떤 마커에 적용할지
+  const [pendingLocation, setPendingLocation] = useState<{ adId: string; lat: number; lng: number } | null>(null);
+  const locationFieldRefs = useRef<Map<string, React.RefObject<HTMLDivElement>>>(new Map());
+
+  const getLocationFieldRef = (adId: string) => {
+    if (!locationFieldRefs.current.has(adId)) {
+      locationFieldRefs.current.set(adId, React.createRef<HTMLDivElement>());
+    }
+    return locationFieldRefs.current.get(adId)!;
+  };
 
   useEffect(() => {
     const raw = sessionStorage.getItem('adLocationPending');
     if (raw) {
       sessionStorage.removeItem('adLocationPending');
       try {
-        const { lat, lng } = JSON.parse(raw);
+        const { lat, lng, adId } = JSON.parse(raw);
         if (typeof lat === 'number' && typeof lng === 'number') {
-          setPendingLocation({ lat, lng });
+          setPendingLocation({ adId: adId || 'new', lat, lng });
         }
       } catch (e) {
         console.error('[AdminAds] pendingLocation parse error:', e);
@@ -775,15 +778,18 @@ const AdminAds = () => {
     }
 
     const fetchAds = async () => {
-      const { data, error } = await supabase.from('ads').select('*').order('id');
+      const { data, error } = await supabase.from('ads').select('*');
       if (error) {
         showError('광고 데이터를 불러오지 못했습니다.');
       } else {
-        const ORDER = ['splash', 'header', 'search', 'trending', 'map_marker'];
-        const sorted = [...(data || [])].sort(
-          (a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)
-        ) as AdData[];
-        setAds(sorted);
+        const allAds = (data || []) as AdData[];
+        const ORDER = ['splash', 'header', 'search', 'trending'];
+        const regular = allAds
+          .filter(a => !a.ad_type || a.ad_type !== 'map_marker')
+          .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+        const markers = allAds.filter(a => a.ad_type === 'map_marker');
+        setRegularAds(regular);
+        setMapMarkerAds(markers);
       }
       setIsLoading(false);
     };
@@ -792,22 +798,52 @@ const AdminAds = () => {
 
   useEffect(() => {
     if (!pendingLocation || isLoading) return;
+    const { adId } = pendingLocation;
     setTimeout(() => {
-      locationFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const ref = locationFieldRefs.current.get(adId);
+      ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 400);
   }, [pendingLocation, isLoading]);
 
-  const adsWithPending = ads.map(a =>
-    a.id === 'map_marker' && pendingLocation
-      ? { ...a, lat: pendingLocation.lat, lng: pendingLocation.lng }
-      : a
-  );
+  // 새 지도 마커 광고 생성
+  const handleCreateMapMarker = async () => {
+    setIsCreatingMarker(true);
+    try {
+      const newId = crypto.randomUUID();
+      const { data, error } = await supabase
+        .from('ads')
+        .insert({
+          id: newId,
+          label: '지도 마커 광고',
+          image_url: null,
+          title: null,
+          subtitle: null,
+          link_url: null,
+          brand_name: null,
+          brand_logo_url: null,
+          is_active: false,
+          ad_type: 'map_marker',
+          lat: null,
+          lng: null,
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-  const handleSave = async (updated: AdData) => {
-    // map_marker는 image_url이 있으면 자동으로 is_active: true로 설정
-    const finalIsActive = updated.id === 'map_marker'
-      ? !!(updated.image_url && updated.lat != null && updated.lng != null)
-      : updated.is_active;
+      if (error) {
+        showError('마커 광고 생성에 실패했습니다: ' + error.message);
+        return;
+      }
+      setMapMarkerAds(prev => [...prev, data as AdData]);
+      showSuccess('새 지도 마커 광고가 생성되었습니다! 📍');
+    } finally {
+      setIsCreatingMarker(false);
+    }
+  };
+
+  // 지도 마커 광고 저장
+  const handleSaveMapMarker = async (updated: AdData) => {
+    const finalIsActive = !!(updated.image_url && updated.lat != null && updated.lng != null);
 
     const { error, data } = await supabase
       .from('ads')
@@ -820,6 +856,60 @@ const AdminAds = () => {
         brand_name: updated.brand_name,
         brand_logo_url: updated.brand_logo_url,
         is_active: finalIsActive,
+        lat: updated.lat ?? null,
+        lng: updated.lng ?? null,
+        start_date: updated.start_date ?? null,
+        end_date: updated.end_date ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', updated.id)
+      .select();
+
+    if (error) {
+      showError('저장에 실패했습니다: ' + error.message);
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      showError('저장 권한이 없거나 해당 광고를 찾을 수 없습니다.');
+      throw new Error('0 rows updated');
+    }
+
+    const savedAd = { ...updated, is_active: finalIsActive };
+    setMapMarkerAds(prev => prev.map(a => a.id === updated.id ? savedAd : a));
+    if (pendingLocation?.adId === updated.id) setPendingLocation(null);
+    showSuccess('지도 마커 광고가 저장되었습니다! ✨');
+
+    if (savedAd.lat != null && savedAd.lng != null) {
+      setTimeout(() => {
+        navigate('/', { state: { center: { lat: savedAd.lat, lng: savedAd.lng }, adMarkerSaved: true } });
+      }, 800);
+    }
+  };
+
+  // 지도 마커 광고 삭제
+  const handleDeleteMapMarker = async (id: string) => {
+    const { error } = await supabase.from('ads').delete().eq('id', id);
+    if (error) {
+      showError('삭제에 실패했습니다: ' + error.message);
+      throw error;
+    }
+    setMapMarkerAds(prev => prev.filter(a => a.id !== id));
+    showSuccess('지도 마커 광고가 삭제되었습니다.');
+  };
+
+  // 일반 광고 저장
+  const handleSaveRegular = async (updated: AdData) => {
+    const { error, data } = await supabase
+      .from('ads')
+      .update({
+        label: updated.label,
+        image_url: updated.image_url,
+        title: updated.title,
+        subtitle: updated.subtitle,
+        link_url: updated.link_url,
+        brand_name: updated.brand_name,
+        brand_logo_url: updated.brand_logo_url,
+        is_active: updated.is_active,
         lat: updated.lat ?? null,
         lng: updated.lng ?? null,
         start_date: updated.start_date ?? null,
@@ -837,31 +927,20 @@ const AdminAds = () => {
       .eq('id', updated.id)
       .select();
 
-    if (error) {
-      showError('저장에 실패했습니다: ' + error.message);
-      throw error;
-    }
-    if (!data || data.length === 0) {
-      showError('저장 권한이 없거나 해당 광고를 찾을 수 없습니다.');
-      throw new Error('0 rows updated');
-    }
+    if (error) { showError('저장에 실패했습니다: ' + error.message); throw error; }
+    if (!data || data.length === 0) { showError('저장 권한이 없거나 해당 광고를 찾을 수 없습니다.'); throw new Error('0 rows updated'); }
 
-    const savedAd = { ...updated, is_active: finalIsActive };
-    setAds(prev => prev.map(a => (a.id === updated.id ? savedAd : a)));
-    if (updated.id === 'map_marker') setPendingLocation(null);
-    invalidateAdCache(updated.id, savedAd);
+    setRegularAds(prev => prev.map(a => a.id === updated.id ? updated : a));
     showSuccess(`"${updated.label}" 광고가 저장되었습니다! ✨`);
-
-    if (savedAd.id === 'map_marker' && savedAd.lat != null && savedAd.lng != null) {
-      setTimeout(() => {
-        navigate('/', { state: { center: { lat: savedAd.lat, lng: savedAd.lng }, adMarkerSaved: true } });
-      }, 800);
-    }
   };
 
-  const handleSelectLocation = (_adId: string) => {
-    navigate('/', { state: { startAdLocationSelection: true } });
+  const handleSelectLocation = (adId: string) => {
+    // adId를 sessionStorage에 함께 저장해서 돌아왔을 때 어떤 마커인지 알 수 있게
+    sessionStorage.setItem('adLocationTargetId', adId);
+    navigate('/', { state: { startAdLocationSelection: true, targetAdId: adId } });
   };
+
+  const totalAds = regularAds.length + mapMarkerAds.length;
 
   return (
     <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
@@ -893,7 +972,6 @@ const AdminAds = () => {
           <p className="text-sm text-white/80 font-medium leading-relaxed mt-3">
             각 광고 구좌마다 <span className="text-white font-black">현재 광고</span>와 <span className="text-white font-black">다음 예정 광고</span>를 설정하고, 기간이 끝나면 자동으로 전환됩니다.
           </p>
-          {/* 자동 전환 흐름 설명 */}
           <div className="mt-3 flex items-center gap-2 bg-white/10 rounded-2xl px-3 py-2">
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/80">
               <Eye className="w-3 h-3" />현재 광고
@@ -909,29 +987,81 @@ const AdminAds = () => {
           </div>
         </div>
 
-        {/* 광고 카드 목록 */}
+        {/* 일반 광고 카드 목록 */}
         <div className="px-4 pt-5 space-y-3">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">
-            광고 구좌 ({adsWithPending.length}개)
+            광고 구좌 ({regularAds.length}개)
           </p>
 
           {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
+            Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-20 bg-white rounded-3xl animate-pulse border border-gray-100" />
             ))
           ) : (
-            adsWithPending.map(ad => (
-              <div key={ad.id} ref={ad.id === 'map_marker' ? mapMarkerCardRef : undefined}>
-                <AdCard
-                  key={`${ad.id}-${ad.lat ?? 'null'}-${ad.lng ?? 'null'}`}
-                  initialAd={ad}
-                  savedAd={ads.find(a => a.id === ad.id) ?? ad}
-                  defaultExpanded={ad.id === 'map_marker' && pendingLocation != null}
-                  locationFieldRef={ad.id === 'map_marker' ? locationFieldRef : undefined}
-                  onSave={handleSave}
-                  onSelectLocation={handleSelectLocation}
-                />
+            regularAds.map(ad => (
+              <AdCard
+                key={ad.id}
+                initialAd={ad}
+                savedAd={ad}
+                onSave={handleSaveRegular}
+                onSelectLocation={handleSelectLocation}
+              />
+            ))
+          )}
+        </div>
+
+        {/* 지도 마커 광고 섹션 */}
+        <div className="px-4 pt-6 space-y-3">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              지도 마커 광고 ({mapMarkerAds.length}개)
+            </p>
+            <button
+              onClick={handleCreateMapMarker}
+              disabled={isCreatingMarker}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 text-white text-[11px] font-black shadow-sm shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isCreatingMarker ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+              마커 추가
+            </button>
+          </div>
+
+          {/* 지도 마커 안내 */}
+          <div className="bg-rose-50 rounded-2xl p-3 flex items-start gap-2.5 border border-rose-100">
+            <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-black text-rose-700">지도 마커 광고</p>
+              <p className="text-[10px] text-rose-500 font-medium mt-0.5 leading-relaxed">
+                원하는 만큼 마커를 추가할 수 있습니다. 각 마커는 독립적으로 위치, 기간, 이미지를 설정할 수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          {isLoading ? (
+            Array.from({ length: 1 }).map((_, i) => (
+              <div key={i} className="h-20 bg-white rounded-3xl animate-pulse border border-gray-100" />
+            ))
+          ) : mapMarkerAds.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-dashed border-rose-200 p-8 flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-rose-300" />
               </div>
+              <p className="text-[12px] font-black text-gray-400">지도 마커 광고가 없습니다</p>
+              <p className="text-[10px] text-gray-300 font-medium text-center">위의 "마커 추가" 버튼을 눌러<br />첫 번째 마커 광고를 만들어보세요</p>
+            </div>
+          ) : (
+            mapMarkerAds.map((ad, index) => (
+              <MapMarkerAdCard
+                key={ad.id}
+                ad={ad}
+                index={index}
+                pendingLocation={pendingLocation?.adId === ad.id ? { lat: pendingLocation.lat, lng: pendingLocation.lng } : null}
+                locationFieldRef={getLocationFieldRef(ad.id)}
+                onSave={handleSaveMapMarker}
+                onDelete={handleDeleteMapMarker}
+                onSelectLocation={handleSelectLocation}
+                defaultExpanded={pendingLocation?.adId === ad.id}
+              />
             ))
           )}
         </div>
@@ -940,7 +1070,6 @@ const AdminAds = () => {
           변경사항은 즉시 앱에 반영됩니다
         </p>
       </div>
-
     </div>
   );
 };

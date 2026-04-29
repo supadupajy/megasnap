@@ -293,3 +293,93 @@ export function useAd(adId: string) {
   // ad와 now를 함께 반환 → 컴포넌트에서 resolveActiveSlot(ad, now) 호출
   return { ad, loading, now };
 }
+
+// ─── useMapMarkerAds: ad_type='map_marker'인 모든 광고 구독 ──────────────────
+export function useMapMarkerAds() {
+  const [ads, setAds] = useState<AdData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => new Date());
+  const adsRef = useRef<AdData[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleNextTransition = (adList: AdData[]) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const currentNow = new Date();
+    const candidates: number[] = [];
+    adList.forEach(ad => {
+      if (ad.start_date) {
+        const t = new Date(ad.start_date).getTime() - currentNow.getTime();
+        if (t > 0) candidates.push(t);
+      }
+      if (ad.end_date) {
+        const t = new Date(ad.end_date).getTime() - currentNow.getTime();
+        if (t > 0) candidates.push(t);
+      }
+      if (ad.next_start_date) {
+        const t = new Date(ad.next_start_date).getTime() - currentNow.getTime();
+        if (t > 0) candidates.push(t);
+      }
+      if (ad.next_end_date) {
+        const t = new Date(ad.next_end_date).getTime() - currentNow.getTime();
+        if (t > 0) candidates.push(t);
+      }
+    });
+    if (candidates.length === 0) return;
+    const ms = Math.min(...candidates);
+    timerRef.current = setTimeout(() => {
+      setNow(new Date());
+      if (adsRef.current.length > 0) scheduleNextTransition(adsRef.current);
+    }, ms + 100);
+  };
+
+  useEffect(() => {
+    const fetchAds = async () => {
+      const { data, error } = await supabase
+        .from('ads')
+        .select('*')
+        .eq('ad_type', 'map_marker');
+      if (!error && data) {
+        const adList = data as AdData[];
+        adsRef.current = adList;
+        setAds(adList);
+        scheduleNextTransition(adList);
+      }
+      setLoading(false);
+    };
+    fetchAds();
+
+    // Realtime 구독: map_marker 타입 광고 변경 감지
+    const channelName = 'map-marker-ads-realtime';
+    const existingChannel = supabase.getChannels().find(ch => ch.topic === `realtime:${channelName}`);
+    if (existingChannel) supabase.removeChannel(existingChannel);
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ads' },
+        async () => {
+          // 변경 시 전체 재조회 (INSERT/UPDATE/DELETE 모두 처리)
+          const { data, error } = await supabase
+            .from('ads')
+            .select('*')
+            .eq('ad_type', 'map_marker');
+          if (!error && data) {
+            const adList = data as AdData[];
+            adsRef.current = adList;
+            setAds(adList);
+            setNow(new Date());
+            scheduleNextTransition(adList);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return { ads, loading, now };
+}

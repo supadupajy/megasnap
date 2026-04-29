@@ -24,7 +24,7 @@ import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { toggleLikeInDb } from '@/utils/like-utils';
-import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
+import { useMapMarkerAds, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
@@ -105,8 +105,8 @@ const Index = () => {
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
 
-  // map_marker 광고 데이터 구독 (now: 시간 전환 시 리렌더 트리거)
-  const { ad: mapMarkerAd, now: mapMarkerNow } = useAd('map_marker');
+  // map_marker 광고 데이터 구독 (여러 개 지원, now: 시간 전환 시 리렌더 트리거)
+  const { ads: mapMarkerAds, now: mapMarkerNow } = useMapMarkerAds();
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -281,39 +281,14 @@ const Index = () => {
     return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
-  // ── map_marker 광고를 allPosts에 주입 ──────────────────────
-  // ads 테이블의 map_marker 광고가 활성화되어 있고 lat/lng가 있으면
-  // 고정 ID 'ad-map-marker'로 allPosts에 추가해 지도 마커로 표시.
+  // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
+  // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
+  // 각 광고는 'ad-map-marker-{id}' 형태의 고유 ID로 관리.
   // mapMarkerNow가 바뀌면(시간 전환 타이머) 재실행되어 start/end_date 반영.
   useEffect(() => {
-    const AD_POST_ID = 'ad-map-marker';
+    const AD_POST_PREFIX = 'ad-map-marker-';
 
-    if (!mapMarkerAd || !mapMarkerAd.is_active || mapMarkerAd.lat == null || mapMarkerAd.lng == null) {
-      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
-      return;
-    }
-
-    // start_date / end_date 기반으로 현재 유효한 슬롯 결정
-    const slot = resolveActiveSlot(mapMarkerAd, mapMarkerNow);
-
-    // 만료 후 구인 슬롯이면 마커 제거 (광고 문의 마커는 표시 안 함)
-    if (slot.isRecruitment) {
-      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
-      return;
-    }
-
-    // isPending: 시작 전 대기 중 → 반투명 마커로 표시 (image_url 없어도 마커 생성)
-    // 완전히 기간 밖(image_url도 없고 isPending도 아님)이면 마커 제거
-    if (!slot.image_url && !slot.isPending) {
-      setAllPosts(prev => prev.filter(p => p.id !== AD_POST_ID));
-      return;
-    }
-
-    const lat = mapMarkerAd.lat;
-    const lng = mapMarkerAd.lng;
-
-    // 카카오 역지오코딩으로 정확한 주소 가져오기
-    const getLocation = (): Promise<string> => {
+    const getLocation = (lat: number, lng: number): Promise<string> => {
       return new Promise(resolve => {
         const kakao = (window as any).kakao;
         if (!kakao?.maps?.services) {
@@ -335,8 +310,30 @@ const Index = () => {
       });
     };
 
-    getLocation().then(locationName => {
-      // 대기 중 마커는 광고 이미지 대신 브랜드 로고 또는 빈 이미지 사용
+    // 현재 활성 광고 ID 목록 계산
+    const activeAdIds = new Set<string>();
+
+    const promises = mapMarkerAds.map(async (mapMarkerAd) => {
+      const AD_POST_ID = `${AD_POST_PREFIX}${mapMarkerAd.id}`;
+
+      if (!mapMarkerAd.is_active || mapMarkerAd.lat == null || mapMarkerAd.lng == null) {
+        return null;
+      }
+
+      const slot = resolveActiveSlot(mapMarkerAd, mapMarkerNow);
+
+      // 만료 후 구인 슬롯이면 마커 제거
+      if (slot.isRecruitment) return null;
+
+      // 기간 밖(image_url도 없고 isPending도 아님)이면 마커 제거
+      if (!slot.image_url && !slot.isPending) return null;
+
+      activeAdIds.add(AD_POST_ID);
+
+      const lat = mapMarkerAd.lat!;
+      const lng = mapMarkerAd.lng!;
+      const locationName = await getLocation(lat, lng);
+
       const displayImage = slot.isPending
         ? (mapMarkerAd.brand_logo_url || mapMarkerAd.image_url || '')
         : slot.image_url;
@@ -369,12 +366,18 @@ const Index = () => {
         borderType: 'none',
         link_url: slot.link_url || mapMarkerAd.link_url || '',
       };
+      return adPost;
+    });
+
+    Promise.all(promises).then(results => {
+      const newAdPosts = results.filter((p): p is Post => p !== null);
       setAllPosts(prev => {
-        const without = prev.filter(p => p.id !== AD_POST_ID);
-        return [adPost, ...without];
+        // 기존 ad-map-marker- 접두사 포스트 모두 제거 후 새 것으로 교체
+        const withoutOldAds = prev.filter(p => !p.id.startsWith(AD_POST_PREFIX));
+        return [...newAdPosts, ...withoutOldAds];
       });
     });
-  }, [mapMarkerAd, mapMarkerNow]);
+  }, [mapMarkerAds, mapMarkerNow]);
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김
@@ -966,8 +969,10 @@ const Index = () => {
                           if (loc) {
                             setIsSelectingAdLocation(false);
                             isSelectingAdLocationRef.current = false;
-                            // sessionStorage로 전달 (navigate state는 fetchAds에 의해 덮어써짐)
-                            sessionStorage.setItem('adLocationPending', JSON.stringify({ lat: loc.lat, lng: loc.lng }));
+                            // adId도 함께 전달 (어떤 마커에 위치를 적용할지)
+                            const targetAdId = sessionStorage.getItem('adLocationTargetId') || 'new';
+                            sessionStorage.removeItem('adLocationTargetId');
+                            sessionStorage.setItem('adLocationPending', JSON.stringify({ lat: loc.lat, lng: loc.lng, adId: targetAdId }));
                             setTimeout(() => navigate('/settings/admin-ads'), 100);
                           }
                         }}
