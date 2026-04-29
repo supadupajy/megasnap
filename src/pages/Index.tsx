@@ -41,7 +41,7 @@ const Index = () => {
   const location = useLocation();
   const { user: authUser, session } = useAuth();
 
-  const MAX_VISIBLE_MARKERS = 30;
+  const MAX_VISIBLE_MARKERS = 200;
   const [randomSeed, setRandomSeed] = useState(() => Math.random());
 
   const [showCssConfetti, setShowCssConfetti] = useState(false);
@@ -256,17 +256,15 @@ const Index = () => {
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
+    // 새 영역으로 이동 시 pinned 초기화 → 새 영역 마커가 표시되도록
+    pinnedMarkerIdsRef.current.clear();
+
     let cancelled = false;
 
     const doFetch = async () => {
       try {
         const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
         if (cancelled) return;
-
-        // [Fix] fetch 완료 후 pinnedMarkerIds 초기화 → 새 영역 마커가 표시되도록
-        // (fetch 전에 초기화하면 빈 화면이 잠깐 보이는 문제 발생)
-        pinnedMarkerIdsRef.current.clear();
-
         if (raw.length === 0) return;
 
         setAllPosts(prev => {
@@ -289,7 +287,7 @@ const Index = () => {
     doFetch();
 
     return () => { cancelled = true; };
-  }, [mapData, currentZoom]);
+  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
@@ -535,11 +533,10 @@ const Index = () => {
   useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
   useEffect(() => { isSelectingAdLocationRef.current = isSelectingAdLocation; }, [isSelectingAdLocation]);
 
-  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 및 pinned 초기화 (minDist가 달라지므로)
+  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 초기화 (minDist가 달라지므로)
   useEffect(() => {
     currentZoomRef.current = currentZoom;
     spreadCacheRef.current.clear();
-    pinnedMarkerIdsRef.current.clear();
   }, [currentZoom]);
 
   // ── visibleMarkers: bounds 필터 없이 spreadMarkers 그대로 사용 ──────
@@ -547,46 +544,20 @@ const Index = () => {
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
   const visibleMarkers = spreadMarkers;
 
-  // ── limitedVisibleMarkers: 최대 30개로 제한 (sticky 방식) ──
-  // 한 번 선택된 마커는 고정(pinned)되어 새 포스트가 추가되어도 제거되지 않음.
-  // 이렇게 해야 지도 이동 시 기존 마커가 갑자기 사라지는 버그를 방지할 수 있음.
+  // ── limitedVisibleMarkers: 최대 MAX_VISIBLE_MARKERS개로 제한 ──
+  // 200개 제한으로 대부분의 경우 전부 표시됨.
+  // 초과 시 likes 높은 순 + 광고 우선으로 선택.
   const limitedVisibleMarkers = useMemo(() => {
     const adMarkers = spreadMarkers.filter(m => m.isAd);
     const nonAdMarkers = spreadMarkers.filter(m => !m.isAd);
 
     if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
-      // 30개 이하면 전부 pinned로 등록
-      nonAdMarkers.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
       return spreadMarkers;
     }
 
-    // 현재 spreadMarkers에 없는 id는 pinned에서 제거
-    const currentNonAdIds = new Set(nonAdMarkers.map(m => m.id));
-    pinnedMarkerIdsRef.current.forEach(id => {
-      if (!currentNonAdIds.has(id)) pinnedMarkerIdsRef.current.delete(id);
-    });
-
-    // 이미 pinned된 마커는 그대로 유지
-    const pinned = nonAdMarkers.filter(m => pinnedMarkerIdsRef.current.has(m.id));
-
-    if (pinned.length >= MAX_VISIBLE_MARKERS) {
-      // pinned가 이미 30개 이상이면 pinned만 반환 (새 마커 추가 안 함)
-      return [...adMarkers, ...pinned];
-    }
-
-    // pinned가 30개 미만이면 나머지 슬롯을 최신순으로 채움
-    const remaining = MAX_VISIBLE_MARKERS - pinned.length;
-    const unpinned = nonAdMarkers.filter(m => !pinnedMarkerIdsRef.current.has(m.id));
-    const sorted = [...unpinned].sort((a, b) => {
-      const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-      const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-      return bTime - aTime;
-    });
-    const newlySelected = sorted.slice(0, remaining);
-    newlySelected.forEach(m => pinnedMarkerIdsRef.current.add(m.id));
-
-    const selected = [...pinned, ...newlySelected];
-    return [...adMarkers, ...selected];
+    // 200개 초과 시 likes 높은 순으로 자름
+    const sorted = [...nonAdMarkers].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0));
+    return [...adMarkers, ...sorted.slice(0, MAX_VISIBLE_MARKERS)];
   }, [spreadMarkers]);
 
   // 배지 숫자: 현재 지도 bounds 안에 있는 마커 카운트 (광고 포함)
@@ -1082,7 +1053,7 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
+                <button onClick={handleRefresh} disabled={isRefreshing} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
