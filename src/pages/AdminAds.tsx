@@ -953,7 +953,7 @@ const AdminAds = () => {
           <ChevronLeft className="w-6 h-6 text-gray-400" />
         </button>
         <div className="flex-1 flex justify-center -ml-10">
-          <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 만들기</h1>
+          <h1 className="text-[17px] font-black text-gray-900 tracking-tight">광고 관리</h1>
         </div>
       </div>
 
