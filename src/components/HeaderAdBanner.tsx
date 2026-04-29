@@ -21,8 +21,8 @@ const HeaderAdBanner = () => {
   if (slot.isRecruitment) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl overflow-hidden relative group cursor-pointer shadow-md"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
@@ -38,9 +38,9 @@ const HeaderAdBanner = () => {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
       onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank')}
     >
@@ -76,4 +76,4 @@ const HeaderAdBanner = () => {
   );
 };
 
-export default HeaderAdBanner;
+export default React.memo(HeaderAdBanner);

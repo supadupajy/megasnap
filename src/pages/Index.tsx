@@ -8,6 +8,7 @@ import PostDetail from '@/components/PostDetail';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
+import ShutterOverlay from '@/components/ShutterOverlay';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
@@ -829,24 +830,7 @@ const Index = () => {
       >
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
-          {shutterActive && (
-            <div className="shutter-overlay">
-              <div className="shutter-flash" />
-              {/* SVG 코너 브라켓 - border 방식 대신 SVG로 모바일 렌더링 안정화 */}
-              <svg className="shutter-corner shutter-corner-tl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 22 L4 4 L22 4" stroke="#4f46e5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg className="shutter-corner shutter-corner-tr" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 4 L40 4 L40 22" stroke="#4f46e5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg className="shutter-corner shutter-corner-bl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 22 L4 40 L22 40" stroke="#4f46e5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg className="shutter-corner shutter-corner-br" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 40 L40 40 L40 22" stroke="#4f46e5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          )}
+          <ShutterOverlay active={shutterActive} />
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
