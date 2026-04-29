@@ -558,7 +558,6 @@
   color: #fff;
   letter-spacing: 0.05em;
   overflow: hidden;
-  animation: tornado-pulse-glow 1.8s ease-in-out infinite;
   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   z-index: 0;
 }
