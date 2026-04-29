@@ -23,7 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
-import { invalidateAdCache } from '@/hooks/use-ad';
+import { invalidateAdCache, useAd, resolveActiveSlot } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
 import { formatRelativeTime } from '@/lib/utils';
 
@@ -39,7 +39,6 @@ interface PostDetailProps {
 }
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
-const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
 const getFallbackImage = (postId: string) => {
   return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
@@ -49,6 +48,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
+  const { ad: slideAd, now: slideAdNow } = useAd('post_slide');
+  const slideAdSlot = slideAd ? resolveActiveSlot(slideAd, slideAdNow) : null;
+  const slideAdImage = slideAdSlot && !slideAdSlot.isRecruitment && !slideAdSlot.isPending && slideAdSlot.image_url && slideAd?.is_active
+    ? slideAdSlot.image_url
+    : null;
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
@@ -273,13 +277,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const isAd = currentPost?.isAd || false;
   const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
-  const COCA_COLA_IMAGE = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = currentPost?.link_url || currentPost?.user?.id === 'ad' ? (currentPost?.link_url || '') : '';
+    const url = slideAdSlot?.link_url;
     if (url) {
-      window.open(url.startsWith('http') ? url : `https://${url}`, '_blank', 'noopener,noreferrer');
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      window.open(normalized, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -298,10 +302,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     if (isAd) return baseImages;
     const imagesWithAd = [...baseImages];
-    if (imagesWithAd.length > 0) {
-      imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);
-    } else {
-      imagesWithAd.push(COCA_COLA_IMAGE);
+    if (slideAdImage) {
+      if (imagesWithAd.length > 0) {
+        imagesWithAd.splice(1, 0, slideAdImage);
+      } else {
+        imagesWithAd.push(slideAdImage);
+      }
     }
     return imagesWithAd;
   })();
@@ -531,12 +537,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         <span className="text-xs text-gray-400 font-medium pointer-events-none">
           {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
         </span>
-        {showComments ?
+        {showComments ? 
           <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
           <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
         }
       </button>
-      <div
+      <div 
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
       >
@@ -587,7 +593,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         onMouseMove={onMouseMove}
       >
         {displayImages.map((img, index) => {
-          const isAdSlide = img === COCA_COLA_IMAGE;
+          const isAdSlide = !!slideAdImage && img === slideAdImage;
           if (isAdSlide) {
             return (
               <div
@@ -609,7 +615,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               key={index}
               className="w-full h-full shrink-0 snap-center relative"
               style={{ scrollSnapStop: 'always' }}
-              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
             >
               <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
             </div>
