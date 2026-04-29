@@ -1123,7 +1123,7 @@ const Index = () => {
                     className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
-                    <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
+                    <span className="text-[10px] font-black mt-1 relative z-10">모두 보기</span>
                   </button>
                   {displayedPostCount > 0 && currentZoom < 7 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
