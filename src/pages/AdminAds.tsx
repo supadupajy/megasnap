@@ -433,6 +433,40 @@ const MapMarkerAdCard = ({
           <p className="text-[10px] text-gray-400 font-medium truncate">
             {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '위치 미설정'}
           </p>
+          {/* 남은 시간 표시 */}
+          {form.end_date && (() => {
+            const endD = new Date(form.end_date);
+            const nowD = new Date();
+            if (endD <= nowD) {
+              return (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Clock className="w-2.5 h-2.5 text-red-400 shrink-0" />
+                  <span className="text-[9px] font-bold text-red-400">기간 만료됨</span>
+                </div>
+              );
+            }
+            const ms = endD.getTime() - nowD.getTime();
+            const totalMinutes = Math.ceil(ms / 60000);
+            let remaining = '';
+            if (totalMinutes < 60) {
+              remaining = `${totalMinutes}분 남음`;
+            } else {
+              const hours = Math.floor(totalMinutes / 60);
+              if (hours < 24) {
+                remaining = `${hours}시간 ${totalMinutes % 60}분 남음`;
+              } else {
+                const days = Math.floor(hours / 24);
+                const remHours = hours % 24;
+                remaining = remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
+              }
+            }
+            return (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Clock className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+                <span className="text-[9px] font-bold text-emerald-600">{remaining}</span>
+              </div>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
@@ -456,11 +490,35 @@ const MapMarkerAdCard = ({
               <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
             </button>
           )}
-          {form.image_url && (
-            <div className="w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
-              <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            </div>
-          )}
+          {form.image_url && (() => {
+            const isExpiredPreview = form.end_date ? new Date(form.end_date) <= new Date() : false;
+            const remainingPreview = (() => {
+              if (!form.end_date) return null;
+              const end = new Date(form.end_date);
+              const now = new Date();
+              if (end <= now) return null;
+              const ms = end.getTime() - now.getTime();
+              const totalMinutes = Math.ceil(ms / 60000);
+              if (totalMinutes < 60) return `${totalMinutes}분 남음`;
+              const hours = Math.floor(totalMinutes / 60);
+              if (hours < 24) return `${hours}시간 ${totalMinutes % 60}분 남음`;
+              const days = Math.floor(hours / 24);
+              const remHours = hours % 24;
+              return remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
+            })();
+            return (
+              <div className="relative w-full h-20 rounded-2xl overflow-hidden bg-gray-100">
+                <img src={form.image_url} alt="preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full">현재</div>
+                {form.end_date && (
+                  <div className={cn('absolute top-2 right-2 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1', isExpiredPreview ? 'bg-red-500/80' : 'bg-black/50')}>
+                    <Calendar className="w-2.5 h-2.5" />
+                    {isExpiredPreview ? '기간 만료됨' : remainingPreview ? remainingPreview : `${formatDatetime(form.end_date)}까지`}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -5,8 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>ChoraSnap</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css" type="text/css" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css" /></noscript>
     <style>
+      @font-face {
+        font-family: 'LINE Seed KR';
+        font-display: block;
+      }
+
       html, body, #root {
         width: 100%;
         margin: 0;
@@ -15,12 +22,35 @@
         font-family: 'LINE Seed KR', sans-serif;
       }
 
+      body {
+        visibility: hidden;
+      }
+
+      html.fonts-loaded body {
+        visibility: visible;
+      }
+
       .kakao-overlay { position: absolute; pointer-events: auto; }
     </style>
+    <script>
+      (function() {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function() {
+            document.documentElement.classList.add('fonts-loaded');
+          });
+          // 최대 1초 후에는 강제로 표시 (폰트 로드 실패 대비)
+          setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+          }, 1000);
+        } else {
+          document.documentElement.classList.add('fonts-loaded');
+        }
+      })();
+    </script>
     <!-- Kakao Maps API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer"></script>
-    <script type="module" crossorigin src="./assets/index--ltT2OSV.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-trQEMcCV.css">
+    <script type="module" crossorigin src="./assets/index-DCzCDuFf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-C_B9tHjd.css">
   </head>
   <body>
     <div id="root"></div>
