@@ -52,7 +52,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
-  // [FIX] currentPostIndex가 바뀔 때마다 최신 포스트 데이터를 안전하게 참조
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
   const youtubeId = useMemo(() => {
     if (!currentPost || currentPost.isAd) return '';
@@ -72,17 +71,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
 
-  // Dialog가 모두 닫힌 뒤 body 잠금 강제 해제
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
-      // Radix UI가 body에 걸어둔 scroll-lock / pointer-events 잔재 제거
       document.body.style.pointerEvents = '';
       document.body.style.overflow = '';
       document.body.removeAttribute('data-scroll-locked');
     }
   }, [isOpen, isDeleteDialogOpen]);
 
-  // 포스트가 바뀌면 avatarError 초기화
   useEffect(() => {
     setAvatarError(false);
   }, [currentPostIndex]);
@@ -92,7 +88,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
@@ -115,7 +110,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     imageScrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  // 키보드 대응
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
@@ -197,7 +191,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return () => observer.disconnect();
   }, [currentPostIndex, isOpen, posts]);
 
-  // [FIX] 'Post content 1' 등 텍스트 데이터가 이미지로 인식되는 것을 완전히 차단하는 헬퍼
   const isValidUrl = (url: any) => {
     if (typeof url !== 'string') return false;
     const clean = url.trim();
@@ -211,16 +204,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
   };
 
-  const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
-
   const handleImageError = (postId: string) => {
-    console.log(`[PostDetail] Image error for post: ${postId}, using fallback.`);
     setImgErrors(prev => ({ ...prev, [postId]: true }));
   };
 
   if (!currentPost) return null;
 
-  // 광고 대기 중 마커 클릭 시 간단한 안내 화면
   if (currentPost.isAdPending) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -265,29 +254,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     );
   }
 
-  // [CRITICAL FIX] 이미지 URL 유효성 검사 강화
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
-    
-    // [FIX] 내가 직접 올린 이미지는 절대 더미로 판단하지 않음
     if (clean.includes('supabase.co/storage')) return false;
-
-    // 텍스트가 섞인 비정상 URL 또는 더미 텍스트 감지
     return clean.length < 10 || 
            clean.toLowerCase().includes('post') || 
            clean.toLowerCase().includes('content') || 
            !clean.startsWith('http');
   };
 
-  const displayImage = useMemo(() => {
+  const displayImage = (() => {
     if (!currentPost) return getFallbackImage('default');
     if (imgErrors[currentPost.id]) return getFallbackImage(currentPost.id);
-    
-    // [FIX] post.image_url 필드도 체크
     const rawUrl = currentPost.image || currentPost.image_url;
     return isDummyUrl(rawUrl) ? getFallbackImage(currentPost.id) : rawUrl;
-  }, [currentPost, imgErrors]);
+  })();
 
   const isAd = currentPost?.isAd || false;
   const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
@@ -301,70 +283,36 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
   };
 
-  // [FIX] 모든 포스트의 두 번째 슬라이드에 코카콜라 광고 삽입
-  const displayImages = useMemo(() => {
+  const displayImages = (() => {
     if (!currentPost) return [];
-    
     let baseImages: string[] = [];
-    
-    // 1. images 배열 확인
     if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
       baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
     }
-    
-    // 2. image_url 또는 image 단일 필드 확인
     const singleImg = currentPost.image_url || currentPost.image;
     if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
       baseImages = [singleImg];
     }
-    
-    // 3. 그래도 없으면 계산된 displayImage 사용
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    
-    // [FIX] 광고 포스트는 코카콜라 이미지 삽입 안 함 - 광고 자체 이미지만 표시
-    if (isAd) {
-      return baseImages;
-    }
-
-    // 코카콜라 광고 삽입 로직 (일반 포스트만)
+    if (isAd) return baseImages;
     const imagesWithAd = [...baseImages];
     if (imagesWithAd.length > 0) {
       imagesWithAd.splice(1, 0, COCA_COLA_IMAGE);
     } else {
       imagesWithAd.push(COCA_COLA_IMAGE);
     }
-    
     return imagesWithAd;
-  }, [currentPost, displayImage, isAd]);
+  })();
 
-  const adLink = useMemo(() => {
-    if (!currentPost) return "https://www.coca-cola.co.kr/";
-    if (currentPost.content?.includes('나이키') || currentPost.image?.includes('nike'))
-      return "https://www.nike.com/kr/";
-    return "https://www.coca-cola.co.kr/";
-  }, [currentPost]);
-
-  // [CRITICAL FIX] 닉네임 표시 로직
-  // use-supabase-posts.ts에서 이미 p.user_name을 우선하도록 가공된 currentPost.user.name을 그대로 사용합니다.
-  const postDisplayName = useMemo(() => {
-    if (!currentPost) return '익명';
-    return currentPost.user.name;
-  }, [currentPost]);
+  const postDisplayName = currentPost?.user?.name || '익명';
   
-  const isSeed = useMemo(() => {
-    if (!currentPost) return false;
-    return currentPost.is_seed_data === true || currentPost.is_seed_data === 'true' || currentPost.is_seed_data === 1;
-  }, [currentPost]);
-
-  const isMine = useMemo(() => {
+  const isMine = (() => {
     if (!currentPost || !authUser) return false;
-    // [FIX] owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 판별
-    // user.id는 display_user_id(표시용)이므로 isMine 판별에 사용하면 안 됨
     const ownerId = currentPost.owner_id || currentPost.user_id;
     return ownerId === authUser.id || ownerId === 'me';
-  }, [currentPost, authUser]);
+  })();
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
@@ -392,9 +340,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       navigate('/profile');
       return;
     }
-    // 이동할 유저 ID 결정: display_user_id(시드 데이터용) 또는 실제 user_id
     const targetUserId = currentPost.user.id || currentPost.user_id;
-    // UUID 형식인지 확인 (랜덤 닉네임 풀 등 실제 유저가 없는 경우 제외)
     const isValidUUID = targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
     if (isValidUUID) {
       onClose();
@@ -437,7 +383,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const confirmDelete = async () => {
     if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
 
-    // 광고 마커: ads 테이블에서 비활성화 + 데이터 초기화
     if (currentPost.isAd) {
       setIsDeleteDialogOpen(false);
       setTimeout(() => {
@@ -463,7 +408,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           })
           .eq('id', 'map_marker');
         if (error) throw error;
-        // 인메모리 캐시 즉시 무효화 → 지도에서 마커 즉시 제거
         invalidateAdCache('map_marker', {
           id: 'map_marker', label: '지도 마커 광고', image_url: '', title: '', subtitle: '',
           link_url: '', brand_name: '', brand_logo_url: '', is_active: false,
@@ -478,17 +422,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
 
     const postId = currentPost.id;
-
-    // 1. 확인 다이얼로그 닫기
     setIsDeleteDialogOpen(false);
-
-    // 2. PostDetail 닫기 (다음 tick에서 실행해 Radix 애니메이션 충돌 방지)
     setTimeout(() => {
       if (onDelete) onDelete(postId);
       onClose();
     }, 0);
-
-    // 3. DB 삭제는 백그라운드에서 진행
     try {
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
@@ -540,61 +478,341 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     );
   };
 
+  // 광고: 흰 배경 + object-contain 로고, 일반: 그라디언트 링 + object-cover
+  const renderAvatarForAd = () => {
+    if (avatarError || !currentPost.user.avatar) {
+      return (
+        <div className="w-9 h-9 rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm transition-transform group-active:scale-90">
+          <span className="text-gray-700 font-black text-[9px] text-center leading-tight px-0.5">{postDisplayName}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="w-9 h-9 rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm overflow-hidden transition-transform group-active:scale-90">
+        <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full object-contain p-1" onError={() => setAvatarError(true)} />
+      </div>
+    );
+  };
+
+  const renderAvatarForNormal = () => {
+    if (avatarError || !currentPost.user.avatar) {
+      return (
+        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
+          <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
+        <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
+      </div>
+    );
+  };
+
+  const renderCommentSection = () => (
+    <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
+      <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+        <Input
+          ref={commentInputRef}
+          placeholder="댓글 달기..."
+          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
+          value={commentInput}
+          onChange={(e) => setCommentInput(e.target.value)}
+          disabled={isSubmittingComment}
+        />
+        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
+        className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
+      >
+        <span className="text-xs text-gray-400 font-medium pointer-events-none">
+          {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
+        </span>
+        {showComments ?
+          <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
+          <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+        }
+      </button>
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
+      >
+        <div className="space-y-2 pb-2">
+          {localComments.slice(0, -1).map((c, i) => (
+            <div key={i} className="flex items-start justify-between gap-2">
+              <div className="flex gap-2 items-start flex-1 min-w-0">
+                <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
+                <span className="text-sm text-gray-500">{c.text}</span>
+              </div>
+              {c.createdAt && (
+                <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+                  {formatRelativeTime(new Date(c.createdAt))}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      {lastComment && (
+        <div className="flex items-start justify-between gap-2 mt-1">
+          <div className="flex gap-2 items-start flex-1 min-w-0">
+            <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
+            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+          </div>
+          {lastComment.createdAt && (
+            <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
+              {formatRelativeTime(new Date(lastComment.createdAt))}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderImageSlider = () => (
+    <div className="absolute inset-0 w-full h-full z-10">
+      <div
+        ref={imageScrollRef}
+        className={cn(
+          "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+          isDragging && "cursor-grabbing snap-none"
+        )}
+        onScroll={handleImageScroll}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onMouseMove={onMouseMove}
+      >
+        {displayImages.map((img, index) => {
+          const isAdSlide = img === COCA_COLA_IMAGE;
+          if (isAdSlide) {
+            return (
+              <div
+                key={index}
+                className="w-full h-full shrink-0 snap-center relative cursor-pointer"
+                style={{ scrollSnapStop: 'always' }}
+                onClick={handleAdClick}
+              >
+                <img src={img} alt="Advertisement" className="w-full h-full object-cover pointer-events-none" draggable={false} />
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="font-bold">AD</span>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div
+              key={index}
+              className="w-full h-full shrink-0 snap-center relative"
+              style={{ scrollSnapStop: 'always' }}
+              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
+            >
+              <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
+            </div>
+          );
+        })}
+      </div>
+      {displayImages.length > 1 && (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+          {displayImages.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMediaArea = () => (
+    <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+      {youtubeId ? (
+        <iframe
+          className="w-full h-full"
+          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
+          title="YouTube video player"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (currentPost.videoUrl && !currentPost.isAd) ? (
+        <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+      ) : (
+        renderImageSlider()
+      )}
+    </div>
+  );
+
+  const renderActionButtons = () => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
+            <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+          </button>
+          <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
+            <MessageCircle className="w-6 h-6 text-gray-700" />
+          </button>
+          <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)}>
+            <Share2 className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
+            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+          </button>
+          {renderCategoryBadge()}
+          {currentPost.lat !== undefined && currentPost.lng !== undefined && (
+            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
+              <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+              <span className="text-[10px] font-black">위치보기</span>
+            </button>
+          )}
+        </div>
+      </div>
+      {isAd && (
+        <div className="flex justify-end mt-[-4px]">
+          <a
+            href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-black">상세정보</span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDropdownMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
+        {(isMine || isAdmin) ? (
+          <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+            <Trash2 className="w-4 h-4 text-red-600" />
+            <span className="text-sm font-bold text-red-600">삭제하기</span>
+          </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
+              <AlertCircle className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-bold text-gray-700">신고</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+              <Ban className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-bold text-red-600">차단</span>
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogPortal>
-        <DialogOverlay className="bg-black/40" />
-        <DialogPrimitive.Content className="fixed inset-0 z-50 max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-          <VisuallyHidden.Root>
-            <DialogTitle>포스트 상세 보기</DialogTitle>
-            <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
-          </VisuallyHidden.Root>
-          
-          <div className="relative flex-1 flex flex-col min-h-0">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-50 flex items-start justify-end px-4 pt-7 pointer-events-none">
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <button
-                  onClick={onClose}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+          <DialogOverlay className="bg-black/40" />
+          <DialogPrimitive.Content className="fixed inset-0 z-50 max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+            <VisuallyHidden.Root>
+              <DialogTitle>포스트 상세 보기</DialogTitle>
+              <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
+            </VisuallyHidden.Root>
+            
+            <div className="relative flex-1 flex flex-col min-h-0">
+              {/* 닫기 버튼 */}
+              <div className="absolute top-0 left-0 right-0 z-50 flex items-start justify-end px-4 pt-7 pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto">
+                  <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div
-              className="relative w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
-              style={{
-                paddingTop: '16px',
-                paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
-                transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
-              }}
-            >
-              <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
-                {isAd ? (
-                  <div className="ad-post-wrapper w-full h-full">
-                    <div className="ad-post-inner w-full h-full flex flex-col bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
-                      <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-                        {/* 헤더 고정 영역 */}
-                        <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
-                          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                              {avatarError || !currentPost.user.avatar ? (
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
-                                  <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
-                                </div>
-                              ) : (
-                                <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                                  <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
-                                </div>
-                              )}
+              <div
+                className="relative w-full h-full flex items-center justify-center pointer-events-none px-4 transition-all duration-500"
+                style={{
+                  paddingTop: '16px',
+                  paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '60px',
+                  transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
+                }}
+              >
+                <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
+                  {isAd ? (
+                    /* ===== 광고 포스트 ===== */
+                    <div className="ad-post-wrapper w-full h-full">
+                      <div className="ad-post-inner w-full h-full flex flex-col bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
+                        <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
+                          {/* 헤더 */}
+                          <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
+                            <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+                              {renderAvatarForAd()}
                               <div>
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
                                   <div className="ad-badge-fancy"><span>AD</span></div>
                                 </div>
+                                <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
+                              {renderDropdownMenu()}
+                            </div>
+                          </div>
+
+                          <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
+                            <div className="flex flex-col">
+                              <div className="px-4 mt-2">
+                                {renderMediaArea()}
+                              </div>
+                            </div>
+
+                            <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
+                              {renderActionButtons()}
+                              <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
+                                <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
+                                <div className="flex gap-2 items-start">
+                                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
+                                  <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
+                                </div>
+                              </div>
+                              {renderCommentSection()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ===== 일반 포스트 ===== */
+                    <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
+                      <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
+                          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
+                            {renderAvatarForNormal()}
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
+                              </div>
                               <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
                                 <MapPin className="w-3 h-3" />
                                 <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
@@ -602,165 +820,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </div>
                           </div>
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            {formattedDate && (
-                              <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
-                                  <MoreHorizontal className="w-5 h-5" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                                {(isMine || isAdmin) ? (
-                                  <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                    <Trash2 className="w-4 h-4 text-red-600" />
-                                    <span className="text-sm font-bold text-red-600">삭제하기</span>
-                                  </DropdownMenuItem>
-                                ) : (
-                                  <>
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                                      <AlertCircle className="w-4 h-4 text-gray-600" />
-                                      <span className="text-sm font-bold text-gray-700">신고</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                      <Ban className="w-4 h-4 text-red-600" />
-                                      <span className="text-sm font-bold text-red-600">차단</span>
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
+                            {renderDropdownMenu()}
                           </div>
                         </div>
 
                         <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
                           <div className="flex flex-col">
                             <div className="px-4 mt-2">
-                              <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                                {youtubeId ? (
-                                  <iframe
-                                    className="w-full h-full"
-                                    src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-                                    title="YouTube video player"
-                                    frameBorder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                  />
-                                ) : (currentPost.videoUrl && !currentPost.isAd) ? (
-                                  <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
-                                ) : (
-                                  <div className="absolute inset-0 w-full h-full z-10">
-                                    <div
-                                      ref={imageScrollRef}
-                                      className={cn(
-                                        "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-                                        isDragging && "cursor-grabbing snap-none"
-                                      )}
-                                      onScroll={handleImageScroll}
-                                      onMouseDown={onMouseDown}
-                                      onMouseUp={onMouseUp}
-                                      onMouseLeave={onMouseUp}
-                                      onMouseMove={onMouseMove}
-                                    >
-                                      {displayImages.map((img, index) => {
-                                        const isAdSlide = img === COCA_COLA_IMAGE;
-                                        if (isAdSlide) {
-                                          return (
-                                            <div
-                                              key={index}
-                                              className="w-full h-full shrink-0 snap-center relative cursor-pointer"
-                                              style={{ scrollSnapStop: 'always' }}
-                                              onClick={handleAdClick}
-                                            >
-                                              <img
-                                                src={img}
-                                                alt="Advertisement"
-                                                className="w-full h-full object-cover pointer-events-none"
-                                                draggable={false}
-                                              />
-                                              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                                <span className="font-bold">AD</span>
-                                              </div>
-                                            </div>
-                                          );
-                                        }
-                                        return (
-                                          <div
-                                            key={index}
-                                            className="w-full h-full shrink-0 snap-center relative"
-                                            style={{ scrollSnapStop: 'always' }}
-                                            onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-                                          >
-                                            <img
-                                              src={img}
-                                              alt={`Post content ${index + 1}`}
-                                              className="w-full h-full object-cover pointer-events-none"
-                                              draggable={false}
-                                            />
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    {displayImages.length > 1 && (
-                                      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-                                        {displayImages.map((_, i) => (
-                                          <div
-                                            key={i}
-                                            className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-                                          />
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                              {renderMediaArea()}
                             </div>
                           </div>
 
                           <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-col gap-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
-                                    <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-                                  </button>
-                                  <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
-                                    <MessageCircle className="w-6 h-6 text-gray-700" />
-                                  </button>
-                                  <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)}>
-                                    <Share2 className="w-6 h-6" />
-                                  </button>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-                                    <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-                                  </button>
-                                  {renderCategoryBadge()}
-                                  {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-                                    <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
-                                      <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                                      <span className="text-[10px] font-black">위치보기</span>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              {isAd && (
-                                <div className="flex justify-end mt-[-4px]">
-                                  <a
-                                    href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-black">상세정보</span>
-                                  </a>
-                                </div>
-                              )}
-                            </div>
+                            {renderActionButtons()}
                             <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
                               <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                               <div className="flex gap-2 items-start">
@@ -768,346 +841,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
                               </div>
                             </div>
-                            <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
-                              <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                                <Input
-                                  ref={commentInputRef}
-                                  placeholder="댓글 달기..."
-                                  className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
-                                  value={commentInput}
-                                  onChange={(e) => setCommentInput(e.target.value)}
-                                  disabled={isSubmittingComment}
-                                />
-                                <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-                                  <Send className="w-4 h-4" />
-                                </button>
-                              </form>
-                              <button
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
-                                className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
-                              >
-                                <span className="text-xs text-gray-400 font-medium pointer-events-none">
-                                  {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                                </span>
-                                {showComments ?
-                                  <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
-                                  <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-                                }
-                              </button>
-                              <div
-                                className="overflow-hidden transition-all duration-300 ease-in-out"
-                                style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
-                              >
-                                <div className="space-y-2 pb-2">
-                                  {localComments.slice(0, -1).map((c, i) => (
-                                    <div key={i} className="flex items-start justify-between gap-2">
-                                      <div className="flex gap-2 items-start flex-1 min-w-0">
-                                        <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                                        <span className="text-sm text-gray-500">{c.text}</span>
-                                      </div>
-                                      {c.createdAt && (
-                                        <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                          {formatRelativeTime(new Date(c.createdAt))}
-                                        </span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              {lastComment && (
-                                <div className="flex items-start justify-between gap-2 mt-1">
-                                  <div className="flex gap-2 items-start flex-1 min-w-0">
-                                    <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
-                                    <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-                                  </div>
-                                  {lastComment.createdAt && (
-                                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                      {formatRelativeTime(new Date(lastComment.createdAt))}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                            {renderCommentSection()}
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                <div className="w-full h-full flex flex-col bg-white rounded-[30px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
-                  <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
-                    {/* 헤더 고정 영역 */}
-                    <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
-                      <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                        {avatarError || !currentPost.user.avatar ? (
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
-                            <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
-                          </div>
-                        ) : (
-                          <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-                            <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
-                          </div>
-                        )}
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
-                          </div>
-                          <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
-                            <MapPin className="w-3 h-3" />
-                            <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {formattedDate && (
-                          <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
-                        )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
-                              <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[1200]">
-                            {(isMine || isAdmin) ? (
-                              <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                                <span className="text-sm font-bold text-red-600">삭제하기</span>
-                              </DropdownMenuItem>
-                            ) : (
-                              <>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-                                  <AlertCircle className="w-4 h-4 text-gray-600" />
-                                  <span className="text-sm font-bold text-gray-700">신고</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-                                  <Ban className="w-4 h-4 text-red-600" />
-                                  <span className="text-sm font-bold text-red-600">차단</span>
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
-                      <div className="flex flex-col">
-                        {/* 미디어 영역 - mx-4로 좌우 여백 주어 본문과 넓이 일치 */}
-                        <div className="px-4 mt-2">
-                          <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-                            {youtubeId ? (
-                              <iframe
-                                className="w-full h-full"
-                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-                                title="YouTube video player"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            ) : (currentPost.videoUrl && !currentPost.isAd) ? (
-                              <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
-                            ) : (
-                              <div className="absolute inset-0 w-full h-full z-10">
-                                {/* 이미지 슬라이더 (영상이 없을 때만 존재) */}
-                                <div
-                                  ref={imageScrollRef}
-                                  className={cn(
-                                    "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-                                    isDragging && "cursor-grabbing snap-none"
-                                  )}
-                                  onScroll={handleImageScroll}
-                                  onMouseDown={onMouseDown}
-                                  onMouseUp={onMouseUp}
-                                  onMouseLeave={onMouseUp}
-                                  onMouseMove={onMouseMove}
-                                >
-                                  {displayImages.map((img, index) => {
-                                    const isAdSlide = img === COCA_COLA_IMAGE;
-                                    if (isAdSlide) {
-                                      return (
-                                        <div
-                                          key={index}
-                                          className="w-full h-full shrink-0 snap-center relative cursor-pointer"
-                                          style={{ scrollSnapStop: 'always' }}
-                                          onClick={handleAdClick}
-                                        >
-                                          <img
-                                            src={img}
-                                            alt="Advertisement"
-                                            className="w-full h-full object-cover pointer-events-none"
-                                            draggable={false}
-                                          />
-                                          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                                            <ExternalLink className="w-3.5 h-3.5" />
-                                            <span className="font-bold">AD</span>
-                                          </div>
-                                        </div>
-                                      );
-                                    }
-                                    return (
-                                      <div
-                                        key={index}
-                                        className="w-full h-full shrink-0 snap-center relative"
-                                        style={{ scrollSnapStop: 'always' }}
-                                        onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-                                      >
-                                        <img
-                                          src={img}
-                                          alt={`Post content ${index + 1}`}
-                                          className="w-full h-full object-cover pointer-events-none"
-                                          draggable={false}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-
-                                {/* 인디케이터 */}
-                                {displayImages.length > 1 && (
-                                  <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-                                    {displayImages.map((_, i) => (
-                                      <div
-                                        key={i}
-                                        className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 액션 버튼 및 내용 - 아이콘 그룹과 버튼 그룹 분리 */}
-                      <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()} >
-                        <div className="flex flex-col gap-3">
-                          {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }} >
-                                <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-                              </button>
-                              <button onClick={handleCommentClick} className="active:scale-110 transition-transform" >
-                                <MessageCircle className="w-6 h-6 text-gray-700" />
-                              </button>
-                              <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)} >
-                                <Share2 className="w-6 h-6" />
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <button className="transition-transform active:scale-125" onClick={handleSaveToggle} >
-                                <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-                              </button>
-                              {renderCategoryBadge()}
-                              {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-                                <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/50 hover:bg-indigo-100 active:scale-95 transition-all">
-                                  <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
-                                  <span className="text-[10px] font-black">위치보기</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* 하단: 광고 전용 사이트 방문 버튼 (광고이고 link_url이 있을 때만 표시) */}
-                          {isAd && (
-                            <div className="flex justify-end mt-[-4px]">
-                              <a
-                                href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                <span className="text-[10px] font-black">상세정보</span>
-                              </a>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
-                          <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
-                          <div className="flex gap-2 items-start">
-                            <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
-                            <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
-                          </div>
-                        </div>
-                        <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()} >
-                          <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                            <Input
-                              ref={commentInputRef}
-                              placeholder="댓글 달기..."
-                              className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
-                              value={commentInput}
-                              onChange={(e) => setCommentInput(e.target.value)}
-                              disabled={isSubmittingComment}
-                            />
-                            <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-                              <Send className="w-4 h-4" />
-                            </button>
-                          </form>
-
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
-                            className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
-                          >
-                            <span className="text-xs text-gray-400 font-medium pointer-events-none">
-                              {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                            </span>
-                            {showComments ?
-                              <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
-                              <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-                            }
-                          </button>
-
-                          <div
-                            className="overflow-hidden transition-all duration-300 ease-in-out"
-                            style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
-                          >
-                            <div className="space-y-2 pb-2">
-                              {localComments.slice(0, -1).map((c, i) => (
-                                <div key={i} className="flex items-start justify-between gap-2">
-                                  <div className="flex gap-2 items-start flex-1 min-w-0">
-                                    <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                                    <span className="text-sm text-gray-500">{c.text}</span>
-                                  </div>
-                                  {c.createdAt && (
-                                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                      {formatRelativeTime(new Date(c.createdAt))}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {lastComment && (
-                            <div className="flex items-start justify-between gap-2 mt-1">
-                              <div className="flex gap-2 items-start flex-1 min-w-0">
-                                <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
-                                <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
-                              </div>
-                              {lastComment.createdAt && (
-                                <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                  {formatRelativeTime(new Date(lastComment.createdAt))}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-                )}
               </div>
             </div>
-          </div>
-        </DialogPrimitive.Content>
+          </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
 

@@ -106,10 +106,33 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     return ownerId === authUser.id || ownerId === 'me';
   }, [authUser?.id, post.owner_id, post.user_id]);
 
-  // 프로필 이미지 fallback: 이니셜 표시
+  // 프로필 이미지: 광고는 로고(object-contain), 일반은 프로필 사진
   const renderAvatar = (size: 'sm' | 'md' = 'md') => {
     const sizeClass = size === 'md' ? 'w-10 h-10' : 'w-9 h-9';
     const initial = (user.name || '?')[0].toUpperCase();
+
+    if (isAd) {
+      // 광고: 흰 배경 원형에 로고 이미지 (object-contain)
+      if (avatarError || !user.avatar) {
+        return (
+          <div className={`${sizeClass} rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm`}>
+            <span className="text-gray-700 font-black text-[9px] text-center leading-tight px-0.5">{user.name}</span>
+          </div>
+        );
+      }
+      return (
+        <div className={`${sizeClass} rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm overflow-hidden`}>
+          <img
+            src={user.avatar}
+            alt={user.name}
+            className="w-full h-full object-contain p-1"
+            onError={() => setAvatarError(true)}
+          />
+        </div>
+      );
+    }
+
+    // 일반 포스트: 그라디언트 링 + 프로필 사진
     if (avatarError || !user.avatar) {
       return (
         <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white`}>

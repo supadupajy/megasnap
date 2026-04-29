@@ -1,0 +1,1 @@
+UPDATE ads SET brand_logo_url = 'https://upload.wikimedia.org/wikipedia/en/d/d3/Starbucks_Corporation_Logo_2011.svg' WHERE brand_name = '스타벅스';

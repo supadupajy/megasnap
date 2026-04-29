@@ -1,0 +1,1 @@
+SELECT id, brand_name, brand_logo_url FROM ads WHERE is_active = true LIMIT 5;
