@@ -11,6 +11,7 @@ import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
 import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
+import { handleDeepLink } from '@/utils/share';
 
 const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar';
 
@@ -87,6 +88,11 @@ const PostDetail = () => {
       category: sanitized.category || 'none'
     };
   };
+
+  // 딥링크 처리: 모바일에서 앱 실행 시도, 없으면 스토어로 이동
+  useEffect(() => {
+    if (id) handleDeepLink(id);
+  }, [id]);
 
   useEffect(() => {
     const fetchAllPosts = async () => {

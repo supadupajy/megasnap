@@ -42,6 +42,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
+import { handleShare } from '@/utils/share';
 
 const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
@@ -522,7 +523,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} className="active:scale-110 transition-transform">
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </button>
-            <button onClick={(e) => e.stopPropagation()} className="active:scale-110 transition-transform">
+            <button onClick={(e) => handleShare(e, post.id)} className="active:scale-110 transition-transform">
               <Share2 className="w-6 h-6 text-gray-700" />
             </button>
           </div>

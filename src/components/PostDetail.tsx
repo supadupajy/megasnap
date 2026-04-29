@@ -24,6 +24,7 @@ import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { invalidateAdCache } from '@/hooks/use-ad';
+import { handleShare } from '@/utils/share';
 
 interface PostDetailProps {
   posts: any[];
@@ -708,7 +709,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}>
                                     <MessageCircle className="w-6 h-6 text-gray-700" />
                                   </button>
-                                  <button className="text-gray-700" onClick={(e) => e.stopPropagation()}>
+                                  <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)}>
                                     <Share2 className="w-6 h-6" />
                                   </button>
                                 </div>
@@ -949,7 +950,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               <button onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} >
                                 <MessageCircle className="w-6 h-6 text-gray-700" />
                               </button>
-                              <button className="text-gray-700" onClick={(e) => e.stopPropagation()} >
+                              <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)} >
                                 <Share2 className="w-6 h-6" />
                               </button>
                             </div>
