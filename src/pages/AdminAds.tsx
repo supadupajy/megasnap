@@ -26,7 +26,6 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  GalleryHorizontal,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -86,7 +85,6 @@ const AD_ICONS: Record<string, React.ElementType> = {
   search: Search,
   trending: TrendingUp,
   map_marker: MapPin,
-  post_slide: GalleryHorizontal,
 };
 
 const AD_COLORS: Record<string, { bg: string; icon: string; border: string; badge: string; accent: string }> = {
@@ -95,7 +93,6 @@ const AD_COLORS: Record<string, { bg: string; icon: string; border: string; badg
   search:     { bg: 'bg-emerald-50', icon: 'text-emerald-600', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700', accent: 'bg-emerald-600' },
   trending:   { bg: 'bg-orange-50',  icon: 'text-orange-600',  border: 'border-orange-100',  badge: 'bg-orange-100 text-orange-700',  accent: 'bg-orange-600' },
   map_marker: { bg: 'bg-rose-50',    icon: 'text-rose-600',    border: 'border-rose-100',    badge: 'bg-rose-100 text-rose-700',    accent: 'bg-rose-600' },
-  post_slide: { bg: 'bg-pink-50',    icon: 'text-pink-600',    border: 'border-pink-100',    badge: 'bg-pink-100 text-pink-700',    accent: 'bg-pink-600' },
 };
 
 const AD_DESCRIPTIONS: Record<string, string> = {
@@ -104,7 +101,6 @@ const AD_DESCRIPTIONS: Record<string, string> = {
   search:     '친구 검색 화면 상단에 표시되는 배너 광고입니다.',
   trending:   '실시간 인기 포스팅 패널 내 광고 구좌입니다.',
   map_marker: '지도 위에 표시되는 브랜드 마커 광고입니다.',
-  post_slide: '각 포스팅의 2번째 슬라이드에 삽입되는 광고입니다.',
 };
 
 // ─── 날짜+시간 포맷 헬퍼 ─────────────────────────────────────────────────────
@@ -787,7 +783,7 @@ const AdminAds = () => {
         showError('광고 데이터를 불러오지 못했습니다.');
       } else {
         const allAds = (data || []) as AdData[];
-        const ORDER = ['splash', 'header', 'search', 'trending', 'post_slide'];
+        const ORDER = ['splash', 'header', 'search', 'trending'];
         const regular = allAds
           .filter(a => !a.ad_type || a.ad_type !== 'map_marker')
           .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));

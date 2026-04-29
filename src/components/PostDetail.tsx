@@ -23,7 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
-import { invalidateAdCache, useAd, resolveActiveSlot } from '@/hooks/use-ad';
+import { invalidateAdCache } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
 import { formatRelativeTime } from '@/lib/utils';
 
@@ -48,11 +48,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
-  const { ad: slideAd, now: slideAdNow } = useAd('post_slide');
-  const slideAdSlot = slideAd ? resolveActiveSlot(slideAd, slideAdNow) : null;
-  const slideAdImage = slideAdSlot && !slideAdSlot.isRecruitment && !slideAdSlot.isPending && slideAdSlot.image_url && slideAd?.is_active
-    ? slideAdSlot.image_url
-    : null;
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
@@ -276,16 +271,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   })();
 
   const isAd = currentPost?.isAd || false;
-  const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
-
-  const handleAdClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = slideAdSlot?.link_url;
-    if (url) {
-      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-      window.open(normalized, '_blank', 'noopener,noreferrer');
-    }
-  };
 
   const displayImages = (() => {
     if (!currentPost) return [];
@@ -300,16 +285,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    if (isAd) return baseImages;
-    const imagesWithAd = [...baseImages];
-    if (slideAdImage) {
-      if (imagesWithAd.length > 0) {
-        imagesWithAd.splice(1, 0, slideAdImage);
-      } else {
-        imagesWithAd.push(slideAdImage);
-      }
-    }
-    return imagesWithAd;
+    return baseImages;
   })();
 
   const postDisplayName = currentPost?.user?.name || '익명';
@@ -592,34 +568,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         onMouseLeave={onMouseUp}
         onMouseMove={onMouseMove}
       >
-        {displayImages.map((img, index) => {
-          const isAdSlide = !!slideAdImage && img === slideAdImage;
-          if (isAdSlide) {
-            return (
-              <div
-                key={index}
-                className="w-full h-full shrink-0 snap-center relative cursor-pointer"
-                style={{ scrollSnapStop: 'always' }}
-                onClick={handleAdClick}
-              >
-                <img src={img} alt="Advertisement" className="w-full h-full object-cover pointer-events-none" draggable={false} />
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20 z-10 pointer-events-none">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="font-bold">AD</span>
-                </div>
-              </div>
-            );
-          }
-          return (
-            <div
-              key={index}
-              className="w-full h-full shrink-0 snap-center relative"
-              style={{ scrollSnapStop: 'always' }}
-            >
-              <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
-            </div>
-          );
-        })}
+        {displayImages.map((img, index) => (
+          <div
+            key={index}
+            className="w-full h-full shrink-0 snap-center relative"
+            style={{ scrollSnapStop: 'always' }}
+          >
+            <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
+          </div>
+        ))}
       </div>
       {displayImages.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">

@@ -1,0 +1,1 @@
+DELETE FROM ads WHERE id = 'post_slide';
