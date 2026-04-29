@@ -1121,7 +1121,7 @@ const Index = () => {
                     m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
                   )
                 : allPosts;
-              // 광고는 맨 앞, 일반 포스트는 최신순 + 안 본 것 우선
+              // 일반 포스트는 최신순 + 안 본 것 우선, 광고는 seen 여부에 따라 seen 영역에 포함
               const adPosts = boundsFiltered.filter(p => p.isAd);
               const normalPosts = boundsFiltered.filter(p => !p.isAd);
               const sorted = [...normalPosts].sort((a, b) => {
@@ -1131,7 +1131,8 @@ const Index = () => {
               });
               const unseen = sorted.filter(p => !viewedIds.has(p.id));
               const seen = sorted.filter(p => viewedIds.has(p.id));
-              return [...adPosts, ...unseen, ...seen];
+              // 광고는 항상 seen 영역 맨 앞에 배치 (구분선이 광고 위에 나올 수 있도록)
+              return [...unseen, ...adPosts, ...seen];
             })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
