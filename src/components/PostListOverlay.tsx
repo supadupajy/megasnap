@@ -192,10 +192,8 @@ const PostListOverlay = ({
   
   // ✅ [FIX] 지도가 이동할 때마다 initialPosts가 바뀌므로, 이때 hasMore를 다시 true로 리셋해줘야 합니다.
   useEffect(() => {
-    // 광고 포스트는 목록에서 제외
-    const filtered = (initialPosts || []).filter(p => !p.isAd && !p.content?.trim().startsWith('[AD]'));
-    setPosts(filtered);
-    setHasMore(true); 
+    setPosts(initialPosts || []);
+    setHasMore(true);
     setIsLoadingMore(false);
     // 새 목록으로 바뀌면 스크롤 맨 위로
     if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -226,7 +224,6 @@ const PostListOverlay = ({
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
         .lte('longitude', lngMax)
-        .not('content', 'ilike', '[AD]%')  // 광고 포스트 제외
         .lt('created_at', lastPostDate)
         .order('created_at', { ascending: false })
         .limit(12);
