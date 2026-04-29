@@ -1,0 +1,1 @@
+SELECT id, label, ad_type, is_active, image_url, title, brand_name FROM ads ORDER BY ad_type, id;

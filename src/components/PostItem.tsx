@@ -45,8 +45,7 @@ import { useLocationDisplay } from '@/hooks/use-location-display';
 import { handleShare } from '@/utils/share';
 import { formatRelativeTime } from '@/lib/utils';
 
-const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
-const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
+import { useAd, resolveActiveSlot } from '@/hooks/use-ad';
 
 interface PostItemProps {
   post: Post;
@@ -63,6 +62,8 @@ interface PostItemProps {
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, session, profile: authProfile, isAdmin } = useAuth();
+  const { ad: slideAd, now: slideAdNow } = useAd('post_slide');
+  const slideAdSlot = slideAd ? resolveActiveSlot(slideAd, slideAdNow) : null;
   const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
   
@@ -155,7 +156,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const handleAdClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(COCA_COLA_URL, '_blank', 'noopener,noreferrer');
+    const url = slideAdSlot?.link_url;
+    if (url) {
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      window.open(normalized, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
@@ -345,28 +350,31 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           onMouseLeave={onMouseUp}
           onMouseMove={onMouseMove}
         >
-          {displayImages.map((img, index) => (
-            <div 
-              key={index} 
-              className="w-full h-full shrink-0 snap-center relative"
-              onClick={img === COCA_COLA_AD ? handleAdClick : undefined}
-            >
-              <img
-                src={img}
-                alt={`Content ${index}`}
-                className={cn(
-                  "w-full h-full object-cover pointer-events-none", // 이미지 자체 드래그 방지
-                  img === COCA_COLA_AD && "cursor-pointer"
+          {displayImages.map((img, index) => {
+            const isSlideAd = slideAdSlot && !slideAdSlot.isRecruitment && !slideAdSlot.isPending && img === slideAdSlot.image_url && slideAd?.is_active;
+            return (
+              <div
+                key={index}
+                className="w-full h-full shrink-0 snap-center relative"
+                onClick={isSlideAd ? handleAdClick : undefined}
+              >
+                <img
+                  src={img}
+                  alt={`Content ${index}`}
+                  className={cn(
+                    "w-full h-full object-cover pointer-events-none",
+                    isSlideAd && "cursor-pointer"
+                  )}
+                  onError={handleImageError}
+                />
+                {isSlideAd && (
+                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
+                    AD
+                  </div>
                 )}
-                onError={handleImageError}
-              />
-              {img === COCA_COLA_AD && (
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold z-10 border border-white/20">
-                  AD
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* 페이지 인디케이터 (구분자) */}
@@ -395,10 +403,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
     
     const newImages = [...baseImages];
-    // 두 번째 슬라이드(index 1) 위치에 코카콜라 광고 삽입
-    newImages.splice(1, 0, COCA_COLA_AD);
+    // 두 번째 슬라이드(index 1) 위치에 포스팅 슬라이드 광고 삽입 (활성화된 경우에만)
+    const slideAdImage = slideAdSlot && !slideAdSlot.isRecruitment && !slideAdSlot.isPending && slideAdSlot.image_url && slideAd?.is_active
+      ? slideAdSlot.image_url
+      : null;
+    if (slideAdImage) {
+      newImages.splice(1, 0, slideAdImage);
+    }
     return newImages;
-  }, [post.images, post.image, post.image_url, isAd]);
+  }, [post.images, post.image, post.image_url, isAd, slideAdSlot, slideAd?.is_active]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return; // 드래그 중에는 스크롤 이벤트에 의한 인덱스 업데이트 방지 (선택 사항)
