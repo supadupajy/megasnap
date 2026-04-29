@@ -1,10 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Map, Flame, Plus, Search, User, PlusCircle, UsersRound } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useKeyboard } from '@/hooks/use-keyboard';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
@@ -12,6 +11,30 @@ import { motion } from 'framer-motion';
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const navRef = useRef<HTMLElement>(null);
+
+  // 키보드가 올라와도 항상 실제 화면 하단에 고정
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      const nav = navRef.current;
+      if (!nav) return;
+      // visualViewport의 offsetTop + height = 실제 보이는 영역의 하단 위치
+      const offsetFromBottom = window.innerHeight - (vv.offsetTop + vv.height);
+      nav.style.bottom = `${offsetFromBottom}px`;
+    };
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    update();
+
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
 
   const navItems = [
     { icon: Map, label: '지도', path: '/' },
@@ -23,6 +46,7 @@ const BottomNav = () => {
 
   return (
     <nav
+      ref={navRef}
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[2000]"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
