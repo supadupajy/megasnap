@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Camera, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,6 +43,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [agreedToAll, setAgreedToAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -55,6 +56,26 @@ const Login = () => {
     if (savedPref === 'true') setRememberMe(true);
   }, []);
 
+  // 회원가입 ↔ 로그인 전환 시 약관 동의 초기화
+  useEffect(() => {
+    setAgreedToAll(false);
+  }, [isSignUp]);
+
+  const saveAgreement = async (userId: string) => {
+    try {
+      await supabase.from('user_agreements').upsert({
+        user_id: userId,
+        agreed_to_terms: true,
+        agreed_to_privacy: true,
+        agreed_at: new Date().toISOString(),
+        terms_version: '2025-05-01',
+        privacy_version: '2025-05-01',
+      }, { onConflict: 'user_id' });
+    } catch (err) {
+      console.error('[Login] agreement save error:', err);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -63,6 +84,10 @@ const Login = () => {
     }
 
     if (isSignUp) {
+      if (!agreedToAll) {
+        showError('서비스 이용약관 및 개인정보 처리방침에 동의해주세요.');
+        return;
+      }
       if (password.length < 8) {
         showError('비밀번호는 8자 이상이어야 합니다.');
         return;
@@ -81,6 +106,10 @@ const Login = () => {
           password,
         });
         if (error) throw error;
+
+        if (data.user) {
+          await saveAgreement(data.user.id);
+        }
 
         if (data.user && data.session) {
           showSuccess('회원가입이 완료되었습니다! ✨');
@@ -143,7 +172,8 @@ const Login = () => {
             <div className="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
               <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
-                인증 메일이 오지 않는다면 스팸함을 확인하거나, 잠시 후 다시 시도해주세요.</p>
+                인증 메일이 오지 않는다면 스팸함을 확인하거나, 잠시 후 다시 시도해주세요. (Supabase 무료 플랜 제한)
+              </p>
             </div>
           )}
 
@@ -203,6 +233,76 @@ const Login = () => {
                 </div>
               </div>
             )}
+
+            {/* 회원가입 시 약관 동의 */}
+            <AnimatePresence>
+              {isSignUp && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                    {/* 전체 동의 */}
+                    <div
+                      className="flex items-center gap-3 cursor-pointer"
+                      onClick={() => setAgreedToAll(!agreedToAll)}
+                    >
+                      <Checkbox
+                        id="agree-all"
+                        checked={agreedToAll}
+                        onCheckedChange={(checked) => setAgreedToAll(checked as boolean)}
+                        className="w-5 h-5 rounded-lg border-gray-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <label htmlFor="agree-all" className="text-[13px] font-black text-gray-800 cursor-pointer select-none">
+                        서비스 이용약관 및 개인정보 처리방침 동의 (필수)
+                      </label>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-3 space-y-2">
+                      {/* 이용약관 링크 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-indigo-500' : 'bg-gray-300'}`} />
+                          <span className="text-[11px] font-medium text-gray-500">서비스 이용약관 (필수)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/terms')}
+                          className="flex items-center gap-0.5 text-[11px] font-bold text-indigo-500 active:opacity-70"
+                        >
+                          보기 <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* 개인정보 처리방침 링크 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-indigo-500' : 'bg-gray-300'}`} />
+                          <span className="text-[11px] font-medium text-gray-500">개인정보 처리방침 (필수)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/privacy-policy')}
+                          className="flex items-center gap-0.5 text-[11px] font-bold text-indigo-500 active:opacity-70"
+                        >
+                          보기 <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {!agreedToAll && (
+                      <p className="text-[10px] text-rose-500 font-medium pt-1">
+                        회원가입을 위해 약관 동의가 필요합니다.
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <Button 
               type="submit"
