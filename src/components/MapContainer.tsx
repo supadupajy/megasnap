@@ -94,17 +94,6 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  // ── 레벨 7 이상이면 모든 마커를 애니메이션 없이 즉시 제거 ──────────
-  useEffect(() => {
-    if (level === undefined) return;
-    if (level >= 7) {
-      overlaysRef.current.forEach((overlay) => {
-        overlay.setMap(null);
-      });
-      overlaysRef.current.clear();
-    }
-  }, [level]);
-
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
@@ -525,13 +514,8 @@ const MapContainer = ({
     return () => clearInterval(checkMap);
   }, [initMap]);
 
-  useEffect(() => {
-    if (mapInstance.current && level !== undefined) {
-      mapInstance.current.setLevel(level);
-      setCurrentLevel(level);
-      currentLevelRef.current = level;
-    }
-  }, [level]);
+  // level prop 변경 시 setLevel은 아래 isMapReady-gated useEffect 하나에서만 처리
+  // (즉시 실행 useEffect를 제거 - zoom_changed 이벤트 중복 발생 방지)
 
   useEffect(() => {
     const kakao = (window as any).kakao;

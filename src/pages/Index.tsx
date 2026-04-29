@@ -411,12 +411,9 @@ const Index = () => {
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김
+  // 레벨 7 이상 마커 제거는 MapContainer 내부 zoom_changed 핸들러가 직접 처리하므로
+  // 여기서 setDisplayedMarkers([])를 하면 줌인 시 마커 복원 타이밍 충돌이 발생함
   useEffect(() => {
-    if (currentZoom >= 7) {
-      setDisplayedMarkers([]);
-      return;
-    }
-
     const filtered = allPosts.filter(post => {
       if (!post || post.lat == null || post.lng == null) return false;
       if (blockedIds.has(post.user?.id)) return false;
@@ -445,8 +442,10 @@ const Index = () => {
   // 줌 레벨에 따라 마커 1개가 차지하는 지리적 거리(도 단위)를 계산하여
   // 너무 가까운 마커들을 방사형으로 분산시킴
   const spreadMarkers = useMemo(() => {
+    // 줌이 바뀌면 minDist가 달라지므로 캐시를 여기서 초기화 (useEffect보다 먼저 실행 보장)
+    spreadCacheRef.current.clear();
+
     if (displayedMarkers.length === 0) {
-      spreadCacheRef.current.clear();
       return displayedMarkers;
     }
 
@@ -533,10 +532,9 @@ const Index = () => {
   useEffect(() => { isSelectingLocationRef.current = isSelectingLocation; }, [isSelectingLocation]);
   useEffect(() => { isSelectingAdLocationRef.current = isSelectingAdLocation; }, [isSelectingAdLocation]);
 
-  // currentZoom ref 동기화 + 줌 변경 시 분산 캐시 초기화 (minDist가 달라지므로)
+  // currentZoom ref 동기화
   useEffect(() => {
     currentZoomRef.current = currentZoom;
-    spreadCacheRef.current.clear();
   }, [currentZoom]);
 
   // ── visibleMarkers: bounds 필터 없이 spreadMarkers 그대로 사용 ──────
