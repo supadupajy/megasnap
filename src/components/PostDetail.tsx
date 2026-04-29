@@ -753,7 +753,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                 <div className="w-full max-w-[420px] h-[75vh] max-h-[calc(100vh-144px)] relative pointer-events-auto">
                   {isAd ? (
                     /* ===== 광고 포스트 ===== */
-                    <div className="ad-post-wrapper w-full h-full">
+                    <div className="ad-post-wrapper w-full h-full" style={{ willChange: 'transform' }}>
                       <div className="ad-post-inner w-full h-full flex flex-col bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                         <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full z-[60] opacity-50" />
                         <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
