@@ -27,7 +27,7 @@ const HeaderAdBanner = () => {
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-left">
             <span className="text-[8px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
             <span className="text-[6px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
           </div>
