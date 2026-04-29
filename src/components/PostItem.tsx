@@ -88,6 +88,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
   
   // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
@@ -494,9 +495,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setTimeout(() => {
-      commentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
+    commentInputRef.current?.focus({ preventScroll: true });
   };
 
   const confirmDelete = () => {
@@ -695,7 +694,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
                 <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                   <Send className="w-4 h-4" />
                 </button>
@@ -799,7 +798,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
               <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                 <Send className="w-4 h-4" />
               </button>
