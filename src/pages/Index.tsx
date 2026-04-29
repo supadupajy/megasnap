@@ -833,10 +833,26 @@ const Index = () => {
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
               {/* 플래시 오버레이 */}
               <div className="shutter-flash" style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
-              {/* 인디고 테두리 */}
-              <div className="shutter-border" style={{ position: 'absolute', inset: 0, zIndex: 2 }} />
             </div>
           )}
+          {/* 인디고 테두리 - 헤더/네비 위로 올라오도록 fixed + 지도 영역 좌표 사용 */}
+          {shutterActive && mapAreaRef.current && (() => {
+            const r = mapAreaRef.current!.getBoundingClientRect();
+            return (
+              <div
+                className="shutter-border"
+                style={{
+                  position: 'fixed',
+                  top: r.top,
+                  left: r.left,
+                  width: r.width,
+                  height: r.height,
+                  zIndex: 9999,
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          })()}
           <div className="absolute inset-0 z-0">
             <MapContainer
               posts={displayedMarkers}
