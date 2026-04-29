@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Flame, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDiverseUnsplashUrl, getVerifiedYoutubeUrlByIndex, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { getDiverseUnsplashUrl, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
+import { motion } from 'framer-motion';
+import { showError } from '@/utils/toast';
 
 const getTierFromFollowers = (followers: number) => {
   if (followers >= 10000000) return 'diamond';
@@ -80,18 +82,11 @@ const Popular = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
-  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
   const hasLoaded = useRef(false);
 
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
-
-  useEffect(() => {
-    const handleOpenWrite = () => {};
-    window.addEventListener('open-write-post', handleOpenWrite);
-    return () => window.removeEventListener('open-write-post', handleOpenWrite);
-  }, []);
 
   const filteredPosts = useMemo(() => {
     if (!posts) return [];
@@ -102,7 +97,6 @@ const Popular = () => {
     try {
       const from = pageNum * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-
       const { data, error } = await supabase
         .from('posts')
         .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
@@ -112,10 +106,10 @@ const Popular = () => {
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
 
-      // ✅ 즉시 렌더링: YouTube 검증 없이 바로 표시
+      // 즉시 렌더링: YouTube 검증 없이 바로 표시
       const immediatePost = (data || []).map(mapPostImmediate);
 
-      // ✅ YouTube 검증은 백그라운드에서 배치 처리
+      // YouTube 검증은 백그라운드에서 배치 처리
       const postsWithYoutube = (data || []).filter(p => p.youtube_url);
       if (postsWithYoutube.length > 0) {
         sanitizeYoutubeMediaBatch(postsWithYoutube).then(sanitized => {
@@ -154,29 +148,31 @@ const Popular = () => {
     }
   }, [authLoading, authUser, loadInitialData, navigate]);
 
-  const loadMorePosts = useCallback(async () => {
+  const loadNearbyPosts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
-    const nextPage = page + 1;
-    const newPosts = await fetchPopularPosts(nextPage);
+    const currentPage = Math.floor(posts.length / PAGE_SIZE);
+    const newPosts = await fetchPopularPosts(currentPage);
     if (newPosts.length > 0) {
-      setPosts(prev => [...prev, ...newPosts]);
-      setPage(nextPage);
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        return [...prev, ...newPosts.filter(p => !existingIds.has(p.id))];
+      });
     } else {
       setHasMore(false);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, page, fetchPopularPosts]);
+  }, [isLoadingMore, hasMore, posts.length, fetchPopularPosts]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && posts.length > 0 && hasMore) loadMorePosts(); },
+      ([entry]) => { if (entry.isIntersecting && posts.length > 0 && hasMore) loadNearbyPosts(); },
       { threshold: 0.1 }
     );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [loadMorePosts, posts.length, hasMore]);
+  }, [loadNearbyPosts, posts.length, hasMore]);
 
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
@@ -251,9 +247,15 @@ const Popular = () => {
                 표시할 인기 포스팅이 없습니다.
               </div>
             )}
-            {hasMore && posts.length > 0 && (
+            
+            {hasMore && (
               <div ref={loadMoreRef} className="py-10 flex justify-center">
                 {isLoadingMore && <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />}
+              </div>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <div className="py-8 text-center text-xs text-gray-400 font-medium">
+                모든 인기 포스팅을 불러왔습니다.
               </div>
             )}
           </div>

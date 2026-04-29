@@ -42,3 +42,11 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 해당 포스팅의 위치를 경기도 수원시 팔달구 매산로1가 18 (수원역 인근) 좌표로 수정하고 카테고리를 명소(place)로 변경
+UPDATE posts 
+SET latitude = 37.2662, 
+    longitude = 127.0002, 
+    location_name = '경기도 수원시 팔달구 매산로1가',
+    category = 'place'
+WHERE id = 'cebfd060-7116-4a6c-b259-b5bba3cb9d44';

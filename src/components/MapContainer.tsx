@@ -582,7 +582,7 @@ const MapContainer = ({
     });
 
     posts.forEach(post => {
-      if (!post) return;
+      if (!post || post.lat === null || post.lng === null) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
 
       const isViewed = combinedViewedIds.has(post.id);

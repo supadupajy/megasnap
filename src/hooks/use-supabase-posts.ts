@@ -42,6 +42,7 @@ export const fetchPostsInBounds = async (
       .limit(limit);
 
     if (error) throw error;
+
     return data || [];
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);

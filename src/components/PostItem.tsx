@@ -388,6 +388,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('[PostItem] Like button clicked for post:', post.id);
     onLikeToggle?.(post.id);
   };
 
@@ -525,7 +526,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
-              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+              <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
             <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
               <MessageCircle className="w-6 h-6 text-gray-700" />

@@ -133,27 +133,20 @@ const Index = () => {
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
-  // posts 실시간 구독 제거에 따라 channelIdRef / triggerConfettiRef는 더 이상 필요하지 않음
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
   const trendingFetchedAtRef = useRef<number>(0);
   const lastBoundsKeyRef = useRef<string>('');
 
-  // [Optimized] profile fetch 제거 — AuthProvider에서 이미 관리하며, Index.tsx에서는 사용처가 없음
-
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
-  // [Optimized] bounds fetch에서 일부 컬럼이 빠진 raw도 안전하게 처리.
-  // 빠진 필드는 기존 allPosts의 동일 id 데이터를 우선 사용하고, 없으면 기본값.
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
     const content = p.content !== undefined ? (p.content || '') : (prev?.content ?? '');
     const isAd = content.trim().startsWith('[AD]') || prev?.isAd || false;
     const likes = Number(p.likes ?? prev?.likes ?? 0);
     let borderType: any = 'none';
-    // hot_since가 있으면 HOT (1시간 내 좋아요 1000개 이상 달성)
     const hotSince = p.hot_since ?? prev?.hot_since ?? null;
     if (hotSince) borderType = 'popular';
     else if (!isAd) {
-      // follower 수 기반 tier 결정 (profiles JOIN 데이터 우선, 없으면 0)
       const followers = Number(p.profiles?.followers ?? 0);
       if (followers >= 10000000) borderType = 'diamond';
       else if (followers >= 1000000) borderType = 'gold';
@@ -247,12 +240,10 @@ const Index = () => {
     const center = mapData.center;
 
     // [Optimized] bounds 변화량이 작으면 fetch 스킵
-    // 소수점 2자리(약 1.1km) 단위로 반올림 → 지도를 조금 움직여도 fetch 안 함
     const boundsKey = `${sw.lat.toFixed(3)}|${sw.lng.toFixed(3)}|${ne.lat.toFixed(3)}|${ne.lng.toFixed(3)}|${currentZoom}`;
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
-    // 이전 fetch 취소용 플래그
     let cancelled = false;
 
     const doFetch = async () => {
@@ -829,14 +820,12 @@ const Index = () => {
     }
     if (routeState.startAdLocationSelection) {
       setIsPostListOpen(false);
-      // 즉시 현재 지도 중심으로 초기화 (mapCache.lastCenter는 항상 최신값)
       setTempAdLocation(mapCache.lastCenter || null);
       setTimeout(() => {
         setIsSelectingAdLocation(true);
       }, 300);
     }
     if (routeState.adMarkerSaved && routeState.center) {
-      // 광고 마커 저장 후 해당 위치로 이동 + 줌 레벨 조정 + 마커 하이라이트
       setMapCenter(routeState.center);
       setCurrentZoom(4);
       setTimeout(() => {
@@ -1080,7 +1069,6 @@ const Index = () => {
             initialPosts={(() => {
               if (!mapData?.bounds) return visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m);
               const { sw, ne } = mapData.bounds;
-              // 원본 좌표(분산 전) 기준으로 bounds 필터링 → 분산으로 밀려난 포스트도 포함
               return allPosts.filter(p =>
                 !p.isAd &&
                 !p.content?.trim().startsWith('[AD]') &&
