@@ -641,7 +641,8 @@ const MapContainer = ({
           isMineKey = !!(displayId && String(displayId) === String(authUserRef.current.id));
         }
       }
-      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
+      const isAdPendingKey = !!(p as any).isAdPending;
+      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
       content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
       content.setAttribute('data-content-state', newStateKey);
     });
@@ -711,7 +712,8 @@ const MapContainer = ({
                     isMineKey = !!(displayId && String(displayId) === String(currentAuthUser.id));
                   }
                 }
-                const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}`;
+                const isAdPendingKey = !!(p as any).isAdPending;
+                const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
                 content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
                 content.setAttribute('data-content-state', newStateKey);
               }
