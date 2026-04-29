@@ -532,17 +532,23 @@ const Index = () => {
   }, [currentZoom]);
 
   // ── visibleMarkers: 현재 지도 bounds 안에 있는 마커만 ──────
-  // spreadMarkers의 분산된 좌표 기준으로 필터링해야 실제 화면과 일치함
+  // [BUG FIX] 원래 좌표(post.lat/lng)로 bounds 필터링해야 함
+  // spreadMarkers의 분산된 좌표로 필터링하면 레벨 변경 시 캐시 초기화로
+  // 분산 좌표가 달라져 bounds 안/밖 판정이 달라지는 버그 발생
   const visibleMarkers = useMemo(() => {
     if (!mapData?.bounds) return spreadMarkers;
     const { sw, ne } = mapData.bounds;
-    return spreadMarkers.filter(p =>
+    return spreadMarkers.filter(p => {
       // 광고 마커는 bounds 밖이어도 항상 포함
-      p.isAd ||
-      (p.lat >= sw.lat && p.lat <= ne.lat &&
-      p.lng >= sw.lng && p.lng <= ne.lng)
-    );
-  }, [spreadMarkers, mapData?.bounds]);
+      if (p.isAd) return true;
+      // 원래 좌표(분산 전)로 bounds 필터링
+      const origPost = allPosts.find(op => op.id === p.id);
+      const origLat = origPost?.lat ?? p.lat;
+      const origLng = origPost?.lng ?? p.lng;
+      return origLat >= sw.lat && origLat <= ne.lat &&
+             origLng >= sw.lng && origLng <= ne.lng;
+    });
+  }, [spreadMarkers, mapData?.bounds, allPosts]);
 
   // ── limitedVisibleMarkers: 최대 30개로 제한 (최신순) ──
   const limitedVisibleMarkers = useMemo(() => {
@@ -565,20 +571,10 @@ const Index = () => {
   }, [visibleMarkers]);
 
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
-  // spreadMarkers(실제 지도에 렌더링되는 마커) 중 현재 bounds 안에 있는 것만 카운트
-  // → 분산된 좌표 기준으로 필터링해야 화면에 보이는 마커 수와 정확히 일치
+  // [BUG FIX] limitedVisibleMarkers 기준으로 통일 (실제 지도에 표시되는 마커와 일치)
   const visiblePostCount = useMemo(() => {
-    if (!mapData?.bounds) {
-      return spreadMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
-    }
-    const { sw, ne } = mapData.bounds;
-    return spreadMarkers.filter(m =>
-      !m.isAd &&
-      !m.content?.trim().startsWith('[AD]') &&
-      m.lat >= sw.lat && m.lat <= ne.lat &&
-      m.lng >= sw.lng && m.lng <= ne.lng
-    ).length;
-  }, [spreadMarkers, mapData?.bounds]);
+    return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+  }, [limitedVisibleMarkers]);
 
   // 실제 화면에 표시되는 마커 수 (광고 제외, 최대 30개 제한 후)
   const displayedPostCount = useMemo(() => {
