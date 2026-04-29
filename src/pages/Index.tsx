@@ -585,20 +585,15 @@ const Index = () => {
     return [...adMarkers, ...selected];
   }, [spreadMarkers]);
 
-  // 배지 숫자: 현재 지도 bounds 안에 원래 좌표가 있는 마커만 카운트
-  // (MapContainer에 전달된 마커 중 실제 화면에 보이는 것)
+  // 배지 숫자: 현재 지도 bounds 안에 있는 마커 카운트 (광고 포함)
   const displayedPostCount = useMemo(() => {
     if (!mapData?.bounds) {
-      return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+      return limitedVisibleMarkers.length;
     }
     const { sw, ne } = mapData.bounds;
     return limitedVisibleMarkers.filter(m => {
-      if (m.isAd || m.content?.trim().startsWith('[AD]')) return false;
-      // 원래 좌표(분산 전)로 bounds 체크
-      const origLat = m.lat;
-      const origLng = m.lng;
-      return origLat >= sw.lat && origLat <= ne.lat &&
-             origLng >= sw.lng && origLng <= ne.lng;
+      return m.lat >= sw.lat && m.lat <= ne.lat &&
+             m.lng >= sw.lng && m.lng <= ne.lng;
     }).length;
   }, [limitedVisibleMarkers, mapData?.bounds]);
 
