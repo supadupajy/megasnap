@@ -252,8 +252,7 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const center = mapData.center;
 
-    // [Optimized] bounds 변화량이 작으면 fetch 스킵
-    const boundsKey = `${sw.lat.toFixed(3)}|${sw.lng.toFixed(3)}|${ne.lat.toFixed(3)}|${ne.lng.toFixed(3)}|${currentZoom}`;
+    const boundsKey = `${sw.lat.toFixed(4)}|${sw.lng.toFixed(4)}|${ne.lat.toFixed(4)}|${ne.lng.toFixed(4)}|${currentZoom}`;
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
@@ -263,6 +262,11 @@ const Index = () => {
       try {
         const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
         if (cancelled) return;
+
+        // [Fix] fetch 완료 후 pinnedMarkerIds 초기화 → 새 영역 마커가 표시되도록
+        // (fetch 전에 초기화하면 빈 화면이 잠깐 보이는 문제 발생)
+        pinnedMarkerIdsRef.current.clear();
+
         if (raw.length === 0) return;
 
         setAllPosts(prev => {
@@ -285,7 +289,7 @@ const Index = () => {
     doFetch();
 
     return () => { cancelled = true; };
-  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
+  }, [mapData, currentZoom]);
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
@@ -603,17 +607,19 @@ const Index = () => {
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
   const handleMapChange = useCallback((data: any) => {
-    if (throttleTimer.current) clearTimeout(throttleTimer.current);
+    // mapDataRef는 즉시 업데이트 (throttle 전에도 최신값 유지)
     mapDataRef.current = data;
     if (data.level !== undefined) {
       setCurrentZoom(data.level);
       currentZoomRef.current = data.level;
       mapCache.lastZoom = data.level;
     }
-    // 위치 선택 모드일 때 즉시 ref 업데이트 (throttle 전에도 최신값 유지)
+    // 위치 선택 모드일 때 즉시 ref 업데이트
     if (isSelectingAdLocationRef.current && data.center) {
       tempAdLocationRef.current = data.center;
     }
+
+    if (throttleTimer.current) clearTimeout(throttleTimer.current);
     throttleTimer.current = setTimeout(() => {
       setMapData(data);
       mapCache.lastCenter = data.center;

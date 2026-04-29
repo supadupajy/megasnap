@@ -493,24 +493,9 @@ const MapContainer = ({
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
 
-      // zoom_changed 시 레벨을 즉시 전달 → 레벨 7 전환 시 마커가 잠깐 보이는 버그 방지
-      kakao.maps.event.addListener(map, 'zoom_changed', () => {
-        try {
-          const bounds = map.getBounds();
-          const currentCenter = map.getCenter();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const mapLevel = map.getLevel();
-          onMapChangeRef.current({
-            bounds: {
-              sw: { lat: sw.getLat(), lng: sw.getLng() },
-              ne: { lat: ne.getLat(), lng: ne.getLng() }
-            },
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
-            level: mapLevel,
-          });
-        } catch (e) {}
-      });
+      // zoom_changed: 레벨 즉시 전달 (idle보다 먼저 발생하므로 레벨 7 전환 시 마커 깜빡임 방지)
+      // 단, onMapChangeRef는 여기서만 호출 (별도 useEffect의 zoom_changed 리스너와 중복 방지)
+      kakao.maps.event.addListener(map, 'zoom_changed', updateMapData);
       
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
         if (onMapClickRef.current) {
@@ -811,6 +796,8 @@ const MapContainer = ({
         el.className = el.className.replace(/\bzoom-\d+\b/g, '');
         el.classList.add(`zoom-${level}`);
       }
+      // NOTE: onMapChangeRef는 initMap의 zoom_changed 리스너(updateMapData)에서 호출됨
+      // 여기서 중복 호출하지 않음
     };
 
     const handleIdle = () => {
