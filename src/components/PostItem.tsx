@@ -517,7 +517,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
-  const formattedDate = post.createdAt
+  // 광고 포스트는 createdAt이 항상 현재 시각으로 설정되므로 시간 표시 숨김
+  const formattedDate = (!isAd && post.createdAt)
     ? formatRelativeTime(new Date(post.createdAt))
     : null;
 
