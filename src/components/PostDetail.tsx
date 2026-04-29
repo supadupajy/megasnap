@@ -25,8 +25,7 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/utils';
 
 interface PostDetailProps {
   posts: any[];
@@ -364,7 +363,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const formattedDate = currentPost?.createdAt
-    ? formatDistanceToNow(new Date(currentPost.createdAt), { addSuffix: true, locale: ko })
+    ? formatRelativeTime(new Date(currentPost.createdAt))
     : null;
 
   const displayLocation = useLocationDisplay(
@@ -796,7 +795,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                       </div>
                                       {c.createdAt && (
                                         <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                          {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                                          {formatRelativeTime(new Date(c.createdAt))}
                                         </span>
                                       )}
                                     </div>
@@ -811,7 +810,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   </div>
                                   {lastComment.createdAt && (
                                     <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                      {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                                      {formatRelativeTime(new Date(lastComment.createdAt))}
                                     </span>
                                   )}
                                 </div>
@@ -1060,7 +1059,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   </div>
                                   {c.createdAt && (
                                     <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                                      {formatRelativeTime(new Date(c.createdAt))}
                                     </span>
                                   )}
                                 </div>
@@ -1076,7 +1075,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               </div>
                               {lastComment.createdAt && (
                                 <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                                  {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                                  {formatRelativeTime(new Date(lastComment.createdAt))}
                                 </span>
                               )}
                             </div>

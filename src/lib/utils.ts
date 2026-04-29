@@ -50,6 +50,19 @@ export const isMobilePlatform = () => Capacitor.isNativePlatform();
  * - 1,000 이상: 1,500 형식 (천 단위 콤마)
  * - 그 외: 그대로 표시
  */
+/**
+ * 날짜를 "N분 전" 형태로 포맷. 1분 미만은 "1분 전"으로 표시.
+ */
+import { formatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
+
+export const formatRelativeTime = (date: Date | string): string => {
+  const d = new Date(date);
+  const diffMs = Date.now() - d.getTime();
+  if (Math.abs(diffMs) < 60_000) return '1분 전';
+  return formatDistanceToNow(d, { addSuffix: true, locale: ko });
+};
+
 export const formatCount = (n: number): string => {
   if (n >= 1_000_000) {
     const m = n / 1_000_000;

@@ -43,8 +43,7 @@ import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { handleShare } from '@/utils/share';
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/utils';
 
 const COCA_COLA_AD = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80";
 const COCA_COLA_URL = "https://www.coca-cola.co.kr/";
@@ -478,7 +477,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   const formattedDate = post.createdAt
-    ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ko })
+    ? formatRelativeTime(new Date(post.createdAt))
     : null;
 
   const renderCategoryBadge = () => {
@@ -656,7 +655,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                     </div>
                     {c.createdAt && (
                       <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                        {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                        {formatRelativeTime(new Date(c.createdAt))}
                       </span>
                     )}
                   </div>
@@ -671,7 +670,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   </div>
                   {lastComment.createdAt && (
                     <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                      {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                      {formatRelativeTime(new Date(lastComment.createdAt))}
                     </span>
                   )}
                 </div>
@@ -746,7 +745,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   </div>
                   {c.createdAt && (
                     <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ko })}
+                      {formatRelativeTime(new Date(c.createdAt))}
                     </span>
                   )}
                 </div>
@@ -761,7 +760,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 </div>
                 {lastComment.createdAt && (
                   <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                    {formatDistanceToNow(new Date(lastComment.createdAt), { addSuffix: true, locale: ko })}
+                    {formatRelativeTime(new Date(lastComment.createdAt))}
                   </span>
                 )}
               </div>
