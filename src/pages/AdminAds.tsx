@@ -433,40 +433,6 @@ const MapMarkerAdCard = ({
           <p className="text-[10px] text-gray-400 font-medium truncate">
             {hasLocation ? (locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`) : '위치 미설정'}
           </p>
-          {/* 남은 시간 표시 */}
-          {form.end_date && (() => {
-            const endD = new Date(form.end_date);
-            const nowD = new Date();
-            if (endD <= nowD) {
-              return (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Clock className="w-2.5 h-2.5 text-red-400 shrink-0" />
-                  <span className="text-[9px] font-bold text-red-400">기간 만료됨</span>
-                </div>
-              );
-            }
-            const ms = endD.getTime() - nowD.getTime();
-            const totalMinutes = Math.ceil(ms / 60000);
-            let remaining = '';
-            if (totalMinutes < 60) {
-              remaining = `${totalMinutes}분 남음`;
-            } else {
-              const hours = Math.floor(totalMinutes / 60);
-              if (hours < 24) {
-                remaining = `${hours}시간 ${totalMinutes % 60}분 남음`;
-              } else {
-                const days = Math.floor(hours / 24);
-                const remHours = hours % 24;
-                remaining = remHours > 0 ? `${days}일 ${remHours}시간 남음` : `${days}일 남음`;
-              }
-            }
-            return (
-              <div className="flex items-center gap-1 mt-0.5">
-                <Clock className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
-                <span className="text-[9px] font-bold text-emerald-600">{remaining}</span>
-              </div>
-            );
-          })()}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-300" />}
@@ -476,20 +442,6 @@ const MapMarkerAdCard = ({
       {/* 접힌 상태 미리보기 */}
       {!isExpanded && (
         <div className="px-4 pb-3 space-y-2">
-          {hasLocation && (
-            <button
-              onClick={e => { e.stopPropagation(); onSelectLocation(ad.id); }}
-              className="w-full flex items-center gap-3 rounded-2xl px-3 h-11 border bg-rose-50 border-rose-100 hover:border-rose-300 transition-all active:scale-[0.98]"
-            >
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-rose-100">
-                <Navigation2 className="w-3.5 h-3.5 text-rose-500" />
-              </div>
-              <span className="flex-1 text-left text-sm font-semibold truncate text-gray-900">
-                {locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`}
-              </span>
-              <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
-            </button>
-          )}
           {form.image_url && (() => {
             const isExpiredPreview = form.end_date ? new Date(form.end_date) <= new Date() : false;
             const remainingPreview = (() => {
@@ -519,6 +471,20 @@ const MapMarkerAdCard = ({
               </div>
             );
           })()}
+          {hasLocation && (
+            <button
+              onClick={e => { e.stopPropagation(); onSelectLocation(ad.id); }}
+              className="w-full flex items-center gap-3 rounded-2xl px-3 h-11 border bg-rose-50 border-rose-100 hover:border-rose-300 transition-all active:scale-[0.98]"
+            >
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-rose-100">
+                <Navigation2 className="w-3.5 h-3.5 text-rose-500" />
+              </div>
+              <span className="flex-1 text-left text-sm font-semibold truncate text-gray-900">
+                {locationLabel ?? `${form.lat!.toFixed(4)}, ${form.lng!.toFixed(4)}`}
+              </span>
+              <span className="text-[10px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg shrink-0">설정됨</span>
+            </button>
+          )}
         </div>
       )}
 
