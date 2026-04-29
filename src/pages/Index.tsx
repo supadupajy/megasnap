@@ -114,7 +114,6 @@ const Index = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSearchPending, setIsSearchPending] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
@@ -950,7 +949,7 @@ const Index = () => {
                 className={cn("absolute left-4 z-20 flex flex-col gap-2 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
-                <button onClick={() => { setIsSearchPending(true); setTimeout(() => { setIsSearchOpen(true); setIsSearchPending(false); }, 80); }} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
+                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button>
               </div>
 
@@ -1042,22 +1041,23 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      <div
-        className={cn(
-          "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
-          isCategoryOpen && "opacity-50 blur-[1px]",
-          (isPostListOpen || isSearchOpen || isSearchPending) && "invisible pointer-events-none"
-        )}
-      >
-        <div className="max-w-md mx-auto pointer-events-auto">
-          <TrendingPosts
-            posts={globalTrendingPosts}
-            onPostClick={handleTrendingPostClick}
-            isExpanded={isTrendingExpanded}
-            onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-          />
+      {!isPostListOpen && !isSearchOpen && (
+        <div
+          className={cn(
+            "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
+            isCategoryOpen && "opacity-50 blur-[1px]",
+          )}
+        >
+          <div className="max-w-md mx-auto pointer-events-auto">
+            <TrendingPosts
+              posts={globalTrendingPosts}
+              onPostClick={handleTrendingPostClick}
+              isExpanded={isTrendingExpanded}
+              onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <AnimatePresence>
         {isPostListOpen && (
