@@ -41,6 +41,9 @@ const Index = () => {
   const location = useLocation();
   const { user: authUser, session } = useAuth();
 
+  const MAX_VISIBLE_MARKERS = 30;
+  const [randomSeed, setRandomSeed] = useState(() => Math.random());
+
   const [showCssConfetti, setShowCssConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
@@ -523,6 +526,29 @@ const Index = () => {
     );
   }, [spreadMarkers, mapData?.bounds]);
 
+  // ── limitedVisibleMarkers: 최대 30개로 제한 (랜덤 시드 기반 셔플) ──
+  const limitedVisibleMarkers = useMemo(() => {
+    const adMarkers = visibleMarkers.filter(m => m.isAd);
+    const nonAdMarkers = visibleMarkers.filter(m => !m.isAd);
+
+    if (nonAdMarkers.length <= MAX_VISIBLE_MARKERS) {
+      return visibleMarkers;
+    }
+
+    // randomSeed 기반으로 결정론적 셔플 (같은 seed면 같은 결과)
+    const seeded = [...nonAdMarkers].sort((a, b) => {
+      const hashA = (randomSeed * 31 + a.id.charCodeAt(0)) % 1;
+      const hashB = (randomSeed * 31 + b.id.charCodeAt(0)) % 1;
+      // 더 안정적인 해시: id 전체를 활용
+      const scoreA = Array.from(a.id).reduce((acc, c, i) => acc + c.charCodeAt(0) * (randomSeed * (i + 1)), 0) % 1000;
+      const scoreB = Array.from(b.id).reduce((acc, c, i) => acc + c.charCodeAt(0) * (randomSeed * (i + 1)), 0) % 1000;
+      return scoreA - scoreB;
+    });
+
+    const selected = seeded.slice(0, MAX_VISIBLE_MARKERS);
+    return [...adMarkers, ...selected];
+  }, [visibleMarkers, randomSeed]);
+
   // 광고 제외 visible 포스트 수 (여기 보기 카운트 배지용)
   // spreadMarkers(실제 지도에 렌더링되는 마커) 중 현재 bounds 안에 있는 것만 카운트
   // → 분산된 좌표 기준으로 필터링해야 화면에 보이는 마커 수와 정확히 일치
@@ -538,6 +564,11 @@ const Index = () => {
       m.lng >= sw.lng && m.lng <= ne.lng
     ).length;
   }, [spreadMarkers, mapData?.bounds]);
+
+  // 실제 화면에 표시되는 마커 수 (광고 제외, 최대 30개 제한 후)
+  const displayedPostCount = useMemo(() => {
+    return limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]')).length;
+  }, [limitedVisibleMarkers]);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
@@ -665,6 +696,9 @@ const Index = () => {
         });
       }
     }
+
+    // 새로운 랜덤 시드로 마커 셔플
+    setRandomSeed(Math.random());
 
     setIsRefreshing(false);
     showSuccess('데이터를 새로고침했습니다.');
@@ -885,7 +919,7 @@ const Index = () => {
         <div className="flex-1 relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 z-0">
             <MapContainer
-              posts={spreadMarkers}
+              posts={limitedVisibleMarkers}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
@@ -1009,23 +1043,23 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= 30} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
+                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-xl active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-indigo-100">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
                 <div className="relative">
-                  {visiblePostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
+                  {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => { if (visiblePostCount > 0 && currentZoom < 7) setIsPostListOpen(true); }}
-                    disabled={currentZoom >= 7 || visiblePostCount === 0}
-                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || visiblePostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
+                    onClick={() => { if (displayedPostCount > 0 && currentZoom < 7) setIsPostListOpen(true); }}
+                    disabled={currentZoom >= 7 || displayedPostCount === 0}
+                    className={cn("w-16 h-16 bg-indigo-600 rounded-[24px] flex flex-col items-center justify-center text-white shadow-[0_15px_30px_rgba(79,70,229,0.4)] active:scale-95 transition-all border-2 border-white/20 overflow-hidden relative", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none")}
                   >
                     <LayoutGrid className="w-7 h-7 stroke-[3px] relative z-10" />
                     <span className="text-[10px] font-black mt-1 relative z-10">여기 보기</span>
                   </button>
-                  {visiblePostCount > 0 && currentZoom < 7 && (
+                  {displayedPostCount > 0 && currentZoom < 7 && (
                     <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
-                      {visiblePostCount}
+                      {displayedPostCount}
                     </div>
                   )}
                 </div>
