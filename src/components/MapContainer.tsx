@@ -665,6 +665,7 @@ const MapContainer = ({
               const c = o.getContent() as HTMLElement;
               if (c && c.classList.contains('highlighted') && id !== postId) {
                 c.classList.remove('highlighted');
+                c.classList.remove('marker-appear-animation');
                 highlightingIdsRef.current.delete(id);
                 const p = postsRef.current.find(item => item.id === id);
                 if (p) {
@@ -691,6 +692,7 @@ const MapContainer = ({
                 return;
               }
               content.classList.remove('highlighted');
+              content.classList.remove('marker-appear-animation');
 
               const p = postsRef.current.find(item => item.id === postId);
               if (p) {
