@@ -1111,17 +1111,16 @@ const Index = () => {
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
             initialPosts={(() => {
-              // "여기보기"는 bounds 안 allPosts 전체를 최신순으로 보여줌
-              // (지도 마커는 30개 제한이지만, 여기보기에서는 전체 + 무한스크롤로 추가 로딩 가능)
+              // 뱃지와 동일한 소스(displayedMarkers)를 사용하여 숫자 일치
               const bounds = mapData?.bounds;
               const boundsFiltered = bounds
-                ? allPosts.filter(m =>
+                ? displayedMarkers.filter(m =>
                     m.lat != null && m.lng != null &&
                     m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
                     m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
                   )
-                : allPosts;
-              // 일반 포스트는 최신순 + 안 본 것 우선, 광고는 seen 여부에 따라 seen 영역에 포함
+                : displayedMarkers;
+              // 일반 포스트는 최신순 + 안 본 것 우선, 광고는 seen 영역에 포함
               const adPosts = boundsFiltered.filter(p => p.isAd);
               const normalPosts = boundsFiltered.filter(p => !p.isAd);
               const sorted = [...normalPosts].sort((a, b) => {
@@ -1131,7 +1130,6 @@ const Index = () => {
               });
               const unseen = sorted.filter(p => !viewedIds.has(p.id));
               const seen = sorted.filter(p => viewedIds.has(p.id));
-              // 광고는 항상 seen 영역 맨 앞에 배치 (구분선이 광고 위에 나올 수 있도록)
               return [...unseen, ...adPosts, ...seen];
             })()}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
