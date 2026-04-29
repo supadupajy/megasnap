@@ -1145,12 +1145,11 @@ const Index = () => {
             onClose={() => setIsPostListOpen(false)}
             initialPosts={(() => {
               // 배지 숫자와 동일한 기준: limitedVisibleMarkers(실제 지도에 표시된 마커) 중
-              // 현재 bounds 안에 있는 비광고 포스트만 표시
+              // 현재 bounds 안에 있는 포스트 (광고 포함)
               const boundsFiltered = (() => {
-                const nonAdMarkers = limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]'));
-                if (!mapData?.bounds) return nonAdMarkers;
+                if (!mapData?.bounds) return limitedVisibleMarkers;
                 const { sw, ne } = mapData.bounds;
-                return nonAdMarkers.filter(m =>
+                return limitedVisibleMarkers.filter(m =>
                   m.lat >= sw.lat && m.lat <= ne.lat &&
                   m.lng >= sw.lng && m.lng <= ne.lng
                 );
