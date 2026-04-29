@@ -32,7 +32,7 @@ const HeaderAdBanner = () => {
             <span className="text-[6px] font-bold text-white/70 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
           </div>
         </div>
-        <Mail className="absolute top-2.5 right-2 w-2.5 h-2.5 text-white/80" />
+        <Mail className="absolute top-2 right-2.5 w-2.5 h-2.5 text-white/80" />
       </motion.div>
     );
   }
