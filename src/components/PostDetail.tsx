@@ -725,19 +725,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   )}
                                 </div>
                               </div>
-                              {currentPost.link_url && (
-                              <div className="flex justify-end mt-[-4px]">
-                                <a
-                                  href={currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  <span className="text-[10px] font-black">주문하기</span>
-                                </a>
-                              </div>
+                              {isAd && (
+                                <div className="flex justify-end mt-[-4px]">
+                                  <a
+                                    href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-orange-400/20 min-w-[78px]"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-black">주문하기</span>
+                                  </a>
+                                </div>
                               )}
                             </div>
                             <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
@@ -969,10 +969,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           </div>
 
                           {/* 하단: 광고 전용 사이트 방문 버튼 (광고이고 link_url이 있을 때만 표시) */}
-                          {isAd && currentPost.link_url && (
+                          {isAd && (
                             <div className="flex justify-end mt-[-4px]">
                               <a
-                                href={currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`}
+                                href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
