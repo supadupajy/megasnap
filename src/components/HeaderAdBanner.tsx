@@ -26,7 +26,7 @@ const HeaderAdBanner = () => {
         className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl overflow-hidden relative group cursor-pointer shadow-md"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
-        <div className="absolute inset-0 flex items-center justify-center gap-2 pl-6 pr-4">
+        <div className="absolute inset-0 flex items-center justify-center gap-2 pl-6 pr-10">
           <Mail className="w-3 h-3 text-white/90 shrink-0" />
           <div className="flex flex-col">
             <span className="text-[8px] font-black text-white leading-none tracking-tighter uppercase">광고 문의</span>
