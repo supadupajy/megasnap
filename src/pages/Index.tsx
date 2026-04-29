@@ -1144,25 +1144,19 @@ const Index = () => {
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
             initialPosts={(() => {
-              let filtered: Post[];
-              if (!mapData?.bounds) {
-                filtered = visibleMarkers.filter(m => !m.isAd).map(m => allPosts.find(p => p.id === m.id) || m);
-              } else {
+              // 배지 숫자와 동일한 기준: limitedVisibleMarkers(실제 지도에 표시된 마커) 중
+              // 현재 bounds 안에 있는 비광고 포스트만 표시
+              const boundsFiltered = (() => {
+                const nonAdMarkers = limitedVisibleMarkers.filter(m => !m.isAd && !m.content?.trim().startsWith('[AD]'));
+                if (!mapData?.bounds) return nonAdMarkers;
                 const { sw, ne } = mapData.bounds;
-                filtered = allPosts.filter(p =>
-                  !p.isAd &&
-                  !p.content?.trim().startsWith('[AD]') &&
-                  p.lat != null && p.lng != null &&
-                  p.lat >= sw.lat && p.lat <= ne.lat &&
-                  p.lng >= sw.lng && p.lng <= ne.lng &&
-                  !blockedIds.has(p.user?.id) &&
-                  (selectedCategories.includes('all') ||
-                    (selectedCategories.includes('mine') && authUser && p.user?.id === authUser.id) ||
-                    selectedCategories.includes(p.category || 'none') ||
-                    (selectedCategories.includes('hot') && (p.borderType === 'popular' || p.likes >= 9000)) ||
-                    (selectedCategories.includes('influencer') && (p.isInfluencer || ['silver','gold','diamond'].includes(p.borderType || ''))))
+                return nonAdMarkers.filter(m =>
+                  m.lat >= sw.lat && m.lat <= ne.lat &&
+                  m.lng >= sw.lng && m.lng <= ne.lng
                 );
-              }
+              })();
+              // allPosts에서 전체 데이터(댓글 수 등)를 병합
+              const filtered = boundsFiltered.map(m => allPosts.find(p => p.id === m.id) || m);
               // 최신순 정렬 후 안 본 포스팅 우선
               filtered.sort((a, b) => {
                 const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
