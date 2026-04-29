@@ -987,15 +987,26 @@ const Index = () => {
                               m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
                             )
                           : displayedMarkers;
-                        // 광고 포함 전체를 시간 순으로 정렬 (광고는 start_date 기준)
-                        const sorted = [...boundsFiltered].sort((a, b) => {
+                        // 일반 포스팅만 시간 순 정렬
+                        const normalPosts = boundsFiltered.filter(p => !p.isAd);
+                        const adPosts = boundsFiltered.filter(p => p.isAd);
+                        const sorted = [...normalPosts].sort((a, b) => {
                           const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
                           const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
                           return bTime - aTime;
                         });
                         const unseen = sorted.filter(p => !viewedIds.has(p.id));
                         const seen = sorted.filter(p => viewedIds.has(p.id));
-                        setPostListInitialPosts([...unseen, ...seen]);
+                        const normalList = [...unseen, ...seen];
+
+                        // 광고를 랜덤 위치에 삽입
+                        // start_date가 있는 광고는 해당 날짜에 맞는 위치, 없는 광고는 완전 랜덤
+                        const finalList = [...normalList];
+                        adPosts.forEach(ad => {
+                          const insertAt = Math.floor(Math.random() * (finalList.length + 1));
+                          finalList.splice(insertAt, 0, ad);
+                        });
+                        setPostListInitialPosts(finalList);
 
                         // 카메라 셔터 애니메이션 시작
                         setShutterActive(true);
