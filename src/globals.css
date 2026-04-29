@@ -225,9 +225,8 @@
 }
 
 @keyframes ad-spin {
-  0%   { transform: rotateY(0deg); }
-  75%  { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
+  0%,75%  { transform: rotateY(0deg); }
+  100%    { transform: rotateY(360deg); }
 }
 
 .animate-ad-breathing {

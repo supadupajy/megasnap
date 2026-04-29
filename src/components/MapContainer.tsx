@@ -79,7 +79,7 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
-  const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '');
+  const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '' );
   const authUserRef = useRef(authUser);
 
   useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
@@ -1042,31 +1042,22 @@ const MapContainer = ({
     else if (borderType === 'silver') { inlineBorderStyle = "border: 4.5px solid #94a3b8;"; inlineShadow = "0 0 16px rgba(148, 163, 184, 0.7), inset 0 0 8px rgba(148, 163, 184, 0.3)"; influencerClass = "influencer-glow"; }
 
     const adStyleTag = isAd ? `<style>
-      @keyframes _ad_orbit_1 { 0%{transform:rotate(0deg) translateX(36px) rotate(0deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(360deg) translateX(36px) rotate(-360deg);opacity:1} }
-      @keyframes _ad_orbit_2 { 0%{transform:rotate(90deg) translateX(36px) rotate(-90deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(450deg) translateX(36px) rotate(-450deg);opacity:1} }
-      @keyframes _ad_orbit_3 { 0%{transform:rotate(180deg) translateX(36px) rotate(-180deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(540deg) translateX(36px) rotate(-540deg);opacity:1} }
-      @keyframes _ad_orbit_4 { 0%{transform:rotate(270deg) translateX(36px) rotate(-270deg);opacity:1} 50%{opacity:.6} 100%{transform:rotate(630deg) translateX(36px) rotate(-630deg);opacity:1} }
-      @keyframes _ad_glow_pulse { 0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)} }
+      @keyframes _ad_flip { 0%,75%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
     </style>` : '';
 
     const adLabelHtml = isAd
-      ? `<div style="width:100%;background:linear-gradient(90deg,#fbbf24,#ef4444,#ec4899,#8b5cf6,#3b82f6,#fbbf24);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">AD</div>`
+      ? `<div style="width:100%;background:#2563eb;color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 -2px 10px rgba(0,0,0,0.1);line-height:1.2;">AD</div>`
       : '';
 
-    const adSparklesHtml = isAd ? `
-      <span style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #fbbf24);color:#fbbf24;animation:_ad_orbit_1 3s linear infinite;">✦</span>
-      <span style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #ec4899);color:#ec4899;animation:_ad_orbit_2 3s linear infinite;">★</span>
-      <span style="position:absolute;top:50%;left:50%;font-size:12px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #60a5fa);color:#60a5fa;animation:_ad_orbit_3 3s linear infinite;">✦</span>
-      <span style="position:absolute;top:50%;left:50%;font-size:10px;line-height:1;pointer-events:none;z-index:20;filter:drop-shadow(0 0 3px #a78bfa);color:#a78bfa;animation:_ad_orbit_4 3s linear infinite;">★</span>
-    ` : '';
+    const adSparklesHtml = '';
 
     // 글로우를 z-index:-1 별도 레이어로 분리 → 라벨/이미지 뒤에 완전히 숨음
     const adGlowLayer = isAd
-      ? `<div style="position:absolute;top:50%;left:50%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,0.7) 0%,rgba(139,92,246,0.4) 50%,transparent 75%);filter:blur(8px);z-index:-1;pointer-events:none;animation:_ad_glow_pulse 1.8s ease-in-out infinite;"></div>`
+      ? `<div style="position:absolute;top:50%;left:50%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.6) 0%,rgba(59,130,246,0.3) 50%,transparent 75%);filter:blur(8px);z-index:-1;pointer-events:none;"></div>`
       : '';
 
     const innerBoxStyle = isAd
-      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #ec4899;background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`
+      ? `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:4.5px solid #2563eb;box-shadow:0 0 20px rgba(37,99,235,0.6);background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;animation:_ad_flip 4s ease-in-out infinite;transform-style:preserve-3d;`
       : `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
