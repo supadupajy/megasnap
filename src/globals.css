@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css');
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -40,6 +42,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'LINE Seed KR', sans-serif;
     /* [FIX] 안드로이드/iOS 상태바 침범 방지 - 상단만 적용, 하단은 BottomNav에서 처리 */
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: 0px !important;
