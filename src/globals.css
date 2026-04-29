@@ -438,8 +438,9 @@
 .ad-post-wrapper {
   position: relative;
   border-radius: 1rem;
-  overflow: hidden;
   padding: 2px;
+  will-change: transform;
+  transform: translateZ(0);
   background-image: conic-gradient(
     from var(--ad-angle),
     #1d4ed8 0deg,
@@ -464,7 +465,8 @@
 /* PostDetail 모달에서 광고 카드 전체 높이 채우기 */
 .ad-post-wrapper.w-full.h-full {
   border-radius: 30px;
-  overflow: hidden;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .ad-post-wrapper.w-full.h-full > .ad-post-inner {
   border-radius: 28px;
