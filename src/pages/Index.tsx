@@ -1132,6 +1132,8 @@ const Index = () => {
             authUserId={authUser?.id}
             onDeletePost={handlePostDeleted}
             openedViewedIds={postListOpenedViewedIds}
+            viewedIds={viewedIds}
+            markAsViewed={markAsViewed}
           />
         )}
       </AnimatePresence>

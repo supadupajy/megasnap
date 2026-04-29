@@ -8,7 +8,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import PostItem from './PostItem';
 import { Post } from '@/types';
-import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -158,6 +157,8 @@ interface PostListOverlayProps {
   authUserId?: string | null;
   onDeletePost?: (id: string) => void;
   openedViewedIds: Set<string>; // 오버레이가 열릴 때의 viewedIds 스냅샷 (외부에서 주입)
+  viewedIds: Set<string>; // 실시간 viewedIds (부모에서 주입)
+  markAsViewed: (id: string) => void; // 부모에서 주입
 }
 
 const PostListOverlay = ({ 
@@ -170,9 +171,10 @@ const PostListOverlay = ({
   authUserId,
   onDeletePost,
   openedViewedIds,
+  viewedIds,
+  markAsViewed,
 }: PostListOverlayProps) => {
   const navigate = useNavigate();
-  const { viewedIds, markAsViewed } = useViewedPosts();
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
