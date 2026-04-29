@@ -119,6 +119,9 @@ const Index = () => {
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
   // 오버레이가 열릴 때 한 번만 계산된 포스트 목록 (viewedIds 변화로 재정렬 방지)
   const [postListInitialPosts, setPostListInitialPosts] = useState<Post[]>([]);
+  // 모두보기 ripple 애니메이션 상태
+  const [viewAllRipple, setViewAllRipple] = useState<{ x: number; y: number; size: number } | null>(null);
+  const viewAllBtnRef = useRef<HTMLButtonElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
     setSelectedCategories(cats);
@@ -808,6 +811,21 @@ const Index = () => {
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
+
+      {/* 모두보기 ripple 전환 오버레이 */}
+      {viewAllRipple && (
+        <div className="view-all-ripple-overlay">
+          <div
+            className="view-all-ripple-circle"
+            style={{
+              left: viewAllRipple.x,
+              top: viewAllRipple.y,
+              width: viewAllRipple.size,
+              height: viewAllRipple.size,
+            }}
+          />
+        </div>
+      )}
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
@@ -951,8 +969,24 @@ const Index = () => {
                 <div className="relative">
                   {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
-                    onClick={() => {
+                    ref={viewAllBtnRef}
+                    onClick={(e) => {
                       if (displayedPostCount > 0 && currentZoom < 7) {
+                        // 버튼 위치 계산 (화면 기준 중심점)
+                        const btn = viewAllBtnRef.current;
+                        const rect = btn?.getBoundingClientRect();
+                        const cx = rect ? rect.left + rect.width / 2 : e.clientX;
+                        const cy = rect ? rect.top + rect.height / 2 : e.clientY;
+
+                        // 버튼 중심에서 화면 모서리까지의 최대 거리 × 2 = ripple 지름
+                        const maxDist = Math.sqrt(
+                          Math.pow(Math.max(cx, window.innerWidth - cx), 2) +
+                          Math.pow(Math.max(cy, window.innerHeight - cy), 2)
+                        );
+                        const rippleSize = maxDist * 2.2;
+
+                        setViewAllRipple({ x: cx, y: cy, size: rippleSize });
+
                         // 광고 포스팅 ID도 스냅샷에 포함
                         const adIds = displayedMarkers.filter(p => p.isAd).map(p => p.id);
                         const snapshotViewedIds = new Set([...viewedIds, ...adIds]);
@@ -978,7 +1012,11 @@ const Index = () => {
                         const seen = sorted.filter(p => viewedIds.has(p.id));
                         setPostListInitialPosts([...unseen, ...adPosts, ...seen]);
 
-                        setIsPostListOpen(true);
+                        // ripple 애니메이션(0.55s) 후 오버레이 열기
+                        setTimeout(() => {
+                          setViewAllRipple(null);
+                          setIsPostListOpen(true);
+                        }, 480);
                       }
                     }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}
