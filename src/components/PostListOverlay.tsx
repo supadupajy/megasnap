@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
 
-const ObservedPostItem = ({ 
+const ObservedPostItem = React.memo(({
   post, 
   onVisible, 
   isViewed, 
@@ -134,9 +134,9 @@ const ObservedPostItem = ({
 
   return (
     <div ref={itemRef} id={`post-${post.id}`} className="scroll-mt-0">
-      <PostItem 
+      <PostItem
         post={fullPost}
-        isViewed={isViewed} 
+        isViewed={isViewed}
         onLikeToggle={onLikeToggle}
         onLocationClick={(e, lat, lng) => onLocationClick(e, lat, lng, fullPost)}
         onDelete={onDelete}
@@ -145,7 +145,7 @@ const ObservedPostItem = ({
       />
     </div>
   );
-};
+});
 
 interface PostListOverlayProps {
   isOpen: boolean;
@@ -427,10 +427,10 @@ const PostListOverlay = ({
                     <div className="flex-1 h-px bg-gray-300" />
                   </div>
                 )}
-                <ObservedPostItem 
+                <ObservedPostItem
                   post={post}
                   isViewed={viewedIds.has(post.id)}
-                  onVisible={(id) => markAsViewed(id)}
+                  onVisible={markAsViewed}
                   onLikeToggle={handleLikeToggle}
                   onLocationClick={(e, lat, lng, fullPost) => {
                     window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));

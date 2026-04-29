@@ -118,6 +118,8 @@ const Index = () => {
   const [isPostListOpen, setIsPostListOpen] = useState(false);
   // 오버레이가 열릴 때의 viewedIds 스냅샷 (구분선 위치 고정용)
   const [postListOpenedViewedIds, setPostListOpenedViewedIds] = useState<Set<string>>(new Set());
+  // 오버레이가 열릴 때 한 번만 계산된 포스트 목록 (viewedIds 변화로 재정렬 방지)
+  const [postListInitialPosts, setPostListInitialPosts] = useState<Post[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
     setSelectedCategories(cats);
@@ -1045,9 +1047,31 @@ const Index = () => {
                   <button
                     onClick={() => {
                       if (displayedPostCount > 0 && currentZoom < 7) {
-                        // 광고 포스팅 ID도 스냅샷에 포함 (광고는 항상 맨 앞이므로 이미 본 것으로 처리)
-                        const adIds = allPosts.filter(p => p.isAd).map(p => p.id);
-                        setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
+                        // 광고 포스팅 ID도 스냅샷에 포함
+                        const adIds = displayedMarkers.filter(p => p.isAd).map(p => p.id);
+                        const snapshotViewedIds = new Set([...viewedIds, ...adIds]);
+                        setPostListOpenedViewedIds(snapshotViewedIds);
+
+                        // initialPosts를 클릭 시점에 한 번만 계산 (viewedIds 변화로 재정렬 방지)
+                        const bounds = mapData?.bounds;
+                        const boundsFiltered = bounds
+                          ? displayedMarkers.filter(m =>
+                              m.lat != null && m.lng != null &&
+                              m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
+                              m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
+                            )
+                          : displayedMarkers;
+                        const adPosts = boundsFiltered.filter(p => p.isAd);
+                        const normalPosts = boundsFiltered.filter(p => !p.isAd);
+                        const sorted = [...normalPosts].sort((a, b) => {
+                          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+                          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+                          return bTime - aTime;
+                        });
+                        const unseen = sorted.filter(p => !viewedIds.has(p.id));
+                        const seen = sorted.filter(p => viewedIds.has(p.id));
+                        setPostListInitialPosts([...unseen, ...adPosts, ...seen]);
+
                         setIsPostListOpen(true);
                       }
                     }}
@@ -1110,28 +1134,7 @@ const Index = () => {
             key="post-list-overlay"
             isOpen={isPostListOpen}
             onClose={() => setIsPostListOpen(false)}
-            initialPosts={(() => {
-              // 뱃지와 동일한 소스(displayedMarkers)를 사용하여 숫자 일치
-              const bounds = mapData?.bounds;
-              const boundsFiltered = bounds
-                ? displayedMarkers.filter(m =>
-                    m.lat != null && m.lng != null &&
-                    m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-                    m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
-                  )
-                : displayedMarkers;
-              // 일반 포스트는 최신순 + 안 본 것 우선, 광고는 seen 영역에 포함
-              const adPosts = boundsFiltered.filter(p => p.isAd);
-              const normalPosts = boundsFiltered.filter(p => !p.isAd);
-              const sorted = [...normalPosts].sort((a, b) => {
-                const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-                const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-                return bTime - aTime;
-              });
-              const unseen = sorted.filter(p => !viewedIds.has(p.id));
-              const seen = sorted.filter(p => viewedIds.has(p.id));
-              return [...unseen, ...adPosts, ...seen];
-            })()}
+            initialPosts={postListInitialPosts}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}
             selectedCategories={selectedCategories}
