@@ -609,6 +609,7 @@ const MapContainer = ({
           if (!highlightingIdsRef.current.has(post.id)) {
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
+            scheduleOverlapBadgeUpdateRef.current();
           } else {
             content.setAttribute('data-content-state', contentStateKey);
           }
@@ -646,6 +647,7 @@ const MapContainer = ({
       const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
       content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
       content.setAttribute('data-content-state', newStateKey);
+      scheduleOverlapBadgeUpdateRef.current();
     });
   }, [viewedPostIds, internalViewedIds, isMapReady]);
 
@@ -715,6 +717,7 @@ const MapContainer = ({
               const nowStateKey = `${isViewedNow}-${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isSeedNow}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}`;
               content.innerHTML = getMarkerInnerHtmlRef.current(pNow, isViewedNow);
               content.setAttribute('data-content-state', nowStateKey);
+              scheduleOverlapBadgeUpdateRef.current();
             }
             // marker-appear-animation 제거 (innerHTML 교체 후이므로 안전)
             content.classList.remove('marker-appear-animation');
@@ -753,6 +756,7 @@ const MapContainer = ({
                 const finalStateKey = `${isViewed2}-${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isSeed2}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}`;
                 content.innerHTML = getMarkerInnerHtmlRef.current(p2, isViewed2);
                 content.setAttribute('data-content-state', finalStateKey);
+                scheduleOverlapBadgeUpdateRef.current();
               }
               content.classList.remove('highlighted');
               highlightingIdsRef.current.delete(postId);
@@ -1070,46 +1074,52 @@ const MapContainer = ({
     }
 
     // 배지 DOM 업데이트
+    // 배지는 content(최상위 div)의 직접 자식으로 붙임 → innerHTML 교체에 영향 안 받음
     overlaysRef.current.forEach((overlay, id) => {
+      if (overlay.getMap() === null) return;
       const content = overlay.getContent() as HTMLElement;
       if (!content) return;
 
-      const existingBadge = content.querySelector('.overlap-badge') as HTMLElement | null;
-      const group = groups.find(g => g.some(m => m.id === id));
+      // content 직접 자식 중 overlap-badge만 찾음 (querySelector는 하위 전체 탐색이라 제외)
+      const existingBadge = Array.from(content.children).find(
+        el => el.classList.contains('overlap-badge')
+      ) as HTMLElement | undefined;
+
       const isRep = representativeIds.has(id);
+      // markerInfos에서 해당 id가 속한 그룹 찾기 (지도에 표시된 마커만 포함된 groups)
+      const group = groups.find(g => g.some(m => m.id === id));
       const count = group ? group.length : 1;
 
       if (isRep && count >= 2) {
         const countStr = String(count);
         if (existingBadge) {
-          // 숫자만 업데이트
           if (existingBadge.getAttribute('data-count') !== countStr) {
             existingBadge.setAttribute('data-count', countStr);
             existingBadge.textContent = countStr;
           }
         } else {
-          // 새 배지 생성
           const badge = document.createElement('div');
           badge.className = 'overlap-badge';
           badge.setAttribute('data-count', countStr);
           badge.textContent = countStr;
           badge.style.cssText = [
             'position:absolute',
-            'top:-6px',
-            'right:-6px',
-            'min-width:18px',
-            'height:18px',
-            'padding:0 4px',
-            'background:#1a1a2e',
+            'top:-8px',
+            'left:50%',
+            'transform:translateX(-50%)',
+            'min-width:20px',
+            'height:20px',
+            'padding:0 5px',
+            'background:#4f46e5',
             'color:#ffffff',
-            'font-size:10px',
+            'font-size:11px',
             'font-weight:800',
-            'border-radius:9px',
+            'border-radius:10px',
             'display:flex',
             'align-items:center',
             'justify-content:center',
             'border:2px solid #ffffff',
-            'box-shadow:0 2px 6px rgba(0,0,0,0.35)',
+            'box-shadow:0 2px 8px rgba(79,70,229,0.45)',
             'z-index:9999',
             'pointer-events:none',
             'letter-spacing:-0.02em',
@@ -1117,14 +1127,10 @@ const MapContainer = ({
             'box-sizing:border-box',
             markersHiddenRef.current ? 'opacity:0' : 'opacity:1',
           ].join(';');
-          // marker-content-wrapper 또는 marker-scaling-target에 붙임
-          const wrapper = content.querySelector('.marker-scaling-target') as HTMLElement | null;
-          const target = wrapper || content;
-          target.style.position = 'relative';
-          target.appendChild(badge);
+          content.style.position = 'relative';
+          content.appendChild(badge);
         }
       } else {
-        // 대표 마커가 아니거나 그룹 크기 1이면 배지 제거
         if (existingBadge) existingBadge.remove();
       }
     });
@@ -1138,6 +1144,10 @@ const MapContainer = ({
       updateOverlapBadges();
     }, 150);
   }, [updateOverlapBadges]);
+
+  // innerHTML 교체 후 배지 복원을 위한 ref (getMarkerInnerHtml 내부에서 접근)
+  const scheduleOverlapBadgeUpdateRef = useRef(scheduleOverlapBadgeUpdate);
+  useEffect(() => { scheduleOverlapBadgeUpdateRef.current = scheduleOverlapBadgeUpdate; }, [scheduleOverlapBadgeUpdate]);
 
   // 지도 이벤트(idle / zoom_changed / dragend)에 연결
   useEffect(() => {
