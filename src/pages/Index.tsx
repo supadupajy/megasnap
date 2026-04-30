@@ -9,6 +9,7 @@ import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
+import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getYoutubeThumbnail } from '@/lib/utils';
@@ -978,6 +979,13 @@ const Index = () => {
               searchResultLocation={searchResultLocation}
               onMapClick={() => setSearchResultLocation(null)}
             />
+            {/* 화면 밖 마커 방향 표시 */}
+            {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
+              <OffScreenMarkerIndicator
+                posts={displayedMarkers}
+                bounds={mapData?.bounds || null}
+              />
+            )}
           </div>
 
           <AnimatePresence>
