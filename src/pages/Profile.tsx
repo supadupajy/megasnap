@@ -113,6 +113,8 @@ const Profile = () => {
 
     return {
       id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
+      user_id: p.user_id,
+      owner_id: p.user_id,
       user: {
         id: p.user_id,
         name: p.user_id === authUser?.id ? displayName : (p.user_name || '탐험가'),
