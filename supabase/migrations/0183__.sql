@@ -1,0 +1,1 @@
+SELECT public.generate_random_nickname() AS test_nickname FROM generate_series(1, 5);
