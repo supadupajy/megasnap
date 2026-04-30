@@ -794,11 +794,18 @@ const Index = () => {
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['all']);
-      setTimeout(() => setCurrentZoom(5), 500);
       if (routeState.post && routeState.post.lat != null && routeState.post.lng != null) {
-        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+        // zoom 먼저 설정 후 이동 (zoom 변경이 center를 리셋하는 충돌 방지)
+        setCurrentZoom(5);
+        currentZoomRef.current = 5;
+        // zoom 적용 후 이동 (300ms 대기)
+        setTimeout(() => {
+          focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+        }, 350);
       } else if (routeState.center && routeState.center.lat != null) {
-        setMapCenter(routeState.center);
+        setCurrentZoom(5);
+        currentZoomRef.current = 5;
+        setTimeout(() => setMapCenter(routeState.center), 350);
       } else {
         handleCurrentLocation();
       }

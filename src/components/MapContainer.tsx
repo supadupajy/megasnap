@@ -60,6 +60,7 @@ const MapContainer = ({
   const searchOverlayRef = useRef<any>(null);
   const highlightingIdsRef = useRef<Set<string>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
+  const levelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(6);
@@ -461,33 +462,8 @@ const MapContainer = ({
         if (mapInstance.current) {
           mapInstance.current.relayout();
           updateZoomClass();
-
-          // centerRef.current가 있고 현재 지도 center와 다르면 setCenter 하지 않음
-          // (smoothMoveTo가 이미 이동 중일 수 있으므로 덮어쓰지 않음)
-          const targetCenter = centerRef.current;
-          const mapCenter = mapInstance.current.getCenter();
-          const shouldOverrideCenter = !targetCenter ||
-            (Math.abs(mapCenter.getLat() - targetCenter.lat) < 0.0001 &&
-             Math.abs(mapCenter.getLng() - targetCenter.lng) < 0.0001);
-
-          if (shouldOverrideCenter) {
-            mapInstance.current.setCenter(mapCenter);
-          }
-
-          const bounds = mapInstance.current.getBounds();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const mapLevel = mapInstance.current.getLevel();
-          const reportCenter = mapInstance.current.getCenter();
-
-          onMapChangeRef.current({
-            bounds: {
-              sw: { lat: sw.getLat(), lng: sw.getLng() },
-              ne: { lat: ne.getLat(), lng: ne.getLng() }
-            },
-            center: { lat: reportCenter.getLat(), lng: reportCenter.getLng() },
-            level: mapLevel,
-          });
+          // setCenter 호출 완전 제거 - smoothMoveTo 진행 중인 경우 덮어쓰기 방지
+          // idle 이벤트가 자동으로 onMapChangeRef를 호출하므로 여기서 중복 호출 불필요
         }
       }, 200);
 
@@ -686,9 +662,15 @@ const MapContainer = ({
               }
             });
 
-            // marker-appear-animation 제거: highlighted의 animation:none이 forwards fill을
-            // 날려버려 opacity:0으로 순간 복귀하는 깜빡임 방지
+            // marker-appear-animation 제거 후 marker-content-wrapper에 opacity:1 인라인 고정
+            // CSS animation forwards fill이 제거되면 opacity:0으로 돌아가는 현상 방지
             content.classList.remove('marker-appear-animation');
+            const wrapper = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
+            if (wrapper) {
+              wrapper.style.opacity = '1';
+              wrapper.style.transform = 'scale(1) translateY(0)';
+              wrapper.style.animation = 'none';
+            }
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
@@ -700,9 +682,9 @@ const MapContainer = ({
                 return;
               }
               // highlighted 클래스만 제거 - innerHTML 교체 절대 금지
-              // innerHTML 교체 시 MY 마커가 순간적으로 흰색으로 깜빡이는 현상 발생
               content.classList.remove('highlighted');
               highlightingIdsRef.current.delete(postId);
+              // 인라인 스타일 유지 (제거하면 다시 opacity:0으로 돌아갈 수 있음)
 
               const p2 = postsRef.current.find(item => item.id === postId);
               overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
@@ -798,15 +780,24 @@ const MapContainer = ({
 
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
-    const timer = setTimeout(() => {
+    if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
+    levelTimerRef.current = setTimeout(() => {
+      levelTimerRef.current = null;
       const map = mapInstance.current;
       if (!map) return;
+      // smoothMoveTo 진행 중이면 setLevel 스킵 (카카오맵이 center를 리셋하는 부작용 방지)
+      if (animationFrameRef.current) return;
       map.setLevel(level, { animate: false });
       const newLevel = map.getLevel();
       setCurrentLevel(newLevel);
       currentLevelRef.current = newLevel;
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      if (levelTimerRef.current) {
+        clearTimeout(levelTimerRef.current);
+        levelTimerRef.current = null;
+      }
+    };
   }, [level, isMapReady]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
@@ -816,6 +807,11 @@ const MapContainer = ({
 
     if (window.getSelection) window.getSelection()?.removeAllRanges();
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    // level 변경 타이머가 이동 중에 실행되면 카카오맵이 center를 리셋하므로 취소
+    if (levelTimerRef.current) {
+      clearTimeout(levelTimerRef.current);
+      levelTimerRef.current = null;
+    }
 
     const startCenter = map.getCenter();
     const startLat = startCenter.getLat();
