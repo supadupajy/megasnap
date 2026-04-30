@@ -645,6 +645,10 @@ const MapContainer = ({
 
       if (!postId) return;
 
+      // 즉시 highlightingIdsRef에 추가 - overlay를 찾기 전에 보호 시작
+      // (300ms throttle 후 React 리렌더가 일어나도 innerHTML 교체 방지)
+      highlightingIdsRef.current.add(postId);
+
       const tryHighlight = (retryCount = 0) => {
         const overlay = overlaysRef.current.get(postId);
         
@@ -698,6 +702,9 @@ const MapContainer = ({
 
         if (retryCount < 15) {
           setTimeout(() => tryHighlight(retryCount + 1), 200);
+        } else {
+          // 재시도 포기 시 보호 해제
+          highlightingIdsRef.current.delete(postId);
         }
       };
 
