@@ -146,6 +146,8 @@ const Index = () => {
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
+  // route state로 위치가 지정된 경우 geolocation이 덮어쓰지 못하도록 보호
+  const locationLockedRef = useRef(false);
 
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
@@ -654,6 +656,9 @@ const Index = () => {
 
   // ── 현재 위치 ────────────────────────────────────────────────
   const moveToCurrentLocation = useCallback(async (showToast = true) => {
+    // route state로 위치가 이미 지정된 경우 geolocation으로 덮어쓰지 않음
+    if (locationLockedRef.current) return;
+
     const toastId = showToast ? showLoading('현재 위치를 확인 중입니다...') : null;
 
     const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
@@ -809,27 +814,35 @@ const Index = () => {
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['all']);
       if (routeState.post && routeState.post.lat != null && routeState.post.lng != null) {
+        locationLockedRef.current = true;
         // zoom 변경 없이 바로 이동 (zoom 변경이 카카오맵 center를 리셋하는 충돌 방지)
         focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+        setTimeout(() => { locationLockedRef.current = false; }, 5000);
       } else if (routeState.center && routeState.center.lat != null) {
+        locationLockedRef.current = true;
         setMapCenter(routeState.center);
+        setTimeout(() => { locationLockedRef.current = false; }, 5000);
       } else {
         handleCurrentLocation();
       }
     } else if (routeState.post) {
+      locationLockedRef.current = true;
       // zoom이 지정된 경우 먼저 줌 레벨 설정 후 이동 (순간이동 방지)
       if (routeState.zoom != null) {
         setCurrentZoom(routeState.zoom);
         currentZoomRef.current = routeState.zoom;
       }
       focusPostOnMap(routeState.post, routeState.center);
+      setTimeout(() => { locationLockedRef.current = false; }, 5000);
     } else if (routeState.center) {
+      locationLockedRef.current = true;
       setSelectedPostId(null);
       if (routeState.zoom != null) {
         setCurrentZoom(routeState.zoom);
         currentZoomRef.current = routeState.zoom;
       }
       setMapCenter(routeState.center);
+      setTimeout(() => { locationLockedRef.current = false; }, 5000);
     }
     if (routeState.startSelection) {
       setIsPostListOpen(false);
