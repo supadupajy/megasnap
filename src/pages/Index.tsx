@@ -260,15 +260,35 @@ const Index = () => {
       try {
         const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
         if (cancelled) return;
-        if (raw.length === 0) return;
 
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
-          raw.forEach(r => {
+
+          // DB에서 반환된 포스트 ID 집합
+          const fetchedIds = new Set(raw.map((r: any) => String(r.id)));
+
+          // 현재 bounds 안에 있는 일반 포스트 중 DB에서 돌아오지 않은 것은 삭제된 것으로 제거
+          // (광고 마커는 ads 테이블에서 별도 관리하므로 제외)
+          existingMap.forEach((post, id) => {
+            if (String(id).startsWith('ad-map-marker-')) return;
+            if (post.lat == null || post.lng == null) return;
+            const inBounds =
+              post.lat >= Math.min(sw.lat, ne.lat) &&
+              post.lat <= Math.max(sw.lat, ne.lat) &&
+              post.lng >= Math.min(sw.lng, ne.lng) &&
+              post.lng <= Math.max(sw.lng, ne.lng);
+            if (inBounds && !fetchedIds.has(id)) {
+              existingMap.delete(id);
+            }
+          });
+
+          // DB에서 반환된 포스트 추가/갱신
+          raw.forEach((r: any) => {
             if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
             existingMap.set(r.id, mapRawToPost(r, prevPost));
           });
+
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
           return combined;
@@ -592,20 +612,37 @@ const Index = () => {
       lastBoundsKeyRef.current = '';
 
       const raw = await fetchPostsInBounds(sw, ne, zoom, center);
-      if (raw.length > 0) {
-        setAllPosts(prev => {
-          const existingMap = new Map(prev.map(p => [p.id, p]));
-          raw.forEach(r => {
-            // 광고 마커는 ads 테이블에서 별도 관리 — 새로고침으로 덮어쓰지 않음
-            if (String(r.id).startsWith('ad-map-marker-')) return;
-            const prevPost = existingMap.get(r.id) || null;
-            existingMap.set(r.id, mapRawToPost(r, prevPost));
-          });
-          const combined = Array.from(existingMap.values()).slice(0, 5000);
-          mapCache.posts = combined;
-          return combined;
+      setAllPosts(prev => {
+        const existingMap = new Map(prev.map(p => [p.id, p]));
+
+        // DB에서 반환된 포스트 ID 집합
+        const fetchedIds = new Set(raw.map((r: any) => String(r.id)));
+
+        // 현재 bounds 안에 있는 일반 포스트 중 DB에서 돌아오지 않은 것은 삭제된 것으로 제거
+        existingMap.forEach((post, id) => {
+          if (String(id).startsWith('ad-map-marker-')) return;
+          if (post.lat == null || post.lng == null) return;
+          const inBounds =
+            post.lat >= Math.min(sw.lat, ne.lat) &&
+            post.lat <= Math.max(sw.lat, ne.lat) &&
+            post.lng >= Math.min(sw.lng, ne.lng) &&
+            post.lng <= Math.max(sw.lng, ne.lng);
+          if (inBounds && !fetchedIds.has(id)) {
+            existingMap.delete(id);
+          }
         });
-      }
+
+        // 광고 마커는 ads 테이블에서 별도 관리 — 새로고침으로 덮어쓰지 않음
+        raw.forEach((r: any) => {
+          if (String(r.id).startsWith('ad-map-marker-')) return;
+          const prevPost = existingMap.get(r.id) || null;
+          existingMap.set(r.id, mapRawToPost(r, prevPost));
+        });
+
+        const combined = Array.from(existingMap.values()).slice(0, 5000);
+        mapCache.posts = combined;
+        return combined;
+      });
     }
 
     setIsRefreshing(false);
