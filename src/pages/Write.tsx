@@ -12,6 +12,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { useWriteStore } from '@/utils/write-store';
+import { mapCache } from '@/utils/map-cache';
 
 interface MediaFile {
   file: File;
@@ -225,10 +226,10 @@ const Write = () => {
         uploadedUrls.push(publicUrl);
       }
 
-      // ✅ [FIX] 위치 정보(latitude, longitude)를 initialLocation에서 정확히 가져오도록 보장
-      // location.state에서 전달된 좌표를 최우선으로 사용
-      const postLat = initialLocation?.lat || null;
-      const postLng = initialLocation?.lng || null;
+      // 위치 정보: 선택된 위치 → 지도 마지막 중심 순으로 fallback
+      const fallbackCenter = mapCache.lastCenter;
+      const postLat = initialLocation?.lat ?? fallbackCenter?.lat ?? null;
+      const postLng = initialLocation?.lng ?? fallbackCenter?.lng ?? null;
 
       const isFirstMediaVideo = mediaToUpload[0]?.type === 'video';
       
@@ -291,15 +292,18 @@ const Write = () => {
       clear();
       postDraftStore.clear();
       
-      // ✅ [FIX] filterUserId: 'me'와 함께 실제 post 객체를 넘겨 위치 이동 보장
-      navigate('/', { 
-        state: { 
-          triggerConfetti: true, 
+      // 업로드 완료 후 메인으로 이동 - 포스트 위치가 있으면 해당 위치로, 없으면 현재 지도 중심으로
+      const navigateCenter = (mappedPost.lat != null && mappedPost.lng != null)
+        ? { lat: mappedPost.lat, lng: mappedPost.lng }
+        : (mapCache.lastCenter || undefined);
+      navigate('/', {
+        state: {
+          triggerConfetti: true,
           filterUserId: 'me',
-          post: mappedPost,
-          center: { lat: mappedPost.lat, lng: mappedPost.lng }
-        }, 
-        replace: true 
+          post: mappedPost.lat != null ? mappedPost : undefined,
+          center: navigateCenter,
+        },
+        replace: true
       });
     } catch (err: any) {
       showError('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류'));

@@ -664,29 +664,13 @@ const MapContainer = ({
             overlaysRef.current.forEach((o, id) => {
               const c = o.getContent() as HTMLElement;
               if (c && c.classList.contains('highlighted') && id !== postId) {
+                // highlighted 클래스만 제거 - innerHTML 교체 금지 (깜빡임 방지)
                 c.classList.remove('highlighted');
-                c.classList.remove('marker-appear-animation');
                 highlightingIdsRef.current.delete(id);
-                const p = postsRef.current.find(item => item.id === id);
-                if (p) {
-                  // [FIX] 동영상 마커는 innerHTML 교체 시 <video>가 재로드되어 깜빡임 발생.
-                  // 동영상 마커는 innerHTML 교체를 생략하고 클래스 제거만 수행.
-                  const isVideoMarker = !!(p as any).videoUrl || (
-                    !p.isAd && typeof (p as any).image === 'string' &&
-                    (() => {
-                      const lower = ((p as any).image as string).toLowerCase().split('?')[0];
-                      return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
-                    })()
-                  );
-                  if (!isVideoMarker) {
-                    const stateKey = c.getAttribute('data-content-state') || '';
-                    const isViewed = stateKey.startsWith('true');
-                    c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-                  }
-                }
+                const prevPost = postsRef.current.find(item => item.id === id);
                 o.setZIndex(
-                  postsRef.current.find(item => item.id === id)?.isAd ? 500 :
-                  (postsRef.current.find(item => item.id === id)?.borderType !== 'none' ? 400 : 300)
+                  prevPost?.isAd ? 500 :
+                  (prevPost?.borderType !== 'none' ? 400 : 300)
                 );
               }
             });
@@ -704,55 +688,9 @@ const MapContainer = ({
                 highlightingIdsRef.current.delete(postId);
                 return;
               }
+              // highlighted 클래스만 제거 - innerHTML 교체 절대 금지
+              // innerHTML 교체 시 MY 마커가 순간적으로 흰색으로 깜빡이는 현상 발생
               content.classList.remove('highlighted');
-              content.classList.remove('marker-appear-animation');
-
-              const p = postsRef.current.find(item => item.id === postId);
-              if (p) {
-                const combinedViewed = new Set([
-                  ...Array.from(viewedPostIdsRef.current),
-                  ...Array.from(internalViewedIdsRef.current)
-                ]);
-                const isViewed = combinedViewed.has(postId);
-                const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
-                const currentAuthUser = authUserRef.current;
-                let isMineKey = false;
-                if (currentAuthUser) {
-                  if (!isSeed) {
-                    const ownerId = (p as any).owner_id || (p as any).user_id;
-                    isMineKey = !!(ownerId && String(ownerId) === String(currentAuthUser.id));
-                  } else {
-                    const displayId = (p as any).display_user_id;
-                    isMineKey = !!(displayId && String(displayId) === String(currentAuthUser.id));
-                  }
-                }
-                const isAdPendingKey = !!(p as any).isAdPending;
-                const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
-
-                // [FIX] 동영상 마커는 innerHTML 교체 시 <video>가 재로드되어 깜빡임 발생.
-                // 상태 변경이 없으면 innerHTML 교체를 완전히 생략하고 data-content-state만 갱신.
-                // 상태 변경이 있더라도 동영상 마커는 <video> 요소를 재사용하고 나머지만 교체.
-                const prevStateKey = content.getAttribute('data-content-state') || '';
-                const isVideoMarker = !!(p as any).videoUrl || (
-                  !p.isAd && typeof (p as any).image === 'string' &&
-                  (() => {
-                    const lower = ((p as any).image as string).toLowerCase().split('?')[0];
-                    return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
-                  })()
-                );
-
-                if (prevStateKey !== newStateKey) {
-                  if (isVideoMarker) {
-                    // 동영상 마커: <video> 요소를 보존하고 상태만 업데이트
-                    // innerHTML 교체 없이 data-content-state만 갱신 (깜빡임 방지)
-                    content.setAttribute('data-content-state', newStateKey);
-                  } else {
-                    content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-                    content.setAttribute('data-content-state', newStateKey);
-                  }
-                }
-                // 상태 변경 없으면 아무것도 하지 않음 (innerHTML 교체 생략)
-              }
               highlightingIdsRef.current.delete(postId);
 
               const p2 = postsRef.current.find(item => item.id === postId);
@@ -872,8 +810,8 @@ const MapContainer = ({
     const startLat = startCenter.getLat();
     const startLng = startCenter.getLng();
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
-    // 거리에 비례한 duration: 가까우면 빠르게, 멀면 최대 1200ms로 부드럽게
-    const duration = Math.min(Math.max(dist * 800, 400), 1200);
+    // 거리에 비례한 duration: 가까우면 빠르게, 멀면 최대 1500ms로 부드럽게
+    const duration = Math.min(Math.max(dist * 1200, 400), 1500);
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
@@ -901,6 +839,7 @@ const MapContainer = ({
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
+  // center prop 변경 또는 isMapReady 변경 시 부드럽게 이동
   useEffect(() => {
     if (isMapReady && mapInstance.current && center) {
       const currentCenter = mapInstance.current.getCenter();
