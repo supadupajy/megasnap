@@ -415,7 +415,10 @@ const MapContainer = ({
       if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
       if (mapInstance.current) return true;
 
-      const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
+      // 카카오맵 초기 위치는 항상 mapCache.lastCenter(이전 세션 마지막 위치) 사용
+      // centerRef.current(현재 prop)를 사용하면 routeState로 즉시 post 위치가 들어와
+      // smoothMoveTo가 작동하지 않고 순간이동처럼 보이는 문제 발생
+      const initialCenter = mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
       const initialLevel = levelRef.current ?? 6;
       const map = new kakao.maps.Map(containerRef.current!, {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
@@ -898,7 +901,8 @@ const MapContainer = ({
     const startLng = startCenter.getLng();
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
     // 거리에 비례한 duration: 가까우면 빠르게, 멀면 최대 1500ms로 부드럽게
-    const duration = Math.min(Math.max(dist * 1200, 400), 1500);
+    // 최소 700ms 보장 → 같은 동네 안에서도 부드러운 애니메이션 체감
+    const duration = Math.min(Math.max(dist * 1200, 700), 1500);
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
@@ -960,7 +964,8 @@ const MapContainer = ({
     const latDiff = Math.abs(currentCenter.getLat() - center.lat);
     const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
 
-    if (latDiff > 0.0001 || lngDiff > 0.0001) {
+    // 좀 더 작은 임계값으로 변경 — 대도시 내 같은 동 안 거리도 부드럽게 이동
+    if (latDiff > 0.00001 || lngDiff > 0.00001) {
       // 충분한 거리 차이가 있으면 부드럽게 이동
       smoothMoveTo(center.lat, center.lng, () => {
         window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
