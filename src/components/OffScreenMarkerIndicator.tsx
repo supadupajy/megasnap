@@ -153,7 +153,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     // 위치 계산
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      posStyle.top = 'calc(env(safe-area-inset-top, 0px) + 160px)';
+      // 트렌딩 포스트 시작(74px) + 트렌딩 높이(56px) + 여백(16px) = 146px
+      posStyle.top = 'calc(env(safe-area-inset-top, 0px) + 146px)';
       posStyle.left = `calc(${ratio * 100}% - 28px)`;
     } else if (dir === 'bottom') {
       posStyle.bottom = 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 90px)';
