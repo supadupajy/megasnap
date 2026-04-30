@@ -7,13 +7,20 @@ const IOS_APP_ID = '0000000000'; // 실제 App Store ID로 교체 필요
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 const APP_STORE_URL = `https://apps.apple.com/app/id${IOS_APP_ID}`;
 
+// 프로덕션 배포 URL (VITE_APP_URL 환경변수로 설정, 없으면 현재 origin 사용)
+const getBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_APP_URL;
+  if (envUrl) return envUrl.replace(/\/$/, ''); // 끝 슬래시 제거
+  // 개발 환경(localhost)이면 경고 표시용으로 origin 그대로 반환
+  return window.location.origin;
+};
+
 /**
  * 포스팅 공유 URL 생성
- * 웹 URL: https://[host]/post/[id]
+ * 웹 URL: https://[배포도메인]/post/[id]
  */
 export const getPostShareUrl = (postId: string): string => {
-  const baseUrl = window.location.origin;
-  return `${baseUrl}/post/${postId}`;
+  return `${getBaseUrl()}/post/${postId}`;
 };
 
 const copyToClipboard = async (text: string): Promise<void> => {
