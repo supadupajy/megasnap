@@ -11,8 +11,8 @@ interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
   mapCenter: { lat: number; lng: number } | null;
   onNavigate: (post: Post) => void;
-  topOffset: number;   // 상단 인디케이터 top 픽셀 (트렌딩 포스트 하단)
-  bottomOffset: number; // 하단 인디케이터 bottom 픽셀 (하단 네비 상단)
+  topOffset: number;
+  bottomOffset: number;
 }
 
 type Direction = 'top' | 'bottom' | 'left' | 'right';
@@ -20,8 +20,6 @@ type Direction = 'top' | 'bottom' | 'left' | 'right';
 interface DirectionGroup {
   count: number;
   nearest: Post | null;
-  // 화면 가장자리에서의 상대 위치 (0~1), 상하는 좌우 비율, 좌우는 상하 비율
-  edgeRatio: number;
 }
 
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
@@ -33,7 +31,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bottomOffset,
 }) => {
   const groups = useMemo<Record<Direction, DirectionGroup>>(() => {
-    const empty = (): DirectionGroup => ({ count: 0, nearest: null, edgeRatio: 0.5 });
+    const empty = (): DirectionGroup => ({ count: 0, nearest: null });
     const result: Record<Direction, DirectionGroup> = {
       top: empty(), bottom: empty(), left: empty(), right: empty(),
     };
@@ -43,28 +41,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const { sw, ne } = bounds;
     const cx = mapCenter.lng;
     const cy = mapCenter.lat;
-
-    // 위도/경도 범위
     const latRange = ne.lat - sw.lat;
     const lngRange = ne.lng - sw.lng;
 
     const dist = (p: Post) =>
       Math.sqrt(Math.pow((p.lat ?? 0) - cy, 2) + Math.pow((p.lng ?? 0) - cx, 2));
 
-    // 방향별 마커 경도/위도 합산 (평균 위치 계산용)
-    const sums: Record<Direction, { lngSum: number; latSum: number; count: number }> = {
-      top: { lngSum: 0, latSum: 0, count: 0 },
-      bottom: { lngSum: 0, latSum: 0, count: 0 },
-      left: { lngSum: 0, latSum: 0, count: 0 },
-      right: { lngSum: 0, latSum: 0, count: 0 },
-    };
-
     const addToDir = (dir: Direction, post: Post) => {
       result[dir].count++;
-      sums[dir].lngSum += post.lng!;
-      sums[dir].latSum += post.lat!;
-      sums[dir].count++;
-
       const d = dist(post);
       const nearestDist = result[dir].nearest ? dist(result[dir].nearest!) : Infinity;
       if (d < nearestDist) result[dir].nearest = post;
@@ -75,22 +59,18 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
       const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
       const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
-      if (inLat && inLng) return; // 화면 안
+      if (inLat && inLng) return;
 
-      // 카카오맵: ne = 북동(우상단), sw = 남서(좌하단)
-      // 위도: ne.lat > sw.lat (북쪽이 큰 값 = 화면 위쪽)
-      // 경도: ne.lng > sw.lng (동쪽이 큰 값 = 화면 오른쪽)
-      const isAbove = post.lat > ne.lat;  // 화면 위쪽 밖 (북쪽)
-      const isBelow = post.lat < sw.lat;  // 화면 아래쪽 밖 (남쪽)
-      const isLeft  = post.lng < sw.lng;  // 화면 왼쪽 밖 (서쪽)
-      const isRight = post.lng > ne.lng;  // 화면 오른쪽 밖 (동쪽)
+      const isAbove = post.lat > ne.lat;
+      const isBelow = post.lat < sw.lat;
+      const isLeft  = post.lng < sw.lng;
+      const isRight = post.lng > ne.lng;
 
       if (isAbove && !isLeft && !isRight) { addToDir('top', post); return; }
       if (isBelow && !isLeft && !isRight) { addToDir('bottom', post); return; }
       if (isLeft  && !isAbove && !isBelow) { addToDir('left', post); return; }
       if (isRight && !isAbove && !isBelow) { addToDir('right', post); return; }
 
-      // 대각선: 위도/경도 차이 비교로 주방향 결정
       if (isAbove && isLeft) {
         (post.lat - ne.lat) / latRange >= (sw.lng - post.lng) / lngRange
           ? addToDir('top', post) : addToDir('left', post);
@@ -106,30 +86,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       }
     });
 
-    // 각 방향별 평균 위치로 edgeRatio 계산
-    // top/bottom: 마커들의 평균 경도 → 화면 좌우 비율 (0=왼쪽, 1=오른쪽)
-    // left/right: 마커들의 평균 위도 → 화면 상하 비율 (0=위쪽, 1=아래쪽) — 위도는 반전
-    (['top', 'bottom', 'left', 'right'] as Direction[]).forEach(dir => {
-      const s = sums[dir];
-      if (s.count === 0) return;
-      if (dir === 'top' || dir === 'bottom') {
-        const avgLng = s.lngSum / s.count;
-        // 경도 → 화면 좌우 비율 (클램프 0.1~0.9)
-        result[dir].edgeRatio = Math.min(0.9, Math.max(0.1, (avgLng - sw.lng) / lngRange));
-      } else {
-        const avgLat = s.latSum / s.count;
-        // 위도 → 화면 상하 비율 (위도가 클수록 위쪽 = 비율 작음, 반전)
-        result[dir].edgeRatio = Math.min(0.9, Math.max(0.1, 1 - (avgLat - sw.lat) / latRange));
-      }
-    });
-
     return result;
   }, [posts, bounds, mapCenter]);
 
   const hasAny = (Object.values(groups) as DirectionGroup[]).some(g => g.count > 0);
   if (!hasAny) return null;
 
-  // 화살표 SVG
   const Arrow = ({ dir }: { dir: Direction }) => {
     const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
     return (
@@ -152,22 +114,25 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     if (group.count === 0) return null;
 
     const isVertical = dir === 'top' || dir === 'bottom';
-    const ratio = group.edgeRatio; // 0~1
 
-    // 위치 계산
+    // 항상 해당 가장자리 정중앙에 고정
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
       posStyle.top = `${topOffset + 12}px`;
-      posStyle.left = `calc(${ratio * 100}% - 28px)`;
+      posStyle.left = '50%';
+      posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
       posStyle.bottom = `${bottomOffset + 12}px`;
-      posStyle.left = `calc(${ratio * 100}% - 28px)`;
+      posStyle.left = '50%';
+      posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'left') {
       posStyle.left = '12px';
-      posStyle.top = `calc(${ratio * 100}% - 16px)`;
+      posStyle.top = '50%';
+      posStyle.transform = 'translateY(-50%)';
     } else {
       posStyle.right = '12px';
-      posStyle.top = `calc(${ratio * 100}% - 16px)`;
+      posStyle.top = '50%';
+      posStyle.transform = 'translateY(-50%)';
     }
 
     return (
