@@ -582,7 +582,7 @@ const MapContainer = ({
         }
       }
       const isAdPendingKey = !!(post as any).isAdPending;
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isAdPendingKey}-${post.likes}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
