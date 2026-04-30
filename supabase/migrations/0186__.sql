@@ -1,0 +1,1 @@
+SELECT id FROM public.profiles WHERE email = 'yeeha@kakao.com';
