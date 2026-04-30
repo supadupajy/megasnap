@@ -286,12 +286,20 @@ const Profile = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
-    navigate('/', { state: { post, center: { lat, lng }, zoom: 4 } });
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
+    // zoom 3 = 적당히 확대된 상태로 해당 포스팅 마커 위치로 이동
+    navigate('/', { state: { post, center: { lat, lng }, zoom: 3 } });
   }, [navigate]);
 
   const handleViewOnMap = () => {
-    const latestPost = myPosts[0];
-    navigate('/', { state: { filterUserId: 'me', post: latestPost, center: latestPost ? { lat: latestPost.lat, lng: latestPost.lng } : undefined } });
+    // 좌표가 있는 첫 번째 포스팅 찾기
+    const postWithCoords = myPosts.find(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng));
+    if (postWithCoords) {
+      navigate('/', { state: { post: postWithCoords, center: { lat: postWithCoords.lat, lng: postWithCoords.lng }, zoom: 3 } });
+    } else {
+      // 좌표 있는 포스팅이 없으면 그냥 지도로 이동
+      navigate('/');
+    }
   };
 
   const handleScrollToPosts = () => {
