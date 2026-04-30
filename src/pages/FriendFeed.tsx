@@ -12,6 +12,7 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
+import AdMobBanner from '@/components/AdMobBanner';
 
 const getTierFromFollowers = (followers: number) => {
   if (followers >= 10000000) return 'diamond';
@@ -66,6 +67,9 @@ const PostSkeleton = () => (
     </div>
   </div>
 );
+
+// 2~3개 포스팅마다 광고를 삽입하는 헬퍼
+const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
 
 const FriendFeed = () => {
   const navigate = useNavigate();
@@ -230,18 +234,40 @@ const FriendFeed = () => {
           </div>
         ) : (
           <div className="flex flex-col">
-            {filteredPosts.map((post) => (
-              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <PostItem
-                  post={post}
-                  onLikeToggle={() => handleLikeToggle(post.id)}
-                  onLocationClick={handleLocationClick}
-                  onDelete={handlePostDelete}
-                  autoPlayVideo={true}
-                  disablePulse={true}
-                />
-              </div>
-            ))}
+            {(() => {
+              const items: React.ReactNode[] = [];
+              let nextAdAt = getAdInterval();
+              let postCount = 0;
+              let adCount = 0;
+
+              filteredPosts.forEach((post, index) => {
+                items.push(
+                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
+                    <PostItem
+                      post={post}
+                      onLikeToggle={() => handleLikeToggle(post.id)}
+                      onLocationClick={handleLocationClick}
+                      onDelete={handlePostDelete}
+                      autoPlayVideo={true}
+                      disablePulse={true}
+                    />
+                  </div>
+                );
+
+                postCount++;
+
+                if (postCount >= nextAdAt) {
+                  adCount++;
+                  items.push(
+                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                  );
+                  postCount = 0;
+                  nextAdAt = getAdInterval();
+                }
+              });
+
+              return items;
+            })()}
 
             {noFollowing && (
               <div className="py-24 flex flex-col items-center justify-center text-center px-10">

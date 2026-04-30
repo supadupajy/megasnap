@@ -13,6 +13,7 @@ import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
+import AdMobBanner from './AdMobBanner';
 
 const ObservedPostItem = React.memo(({
   post, 
@@ -372,6 +373,9 @@ const PostListOverlay = ({
     }
   }, [authUserId, posts]);
 
+  // 2~3개 포스팅마다 광고를 삽입하는 헬퍼 함수
+  const getAdInterval = () => Math.floor(Math.random() * 2) + 2; // 2 또는 3
+
   if (!isOpen) return null;
 
   // 구분선 위치 계산:
@@ -415,32 +419,57 @@ const PostListOverlay = ({
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
-            {posts.map((post, index) => (
-              <React.Fragment key={post.id}>
-                {/* 이미 본 포스팅 구분선 */}
-                {firstViewedIndex !== -1 && index === firstViewedIndex && (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-y border-gray-200">
-                    <div className="flex-1 h-px bg-gray-300" />
-                    <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
-                      여기서부터는 이미 조회한 포스팅입니다
-                    </span>
-                    <div className="flex-1 h-px bg-gray-300" />
-                  </div>
-                )}
-                <ObservedPostItem
-                  post={post}
-                  isViewed={viewedIds.has(post.id)}
-                  onVisible={markAsViewed}
-                  onLikeToggle={handleLikeToggle}
-                  onLocationClick={(e, lat, lng, fullPost) => {
-                    window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
-                  }}
-                  onDelete={(id) => onDeletePost?.(id)}
-                  isPlaying={playingPostId === post.id}
-                  onPlayingChange={handlePlayingChange}
-                />
-              </React.Fragment>
-            ))}
+            {(() => {
+              const items: React.ReactNode[] = [];
+              let nextAdAt = getAdInterval();
+              let postCount = 0;
+              let adCount = 0;
+
+              posts.forEach((post, index) => {
+                // 이미 본 포스팅 구분선
+                if (firstViewedIndex !== -1 && index === firstViewedIndex) {
+                  items.push(
+                    <div key="divider" className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-y border-gray-200">
+                      <div className="flex-1 h-px bg-gray-300" />
+                      <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
+                        여기서부터는 이미 조회한 포스팅입니다
+                      </span>
+                      <div className="flex-1 h-px bg-gray-300" />
+                    </div>
+                  );
+                }
+
+                items.push(
+                  <ObservedPostItem
+                    key={post.id}
+                    post={post}
+                    isViewed={viewedIds.has(post.id)}
+                    onVisible={markAsViewed}
+                    onLikeToggle={handleLikeToggle}
+                    onLocationClick={(e, lat, lng, fullPost) => {
+                      window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
+                    }}
+                    onDelete={(id) => onDeletePost?.(id)}
+                    isPlaying={playingPostId === post.id}
+                    onPlayingChange={handlePlayingChange}
+                  />
+                );
+
+                postCount++;
+
+                // 광고 삽입 조건: 일반 포스팅(isAd 아닌 것)만 카운트
+                if (!post.isAd && postCount >= nextAdAt) {
+                  adCount++;
+                  items.push(
+                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                  );
+                  postCount = 0;
+                  nextAdAt = getAdInterval();
+                }
+              });
+
+              return items;
+            })()}
             
             {/* Infinite scroll sentinel */}
             {hasMore && (

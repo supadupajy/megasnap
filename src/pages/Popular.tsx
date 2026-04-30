@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
+import AdMobBanner from '@/components/AdMobBanner';
 import { motion } from 'framer-motion';
 import { showError } from '@/utils/toast';
 
@@ -92,6 +93,9 @@ const Popular = () => {
     if (!posts) return [];
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
+
+  // 2~3개 포스팅마다 광고를 삽입하는 헬퍼
+  const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
 
   const fetchPopularPosts = useCallback(async (pageNum: number) => {
     try {
@@ -230,18 +234,40 @@ const Popular = () => {
           </div>
         ) : (
           <div className="flex flex-col">
-            {filteredPosts.map((post) => (
-              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <PostItem
-                  post={post}
-                  onLikeToggle={() => handleLikeToggle(post.id)}
-                  onLocationClick={handleLocationClick}
-                  onDelete={handlePostDelete}
-                  autoPlayVideo={true}
-                  disablePulse={true}
-                />
-              </div>
-            ))}
+            {(() => {
+              const items: React.ReactNode[] = [];
+              let nextAdAt = getAdInterval();
+              let postCount = 0;
+              let adCount = 0;
+
+              filteredPosts.forEach((post, index) => {
+                items.push(
+                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
+                    <PostItem
+                      post={post}
+                      onLikeToggle={() => handleLikeToggle(post.id)}
+                      onLocationClick={handleLocationClick}
+                      onDelete={handlePostDelete}
+                      autoPlayVideo={true}
+                      disablePulse={true}
+                    />
+                  </div>
+                );
+
+                postCount++;
+
+                if (postCount >= nextAdAt) {
+                  adCount++;
+                  items.push(
+                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                  );
+                  postCount = 0;
+                  nextAdAt = getAdInterval();
+                }
+              });
+
+              return items;
+            })()}
             {!isLoading && filteredPosts.length === 0 && (
               <div className="text-center py-20 text-gray-400 font-medium px-10">
                 표시할 인기 포스팅이 없습니다.
