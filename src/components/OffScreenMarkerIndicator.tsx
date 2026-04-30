@@ -65,7 +65,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       const isRight = post.lng > ne.lng;
 
       // 코너에 있는 포스트는 두 방향 모두에 카운트
-      // (예: 오른쪽 위 코너 → top과 right 둘 다 +1)
       if (isAbove) addToDir('top', post);
       if (isBelow) addToDir('bottom', post);
       if (isLeft)  addToDir('left', post);

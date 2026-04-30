@@ -307,7 +307,12 @@ const Index = () => {
 
     const doFetch = async () => {
       try {
-        const raw = await fetchPostsInBounds(sw, ne, currentZoom, center);
+        // 화면 밖 포스팅도 인디케이터에 표시하기 위해 bounds를 2배로 확장해서 fetch
+        const latPad = (ne.lat - sw.lat) * 0.8;
+        const lngPad = (ne.lng - sw.lng) * 0.8;
+        const expandedSw = { lat: sw.lat - latPad, lng: sw.lng - lngPad };
+        const expandedNe = { lat: ne.lat + latPad, lng: ne.lng + lngPad };
+        const raw = await fetchPostsInBounds(expandedSw, expandedNe, currentZoom, center);
         if (cancelled) return;
 
         setAllPosts(prev => {
