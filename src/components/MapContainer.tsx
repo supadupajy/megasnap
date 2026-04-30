@@ -461,12 +461,13 @@ const MapContainer = ({
 
       updateZoomClass();
 
+      // 카카오맵은 최초 생성 시 idle 이벤트를 발생시키지 않으므로
+      // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거
       setTimeout(() => {
         if (mapInstance.current) {
           mapInstance.current.relayout();
           updateZoomClass();
-          // setCenter 호출 완전 제거 - smoothMoveTo 진행 중인 경우 덮어쓰기 방지
-          // idle 이벤트가 자동으로 onMapChangeRef를 호출하므로 여기서 중복 호출 불필요
+          updateMapData(); // 초기 bounds 즉시 전달
         }
       }, 200);
 
