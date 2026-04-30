@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { Post } from '@/types';
+import React from 'react';
 import { DirectionCounts } from '@/hooks/use-supabase-posts';
 
 interface Bounds {
@@ -8,107 +7,25 @@ interface Bounds {
 }
 
 interface OffScreenMarkerIndicatorProps {
-  posts: Post[];
   bounds: Bounds | null;
-  mapCenter: { lat: number; lng: number } | null;
-  onNavigate: (post: Post) => void;
-  onPanToDirection: (dir: Direction) => void;
+  onClickDirection: (dir: Direction) => void;
   topOffset: number;
   bottomOffset: number;
-  // DB에서 가져온 방향별 카운트 (없으면 로컬 posts로 계산)
   dbCounts?: DirectionCounts | null;
 }
 
-type Direction = 'top' | 'bottom' | 'left' | 'right';
-
-interface DirectionGroup {
-  count: number;
-  nearest: Post | null;
-}
+export type Direction = 'top' | 'bottom' | 'left' | 'right';
 
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
-  posts,
   bounds,
-  mapCenter,
-  onNavigate,
-  onPanToDirection,
+  onClickDirection,
   topOffset,
   bottomOffset,
   dbCounts,
 }) => {
-  // 로컬 posts에서 방향별 nearest 포스트 계산 (클릭 시 이동 대상)
-  const nearestByDir = useMemo<Record<Direction, Post | null>>(() => {
-    const result: Record<Direction, Post | null> = {
-      top: null, bottom: null, left: null, right: null,
-    };
+  if (!dbCounts) return null;
 
-    if (!bounds || !mapCenter) return result;
-
-    const { sw, ne } = bounds;
-    const cx = mapCenter.lng;
-    const cy = mapCenter.lat;
-
-    const dist = (p: Post) =>
-      Math.sqrt(Math.pow((p.lat ?? 0) - cy, 2) + Math.pow((p.lng ?? 0) - cx, 2));
-
-    const updateNearest = (dir: Direction, post: Post) => {
-      const d = dist(post);
-      const nearestDist = result[dir] ? dist(result[dir]!) : Infinity;
-      if (d < nearestDist) result[dir] = post;
-    };
-
-    posts.forEach(post => {
-      if (post.lat == null || post.lng == null) return;
-
-      const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
-      const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
-      if (inLat && inLng) return;
-
-      const isAbove = post.lat > ne.lat;
-      const isBelow = post.lat < sw.lat;
-      const isLeft  = post.lng < sw.lng;
-      const isRight = post.lng > ne.lng;
-
-      if (isAbove) updateNearest('top', post);
-      if (isBelow) updateNearest('bottom', post);
-      if (isLeft)  updateNearest('left', post);
-      if (isRight) updateNearest('right', post);
-    });
-
-    return result;
-  }, [posts, bounds, mapCenter]);
-
-  // 표시할 카운트: DB 카운트 우선, 없으면 로컬 posts로 계산
-  const counts = useMemo<Record<Direction, number>>(() => {
-    if (dbCounts) {
-      return {
-        top: dbCounts.top,
-        bottom: dbCounts.bottom,
-        left: dbCounts.left,
-        right: dbCounts.right,
-      };
-    }
-
-    // fallback: 로컬 posts 기반 카운트
-    if (!bounds) return { top: 0, bottom: 0, left: 0, right: 0 };
-    const { sw, ne } = bounds;
-    const result = { top: 0, bottom: 0, left: 0, right: 0 };
-
-    posts.forEach(post => {
-      if (post.lat == null || post.lng == null) return;
-      const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
-      const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
-      if (inLat && inLng) return;
-
-      if (post.lat > ne.lat) result.top++;
-      if (post.lat < sw.lat) result.bottom++;
-      if (post.lng < sw.lng && post.lat >= sw.lat && post.lat <= ne.lat) result.left++;
-      if (post.lng > ne.lng && post.lat >= sw.lat && post.lat <= ne.lat) result.right++;
-    });
-
-    return result;
-  }, [dbCounts, posts, bounds]);
-
+  const counts = dbCounts;
   const hasAny = Object.values(counts).some(c => c > 0);
   if (!hasAny) return null;
 
@@ -134,16 +51,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const count = counts[dir];
     if (count === 0) return null;
 
-    const nearest = nearestByDir[dir];
     const isVertical = dir === 'top' || dir === 'bottom';
-
-    const handleClick = () => {
-      if (nearest) {
-        onNavigate(nearest);
-      } else {
-        onPanToDirection(dir);
-      }
-    };
 
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
@@ -166,7 +74,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     return (
       <button
-        onClick={handleClick}
+        onClick={() => onClickDirection(dir)}
         style={{
           position: 'fixed',
           display: 'flex',

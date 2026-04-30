@@ -1018,14 +1018,12 @@ const Index = () => {
         {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
-              posts={displayedMarkers}
               bounds={mapData?.bounds || null}
-              mapCenter={mapData?.center || mapCenter || null}
-              onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
-              onPanToDirection={async (dir) => {
+              onClickDirection={async (dir) => {
                 const b = mapDataRef.current?.bounds || mapData?.bounds;
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!b || !c) return;
+                // 항상 DB에서 해당 방향의 가장 가까운 포스팅 좌표를 가져와 이동
                 const pos = await fetchNearestInDirection(b, c, dir);
                 if (pos) {
                   setMapCenter(pos);
