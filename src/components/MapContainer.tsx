@@ -67,6 +67,7 @@ const MapContainer = ({
   const postsRef = useRef<any[]>(posts);
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
+  const overlapBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pinchStartDistRef = useRef<number | null>(null);
 
@@ -102,6 +103,9 @@ const MapContainer = ({
       if (content) {
         content.classList.remove('markers-revealing');
         content.classList.add('markers-hidden');
+        // 배지도 함께 숨김
+        const badge = content.querySelector('.overlap-badge') as HTMLElement | null;
+        if (badge) badge.style.opacity = '0';
       }
     });
     if (searchOverlayRef.current) {
@@ -114,11 +118,11 @@ const MapContainer = ({
     overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        // markers-revealing은 제거하지 않음 → 클래스가 남아있어도 opacity:1 !important 유지
-        // 깜빡임 원인: transitionend 후 클래스 제거 시 브라우저 재계산 순간 flicker 발생
-        // 해결: revealing 클래스를 영구적으로 유지하고, 다음 숨김 시 hideAllMarkersDom에서 제거
         content.classList.remove('markers-hidden');
         content.classList.add('markers-revealing');
+        // 배지 복원
+        const badge = content.querySelector('.overlap-badge') as HTMLElement | null;
+        if (badge) badge.style.opacity = '1';
       }
     });
     if (searchOverlayRef.current) {
@@ -1006,6 +1010,158 @@ const MapContainer = ({
       searchOverlayRef.current = overlay;
     }
   }, [searchResultLocation, isMapReady]);
+
+  // ── 마커 겹침 배지 업데이트 ──────────────────────────────────────────
+  const updateOverlapBadges = useCallback(() => {
+    const map = mapInstance.current;
+    const kakao = (window as any).kakao;
+    if (!map || !kakao?.maps) return;
+
+    const projection = map.getProjection();
+    if (!projection) return;
+
+    const THRESHOLD = 62; // px - 마커 크기(60px) 기준
+
+    // 현재 지도에 표시된 마커들의 픽셀 좌표 수집
+    type MarkerInfo = { id: string; overlay: any; px: number; py: number };
+    const markerInfos: MarkerInfo[] = [];
+
+    overlaysRef.current.forEach((overlay, id) => {
+      if (overlay.getMap() === null) return;
+      try {
+        const pos = overlay.getPosition();
+        if (!pos) return;
+        const point = projection.pointFromCoords(pos);
+        if (!point) return;
+        markerInfos.push({ id, overlay, px: point.x, py: point.y });
+      } catch (e) {}
+    });
+
+    // 그리디 그룹핑
+    const visited = new Set<string>();
+    const groups: MarkerInfo[][] = [];
+
+    for (const marker of markerInfos) {
+      if (visited.has(marker.id)) continue;
+      const group: MarkerInfo[] = [marker];
+      visited.add(marker.id);
+
+      for (const other of markerInfos) {
+        if (visited.has(other.id)) continue;
+        const dx = marker.px - other.px;
+        const dy = marker.py - other.py;
+        if (Math.sqrt(dx * dx + dy * dy) <= THRESHOLD) {
+          group.push(other);
+          visited.add(other.id);
+        }
+      }
+      groups.push(group);
+    }
+
+    // 모든 마커에서 기존 배지 제거 (data-badge-count로 변경 여부 확인)
+    // 그룹별로 대표 마커(최소 Y) 선정 후 배지 추가
+    const representativeIds = new Set<string>();
+
+    for (const group of groups) {
+      if (group.length < 2) continue;
+      // Y 픽셀이 가장 작은 마커 = 화면 최상단
+      const rep = group.reduce((a, b) => (a.py < b.py ? a : b));
+      representativeIds.add(rep.id);
+    }
+
+    // 배지 DOM 업데이트
+    overlaysRef.current.forEach((overlay, id) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (!content) return;
+
+      const existingBadge = content.querySelector('.overlap-badge') as HTMLElement | null;
+      const group = groups.find(g => g.some(m => m.id === id));
+      const isRep = representativeIds.has(id);
+      const count = group ? group.length : 1;
+
+      if (isRep && count >= 2) {
+        const countStr = String(count);
+        if (existingBadge) {
+          // 숫자만 업데이트
+          if (existingBadge.getAttribute('data-count') !== countStr) {
+            existingBadge.setAttribute('data-count', countStr);
+            existingBadge.textContent = countStr;
+          }
+        } else {
+          // 새 배지 생성
+          const badge = document.createElement('div');
+          badge.className = 'overlap-badge';
+          badge.setAttribute('data-count', countStr);
+          badge.textContent = countStr;
+          badge.style.cssText = [
+            'position:absolute',
+            'top:-6px',
+            'right:-6px',
+            'min-width:18px',
+            'height:18px',
+            'padding:0 4px',
+            'background:#1a1a2e',
+            'color:#ffffff',
+            'font-size:10px',
+            'font-weight:800',
+            'border-radius:9px',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'border:2px solid #ffffff',
+            'box-shadow:0 2px 6px rgba(0,0,0,0.35)',
+            'z-index:9999',
+            'pointer-events:none',
+            'letter-spacing:-0.02em',
+            'line-height:1',
+            'box-sizing:border-box',
+            markersHiddenRef.current ? 'opacity:0' : 'opacity:1',
+          ].join(';');
+          // marker-content-wrapper 또는 marker-scaling-target에 붙임
+          const wrapper = content.querySelector('.marker-scaling-target') as HTMLElement | null;
+          const target = wrapper || content;
+          target.style.position = 'relative';
+          target.appendChild(badge);
+        }
+      } else {
+        // 대표 마커가 아니거나 그룹 크기 1이면 배지 제거
+        if (existingBadge) existingBadge.remove();
+      }
+    });
+  }, []);
+
+  // ── 겹침 배지 debounce 트리거 ─────────────────────────────────────────
+  const scheduleOverlapBadgeUpdate = useCallback(() => {
+    if (overlapBadgeTimerRef.current) clearTimeout(overlapBadgeTimerRef.current);
+    overlapBadgeTimerRef.current = setTimeout(() => {
+      overlapBadgeTimerRef.current = null;
+      updateOverlapBadges();
+    }, 150);
+  }, [updateOverlapBadges]);
+
+  // 지도 이벤트(idle / zoom_changed / dragend)에 연결
+  useEffect(() => {
+    if (!isMapReady || !mapInstance.current) return;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+    const map = mapInstance.current;
+
+    kakao.maps.event.addListener(map, 'idle', scheduleOverlapBadgeUpdate);
+    kakao.maps.event.addListener(map, 'zoom_changed', scheduleOverlapBadgeUpdate);
+    kakao.maps.event.addListener(map, 'dragend', scheduleOverlapBadgeUpdate);
+
+    return () => {
+      kakao.maps.event.removeListener(map, 'idle', scheduleOverlapBadgeUpdate);
+      kakao.maps.event.removeListener(map, 'zoom_changed', scheduleOverlapBadgeUpdate);
+      kakao.maps.event.removeListener(map, 'dragend', scheduleOverlapBadgeUpdate);
+    };
+  }, [isMapReady, scheduleOverlapBadgeUpdate]);
+
+  // posts 변경(마커 추가/제거) 시에도 재계산
+  useEffect(() => {
+    if (!isMapReady) return;
+    scheduleOverlapBadgeUpdate();
+  }, [posts, isMapReady, scheduleOverlapBadgeUpdate]);
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
