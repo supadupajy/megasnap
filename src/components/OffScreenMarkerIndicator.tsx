@@ -9,7 +9,8 @@ interface Bounds {
 interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
   onClickDirection: (dir: Direction) => void;
-  topOffset: number;
+  // topOffset: 상단 버튼의 top CSS 값 (문자열 또는 숫자px)
+  topOffset?: string | number;
   bottomOffset: number;
   dbCounts?: DirectionCounts | null;
 }
@@ -28,6 +29,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const counts = dbCounts;
   const hasAny = Object.values(counts).some(c => c > 0);
   if (!hasAny) return null;
+
+  // 트렌딩 패널 접힌 높이(56px) + 패널 top(safe-area+74px) + 여백(8px)
+  const topCss = topOffset !== undefined
+    ? (typeof topOffset === 'number' ? `${topOffset}px` : topOffset)
+    : 'calc(env(safe-area-inset-top, 0px) + 74px + 56px + 8px)';
 
   const Arrow = ({ dir }: { dir: Direction }) => {
     const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
@@ -55,11 +61,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      posStyle.top = `${topOffset + 8}px`;
+      posStyle.top = topCss;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
-      // bottomOffset = BottomNav 높이(64px). safe-area + 8px 여백 추가
       posStyle.bottom = `calc(${bottomOffset}px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)`;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
