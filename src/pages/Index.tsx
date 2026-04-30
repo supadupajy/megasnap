@@ -795,17 +795,10 @@ const Index = () => {
     if (routeState.filterUserId === 'me') {
       setSelectedCategories(['all']);
       if (routeState.post && routeState.post.lat != null && routeState.post.lng != null) {
-        // zoom 먼저 설정 후 이동 (zoom 변경이 center를 리셋하는 충돌 방지)
-        setCurrentZoom(5);
-        currentZoomRef.current = 5;
-        // zoom 적용 후 이동 (300ms 대기)
-        setTimeout(() => {
-          focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
-        }, 350);
+        // zoom 변경 없이 바로 이동 (zoom 변경이 카카오맵 center를 리셋하는 충돌 방지)
+        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
       } else if (routeState.center && routeState.center.lat != null) {
-        setCurrentZoom(5);
-        currentZoomRef.current = 5;
-        setTimeout(() => setMapCenter(routeState.center), 350);
+        setMapCenter(routeState.center);
       } else {
         handleCurrentLocation();
       }

@@ -180,7 +180,6 @@
 
 .marker-appear-animation .marker-content-wrapper {
   animation: marker-appear 0.4s ease-out forwards;
-  /* forwards fill: 애니메이션 끝나면 opacity:1, transform:scale(1) 유지 */
 }
 
 .marker-appear-animation.is-ad .marker-content-wrapper {
@@ -190,6 +189,14 @@
 /* marker-appear-animation 클래스가 없으면 opacity:1 기본값 보장 */
 .marker-container:not(.marker-appear-animation) .marker-content-wrapper {
   opacity: 1;
+}
+
+/* highlighted 상태에서는 marker-appear-animation이 함께 있어도 animation 완전 무력화 */
+.marker-container.highlighted.marker-appear-animation .marker-content-wrapper,
+.marker-container.highlighted .marker-content-wrapper {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: scale(1) translateY(0) !important;
 }
 
 /* 마커 숨김 모드: !important로 모든 animation/transform 덮어씀 */

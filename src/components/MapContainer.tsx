@@ -662,27 +662,8 @@ const MapContainer = ({
               }
             });
 
-            // marker-appear-animation 제거 전에 먼저 opacity:1 인라인 고정
-            // (클래스 제거 시 CSS animation forwards fill이 사라져 opacity:0으로 순간 복귀하는 현상 방지)
-            const allEls = content.querySelectorAll('*');
-            allEls.forEach((el) => {
-              const htmlEl = el as HTMLElement;
-              if (htmlEl.style) {
-                // 현재 계산된 opacity를 인라인으로 고정
-                const computed = window.getComputedStyle(htmlEl);
-                if (computed.opacity !== '1') {
-                  htmlEl.style.opacity = '1';
-                }
-              }
-            });
-            // marker-content-wrapper 직접 고정
-            const wrapper = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
-            if (wrapper) {
-              wrapper.style.opacity = '1';
-              wrapper.style.transform = 'scale(1) translateY(0)';
-              wrapper.style.animation = 'none';
-            }
-            content.classList.remove('marker-appear-animation');
+            // highlighted 클래스 추가 - CSS가 animation을 무력화하고 opacity:1 강제 적용
+            // (.marker-container.highlighted .marker-content-wrapper { animation: none !important; opacity: 1 !important })
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
