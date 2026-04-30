@@ -176,24 +176,61 @@ export const fetchNearestInDirection = async (
       .from('posts')
       .select('latitude, longitude');
 
+    // 코너 포스팅도 포함하기 위해 lng/lat 범위 제한 없이 방향만으로 필터링
+    // 단, 코너 포스팅은 fetchOffScreenCounts와 동일한 비율 분류 기준으로 필터링
+    const latRange = ne.lat - sw.lat;
+    const lngRange = ne.lng - sw.lng;
+
     if (dir === 'top') {
-      query = query.gt('latitude', ne.lat).gte('longitude', sw.lng).lte('longitude', ne.lng);
+      // lat > ne.lat인 포스팅 중 lat 초과 비율 >= lng 초과 비율인 것
+      // (순수 상단 + 상단 코너 중 lat 방향이 더 큰 것)
+      query = query.gt('latitude', ne.lat);
     } else if (dir === 'bottom') {
-      query = query.lt('latitude', sw.lat).gte('longitude', sw.lng).lte('longitude', ne.lng);
+      query = query.lt('latitude', sw.lat);
     } else if (dir === 'left') {
-      query = query.lt('longitude', sw.lng).gte('latitude', sw.lat).lte('latitude', ne.lat);
+      query = query.lt('longitude', sw.lng);
     } else {
-      query = query.gt('longitude', ne.lng).gte('latitude', sw.lat).lte('latitude', ne.lat);
+      query = query.gt('longitude', ne.lng);
     }
 
-    const { data, error } = await query.limit(100);
+    const { data, error } = await query.limit(200);
     if (error || !data || data.length === 0) return null;
 
+    // fetchOffScreenCounts와 동일한 비율 분류로 해당 방향에 속하는 포스팅만 필터링
+    const filtered = data.filter(p => {
+      if (p.latitude == null || p.longitude == null) return false;
+      const inLat = p.latitude >= sw.lat && p.latitude <= ne.lat;
+      const inLng = p.longitude >= sw.lng && p.longitude <= ne.lng;
+      if (inLat && inLng) return false; // 화면 안
+
+      const isAbove = p.latitude > ne.lat;
+      const isBelow = p.latitude < sw.lat;
+      const isLeft  = p.longitude < sw.lng;
+      const isRight = p.longitude > ne.lng;
+
+      // 순수 방향
+      if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
+      if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
+      if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
+      if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
+
+      // 코너: 비율로 분류
+      const latExcess = isAbove ? (p.latitude - ne.lat) / latRange : isBelow ? (sw.lat - p.latitude) / latRange : 0;
+      const lngExcess = isLeft  ? (sw.lng - p.longitude) / lngRange : isRight ? (p.longitude - ne.lng) / lngRange : 0;
+
+      if (latExcess >= lngExcess) {
+        return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
+      } else {
+        return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
+      }
+    });
+
+    if (filtered.length === 0) return null;
+
     // 중심에서 가장 가까운 포스팅 찾기
-    let nearest = data[0];
+    let nearest = filtered[0];
     let minDist = Infinity;
-    for (const p of data) {
-      if (p.latitude == null || p.longitude == null) continue;
+    for (const p of filtered) {
       const d = Math.sqrt(
         Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2)
       );
