@@ -100,10 +100,7 @@ export const fetchOffScreenCounts = async (
       bottomOnlyRes,
       leftOnlyRes,
       rightOnlyRes,
-      topLeftRes,
-      topRightRes,
-      bottomLeftRes,
-      bottomRightRes,
+      cornerRes,  // 코너 포스팅 좌표를 직접 가져와서 클라이언트에서 정확히 분류
     ] = await Promise.all([
       // 순수 상단: lat > qNe.lat AND lng between qSw.lng and qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
@@ -121,55 +118,34 @@ export const fetchOffScreenCounts = async (
       supabase.from('posts').select('id', { count: 'exact', head: true })
         .gt('longitude', qNe.lng)
         .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
-      // 왼쪽 상단 코너: lat > qNe.lat AND lng < qSw.lng
-      supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', qNe.lat).lt('longitude', qSw.lng),
-      // 오른쪽 상단 코너: lat > qNe.lat AND lng > qNe.lng
-      supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', qNe.lat).gt('longitude', qNe.lng),
-      // 왼쪽 하단 코너: lat < qSw.lat AND lng < qSw.lng
-      supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', qSw.lat).lt('longitude', qSw.lng),
-      // 오른쪽 하단 코너: lat < qSw.lat AND lng > qNe.lng
-      supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', qSw.lat).gt('longitude', qNe.lng),
+      // 코너 포스팅: 좌표를 직접 가져와서 클라이언트에서 정확히 분류
+      supabase.from('posts').select('latitude, longitude')
+        .or(`and(latitude.gt.${qNe.lat},longitude.lt.${qSw.lng}),and(latitude.gt.${qNe.lat},longitude.gt.${qNe.lng}),and(latitude.lt.${qSw.lat},longitude.lt.${qSw.lng}),and(latitude.lt.${qSw.lat},longitude.gt.${qNe.lng})`),
     ]);
 
-    // 코너 포스팅을 lat/lng 초과 비율로 분류
-    // lat 초과 비율 >= lng 초과 비율 → 상/하 방향으로 분류
-    // lat 초과 비율 <  lng 초과 비율 → 좌/우 방향으로 분류
-    //
-    // 단, DB에서 개별 포스팅 좌표를 모르므로 코너 전체를 하나의 방향으로 분류합니다.
-    // 코너의 "대표 비율"은 코너 영역의 중심점 기준으로 계산합니다.
-    // 왼쪽 상단: lat 초과 비율 vs lng 초과 비율 → latRange/lngRange 비교
-    // latRange >= lngRange이면 lat 방향이 더 길므로 코너는 좌/우로 분류
-    // latRange < lngRange이면 lng 방향이 더 길므로 코너는 상/하로 분류
-    const topLeftCount = topLeftRes.count ?? 0;
-    const topRightCount = topRightRes.count ?? 0;
-    const bottomLeftCount = bottomLeftRes.count ?? 0;
-    const bottomRightCount = bottomRightRes.count ?? 0;
-
-    // 화면 비율: latRange/lngRange > 1이면 세로가 더 긴 화면 → 코너는 좌우로
-    //           latRange/lngRange < 1이면 가로가 더 긴 화면 → 코너는 상하로
-    // 즉, lat 초과 비율 >= lng 초과 비율이면 상하 방향
-    // 코너 중심의 lat 초과 = 코너 영역 중심 lat - ne.lat (또는 sw.lat - 코너 중심 lat)
-    // 코너 중심의 lng 초과 = 코너 영역 중심 lng - ne.lng (또는 sw.lng - 코너 중심 lng)
-    // 코너 영역은 무한히 넓으므로 "경계선"으로 판단:
-    // 경계: latExcess/latRange = lngExcess/lngRange
-    // 코너 포스팅이 이 경계보다 lat 방향으로 더 벗어나면 상/하, lng 방향이면 좌/우
-    // 단순화: 화면의 가로세로 비율로 코너 전체를 한 방향으로 분류
-    // latRange >= lngRange → 세로가 더 길거나 같음 → 코너는 좌/우로 분류
-    // latRange < lngRange  → 가로가 더 길음 → 코너는 상/하로 분류
+    // 코너 포스팅을 각 포스팅의 실제 lat/lng 초과 비율로 정확히 분류
     let topAdd = 0, bottomAdd = 0, leftAdd = 0, rightAdd = 0;
+    for (const p of (cornerRes.data ?? [])) {
+      if (p.latitude == null || p.longitude == null) continue;
+      const isAbove = p.latitude > qNe.lat;
+      const isLeft = p.longitude < qSw.lng;
+      const isRight = p.longitude > qNe.lng;
 
-    if (latRange >= lngRange) {
-      // 세로가 더 길거나 같음: 코너는 좌/우로 분류
-      leftAdd = topLeftCount + bottomLeftCount;
-      rightAdd = topRightCount + bottomRightCount;
-    } else {
-      // 가로가 더 길음: 코너는 상/하로 분류
-      topAdd = topLeftCount + topRightCount;
-      bottomAdd = bottomLeftCount + bottomRightCount;
+      // lat 초과량 / latRange vs lng 초과량 / lngRange
+      const latExcess = isAbove
+        ? (p.latitude - qNe.lat) / latRange
+        : (qSw.lat - p.latitude) / latRange;
+      const lngExcess = isLeft
+        ? (qSw.lng - p.longitude) / lngRange
+        : (p.longitude - qNe.lng) / lngRange;
+
+      if (latExcess >= lngExcess) {
+        // lat 방향으로 더 많이 벗어남 → 상/하
+        if (isAbove) topAdd++; else bottomAdd++;
+      } else {
+        // lng 방향으로 더 많이 벗어남 → 좌/우
+        if (isLeft) leftAdd++; else rightAdd++;
+      }
     }
 
     return {
