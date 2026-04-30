@@ -37,9 +37,12 @@ const mapPostImmediate = (p: any): Post => {
   if (!isAd && !p.youtube_url && !p.video_url && finalImage?.includes('img.youtube.com')) {
     finalImage = getDiverseUnsplashUrl(p.id, 'general');
   }
+  // profiles 테이블의 최신 닉네임/아바타를 우선 사용, 없으면 posts 테이블 값 fallback
+  const displayName = p.profiles?.nickname || p.user_name;
+  const displayAvatar = p.profiles?.avatar_url || p.user_avatar;
   return {
     id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-    user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
+    user: { id: p.user_id, name: displayName, avatar: displayAvatar },
     content: p.content?.replace(/^\[AD\]\s*/, '') || '',
     location: p.location_name, lat: p.latitude, lng: p.longitude,
     likes: Number(p.likes || 0), commentsCount: 0, comments: [],
@@ -103,7 +106,7 @@ const Popular = () => {
       const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
         .order('likes', { ascending: false })
         .range(from, to);
 
