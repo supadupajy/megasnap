@@ -833,7 +833,7 @@ const Index = () => {
     }
     if (routeState.startSelection) {
       setIsPostListOpen(false);
-      setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapData?.center || mapCache.lastCenter); }, 500);
+      setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapCenter || mapData?.center || mapCache.lastCenter); }, 500);
     }
     if (routeState.startAdLocationSelection) {
       setIsPostListOpen(false);
@@ -932,7 +932,7 @@ const Index = () => {
                       <Button onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} variant="secondary" className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600">
                         <X className="w-4 h-4 mr-2" /> 취소
                       </Button>
-                      <Button onClick={() => { const loc = tempSelectedLocation || mapDataRef.current?.center || mapCache.lastCenter; if (loc) { setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: loc, fromLocationSelection: true } }), 100); } }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100">
+                      <Button onClick={() => { const loc = tempSelectedLocation || mapCenter || mapDataRef.current?.center || mapCache.lastCenter; setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: loc, fromLocationSelection: true } }), 100); }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100">
                         <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
                       </Button>
                     </div>
