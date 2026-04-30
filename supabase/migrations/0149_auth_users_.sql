@@ -1,0 +1,1 @@
+SELECT id, email, created_at, confirmed_at FROM auth.users WHERE email = 'supadupajy@gmail.com';
