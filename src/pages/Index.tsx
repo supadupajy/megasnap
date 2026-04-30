@@ -375,8 +375,7 @@ const Index = () => {
       setOffScreenCounts(null);
       return;
     }
-    // bounds 바뀌면 즉시 초기화 → 이전 값이 잠깐 보이는 현상 방지
-    setOffScreenCounts(null);
+    // 이전 값을 유지한 채로 fetch → 깜빡임 없이 새 값으로 교체
     let cancelled = false;
     fetchOffScreenCounts(mapData.bounds).then(counts => {
       if (!cancelled) setOffScreenCounts(counts);

@@ -69,11 +69,12 @@ export const fetchOffScreenCounts = async (
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
 
-  // 카카오맵 getBounds()는 실제 화면 픽셀과 정확히 일치하지 않을 수 있으므로
-  // 화면 안쪽으로 10% 여유를 두어 화면 가장자리 포스팅이 잘못 카운트되는 것을 방지
+  // 카카오맵 getBounds()는 실제 화면보다 약간 넓게 반환하므로
+  // 화면 경계를 10% 안쪽으로 축소해서 가장자리 포스팅이 "화면 안"으로 판단되도록 함
+  // (qSw를 올리고 qNe를 내려서 화면 안 영역을 더 크게 잡음)
   const pad = 0.10;
-  const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
-  const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
+  const qSw = { lat: sw.lat + latRange * pad, lng: sw.lng + lngRange * pad };
+  const qNe = { lat: ne.lat - latRange * pad, lng: ne.lng - lngRange * pad };
 
   // 코너 분류 기준: lat 초과 비율 vs lng 초과 비율
   // lat 초과 비율이 더 크면 상/하, lng 초과 비율이 더 크면 좌/우
