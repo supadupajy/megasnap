@@ -1,0 +1,1 @@
+SELECT id, latitude, longitude, location_name, user_id FROM posts WHERE latitude IS NOT NULL AND longitude IS NOT NULL LIMIT 5;

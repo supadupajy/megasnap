@@ -286,15 +286,22 @@ const Profile = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
-    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
-    // zoom 3 = 적당히 확대된 상태로 해당 포스팅 마커 위치로 이동
+    console.log('[Profile] handleLocationClick - lat:', lat, 'lng:', lng, 'post.id:', post.id, 'post.lat:', post.lat, 'post.lng:', post.lng);
+    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) {
+      console.warn('[Profile] Invalid coordinates, aborting navigation');
+      return;
+    }
+    // sessionStorage에 저장하여 navigate state 유실 시에도 보존
+    sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat, lng, postId: post.id, zoom: 3 }));
     navigate('/', { state: { post, center: { lat, lng }, zoom: 3 } });
   }, [navigate]);
 
   const handleViewOnMap = () => {
     // 좌표가 있는 첫 번째 포스팅 찾기
     const postWithCoords = myPosts.find(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng));
+    console.log('[Profile] handleViewOnMap - postWithCoords:', postWithCoords?.id, 'lat:', postWithCoords?.lat, 'lng:', postWithCoords?.lng);
     if (postWithCoords) {
+      sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat: postWithCoords.lat, lng: postWithCoords.lng, postId: postWithCoords.id, zoom: 3 }));
       navigate('/', { state: { post: postWithCoords, center: { lat: postWithCoords.lat, lng: postWithCoords.lng }, zoom: 3 } });
     } else {
       // 좌표 있는 포스팅이 없으면 그냥 지도로 이동

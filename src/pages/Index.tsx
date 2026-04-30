@@ -44,6 +44,44 @@ const Index = () => {
 
   const MAX_VISIBLE_MARKERS = 30;
 
+  // ── 초기 마운트 시 routeState 또는 sessionStorage에서 위치 정보 복원 ─────
+  // 이렇게 하면 mapCenter 초기값이 처음부터 올바른 포스팅 위치로 설정되어
+  // geolocation race condition 자체가 발생하지 않음
+  const initialFocusRef = useRef<{ lat: number; lng: number; zoom?: number; post?: any } | null>(null);
+  if (initialFocusRef.current === null) {
+    try {
+      const routeState = location.state as any;
+      if (routeState?.center?.lat != null && routeState?.center?.lng != null) {
+        initialFocusRef.current = {
+          lat: routeState.center.lat,
+          lng: routeState.center.lng,
+          zoom: routeState.zoom,
+          post: routeState.post,
+        };
+        console.log('[Index] Initial focus from routeState:', initialFocusRef.current);
+      } else if (routeState?.post?.lat != null && routeState?.post?.lng != null) {
+        initialFocusRef.current = {
+          lat: routeState.post.lat,
+          lng: routeState.post.lng,
+          zoom: routeState.zoom,
+          post: routeState.post,
+        };
+        console.log('[Index] Initial focus from routeState.post:', initialFocusRef.current);
+      } else {
+        const stored = sessionStorage.getItem('pendingMapFocus');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.lat != null && parsed?.lng != null) {
+            initialFocusRef.current = parsed;
+            console.log('[Index] Initial focus from sessionStorage:', initialFocusRef.current);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[Index] initialFocusRef parse error:', e);
+    }
+  }
+
   const [showCssConfetti, setShowCssConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState<any[]>([]);
 
@@ -102,8 +140,15 @@ const Index = () => {
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
 
   const [mapData, setMapData] = useState<any>(null);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
+  // 초기 mapCenter: routeState/sessionStorage에 위치가 있으면 그것 우선, 아니면 mapCache.lastCenter
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(
+    initialFocusRef.current
+      ? { lat: initialFocusRef.current.lat, lng: initialFocusRef.current.lng }
+      : mapCache.lastCenter
+  );
+  const [currentZoom, setCurrentZoom] = useState<number>(
+    initialFocusRef.current?.zoom ?? mapCache.lastZoom ?? 6
+  );
 
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -147,9 +192,12 @@ const Index = () => {
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
   // route state로 위치가 지정된 경우 geolocation이 덮어쓰지 못하도록 보호
-  const locationLockedRef = useRef(false);
+  // 초기 마운트 시 initialFocusRef가 있으면 즉시 잠금 (geolocation race condition 차단)
+  const locationLockedRef = useRef(initialFocusRef.current !== null);
 
-  const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
+  const currentZoomRef = useRef<number>(
+    initialFocusRef.current?.zoom ?? mapCache.lastZoom ?? 6
+  );
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
   const trendingFetchedAtRef = useRef<number>(0);
@@ -740,7 +788,46 @@ const Index = () => {
   const handleCurrentLocation = () => moveToCurrentLocation(true);
 
   // ── 앱 시작 시 현재 위치로 자동 이동 ────────────────────────
+  // initialFocusRef가 있으면 (Profile 등에서 위치보기로 진입) geolocation 건너뜀
   useEffect(() => {
+    if (initialFocusRef.current) {
+      console.log('[Index] Skipping geolocation - initial focus active:', initialFocusRef.current);
+      // sessionStorage 정리
+      sessionStorage.removeItem('pendingMapFocus');
+
+      // 마커 highlight 트리거: 지도가 준비되고 마커가 로드되면 발생
+      const focusedPost = initialFocusRef.current.post;
+      if (focusedPost) {
+        // post를 allPosts에 추가 (마커가 보이도록)
+        setAllPosts(prev => {
+          if (prev.some(p => p.id === focusedPost.id)) return prev;
+          return [focusedPost, ...prev];
+        });
+
+        // pre-highlight + highlight 이벤트 발생 (지도 이동 후)
+        window.dispatchEvent(new CustomEvent('pre-highlight-marker', { detail: { id: focusedPost.id } }));
+        const triggerHighlight = () => {
+          window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: focusedPost.id, duration: 2500 } }));
+        };
+        // 지도 이동 완료를 기다림
+        const onMoveComplete = () => {
+          window.removeEventListener('map-move-complete', onMoveComplete);
+          triggerHighlight();
+        };
+        window.addEventListener('map-move-complete', onMoveComplete);
+        // 안전장치: 3초 후에도 이벤트가 안 오면 강제 실행
+        setTimeout(() => {
+          window.removeEventListener('map-move-complete', onMoveComplete);
+          triggerHighlight();
+        }, 3000);
+      }
+
+      // 5초 후 lock 해제 (이후 사용자가 현재 위치 버튼 사용 가능)
+      const lockTimer = setTimeout(() => {
+        locationLockedRef.current = false;
+      }, 5000);
+      return () => clearTimeout(lockTimer);
+    }
     moveToCurrentLocation(false);
   }, []);
 
@@ -811,38 +898,50 @@ const Index = () => {
     const routeState = location.state as any;
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
-    if (routeState.filterUserId === 'me') {
-      setSelectedCategories(['all']);
-      if (routeState.post && routeState.post.lat != null && routeState.post.lng != null) {
+
+    // 초기 마운트 시 initialFocusRef로 이미 위치 처리된 경우, 위치 관련 처리는 스킵
+    // (마커 highlight는 이미 위 useEffect에서 처리됨)
+    const alreadyHandledByInitialFocus = initialFocusRef.current !== null;
+
+    if (!alreadyHandledByInitialFocus) {
+      if (routeState.filterUserId === 'me') {
+        setSelectedCategories(['all']);
+        if (routeState.post && routeState.post.lat != null && routeState.post.lng != null) {
+          locationLockedRef.current = true;
+          focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+          setTimeout(() => { locationLockedRef.current = false; }, 5000);
+        } else if (routeState.center && routeState.center.lat != null) {
+          locationLockedRef.current = true;
+          setMapCenter(routeState.center);
+          setTimeout(() => { locationLockedRef.current = false; }, 5000);
+        } else {
+          handleCurrentLocation();
+        }
+      } else if (routeState.post) {
         locationLockedRef.current = true;
-        // zoom 변경 없이 바로 이동 (zoom 변경이 카카오맵 center를 리셋하는 충돌 방지)
-        focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
+        if (routeState.zoom != null) {
+          setCurrentZoom(routeState.zoom);
+          currentZoomRef.current = routeState.zoom;
+        }
+        focusPostOnMap(routeState.post, routeState.center);
         setTimeout(() => { locationLockedRef.current = false; }, 5000);
-      } else if (routeState.center && routeState.center.lat != null) {
+      } else if (routeState.center) {
         locationLockedRef.current = true;
+        setSelectedPostId(null);
+        if (routeState.zoom != null) {
+          setCurrentZoom(routeState.zoom);
+          currentZoomRef.current = routeState.zoom;
+        }
         setMapCenter(routeState.center);
         setTimeout(() => { locationLockedRef.current = false; }, 5000);
-      } else {
-        handleCurrentLocation();
       }
-    } else if (routeState.post) {
-      locationLockedRef.current = true;
-      // zoom이 지정된 경우 먼저 줌 레벨 설정 후 이동 (순간이동 방지)
-      if (routeState.zoom != null) {
-        setCurrentZoom(routeState.zoom);
-        currentZoomRef.current = routeState.zoom;
-      }
-      focusPostOnMap(routeState.post, routeState.center);
-      setTimeout(() => { locationLockedRef.current = false; }, 5000);
-    } else if (routeState.center) {
-      locationLockedRef.current = true;
-      setSelectedPostId(null);
-      if (routeState.zoom != null) {
-        setCurrentZoom(routeState.zoom);
-        currentZoomRef.current = routeState.zoom;
-      }
-      setMapCenter(routeState.center);
-      setTimeout(() => { locationLockedRef.current = false; }, 5000);
+    } else if (routeState.filterUserId === 'me') {
+      // initialFocus로 처리되었지만 카테고리는 여전히 적용
+      setSelectedCategories(['all']);
+    }
+    // initialFocusRef는 한 번 사용 후 클리어 (다음 렌더에서는 normal flow)
+    if (alreadyHandledByInitialFocus) {
+      initialFocusRef.current = null;
     }
     if (routeState.startSelection) {
       setIsPostListOpen(false);

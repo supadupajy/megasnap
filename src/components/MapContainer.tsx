@@ -416,9 +416,10 @@ const MapContainer = ({
       if (mapInstance.current) return true;
 
       const initialCenter = centerRef.current || mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
+      const initialLevel = levelRef.current ?? 6;
       const map = new kakao.maps.Map(containerRef.current!, {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
-        level: 6
+        level: initialLevel
       });
       map.setMaxLevel(11);
       mapInstance.current = map;
@@ -495,9 +496,11 @@ const MapContainer = ({
         if (isInit) {
           clearInterval(checkMap);
           if (mapInstance.current) {
-            mapInstance.current.setLevel(6, { animate: false });
-            setCurrentLevel(6);
-            currentLevelRef.current = 6;
+            // level prop 값을 우선 사용 (routeState로 zoom 전달 시 반영)
+            const targetLevel = levelRef.current ?? 6;
+            mapInstance.current.setLevel(targetLevel, { animate: false });
+            setCurrentLevel(targetLevel);
+            currentLevelRef.current = targetLevel;
           }
         }
       }
