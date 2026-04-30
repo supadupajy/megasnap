@@ -680,15 +680,34 @@ const MapContainer = ({
               }
             });
 
-            // 1단계: marker-appear-animation 제거 전에 opacity:1 인라인 고정
-            // (클래스 제거 순간 CSS animation forwards fill이 사라져 opacity:0으로 복귀하는 현상 방지)
-            const wrapperEl = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
-            if (wrapperEl) {
-              wrapperEl.style.cssText = 'opacity:1!important;transform:scale(1) translateY(0)!important;animation:none!important;';
+            // highlighted 진입 시 올바른 isMine HTML로 먼저 교체 후 data-content-state 동기화
+            // (highlighted 중 React 리렌더가 일어나도 contentStateKey 일치 → innerHTML 교체 안 함)
+            const pNow = postsRef.current.find(item => item.id === postId);
+            if (pNow) {
+              const combinedViewedNow = new Set([
+                ...Array.from(viewedPostIdsRef.current),
+                ...Array.from(internalViewedIdsRef.current),
+              ]);
+              const isViewedNow = combinedViewedNow.has(postId);
+              const isSeedNow = pNow.is_seed_data === true || pNow.is_seed_data === 'true' || pNow.is_seed_data === 1;
+              let isMineKeyNow = false;
+              if (authUserRef.current) {
+                if (!isSeedNow) {
+                  const ownerIdNow = (pNow as any).owner_id || (pNow as any).user_id;
+                  isMineKeyNow = !!(ownerIdNow && String(ownerIdNow) === String(authUserRef.current.id));
+                } else {
+                  const displayIdNow = (pNow as any).display_user_id;
+                  isMineKeyNow = !!(displayIdNow && String(displayIdNow) === String(authUserRef.current.id));
+                }
+              }
+              const isAdPendingKeyNow = !!(pNow as any).isAdPending;
+              const nowStateKey = `${isViewedNow}-${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isSeedNow}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}`;
+              content.innerHTML = getMarkerInnerHtmlRef.current(pNow, isViewedNow);
+              content.setAttribute('data-content-state', nowStateKey);
             }
-            // 2단계: marker-appear-animation 제거 (이미 opacity:1 인라인이 고정되어 있으므로 안전)
+            // marker-appear-animation 제거 (innerHTML 교체 후이므로 안전)
             content.classList.remove('marker-appear-animation');
-            // 3단계: highlighted 추가
+            // highlighted 추가
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
