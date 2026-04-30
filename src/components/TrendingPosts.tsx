@@ -8,6 +8,120 @@ import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 
+// 동영상 URL인지 판별 (mp4, mov, webm 등)
+const isVideoUrl = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+  const lower = url.toLowerCase().split('?')[0];
+  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
+};
+
+// 동영상 썸네일을 canvas로 추출하는 컴포넌트
+const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ videoUrl, className }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
+  const [failed, setFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.src = videoUrl;
+
+    const cleanup = () => {
+      video.src = '';
+      video.load();
+    };
+
+    video.addEventListener('loadeddata', () => {
+      if (cancelled) return;
+      video.currentTime = 0.5;
+    });
+
+    video.addEventListener('seeked', () => {
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 120;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const url = canvas.toDataURL('image/jpeg', 0.8);
+          setThumbUrl(url);
+        }
+      } catch {
+        setFailed(true);
+      }
+      cleanup();
+    });
+
+    video.addEventListener('error', () => {
+      if (!cancelled) setFailed(true);
+      cleanup();
+    });
+
+    video.load();
+
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [videoUrl]);
+
+  if (thumbUrl) {
+    return (
+      <div className={cn("relative w-full h-full", className)}>
+        <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className={cn("w-full h-full bg-gray-800 flex items-center justify-center", className)}>
+        <svg className="w-4 h-4 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+    );
+  }
+
+  // 로딩 중
+  return (
+    <div className={cn("w-full h-full bg-gray-200 animate-pulse flex items-center justify-center", className)}>
+      <svg className="w-4 h-4 text-gray-400 fill-gray-400 ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+  );
+};
+
+// 포스트 썸네일 컴포넌트 (이미지/동영상 자동 판별)
+const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: string; onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void }> = ({ post, className, imgClassName, onImgError }) => {
+  const videoUrl = post.videoUrl;
+  const imageUrl = post.image;
+
+  // videoUrl이 있거나 image_url이 동영상 URL인 경우
+  const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
+
+  if (effectiveVideoUrl) {
+    return <VideoThumbnail videoUrl={effectiveVideoUrl} className={className} />;
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt=""
+      className={cn("w-full h-full object-cover", imgClassName)}
+      onError={onImgError}
+    />
+  );
+};
+
 interface TrendingPostsProps {
   posts: Post[];
   isExpanded: boolean;
@@ -62,12 +176,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
         borderThickness,
         borderColor
       )}>
-        <img
-          src={post.image}
-          alt=""
-          className="w-full h-full object-cover"
-          onError={handleImageError}
-        />
+        <PostThumbnail post={post} onImgError={handleImageError} />
         {borderType !== 'none' && (
           <div className="absolute top-0.5 right-0.5 z-10">
             <Sparkles className={cn(
@@ -295,12 +404,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             {!isExpanded ? (
               <div className="flex flex-1 items-center gap-2 overflow-hidden">
                 <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img
-                    src={currentPost?.image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    onError={handleImageError}
-                  />
+                  <PostThumbnail post={currentPost!} onImgError={handleImageError} />
                 </div>
                 <div className="flex-1 overflow-hidden relative h-5">
                   <AnimatePresence mode="wait">

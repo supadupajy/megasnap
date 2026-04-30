@@ -1101,6 +1101,7 @@ const Index = () => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }}
+        mapCenter={mapData?.center || mapCache.lastCenter}
       />
     </>
   );

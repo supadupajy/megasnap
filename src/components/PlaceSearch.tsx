@@ -22,9 +22,10 @@ interface PlaceSearchProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (place: Place) => void;
+  mapCenter?: { lat: number; lng: number };
 }
 
-const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
+const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +72,15 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
         });
       });
 
+      // 현재 지도 중심 좌표 기반 검색 옵션
+      const searchOptions: any = { size: 15 };
+      if (mapCenter) {
+        // location: 검색 기준 좌표 (이 좌표 근처 결과를 우선 반환)
+        searchOptions.location = new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
+        // sort: DISTANCE 정렬로 가까운 순서로 반환
+        searchOptions.sort = kakao.maps.services.SortBy.DISTANCE;
+      }
+
       const placesPromise = new Promise<{data: Place[], pagination: any}>((resolve) => {
         searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
           if (status === kakao.maps.services.Status.OK) {
@@ -88,11 +98,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
           } else {
             resolve({ data: [], pagination: null });
           }
-        }, { size: 15 });
+        }, searchOptions);
       });
 
       const [addrResults, placeData] = await Promise.all([addressPromise, placesPromise]);
       
+      // 주소 검색 결과와 장소 검색 결과 합치기
+      // mapCenter가 있으면 거리 기준으로 정렬
       const combined = [...addrResults, ...placeData.data];
       const seen = new Set();
       const unique = combined.filter(item => {
@@ -102,6 +114,16 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
         return true;
       });
 
+      // mapCenter가 있으면 거리 기준으로 재정렬 (장소 검색은 이미 DISTANCE 정렬이지만
+      // 주소 검색 결과와 합쳐진 후 다시 정렬)
+      if (mapCenter) {
+        unique.sort((a, b) => {
+          const distA = Math.pow(a.lat - mapCenter.lat, 2) + Math.pow(a.lng - mapCenter.lng, 2);
+          const distB = Math.pow(b.lat - mapCenter.lat, 2) + Math.pow(b.lng - mapCenter.lng, 2);
+          return distA - distB;
+        });
+      }
+
       setResults(unique);
       setPagination(placeData.pagination);
     } catch (error) {
@@ -110,7 +132,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
       setIsLoading(false);
       isSearching.current = false;
     }
-  }, []);
+  }, [mapCenter]);
 
   const loadNextPage = useCallback(() => {
     if (!pagination?.hasNextPage || isSearching.current) return;
@@ -118,8 +140,15 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
     isSearching.current = true;
     setIsLoading(true);
 
+    const kakao = (window as any).kakao;
+    const searchOptions: any = { page: pagination.current + 1, size: 15 };
+    if (mapCenter) {
+      searchOptions.location = new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
+      searchOptions.sort = kakao.maps.services.SortBy.DISTANCE;
+    }
+
     searchService.current.keywordSearch(query, (data: any, status: any, paginationObj: any) => {
-      if (status === (window as any).kakao.maps.services.Status.OK) {
+      if (status === kakao.maps.services.Status.OK) {
         const newPlaces = data.map((item: any) => ({
           id: item.id,
           name: item.place_name,
@@ -142,8 +171,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
       }
       setIsLoading(false);
       isSearching.current = false;
-    }, { page: pagination.current + 1, size: 15 });
-  }, [pagination, query]);
+    }, searchOptions);
+  }, [pagination, query, mapCenter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -216,6 +245,16 @@ const PlaceSearch = ({ isOpen, onClose, onSelect }: PlaceSearchProps) => {
               )}
             </div>
           </div>
+
+          {/* 현재 지도 위치 기준 안내 */}
+          {mapCenter && (
+            <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 shrink-0">
+              <p className="text-[11px] text-indigo-600 font-bold flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                현재 지도 위치 기준으로 가까운 순서로 표시됩니다
+              </p>
+            </div>
+          )}
 
           {/* Results */}
           <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
