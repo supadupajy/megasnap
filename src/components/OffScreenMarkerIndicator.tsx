@@ -55,12 +55,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      // 트렌딩 패널 바로 아래에 위치 (topOffset = trendingDivRef bottom px)
       posStyle.top = `${topOffset + 8}px`;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
-      posStyle.bottom = `${bottomOffset + 12}px`;
+      // bottomOffset = BottomNav 높이(64px). safe-area + 8px 여백 추가
+      posStyle.bottom = `calc(${bottomOffset}px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)`;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'left') {
@@ -90,8 +90,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           background: 'rgb(79, 70, 229)',
           color: 'white',
           borderRadius: '16px',
-          border: '1.5px solid rgb(99, 91, 255)',
-          boxShadow: '0 4px 14px rgba(79,70,229,0.35)',
+          border: '2px solid white',
+          boxShadow: '0 4px 14px rgba(79,70,229,0.4)',
           cursor: 'pointer',
           zIndex: 9000,
           lineHeight: 1,
