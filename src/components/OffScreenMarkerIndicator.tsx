@@ -96,10 +96,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
     return (
       <svg
-        width="13" height="13"
+        width="12" height="12"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="white"
+        stroke="#4338ca"
         strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -115,7 +115,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     const isVertical = dir === 'top' || dir === 'bottom';
 
-    // 항상 해당 가장자리 정중앙에 고정
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
       posStyle.top = `${topOffset + 12}px`;
@@ -145,18 +144,16 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           gap: '1px',
-          background: 'rgba(79, 70, 229, 0.92)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          color: 'white',
-          borderRadius: '18px',
-          border: '1.5px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 4px 16px rgba(79,70,229,0.45)',
+          width: '44px',
+          height: '44px',
+          background: 'white',
+          color: '#4338ca',
+          borderRadius: '50%',
+          border: '2px solid #4338ca',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
           cursor: 'pointer',
-          letterSpacing: '-0.02em',
           zIndex: 9000,
-          // 상하좌우 모두 동일한 패딩/크기
-          padding: '5px 12px',
+          padding: 0,
           lineHeight: 1,
           pointerEvents: 'auto',
           ...posStyle,
@@ -165,7 +162,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
-        <span style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1, verticalAlign: 'middle' }}>
+        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: '#4338ca' }}>
           {group.count}
         </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
