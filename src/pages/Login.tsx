@@ -61,19 +61,15 @@ const Login = () => {
     setAgreedToAll(false);
   }, [isSignUp]);
 
-  const saveAgreement = async (userId: string) => {
-    try {
-      await supabase.from('user_agreements').upsert({
-        user_id: userId,
-        agreed_to_terms: true,
-        agreed_to_privacy: true,
-        agreed_at: new Date().toISOString(),
-        terms_version: '2025-05-01',
-        privacy_version: '2025-05-01',
-      }, { onConflict: 'user_id' });
-    } catch (err) {
-      console.error('[Login] agreement save error:', err);
-    }
+  // 약관 동의 정보를 localStorage에 임시 저장 (세션 없이 INSERT 불가하므로 SIGNED_IN 시점에 처리)
+  const storeAgreementLocally = () => {
+    localStorage.setItem('pending_agreement', JSON.stringify({
+      agreed_to_terms: true,
+      agreed_to_privacy: true,
+      agreed_at: new Date().toISOString(),
+      terms_version: '2025-05-01',
+      privacy_version: '2025-05-01',
+    }));
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -107,9 +103,8 @@ const Login = () => {
         });
         if (error) throw error;
 
-        if (data.user) {
-          await saveAgreement(data.user.id);
-        }
+        // 약관 동의 정보를 localStorage에 임시 저장 → AuthProvider의 SIGNED_IN 이벤트에서 DB에 저장
+        storeAgreementLocally();
 
         if (data.user && data.session) {
           showSuccess('회원가입이 완료되었습니다! ✨');

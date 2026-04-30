@@ -152,6 +152,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const savePendingAgreement = async (userId: string) => {
+    const raw = localStorage.getItem('pending_agreement');
+    if (!raw) return;
+    try {
+      const agreement = JSON.parse(raw);
+      const { error } = await supabase.from('user_agreements').upsert(
+        { user_id: userId, ...agreement },
+        { onConflict: 'user_id' }
+      );
+      if (!error) {
+        localStorage.removeItem('pending_agreement');
+      } else {
+        console.error('[AuthProvider] savePendingAgreement error:', error);
+      }
+    } catch (err) {
+      console.error('[AuthProvider] savePendingAgreement parse error:', err);
+    }
+  };
+
   const fetchIsAdmin = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -197,6 +216,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
             blockedStore.loadFromDB(userId);
+            // 회원가입 시 저장해둔 약관 동의 정보가 있으면 DB에 저장
+            if (event === 'SIGNED_IN') {
+              savePendingAgreement(userId);
+            }
           } else if (event === "USER_UPDATED") {
             profileFetchingRef.current = null;
             fetchProfile(userId, currentSession.user.email);
