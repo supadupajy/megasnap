@@ -179,6 +179,8 @@ const Index = () => {
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const trendingDivRef = useRef<HTMLDivElement>(null);
   const [trendingBottom, setTrendingBottom] = useState(160);
+  // 트렌딩 패널이 접혔을 때의 bottom 위치만 저장 (펼쳐져도 버튼 위치 고정)
+  const [collapsedTrendingBottom, setCollapsedTrendingBottom] = useState(160);
   const bottomNavHeight = 64; // BottomNav 높이(px)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
@@ -558,6 +560,10 @@ const Index = () => {
       if (trendingDivRef.current) {
         const rect = trendingDivRef.current.getBoundingClientRect();
         setTrendingBottom(rect.bottom);
+        // 접혔을 때만 collapsedTrendingBottom 업데이트 (펼쳐지면 버튼 위치 고정)
+        if (!isTrendingExpanded) {
+          setCollapsedTrendingBottom(rect.bottom);
+        }
       }
     };
     measure();
@@ -565,7 +571,7 @@ const Index = () => {
     if (trendingDivRef.current) ro.observe(trendingDivRef.current);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isPostListOpen, isSearchOpen]);
+  }, [isPostListOpen, isSearchOpen, isTrendingExpanded]);
 
   // ── visibleMarkers: displayedMarkers 그대로 사용 (분산 없음) ──────
   // 카카오맵 CustomOverlay는 화면 밖 마커를 자동으로 렌더링하지 않으므로
@@ -1036,7 +1042,7 @@ const Index = () => {
                   setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                 }
               }}
-              topOffset={trendingBottom}
+              topOffset={collapsedTrendingBottom}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}
             />

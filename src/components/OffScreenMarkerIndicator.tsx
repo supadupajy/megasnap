@@ -55,8 +55,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      // safe-area 아래 고정 (트렌딩 패널과 무관하게 항상 같은 위치)
-      posStyle.top = 'calc(env(safe-area-inset-top, 0px) + 74px)';
+      // 트렌딩 패널 바로 아래에 위치 (topOffset = trendingDivRef bottom px)
+      posStyle.top = `${topOffset + 8}px`;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
