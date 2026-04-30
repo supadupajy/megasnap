@@ -58,10 +58,50 @@ const Write = () => {
   const isDraggingRef = useRef(false);
 
   useEffect(() => {
-    if (initialLocation) {
-      setAddress(resolveOfflineLocationName(initialLocation.lat, initialLocation.lng));
-    } else {
+    if (!initialLocation) {
       setAddress('위치 미지정');
+      return;
+    }
+
+    const { lat, lng } = initialLocation;
+
+    // 카카오맵 Geocoder로 실제 주소 역지오코딩
+    const kakao = (window as any).kakao;
+    if (kakao?.maps?.services?.Geocoder) {
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address;
+          const city = addr.region_1depth_name || '';
+          const gu = addr.region_2depth_name || '';
+          const dong = addr.region_3depth_name || '';
+          setAddress([city, gu, dong].filter(Boolean).join(' '));
+        } else {
+          setAddress(resolveOfflineLocationName(lat, lng));
+        }
+      });
+    } else {
+      // 카카오맵 아직 로드 안 됐으면 잠시 후 재시도
+      const timer = setTimeout(() => {
+        const kakaoRetry = (window as any).kakao;
+        if (kakaoRetry?.maps?.services?.Geocoder) {
+          const geocoder = new kakaoRetry.maps.services.Geocoder();
+          geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+            if (status === kakaoRetry.maps.services.Status.OK && result[0]) {
+              const addr = result[0].address;
+              const city = addr.region_1depth_name || '';
+              const gu = addr.region_2depth_name || '';
+              const dong = addr.region_3depth_name || '';
+              setAddress([city, gu, dong].filter(Boolean).join(' '));
+            } else {
+              setAddress(resolveOfflineLocationName(lat, lng));
+            }
+          });
+        } else {
+          setAddress(resolveOfflineLocationName(lat, lng));
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [initialLocation]);
 
