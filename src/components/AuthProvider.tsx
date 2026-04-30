@@ -186,6 +186,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 딥링크(이메일 인증 등)로 앱이 열렸을 때 토큰 처리
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      try {
+        console.log('[AuthProvider] Deep link received:', url);
+        // com.chorasnap.chorasnap://login-callback#access_token=...&refresh_token=...
+        const hashIndex = url.indexOf('#');
+        if (hashIndex === -1) return;
+        const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          if (error) console.error('[AuthProvider] setSession error:', error);
+        }
+      } catch (err) {
+        console.error('[AuthProvider] Deep link handling error:', err);
+      }
+    };
+
+    // 앱이 실행 중일 때 딥링크로 열리는 경우
+    const listenerPromise = CapApp.addListener('appUrlOpen', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    // 앱이 종료된 상태에서 딥링크로 열리는 경우 (getLaunchUrl)
+    CapApp.getLaunchUrl().then((result) => {
+      if (result?.url) handleDeepLink(result.url);
+    });
+
+    return () => {
+      listenerPromise.then(l => l.remove());
+    };
+  }, []);
+
   useEffect(() => {
     // onAuthStateChange 단일 진입점으로 통합
     // INITIAL_SESSION 이벤트가 현재 세션 상태를 즉시 전달하므로 getSession() 별도 호출 불필요
