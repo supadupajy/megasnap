@@ -6,6 +6,7 @@ import { Post } from "@/types";
 export const mapCache = {
   posts: [] as Post[],
   populatedTiles: new Set<string>(),
-  lastCenter: { lat: 37.5665, lng: 126.9780 } as { lat: number; lng: number },
+  // null로 초기화 - 사용자가 실제로 지도를 본 적 없으면 null
+  lastCenter: null as { lat: number; lng: number } | null,
   lastZoom: 6
 };

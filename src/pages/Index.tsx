@@ -500,11 +500,12 @@ const Index = () => {
     // mapDataRef는 즉시 업데이트 (throttle 전에도 최신값 유지)
     mapDataRef.current = data;
     if (data.level !== undefined) {
-      // ref만 즉시 업데이트 - state는 throttle과 함께 setMapData와 동시에 업데이트
-      // (currentZoom과 mapData.bounds가 서로 다른 타이밍에 업데이트되면
-      //  limitedVisibleMarkers가 불일치한 bounds로 계산되어 마커가 줄어드는 버그 발생)
       currentZoomRef.current = data.level;
       mapCache.lastZoom = data.level;
+    }
+    // lastCenter는 throttle 없이 즉시 저장 (Write 페이지 이동 시 최신 좌표 보장)
+    if (data.center) {
+      mapCache.lastCenter = data.center;
     }
     // 위치 선택 모드일 때 즉시 ref 업데이트
     if (isSelectingAdLocationRef.current && data.center) {
@@ -518,7 +519,6 @@ const Index = () => {
         setCurrentZoom(data.level);
       }
       setMapData(data);
-      mapCache.lastCenter = data.center;
       if (isSelectingLocationRef.current) setTempSelectedLocation(data.center);
       if (isSelectingAdLocationRef.current) {
         setTempAdLocation(data.center);

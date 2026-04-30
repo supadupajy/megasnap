@@ -662,15 +662,27 @@ const MapContainer = ({
               }
             });
 
-            // marker-appear-animation 제거 후 marker-content-wrapper에 opacity:1 인라인 고정
-            // CSS animation forwards fill이 제거되면 opacity:0으로 돌아가는 현상 방지
-            content.classList.remove('marker-appear-animation');
+            // marker-appear-animation 제거 전에 먼저 opacity:1 인라인 고정
+            // (클래스 제거 시 CSS animation forwards fill이 사라져 opacity:0으로 순간 복귀하는 현상 방지)
+            const allEls = content.querySelectorAll('*');
+            allEls.forEach((el) => {
+              const htmlEl = el as HTMLElement;
+              if (htmlEl.style) {
+                // 현재 계산된 opacity를 인라인으로 고정
+                const computed = window.getComputedStyle(htmlEl);
+                if (computed.opacity !== '1') {
+                  htmlEl.style.opacity = '1';
+                }
+              }
+            });
+            // marker-content-wrapper 직접 고정
             const wrapper = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
             if (wrapper) {
               wrapper.style.opacity = '1';
               wrapper.style.transform = 'scale(1) translateY(0)';
               wrapper.style.animation = 'none';
             }
+            content.classList.remove('marker-appear-animation');
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
@@ -778,27 +790,42 @@ const MapContainer = ({
     return () => clearInterval(timer);
   }, [initMap]);
 
+  // level prop이 바뀌면 pendingLevelRef에 저장해두고,
+  // smoothMoveTo가 진행 중이 아닐 때만 실제로 setLevel 적용
+  const pendingLevelRef = useRef<number | null>(null);
+
+  const applyLevel = useCallback((targetLevel: number) => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const savedCenter = map.getCenter();
+    map.setLevel(targetLevel, { animate: false });
+    // setLevel이 center를 리셋하는 경우 복원
+    map.setCenter(savedCenter);
+    const newLevel = map.getLevel();
+    setCurrentLevel(newLevel);
+    currentLevelRef.current = newLevel;
+    pendingLevelRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
     if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
     levelTimerRef.current = setTimeout(() => {
       levelTimerRef.current = null;
-      const map = mapInstance.current;
-      if (!map) return;
-      // smoothMoveTo 진행 중이면 setLevel 스킵 (카카오맵이 center를 리셋하는 부작용 방지)
-      if (animationFrameRef.current) return;
-      map.setLevel(level, { animate: false });
-      const newLevel = map.getLevel();
-      setCurrentLevel(newLevel);
-      currentLevelRef.current = newLevel;
-    }, 300);
+      if (animationFrameRef.current) {
+        // smoothMoveTo 진행 중 → 완료 후 적용하도록 pending에 저장
+        pendingLevelRef.current = level;
+      } else {
+        applyLevel(level);
+      }
+    }, 100);
     return () => {
       if (levelTimerRef.current) {
         clearTimeout(levelTimerRef.current);
         levelTimerRef.current = null;
       }
     };
-  }, [level, isMapReady]);
+  }, [level, isMapReady, applyLevel]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
     const map = mapInstance.current;
@@ -839,6 +866,10 @@ const MapContainer = ({
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         animationFrameRef.current = null;
+        // 이동 완료 후 pending level 적용
+        if (pendingLevelRef.current !== null) {
+          applyLevel(pendingLevelRef.current);
+        }
         onComplete?.();
       }
     };
