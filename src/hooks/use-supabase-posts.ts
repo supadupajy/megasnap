@@ -69,6 +69,12 @@ export const fetchOffScreenCounts = async (
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
 
+  // 카카오맵 getBounds()는 실제 화면 픽셀과 정확히 일치하지 않을 수 있으므로
+  // 화면 안쪽으로 5% 여유를 두어 화면 가장자리 포스팅이 잘못 카운트되는 것을 방지
+  const pad = 0.05;
+  const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
+  const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
+
   // 코너 분류 기준: lat 초과 비율 vs lng 초과 비율
   // lat 초과 비율이 더 크면 상/하, lng 초과 비율이 더 크면 좌/우
   // 비율이 같으면 (45도 대각선) 상/하 우선
@@ -89,43 +95,43 @@ export const fetchOffScreenCounts = async (
 
   try {
     const [
-      topOnlyRes,      // 위: lat > ne.lat AND lng between sw.lng and ne.lng (순수 상단)
-      bottomOnlyRes,   // 아래: lat < sw.lat AND lng between sw.lng and ne.lng (순수 하단)
-      leftOnlyRes,     // 왼쪽: lng < sw.lng AND lat between sw.lat and ne.lat (순수 좌측)
-      rightOnlyRes,    // 오른쪽: lng > ne.lng AND lat between sw.lat and ne.lat (순수 우측)
-      topLeftRes,      // 왼쪽 상단 코너
-      topRightRes,     // 오른쪽 상단 코너
-      bottomLeftRes,   // 왼쪽 하단 코너
-      bottomRightRes,  // 오른쪽 하단 코너
+      topOnlyRes,
+      bottomOnlyRes,
+      leftOnlyRes,
+      rightOnlyRes,
+      topLeftRes,
+      topRightRes,
+      bottomLeftRes,
+      bottomRightRes,
     ] = await Promise.all([
-      // 순수 상단 (코너 제외)
+      // 순수 상단: lat > qNe.lat AND lng between qSw.lng and qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', ne.lat)
-        .gte('longitude', sw.lng).lte('longitude', ne.lng),
-      // 순수 하단 (코너 제외)
+        .gt('latitude', qNe.lat)
+        .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
+      // 순수 하단: lat < qSw.lat AND lng between qSw.lng and qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', sw.lat)
-        .gte('longitude', sw.lng).lte('longitude', ne.lng),
-      // 순수 좌측 (코너 제외)
+        .lt('latitude', qSw.lat)
+        .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
+      // 순수 좌측: lng < qSw.lng AND lat between qSw.lat and qNe.lat
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('longitude', sw.lng)
-        .gte('latitude', sw.lat).lte('latitude', ne.lat),
-      // 순수 우측 (코너 제외)
+        .lt('longitude', qSw.lng)
+        .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
+      // 순수 우측: lng > qNe.lng AND lat between qSw.lat and qNe.lat
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('longitude', ne.lng)
-        .gte('latitude', sw.lat).lte('latitude', ne.lat),
-      // 왼쪽 상단 코너: lat > ne.lat AND lng < sw.lng
+        .gt('longitude', qNe.lng)
+        .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
+      // 왼쪽 상단 코너: lat > qNe.lat AND lng < qSw.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', ne.lat).lt('longitude', sw.lng),
-      // 오른쪽 상단 코너: lat > ne.lat AND lng > ne.lng
+        .gt('latitude', qNe.lat).lt('longitude', qSw.lng),
+      // 오른쪽 상단 코너: lat > qNe.lat AND lng > qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', ne.lat).gt('longitude', ne.lng),
-      // 왼쪽 하단 코너: lat < sw.lat AND lng < sw.lng
+        .gt('latitude', qNe.lat).gt('longitude', qNe.lng),
+      // 왼쪽 하단 코너: lat < qSw.lat AND lng < qSw.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', sw.lat).lt('longitude', sw.lng),
-      // 오른쪽 하단 코너: lat < sw.lat AND lng > ne.lng
+        .lt('latitude', qSw.lat).lt('longitude', qSw.lng),
+      // 오른쪽 하단 코너: lat < qSw.lat AND lng > qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', sw.lat).gt('longitude', ne.lng),
+        .lt('latitude', qSw.lat).gt('longitude', qNe.lng),
     ]);
 
     // 코너 포스팅을 lat/lng 초과 비율로 분류
